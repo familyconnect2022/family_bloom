@@ -4,14 +4,14 @@ import type { FamilyPerson } from "../types/familyGraph";
 
 export function useFamilyPersonDirectory(familyId: string | null | undefined, enabled = true) {
   const [persons, setPersons] = useState<FamilyPerson[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!familyId && enabled);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
     setPersons([]);
     setError(null);
-    if (!familyId || !enabled) return;
+    if (!familyId || !enabled) { setLoading(false); return; }
     setLoading(true);
     familyGraphService.listPersons(familyId)
       .then((items) => {

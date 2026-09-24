@@ -1,9 +1,11 @@
+import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   FlatList,
   Modal,
   Platform,
@@ -83,17 +85,17 @@ export default function PlannerScreen() {
   const [participantsMode, setParticipantsMode] = useState<EventParticipantsMode>("all");
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [personIds, setPersonIds] = useState<string[]>([]);
-  const [screenFocused, setScreenFocused] = useState(true);
+  const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const [hiddenEvents, setHiddenEvents] = useState<FamilyEvent[]>([]);
   const [moderationVisible, setModerationVisible] = useState(false);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
   const membership = families.find((item) => item.familyId === activeFamilyId);
   const canModerate = membership?.role === "owner" || membership?.role === "admin";
 
-  useFocusEffect(useCallback(() => {
-    setScreenFocused(true);
-    return () => setScreenFocused(false);
-  }, []));
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => setAppActive(state === "active"));
+    return () => subscription.remove();
+  }, []);
 
   const year = viewDate.getFullYear();
   const monthIndex = viewDate.getMonth();
@@ -116,10 +118,14 @@ export default function PlannerScreen() {
   } = useFamilyEvents({
     familyId: activeFamilyId,
     viewDate,
-    calendarEnabled: screenFocused && mode === "calendar",
-    listEnabled: screenFocused && mode === "list",
+    // Keep the current bounded query warm across bottom-tab switches. Focus
+    // previously cleared the calendar/list and recreated its Firestore listener.
+    // Release it when the app backgrounds, the family changes or this unmounts.
+    calendarEnabled: appActive && mode === "calendar",
+    listEnabled: appActive && mode === "list",
   });
   const { members, memberByUid } = useFamilyMembers(activeFamilyId);
+  useTabStartupTask("planner", !loadingMonth && !loadingList);
   const { persons: familyPersons } = useFamilyPersonDirectory(activeFamilyId, composerVisible || !!params.personId);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
@@ -33,6 +34,7 @@ function PlayCard({ icon, title, description, tag }: PlayCardProps) {
 }
 
 export default function PlayScreen() {
+  useTabStartupTask("play");
   return (
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

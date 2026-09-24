@@ -8,18 +8,22 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
 import { BLOOM_MOTION } from "../constants/motion";
+import { TabStartupProvider, useTabStartup } from "../context/TabStartupContext";
 
 const RootNavigator = () => {
   const { user, userProfile, families, authStatus, profileStatus, showWelcome, dismissWelcome } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const [navigationStable, setNavigationStable] = useState(false);
+  const { ready: tabsReady } = useTabStartup();
+  const rootSegment = segments[0];
 
   useEffect(() => {
-    setNavigationStable(false);
-    if (authStatus === "initializing" || profileStatus === "loading") return;
+    if (authStatus === "initializing" || profileStatus === "loading") {
+      setNavigationStable(false);
+      return;
+    }
 
-    const rootSegment = segments[0];
     const activeFamilyId = userProfile?.activeFamilyId ?? null;
     const hasValidActiveFamily = !!activeFamilyId && families.some((item) => item.familyId === activeFamilyId);
     const inAuthGroup = rootSegment === "(auth)";
@@ -41,15 +45,17 @@ const RootNavigator = () => {
     }
 
     if (target) {
+      setNavigationStable(false);
       router.replace(target as never);
       const timer = setTimeout(() => setNavigationStable(true), 80);
       return () => clearTimeout(timer);
     }
 
     setNavigationStable(true);
-  }, [authStatus, profileStatus, user, userProfile?.activeFamilyId, families, segments, router]);
+  }, [authStatus, profileStatus, user, userProfile?.activeFamilyId, families, rootSegment, router]);
 
-  const bootstrapReady = authStatus !== "initializing" && profileStatus !== "loading" && navigationStable;
+  const bootstrapReady = authStatus !== "initializing" && profileStatus !== "loading" && navigationStable
+    && (rootSegment !== "(tabs)" || tabsReady);
 
   return (
     <>
@@ -86,16 +92,26 @@ const RootNavigator = () => {
   );
 };
 
+function FamilySession() {
+  const { user, userProfile } = useAuth();
+  // Recreate read caches and screens on account/family change. Upload tasks live
+  // outside this boundary so changing family does not abandon an ongoing upload.
+  const sessionKey = JSON.stringify([user?.uid ?? null, userProfile?.activeFamilyId ?? null]);
+  return (
+    <FamilyRealtimeProvider key={sessionKey}>
+      <TabStartupProvider><RootNavigator /></TabStartupProvider>
+    </FamilyRealtimeProvider>
+  );
+}
+
 export default function RootLayout() {
   return (
     <BloomToastProvider>
       <MediaViewerProvider>
         <AuthProvider>
-          <FamilyRealtimeProvider>
-            <MomentPublishProvider>
-              <RootNavigator />
-            </MomentPublishProvider>
-          </FamilyRealtimeProvider>
+          <MomentPublishProvider>
+            <FamilySession />
+          </MomentPublishProvider>
         </AuthProvider>
       </MediaViewerProvider>
     </BloomToastProvider>

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -83,7 +83,7 @@ function MediaTile({ media, style, remaining, onPress }: { media: MomentMedia; s
   );
 }
 
-function MomentMediaGrid({ media, onOpen }: { media: MomentMedia[]; onOpen: (index: number) => void }) {
+const MomentMediaGrid = React.memo(function MomentMediaGrid({ media, onOpen }: { media: MomentMedia[]; onOpen: (index: number) => void }) {
   if (!media.length) return null;
   const visible = media.slice(0, 4);
 
@@ -108,7 +108,9 @@ function MomentMediaGrid({ media, onOpen }: { media: MomentMedia[]; onOpen: (ind
       ))}
     </View>
   );
-}
+});
+
+const EMPTY_MEDIA: MomentMedia[] = [];
 
 function MomentCardComponent({
   post,
@@ -167,8 +169,8 @@ function MomentCardComponent({
   const router = useRouter();
   const { openMediaViewer } = useMediaViewer();
 
-  const openMediaAt = (index: number) => {
-    const media = post.media || [];
+  const openMediaAt = useCallback((index: number) => {
+    const media = post.media || EMPTY_MEDIA;
     openMediaViewer({
       items: media.map((item) => ({
         id: item.id,
@@ -180,7 +182,7 @@ function MomentCardComponent({
       initialIndex: index,
       title: post.authorName,
     });
-  };
+  }, [openMediaViewer, post.media, post.caption, post.authorName]);
 
   const isOwner = post.authorUid === currentUid;
   const canManagePost = isOwner || canModerate;
@@ -547,7 +549,7 @@ function MomentCardComponent({
           </View>
         </View>
       )}
-      <MomentMediaGrid media={post.media || []} onOpen={openMediaAt} />
+      <MomentMediaGrid media={post.media || EMPTY_MEDIA} onOpen={openMediaAt} />
 
       <View style={styles.stats}>
         <Pressable onPress={openReactionDetails} disabled={!reactionCount} style={styles.statLeft} hitSlop={6}>
@@ -910,7 +912,7 @@ const styles = StyleSheet.create({
   videoOverlay: { position: "absolute", left: 10, bottom: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.46)", alignItems: "center", justifyContent: "center" },
   remainingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(44,27,34,0.48)", alignItems: "center", justifyContent: "center" },
   remainingText: { color: COLORS.white, fontSize: 28, fontWeight: "900" },
-  personLinks: { marginTop: 10, gap: 7 },
+  personLinks: { paddingHorizontal: 16, paddingBottom: 14, marginTop: 10, gap: 7 },
   personLinksLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
   personLinksLabelText: { color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "800" },
   personLinksWrap: { flexDirection: "row", flexWrap: "wrap", gap: 7 },

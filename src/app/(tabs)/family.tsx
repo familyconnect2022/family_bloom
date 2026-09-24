@@ -1,3 +1,4 @@
+import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -23,6 +24,7 @@ const roleLabel: Record<string, string> = {
 };
 
 export default function FamilyScreen() {
+  useTabStartupTask("family");
   const router = useRouter();
   const { userProfile, families } = useAuth();
   const membership = families.find((item) => item.familyId === userProfile?.activeFamilyId);

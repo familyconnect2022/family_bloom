@@ -1,4 +1,20 @@
 # FAMILY BLOOM — MASTER HANDOFF PROMPT TOÀN DỰ ÁN
+
+## Latest checkpoint — Phase 6.5 final device-test candidate (2026-09-24)
+
+**Status: IMPLEMENTED / OPEN / AWAITING USER DEVICE TEST. Not CLOSED.**
+Base source: GitHub familyconnect2022/family_bloom main commit 646457dbb0883fd849211695b082f43cf4631787. User confirms Phase 6.5 Firestore Rules deployed. This cumulative hotfix requires no new Rules/Functions deployment or dependency changes.
+
+Latest implementation supersedes the previous idle-tab warmup hotfix: all five main tabs mount behind the existing in-app splash. Startup waits for their committed readiness, shared members/latest Moments/upcoming and yearly Events, Moments' Person directory and the current Planner month. It releases on completion or an 8-second fallback from first tab readiness registration. Authentication/profile resolution still uses the existing root gate and is not bypassed by that timeout. Login failure stays in auth; missing profile and missing/invalid family follow their existing screens.
+
+Read caches, tab state and startup latch are recreated on account/active-family change. MomentPublishProvider stays outside the family boundary to preserve ongoing uploads. Normal snapshot refreshes do not re-block the user. Only bounded initial feeds/calendar data are prepared, not full history, original images or videos. Person directory retains its existing full-directory request. Native image decoding and device rendering are not guaranteed complete by JS readiness.
+
+UI: rose/pink tab bar with selected-icon pill, no gray press ripple or elevation shadow; Person links in MomentCard get 16-point horizontal inset. Earlier calendar query reuse and memoized media-grid fixes remain.
+
+Validation: startup lifecycle simulation PASS; 128 TS/TSX static transpile PASS; Phase 6.5 contract, Phase 6.4 viewport/progressive, Query/Kinship, DG-11, dense layout, Functions core and Functions syntax PASS. Full typecheck, native build and device visual/performance tests not run. See document/PHASE_6_5_FINAL_DEVICE_TEST.md for the single acceptance checklist and proposed next phase. No runtime PASS claim and no Phase 6.5 CLOSED checkpoint until user acceptance.
+
+The full-project snapshot below remains applicable except where this latest checkpoint explicitly supersedes it.
+
 ## Phase 6.5 IMPLEMENTED · AWAITING DEVICE TEST · BASECODE = Phase 6.4 CLOSED
 
 > Đây là tài liệu bàn giao **FULL APP** hiện hành. **Phase 6.4 đã CLOSED** và là basecode đầu vào của Phase 6.5.  

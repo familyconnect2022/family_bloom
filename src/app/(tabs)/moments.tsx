@@ -1,3 +1,4 @@
+import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -69,7 +70,7 @@ export default function MomentsScreen() {
   const [moderationVisible, setModerationVisible] = useState(false);
   const [hiddenPosts, setHiddenPosts] = useState<MomentPost[]>([]);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
-  const [screenFocused, setScreenFocused] = useState(true);
+  const [screenFocused, setScreenFocused] = useState(false);
   const [visiblePostIds, setVisiblePostIds] = useState<Set<string>>(() => new Set());
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 24, minimumViewTime: 120 }).current;
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -85,8 +86,14 @@ export default function MomentsScreen() {
   }).current;
 
   useFocusEffect(useCallback(() => {
-    setScreenFocused(true);
+    // Paint the selected tab before resuming per-card comments/reaction work.
+    let active = true;
+    const idle = requestIdleCallback(() => {
+      if (active) setScreenFocused(true);
+    }, { timeout: 300 });
     return () => {
+      active = false;
+      cancelIdleCallback(idle);
       setScreenFocused(false);
       setCommentScrollLocked(false);
     };
@@ -96,7 +103,7 @@ export default function MomentsScreen() {
   const canModerate = membership?.role === "admin" || membership?.role === "owner";
   const { openMediaViewer } = useMediaViewer();
   const { memberByUid } = useFamilyMembers(activeFamilyId);
-  const { persons, personById } = useFamilyPersonDirectory(activeFamilyId, !!activeFamilyId);
+  const { persons, personById, loading: personsLoading } = useFamilyPersonDirectory(activeFamilyId, !!activeFamilyId);
   const consumedPersonParamRef = useRef<string | null>(null);
   const highlightAttemptRef = useRef<{ id: string | null; pages: number }>({ id: null, pages: 0 });
   const {
@@ -115,6 +122,7 @@ export default function MomentsScreen() {
     retry,
     error,
   } = useFamilyMoments(activeFamilyId);
+  useTabStartupTask("moments", !loading && !personsLoading);
 
 
   useEffect(() => {

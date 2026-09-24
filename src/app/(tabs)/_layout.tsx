@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BLOOM_MOTION } from "../../constants/motion";
 import { COLORS } from "../../constants/theme";
@@ -30,33 +31,35 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.secondaryText,
+        // Mount the five bounded tab screens behind the startup overlay.
+        lazy: false,
+        tabBarActiveTintColor: "#B94E75",
+        tabBarInactiveTintColor: "#A87588",
         headerShown: false,
         animation: BLOOM_MOTION.tabs.animation,
         tabBarHideOnKeyboard: true,
+        tabBarButton: (props) => <TouchableOpacity {...props} activeOpacity={0.72} />,
         tabBarIcon: ({ color, focused, size }) => (
-          <Ionicons name={iconFor(route.name, focused)} size={Math.min(size, 23)} color={color} />
+          <View style={[styles.iconPill, focused && styles.iconPillSelected]}>
+            <Ionicons name={iconFor(route.name, focused)} size={Math.min(size, 22)} color={color} />
+          </View>
         ),
         tabBarLabelStyle: {
           fontSize: 10.5,
           fontWeight: "700",
-          marginTop: 1,
+          marginTop: 4,
         },
         tabBarItemStyle: {
-          paddingTop: 7,
+          paddingTop: 8,
         },
         tabBarStyle: {
-          height: 59 + bottomInset,
+          height: 65 + bottomInset,
           paddingBottom: bottomInset,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
-          backgroundColor: COLORS.white,
-          shadowColor: "#7E5260",
-          shadowOffset: { width: 0, height: -5 },
-          shadowOpacity: 0.045,
-          shadowRadius: 12,
-          elevation: 8,
+          backgroundColor: "#FFFBFD",
+          shadowOpacity: 0,
+          elevation: 0,
         },
       })}
     >
@@ -68,3 +71,8 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconPill: { width: 48, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  iconPillSelected: { backgroundColor: COLORS.accentBg, borderWidth: 1, borderColor: "#F5CAD9" },
+});

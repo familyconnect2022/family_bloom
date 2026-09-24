@@ -1,3 +1,4 @@
+import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -104,6 +105,7 @@ function DashboardMomentCard({ post, onPress }: { post: MomentPost; onPress: () 
 }
 
 export default function HomeScreen() {
+  useTabStartupTask("home");
   const router = useRouter();
   const { userProfile, families } = useAuth();
   const activeMembership = families.find((item) => item.familyId === userProfile?.activeFamilyId);
