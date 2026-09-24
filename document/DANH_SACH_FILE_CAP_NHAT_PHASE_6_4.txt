@@ -1,0 +1,16 @@
+PHASE 6.4 — FILES CHANGED/ADDED
+
+src/constants/appConfiguration.ts
+src/components/familyGraph/familyGraphPrototypeData.ts
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/familyGraph/familyGraphSpatialGrid.ts
+src/components/familyGraph/familyGraphViewport.ts
+src/components/familyGraph/FamilyGraphPrototype.tsx
+scripts/test-familyGraphLayout.js
+scripts/test-familyGraphPhase64.js
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_PHASE_6_3_CLOSED.md
+document/PHASE_6_4_LARGE_TREE_PROGRESSIVE_INTERACTION.md
+document/BUILD_CHECK_REPORT_PHASE_6_4.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_4.txt
+PATCH_INFO.txt

@@ -1,0 +1,49 @@
+FAMILY BLOOM — PHASE 6.5 PATCH MANIFEST
+=======================================
+
+NEW
+---
+src/components/familyGraph/FamilyPersonMultiPicker.tsx
+src/hooks/useFamilyPersonDirectory.ts
+src/hooks/useFamilyPersonIntegrations.ts
+scripts/test-familyGraphPhase65.js
+document/PHASE_6_5_PERSON_EXPERIENCE_FAMILY_INTEGRATION.md
+document/BUILD_CHECK_REPORT_PHASE_6_5.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_5.txt
+
+MODIFIED
+--------
+src/app/(tabs)/moments.tsx
+src/app/(tabs)/planner.tsx
+src/app/event/[eventId].tsx
+src/app/family-graph.tsx
+src/app/profile.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/familyGraph/familyGraphPrototypeData.ts
+src/components/moments/MomentCard.tsx
+src/context/MomentPublishContext.tsx
+src/services/event/eventService.ts
+src/services/familyGraph/familyGraphService.ts
+src/services/familyGraph/familyPersonContentService.ts
+src/services/moments/momentsService.ts
+src/types/event.ts
+src/types/familyGraph.ts
+src/types/moments.ts
+firestore.rules
+firestore.cloud.rules
+functions/index.js
+package.json
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/FAMILY_BLOOM_FIRESTORE_RULES_DIRECT_DEV.txt
+document/FAMILY_BLOOM_FIRESTORE_RULES_CLOUD_MODE.txt
+
+OWED / INCLUDED HANDOFF CHECKPOINT
+---------------------------------
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_PHASE_6_4_CLOSED.md
+
+NOT INCLUDED / NOT CHANGED
+--------------------------
+package-lock.json (packaging environment has no dependency install; local `npx expo install expo-clipboard` will update lockfile)
+No Android/iOS native files changed in the patch.

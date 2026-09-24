@@ -1,0 +1,34 @@
+FAMILY BLOOM — PHASE 6.3 CUMULATIVE PATCH (FROM PHASE 6.2 CLOSED)
+
+APP / RUNTIME — COPY ĐÈ:
+src/app/family-graph.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/constants/appConfiguration.ts
+src/services/familyGraph/familyGraphQueryEngine.ts
+src/services/familyGraph/familyKinshipResolver.ts
+src/services/familyGraph/familyGraphService.ts
+src/services/index.ts
+src/types/familyGraphQuery.ts
+src/types/index.ts
+
+TEST / DEV:
+scripts/test-familyGraphQueryEngine.js
+scripts/benchmark-familyGraphPhase63.js
+
+DOCUMENTATION:
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_6_3_GRAPH_QUERY_KINSHIP_FOCUS_INTEGRATION.md
+document/BUILD_CHECK_REPORT_PHASE_6_3.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_3.txt
+
+INTENTIONALLY NOT CHANGED:
+firestore.rules
+firestore.cloud.rules
+functions/**
+src/types/familyGraph.ts persisted contract
+Moments/Event/Timeline/Album data contracts
+
+DEPLOY:
+- No Firestore Rules publish required for Phase 6.3.
+- No Cloud Functions deploy required for Phase 6.3.

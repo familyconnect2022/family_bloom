@@ -1,0 +1,13 @@
+COPY ĐÈ ĐÚNG CẤU TRÚC:
+src/app/family-graph-admin.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/services/familyGraph/familyPersonContentService.ts
+src/utils/personName.ts
+
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_6_3_PERSON_DIRECTORY_RELATION_PERFORMANCE_REFINEMENT.md
+document/BUILD_CHECK_REPORT_PHASE_6_3_PERSON_DIRECTORY_RELATION_ALBUM.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_3_PERSON_DIRECTORY_RELATION_ALBUM.txt
+
+KHÔNG COPY/DEPLOY RULES/FUNCTIONS: không thay đổi trong patch này.

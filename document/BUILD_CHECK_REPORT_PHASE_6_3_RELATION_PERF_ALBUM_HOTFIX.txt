@@ -1,0 +1,30 @@
+FAMILY BLOOM — PHASE 6.3 RELATION COMPOSER PERFORMANCE + ALBUM RENDER HOTFIX
+
+RUNTIME FILES CHANGED
+- src/app/family-graph-admin.tsx
+- src/components/familyGraph/FamilyGraphPersonSheet.tsx
+- src/services/familyGraph/familyPersonContentService.ts
+- src/hooks/useFamilyPersonContent.ts
+
+WHAT WAS FIXED
+1. Relationship composer selection state moved inside the modal so every tap no longer rerenders the full Admin person directory behind it.
+2. Picker rows memoized; selection callback uses functional state updates; sort/search index precomputed; Android modal animation changed to fade.
+3. Person Album media_assets query constrained by familyId + entityId so Firestore authorization can prove family access.
+4. Album media tiles use explicit dimensions from window width instead of percentage width + aspectRatio, fixing the on-device 'two pink lines' collapsed tile symptom.
+5. Timeline and Album listener errors separated so one listener does not incorrectly stop the other.
+
+VALIDATION
+- 118 TS/TSX syntax transpile: PASS / 0 errors
+- Relative imports in changed runtime files against cumulative Phase 6.3 baseline: PASS / 0 missing
+- DG-11 Batch Relationship tests: PASS
+- Family Graph dense layout tests: PASS (500-person synthetic adapter covered)
+- Query + Kinship + Focus tests: PASS
+- Graph Core tests: PASS
+- src InteractionManager references: NONE
+
+NO CHANGE
+- Firestore schema
+- firestore.rules / firestore.cloud.rules
+- Cloud Functions deployment state
+- Auth / Root gating / activeFamilyId
+- DG-11 relationship semantics

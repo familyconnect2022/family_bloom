@@ -1,0 +1,34 @@
+FAMILY BLOOM — PHASE 6.4 LARGE TREE / VIEWPORT / PROGRESSIVE PATCH
+Date: 2026-09-24
+Status: IMPLEMENTED · AWAITING DEVICE TEST
+Basecode: Phase 6.3 CLOSED + Spatial Grid Semantic Routing
+
+COPY:
+- Giải nén ZIP.
+- Copy toàn bộ nội dung bên trong ZIP vào root project Family Bloom hiện tại.
+- Cho phép ghi đè file cùng đường dẫn.
+
+NO NEED:
+- npm install
+- expo prebuild
+- Firebase Rules deploy
+- Functions deploy
+- data migration
+
+MAIN CHANGES:
+- Viewport-aware node rendering using spatial grid.
+- Connector render culling by viewport + overscan.
+- Coarse camera sync; pan/pinch stays on UI thread.
+- Progressive Full Tree ordered by graph distance from current focus.
+- Manual "Mở thêm" + idle progressive batches.
+- Generation spacing increased to 288px (~2x previous pitch).
+- Connector grid recalculated to 160px; viewport grid 256px.
+- Full-project handoff updated; Phase 6.3 recorded CLOSED.
+
+TEST AFTER COPY:
+1. npx expo start -c
+2. Test 3 thế hệ / 5 thế hệ / Toàn phả hệ.
+3. Pan + pinch long distances.
+4. Search a Person far from focus.
+5. Verify generation spacing and connector geometry.
+6. Re-test Quang/Minh, Anh/Trung, couple/shared-child.

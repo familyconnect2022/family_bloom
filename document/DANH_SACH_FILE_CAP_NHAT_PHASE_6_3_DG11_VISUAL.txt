@@ -1,0 +1,44 @@
+FAMILY BLOOM — PHASE 6.3 DG-11 + VISUAL TRUTH CUMULATIVE PATCH
+
+APP / RUNTIME — COPY ĐÈ:
+src/app/family-graph.tsx
+src/app/family-graph-admin.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/ui/BloomConfirmDialog.tsx
+src/constants/appConfiguration.ts
+src/services/familyGraph/familyGraphQueryEngine.ts
+src/services/familyGraph/familyGraphService.ts
+src/services/familyGraph/familyKinshipResolver.ts
+src/services/familyGraph/familyGraphMutationService.ts
+src/services/index.ts
+src/types/familyGraph.ts
+src/types/familyGraphQuery.ts
+src/types/index.ts
+src/utils/familyGraph.ts
+
+FUTURE CLOUD SOURCE — COPY ĐÈ, KHÔNG DEPLOY:
+functions/index.js
+functions/familyGraphCore.js
+functions/test-familyGraphCore.js
+
+TEST / DEV:
+scripts/phase2-static-check.js
+scripts/test-familyGraphBatchRelationships.js
+scripts/test-familyGraphQueryEngine.js
+scripts/test-familyGraphLayout.js
+scripts/benchmark-familyGraphPhase63.js
+
+DOCUMENTATION:
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_6_3_GRAPH_QUERY_KINSHIP_FOCUS_INTEGRATION.md
+document/PHASE_6_3_DEVICE_REFINEMENT_LAYOUT_DELETE_PERFORMANCE.md
+document/PHASE_6_3_DG11_BATCH_RELATIONSHIP_AND_VISUAL_TRUTH.md
+document/BUILD_CHECK_REPORT_PHASE_6_3_DG11_VISUAL.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_3_DG11_VISUAL.txt
+
+UNCHANGED / DO NOT DEPLOY:
+firestore.rules
+firestore.cloud.rules
+persisted FamilyPerson / FamilyRelationship schema

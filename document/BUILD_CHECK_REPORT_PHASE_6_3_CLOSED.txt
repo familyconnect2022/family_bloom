@@ -1,0 +1,13 @@
+FAMILY BLOOM — PHASE 6.3 CLOSED BUILD CHECK
+
+Family Graph dense layout + connector routing: PASS
+DG-11 Batch Relationship Composer: PASS
+Family Graph Query + Kinship + Focus Subgraph: PASS
+Synthetic benchmark 50/100/300/500 Person: PASS
+Phase 2 static TS/TSX transpile: PASS (121 files)
+
+Final connector invariants:
+- unrelated overlapping family groups use separated routing lanes
+- far lateral route may use side anchor
+- near-under child prefers one direct vertical connector
+- side connector exits horizontally before vertical drop

@@ -1,0 +1,24 @@
+FAMILY BLOOM — PHASE 6.5 BUILD CHECK
+===================================
+Status: STATIC/SYNTHETIC PASS · DEVICE TEST REQUIRED
+
+Checks run:
+- node scripts/phase2-static-check.js -> PASS (126 TS/TSX transpiled)
+- node scripts/test-familyGraphPhase65.js -> PASS
+- node scripts/test-familyGraphPhase64.js -> PASS
+- node scripts/test-familyGraphQueryEngine.js -> PASS
+- node scripts/test-familyGraphBatchRelationships.js -> PASS
+- node scripts/test-familyGraphLayout.js -> PASS
+- node scripts/benchmark-familyGraphPhase63.js -> PASS (50/100/300/500)
+- node functions/test-familyGraphCore.js -> PASS
+- node --check functions/index.js -> PASS
+- relative import scan -> 427 imports, 0 missing
+
+Environment note:
+- Full TypeScript typecheck could not run in the packaging container because node_modules is not present (`expo/tsconfig.base` unavailable).
+- Device/local project should run normal dependency install and Expo checks.
+- `expo-clipboard` is a new Phase 6.5 dependency; run `npx expo install expo-clipboard` before runtime test.
+
+Firebase note:
+- Direct Firestore Rules source changed. Deploy firestore.rules before testing Timeline contribution as an ordinary member.
+- Functions source is synchronized but does not need deployment while USE_CLOUD_FUNCTIONS=false.

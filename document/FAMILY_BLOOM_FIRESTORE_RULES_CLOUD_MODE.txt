@@ -1,0 +1,433 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function self(uid) { return signedIn() && request.auth.uid == uid; }
+    function member(familyId) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+    // ownerId là người tạo nhà và cũng là admin duy nhất trong Phase 2.
+    function owner(familyId) {
+      return signedIn() && get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid;
+    }
+    // Chấp nhận owner cũ để không làm hỏng dữ liệu đã tạo ở checkpoint trước.
+    function admin(familyId) {
+      return signedIn() && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+    }
+    function familyAccess(familyId) {
+      return member(familyId) || owner(familyId);
+    }
+
+
+    // Family Graph - Direct Firestore Development Mode.
+    // Authorization and structural validation live in Rules; deep graph-cycle validation
+    // remains client-side until a trusted backend is enabled before production.
+    function graphAdmin(familyId) {
+      return owner(familyId) || admin(familyId);
+    }
+    function graphMemberUid(familyId, uid) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(uid));
+    }
+    function nonEmptyString(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+    function nullableString(value, maxLength) {
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+    function dateOnlyOrNull(value) {
+      return value == null || (value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+    function auditIso(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$');
+    }
+    function yearOrNull(value) {
+      return value == null || (value is int && value >= 1800 && value <= request.time.year());
+    }
+    function birthOrderOrNull(value) {
+      return value == null || (value is int && value > 0 && value <= 100);
+    }
+    function personIdsOptional(data) {
+      return !data.keys().hasAny(['personIds'])
+        || (data.personIds is list && data.personIds.size() <= 24);
+    }
+    function validPersonData(data, familyId, personId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'linkedUid', 'displayName', 'gender', 'nickname',
+          'birthDate', 'birthYear', 'birthPlace', 'deathDate', 'deathYear',
+          'lifeStatus', 'birthOrder', 'avatarUrl', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'linkedUid', 'displayName', 'gender', 'nickname',
+          'birthDate', 'birthYear', 'birthPlace', 'deathDate', 'deathYear',
+          'lifeStatus', 'birthOrder', 'avatarUrl', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == personId
+        && data.familyId == familyId
+        && nonEmptyString(data.displayName, 160)
+        && data.gender in ['male', 'female', 'other']
+        && nullableString(data.nickname, 120)
+        && dateOnlyOrNull(data.birthDate)
+        && yearOrNull(data.birthYear)
+        && nullableString(data.birthPlace, 240)
+        && dateOnlyOrNull(data.deathDate)
+        && yearOrNull(data.deathYear)
+        && data.lifeStatus in ['living', 'deceased', 'unknown']
+        && birthOrderOrNull(data.birthOrder)
+        && (data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 1500 && data.avatarUrl.matches('^https://.*')))
+        && nullableString(data.description, 4000)
+        && (data.linkedUid == null || nonEmptyString(data.linkedUid, 200))
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt)
+        && (data.lifeStatus != 'living' || (data.deathDate == null && data.deathYear == null))
+        && ((data.deathDate == null && data.deathYear == null) || data.lifeStatus == 'deceased')
+        && (data.birthYear == null || data.deathYear == null || data.deathYear >= data.birthYear)
+        && (data.birthDate == null || data.deathDate == null || data.deathDate >= data.birthDate);
+    }
+    function afterPersonLinkMatches(familyId, personId, uid) {
+      return uid == null
+        || (graphMemberUid(familyId, uid)
+          && existsAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid))
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.uid == uid
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.familyId == familyId
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.personId == personId);
+    }
+    function oldPersonLinkReleased(familyId, beforeUid, afterUid) {
+      return beforeUid == null
+        || beforeUid == afterUid
+        || !existsAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(beforeUid));
+    }
+    function validPersonLinkData(data, familyId, uid) {
+      return data.keys().hasAll(['familyId', 'uid', 'personId', 'createdByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['familyId', 'uid', 'personId', 'createdByUid', 'createdAt', 'updatedAt'])
+        && data.familyId == familyId
+        && data.uid == uid
+        && nonEmptyString(data.personId, 180)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt);
+    }
+    function validRelationshipData(data, familyId, relationshipId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'type', 'personAId', 'personBId', 'subtype',
+          'partnerStatus', 'startDate', 'endDate', 'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'type', 'personAId', 'personBId', 'subtype',
+          'partnerStatus', 'startDate', 'endDate', 'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == relationshipId
+        && data.familyId == familyId
+        && data.type in ['parent_child', 'partner']
+        && nonEmptyString(data.personAId, 180)
+        && nonEmptyString(data.personBId, 180)
+        && data.personAId != data.personBId
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt)
+        && existsAfter(/databases/$(database)/documents/families/$(familyId)/persons/$(data.personAId))
+        && existsAfter(/databases/$(database)/documents/families/$(familyId)/persons/$(data.personBId))
+        && ((data.type == 'parent_child'
+            && relationshipId == 'pc_' + data.personAId + '_' + data.personBId
+            && data.subtype in ['biological', 'adoptive', 'step', 'unknown']
+            && data.partnerStatus == null
+            && data.startDate == null
+            && data.endDate == null)
+          || (data.type == 'partner'
+            && data.personAId < data.personBId
+            && relationshipId == 'pt_' + data.personAId + '_' + data.personBId
+            && data.subtype == null
+            && data.partnerStatus in ['partner', 'married', 'separated', 'divorced', 'widowed']
+            && dateOnlyOrNull(data.startDate)
+            && dateOnlyOrNull(data.endDate)
+            && (data.startDate == null || data.endDate == null || data.endDate >= data.startDate)));
+    }
+
+    function validTimelineEntryData(data, familyId, personId, entryId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'personId', 'date', 'title', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'personId', 'date', 'title', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == entryId
+        && data.familyId == familyId
+        && data.personId == personId
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && nonEmptyString(data.title, 160)
+        && nullableString(data.description, 4000)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt);
+    }
+    function validPersonAlbumRefData(data, familyId, personId, albumId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'personId', 'mediaAssetId', 'caption',
+          'createdByUid', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'personId', 'mediaAssetId', 'caption',
+          'createdByUid', 'createdAt'
+        ])
+        && data.id == albumId
+        && data.mediaAssetId == albumId
+        && data.familyId == familyId
+        && data.personId == personId
+        && nullableString(data.caption, 4000)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt);
+    }
+    function attachedPersonAlbumAssetAfter(familyId, personId, assetId) {
+      return existsAfter(/databases/$(database)/documents/media_assets/$(assetId))
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.id == assetId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.familyId == familyId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.entityType == 'person'
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.entityId == personId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.purpose == 'album'
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.status == 'attached';
+    }
+
+    match /users/{uid} {
+      allow create: if self(uid) && request.resource.data.uid == uid;
+      allow read: if self(uid);
+      allow update: if self(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (!request.resource.data.keys().hasAny(['activeFamilyId'])
+          || !resource.data.keys().hasAny(['activeFamilyId'])
+          || request.resource.data.activeFamilyId == resource.data.activeFamilyId
+          || exists(/databases/$(database)/documents/users/$(uid)/memberships/$(request.resource.data.activeFamilyId))
+          || getAfter(/databases/$(database)/documents/users/$(uid)/memberships/$(request.resource.data.activeFamilyId)).data.familyId == request.resource.data.activeFamilyId);
+      allow delete: if self(uid);
+
+      match /memberships/{familyId} {
+        allow read: if self(uid);
+        // User tự tạo membership admin chỉ khi đang tạo family mới và ownerId của family là chính họ.
+        // Admin hiện hữu chỉ được tạo membership member/child cho người khác khi duyệt.
+        allow create: if request.resource.data.familyId == familyId
+          && ((self(uid)
+            && request.resource.data.role == 'admin'
+            && getAfter(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid)
+            || (admin(familyId) && request.resource.data.role in ['member', 'child']));
+        allow update, delete: if false;
+      }
+    }
+
+    match /family_codes/{familyCode} {
+      // Alias duy nhất để người dùng tra familyId khi gia nhập. Đây không phải dữ liệu riêng tư.
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.id == familyCode
+        && request.resource.data.familyCode == familyCode
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.familyId is string
+        && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.ownerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /media_assets/{mediaId} {
+      // Media assets are lifecycle records for Cloudinary files. The owner can create/update their own asset;
+      // family members can read family-scoped assets. Provider files are never stored in Firestore itself.
+      allow create: if signedIn()
+        && request.resource.data.id == mediaId
+        && request.resource.data.ownerUid == request.auth.uid
+        && (request.resource.data.familyId == null || familyAccess(request.resource.data.familyId));
+      allow read: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || (resource.data.familyId != null && familyAccess(resource.data.familyId)));
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.id == resource.data.id;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /families/{familyId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.id == familyId;
+      allow read: if member(familyId);
+      allow update: if owner(familyId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.id == resource.data.id;
+      allow delete: if owner(familyId);
+
+      match /members/{uid} {
+        // Thành viên xem profile projection; admin có thể tạo member sau khi duyệt request.
+        allow read: if member(familyId);
+        allow create: if (self(uid) || admin(familyId))
+          && request.resource.data.uid == uid
+          && request.resource.data.role in ['admin', 'member', 'child', 'owner'];
+        // Không cho client đổi role, nhằm đảm bảo chỉ có admin duy nhất ở Phase 2.
+        allow update: if (self(uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role)
+          || (owner(familyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role);
+        allow delete: if owner(familyId) || self(uid);
+      }
+
+      match /joinRequests/{uid} {
+        // User chưa là member vẫn được gửi request tới family tồn tại.
+        allow create: if self(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.familyId == familyId
+          && request.resource.data.status == 'pending'
+          && exists(/databases/$(database)/documents/families/$(familyId));
+        // Người xin xem request của chính mình; admin xem các request của nhà.
+        allow read: if self(uid) || admin(familyId);
+        // Chỉ admin được duyệt/từ chối. Khi approved phải đồng thời có member + membership sau transaction.
+        allow update: if admin(familyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.familyId == resource.data.familyId
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['approved', 'rejected']
+          && (request.resource.data.status == 'rejected'
+            || (exists(/databases/$(database)/documents/families/$(familyId)/members/$(uid))
+              && exists(/databases/$(database)/documents/users/$(uid)/memberships/$(familyId))));
+        allow delete: if admin(familyId) || self(uid);
+      }
+
+      // Family Graph - Direct Firestore Development Mode.
+      // Member được đọc. Chỉ owner/admin được ghi và phải qua validation bên dưới.
+      // Deep parent-cycle validation vẫn được client kiểm tra; trước production nên chuyển
+      // mutation nhạy cảm sang trusted backend nếu cần integrity mạnh hơn.
+      match /persons/{personId} {
+        allow read: if familyAccess(familyId);
+        // Cloud Function mode: Admin SDK is the only Family Graph write path.
+        allow create, update, delete: if false;
+
+        match /timeline/{entryId} {
+          allow read: if familyAccess(familyId);
+          allow create, update, delete: if false;
+        }
+
+        match /album/{albumId} {
+          allow read: if familyAccess(familyId);
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /relationships/{relationshipId} {
+        allow read: if familyAccess(familyId);
+        allow create, update, delete: if false;
+      }
+
+      match /personLinks/{uid} {
+        allow read: if familyAccess(familyId);
+        allow create, update, delete: if false;
+      }
+
+      match /events/{eventId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.id == eventId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.createdByUid == request.auth.uid
+          && personIdsOptional(request.resource.data)
+          && request.resource.data.moderationStatus == 'visible'
+          && request.resource.data.moderatedByUid == null
+          && request.resource.data.moderatedAt == null;
+
+        // Creator owns event content. Admin/Owner moderation is a separate lane:
+        // they may only hide/unhide and may never edit/delete another creator's event.
+        allow update: if familyAccess(familyId)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.createdByUid == resource.data.createdByUid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && personIdsOptional(request.resource.data)
+          && (
+            (resource.data.createdByUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'title', 'dateISO', 'dateKey', 'year', 'month', 'day', 'allDay',
+                'eventType', 'participantsMode', 'participantIds', 'personIds', 'recurrence',
+                'description', 'location', 'attachments', 'attachmentPublicIds',
+                'coverAttachmentId', 'updatedAt'
+              ]))
+            || (graphAdmin(familyId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'moderationStatus', 'moderatedByUid', 'moderatedAt', 'updatedAt'
+              ])
+              && request.resource.data.moderationStatus in ['visible', 'hidden']
+              && request.resource.data.moderatedByUid == request.auth.uid
+              && auditIso(request.resource.data.moderatedAt))
+          );
+
+        allow delete: if familyAccess(familyId)
+          && resource.data.createdByUid == request.auth.uid;
+      }
+
+      match /moments/{postId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.id == postId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.authorUid == request.auth.uid
+          && personIdsOptional(request.resource.data)
+          && request.resource.data.visibility == 'family';
+
+        // 1) Người tạo chỉ được sửa lời bài đăng của chính mình.
+        // 2) Thành viên được cập nhật summary reaction/comment qua transaction hiện có.
+        // 3) Admin/Owner chỉ được đổi trạng thái hiển thị trên trang Kỷ niệm.
+        //    Admin KHÔNG được sửa caption/media và KHÔNG được xóa bài của người khác.
+        allow update: if familyAccess(familyId)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.authorUid == resource.data.authorUid
+          && request.resource.data.visibility == resource.data.visibility
+          && personIdsOptional(request.resource.data)
+          && (
+            (resource.data.authorUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'caption', 'personIds', 'updatedAt'
+              ]))
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'reactionCounts', 'commentCount', 'updatedAt'
+            ])
+            || (graphAdmin(familyId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'moderationStatus', 'moderatedByUid', 'moderatedAt', 'updatedAt'
+              ])
+              && request.resource.data.moderationStatus in ['visible', 'hidden']
+              && request.resource.data.moderatedByUid == request.auth.uid
+              && auditIso(request.resource.data.moderatedAt))
+          );
+
+        // Quyền xóa thuộc duy nhất người tạo bài. Admin không có quyền xóa thay.
+        allow delete: if familyAccess(familyId)
+          && resource.data.authorUid == request.auth.uid;
+
+        match /comments/{commentId} {
+          allow read: if familyAccess(familyId);
+          allow create: if familyAccess(familyId)
+            && request.resource.data.id == commentId
+            && request.resource.data.postId == postId
+            && request.resource.data.authorUid == request.auth.uid;
+          allow update: if familyAccess(familyId)
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.postId == resource.data.postId;
+          // Bình luận cũng chỉ người viết tự xóa; admin không xóa nội dung thay người khác.
+          allow delete: if familyAccess(familyId)
+            && resource.data.authorUid == request.auth.uid;
+        }
+
+        match /reactions/{uid} {
+          allow read: if familyAccess(familyId);
+          allow create, update: if familyAccess(familyId) && self(uid)
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.reaction in ['like','love','haha','wow','sad','celebrate'];
+          allow delete: if familyAccess(familyId) && self(uid);
+        }
+      }
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
