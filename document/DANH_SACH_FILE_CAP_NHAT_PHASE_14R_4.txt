@@ -1,0 +1,14 @@
+Phase 14R.4 — changed/new files
+
+package.json
+scripts/test-phase14r-time-capsule-functional.js
+scripts/test-phase14r4-time-capsule-ux-realtime.js
+src/app/home-time-capsules.tsx
+src/app/home-time-capsule-compose.tsx
+src/app/home-time-capsule/[capsuleId].tsx
+src/components/system/BloomPushBridge.tsx
+src/components/ui/BloomDatePicker.tsx
+src/services/home/homeTimeCapsuleService.ts
+src/services/push/localNotificationService.ts
+document/PHASE_14R_4_TIME_CAPSULE_UX_REALTIME_HOTFIX.md
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_14R_4.txt

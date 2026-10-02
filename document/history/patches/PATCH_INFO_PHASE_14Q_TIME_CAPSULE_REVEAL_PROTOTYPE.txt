@@ -1,0 +1,25 @@
+Family Bloom Phase 14Q — Hộp thời gian / Bloom Time Reveal prototype
+Date: 2026-10-01
+Base: Family_Bloom_Phase_14N_FOCUS_FIRST_CATALOG_FIRST_FULL_2026-09-30.zip
+
+Purpose
+- Device-first visual prototype only. No Firestore schema/rules/index/function changes.
+- Replaces the visible Phòng nhạc surface in Nhà Mình with a Time Capsule prototype entry; music source files remain untouched for safe rollback/history.
+- Tests the signature first-open ceremony before building Time Capsule CRUD/privacy/scheduling.
+
+Prototype flow
+1. Full-screen dark warm Bloom stage.
+2. Locked/sealed 2.5D gift box with ribbon + flower seal.
+3. Tap “Mở hộp” -> medium haptic.
+4. Seal/ribbon release.
+5. Lid opens with perspective transform and warm internal glow.
+6. Lightweight petals + spark particles emitted using Reanimated Views (no heavy animation dependency).
+7. Letter rises from the box, then title/message reveal.
+8. Emotional metadata: “Lời này đã chờ 87 ngày để đến với em”.
+9. Success haptic at completion.
+10. “Xem lại hiệu ứng” resets the demo for repeated device testing.
+
+Important
+- Sample content is local/demo only and does not write/read user data.
+- No notification, persistence, audience/privacy, edit/delete, or scheduled-open logic is connected in this prototype.
+- Those behaviors remain approved product requirements for the functional implementation after visual approval.

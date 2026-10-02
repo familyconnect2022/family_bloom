@@ -1,0 +1,49 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 8.5B — 2026-09-25
+
+BASE
+- Phase 8.2C Tab Regression Corrected FULL + Phase 8.3–8.5 features.
+
+SOURCE AUDIT FINDING
+- Performance Lab startInteractionTest used router.replace("/(tabs)").
+- This could stack/retain multiple Tabs navigator trees during repeated benchmark runs.
+- Latest device report showed five supplemental realtime queries at exactly x3 while four core provider listeners stayed x1.
+- Hidden Performance Lab stayed subscribed to performance-service emits during graph tests.
+
+IMPLEMENTED
+- navigation-stack reuse/unwind for test/cross-tab/family-transition paths
+- ref-counted identical-query Firestore singleton registry
+- focused Performance Lab subscription
+- throttled Graph benchmark progress UI
+- tabs.navigator mount diagnostic
+- Graph render-only timing split
+
+VALIDATION
+- Phase 2 static/transpile: PASS (145 TS/TSX)
+- relative imports: PASS (533 checked, 0 missing)
+- Phase 8.5B runtime singleton/navigation contract: PASS
+- Shared realtime registry runtime/ref-count test: PASS
+- Phase 8.2C correction contract: PASS
+- Phase 8.3–8.5 reliability contract: PASS
+- Phase 7 multi-family: PASS
+- startup gate: PASS
+- tab warmup: PASS
+- Phase 6.5 integration: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Query/Kinship/Focus: PASS
+- DG-11 batch relationships: PASS
+- dense layout/spatial routing: PASS
+- 50/100/300/500 synthetic benchmark: PASS
+- Functions familyGraphCore tests: PASS
+- Functions JS syntax: PASS
+
+NOT CLAIMED
+- real-device listener count PASS until user retests
+- real-device tab/Graph timings PASS until user sends new report
+- native release build / full tsc is not certified in this ZIP-only environment
+
+DEPLOY
+- no Rules change
+- no Functions deploy
+- no Blaze
+- no schema migration
+- no native dependency

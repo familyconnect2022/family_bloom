@@ -1,0 +1,50 @@
+FAMILY BLOOM — PHASE 6.5 CURRENT BUILD CHECK
+============================================
+Review date: 2026-09-25
+Status: STATIC/SYNTHETIC PASS · DEVICE TEST REQUIRED · PHASE OPEN
+Current full source: Family_Bloom_Phase_6_5_FULL_Unlinked_Overview
+
+Checks actually run in this review:
+- node scripts/phase2-static-check.js -> PASS (133 TS/TSX transpiled)
+- node scripts/test-tabStartup.js -> PASS
+- node scripts/test-tabWarmup.js -> PASS
+- node scripts/test-familyGraphPhase65.js -> PASS
+- node scripts/test-familyGraphPhase64.js -> PASS
+- node scripts/test-familyGraphQueryEngine.js -> PASS
+- node scripts/test-familyGraphBatchRelationships.js -> PASS
+- node scripts/test-familyGraphLayout.js -> PASS
+- node scripts/benchmark-familyGraphPhase63.js -> PASS (50/100/300/500)
+- node functions/test-familyGraphCore.js -> PASS
+- node --check functions/index.js -> PASS
+- node --check functions/proposalApproval.js -> PASS
+- relative import scan -> 464 relative imports, 0 missing
+- src scan -> no @react-navigation/native import remains
+
+Dependency verification:
+- package.json contains expo-clipboard ~57.0.2
+- package-lock.json contains matching expo-clipboard 57.0.2 entry
+
+Full TypeScript typecheck:
+- NOT CERTIFIED in this extracted package.
+- `tsc --noEmit` cannot resolve `expo/tsconfig.base` because project node_modules are not installed here.
+- The global tsc version is not the project compiler and also reports the missing Expo base config.
+- Run `npm install`/`npm ci` in the local project, then `npm run typecheck` before release.
+
+Firebase / runtime notes:
+- FEATURE_FLAGS.USE_CLOUD_FUNCTIONS=false.
+- Current firestore.rules contains Timeline member contribution, Moment/Event personIds, member-only graph proposals, admin review and join changes.
+- Publish firestore.rules before device permission tests if the Firebase project is not already on this exact rules version.
+- Cloud Functions source is synchronized for future Cloud Mode; no Functions deployment is required for Direct-mode device testing.
+
+Known integrity boundary:
+- Direct-mode graphProposalState serializes proposal approvals with each other.
+- Existing direct admin graph mutations do not acquire that revision. Full graph-wide concurrency integrity remains backend-hardening work before production.
+
+Still required before Phase 6.5 CLOSED:
+- Android/iOS device permission testing
+- unlinked/linked focus and graph overview visual QA
+- member/admin proposal workflow and pending badges
+- join by Family ID/family code
+- Timeline ownership/moderation
+- Person↔Moments/Events/Profile/Album regression
+- startup/tab switching, offline/slow-network behavior and device performance

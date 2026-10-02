@@ -1,0 +1,30 @@
+FAMILY BLOOM — PHASE 14R.5A DEVICE CHECKLIST
+
+PREP
+[ ] Deploy Firestore rules from this build.
+[ ] Build/install Family Bloom Dev as update; keep Release installed.
+[ ] Use two different family member accounts.
+[ ] Test with a NEW direct whisper created after 14R.5A is installed.
+
+A. COLD / APP-ENTRY CATCH-UP
+[ ] Recipient app is not currently open.
+[ ] Sender sends “Người thân” whisper to recipient only.
+[ ] Open recipient app.
+[ ] After Bloom becomes active, exactly one Bloom toast appears.
+[ ] Tap toast -> correct family + Lời thì thầm.
+[ ] Reopen app again -> same whisper does not toast again.
+
+B. FOREGROUND
+[ ] Recipient stays inside Bloom.
+[ ] Sender sends a new direct whisper.
+[ ] Bloom toast appears immediately, once.
+
+C. BACKGROUND FALLBACK
+[ ] Recipient opens Bloom once, then puts it in background.
+[ ] Sender sends a new direct whisper.
+[ ] If Android notification permission is ON, OS notification appears.
+[ ] If permission is OFF, return to Bloom and verify the in-app catch-up toast still appears.
+
+D. POLICY
+[ ] “Cả nhà” whisper does NOT broadcast a notification to every member.
+[ ] Release + DEV remain installed side-by-side.

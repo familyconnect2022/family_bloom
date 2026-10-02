@@ -1,0 +1,101 @@
+Family Bloom Phase 14D validation — 2026-09-29
+
+== Phase 14D static contract ==
+Phase14D Nhà Mình Music+TODO: 47 PASS / 0 FAIL
+PASS required:src/components/ui/BloomNoteCallout.tsx
+PASS required:src/context/HomeMusicPlayerContext.tsx
+PASS required:src/features/home/music/HomeMusicPanel.tsx
+PASS required:src/services/home/music/musicProvider.ts
+PASS required:src/services/home/music/audiusMusicProvider.ts
+PASS required:src/services/home/music/homeMusicService.ts
+PASS music-bloom-supper-hero
+PASS music-three-tabs
+PASS music-search-actions
+PASS music-search-debounce
+PASS music-bounded-render
+PASS music-lightweight-control-context
+PASS music-cycle-3-days
+PASS music-20-tracks
+PASS music-mix-approved
+PASS music-anti-repeat
+PASS music-search-cache
+PASS music-frozen-family-cycle
+PASS music-provider-abstraction
+PASS audius-search-trending-recent-stream
+PASS audius-skip-gated-tracks
+PASS music-singleton-provider
+PASS music-background-playback
+PASS music-family-switch-clears-player
+PASS music-controls-split-from-progress
+PASS music-inline-in-nha-minh
+PASS music-no-separate-card-link
+PASS legacy-music-redirect
+PASS kitchen-shared-default-seed
+PASS kitchen-personalize-only-on-filters
+PASS kitchen-daily-rotation
+PASS kitchen-copy-shared-family
+PASS kitchen-swap-only-personalized
+PASS WhisperFeaturePanel.tsx-no-native-alert
+PASS WhisperFeaturePanel.tsx-bloom-confirm
+PASS WhisperFeaturePanel.tsx-keyboard-focus
+PASS WhisperFeaturePanel.tsx-bloom-note
+PASS PollFeaturePanel.tsx-no-native-alert
+PASS PollFeaturePanel.tsx-bloom-confirm
+PASS PollFeaturePanel.tsx-keyboard-focus
+PASS PollFeaturePanel.tsx-bloom-note
+PASS firestore.rules-music-rules
+PASS firestore.cloud.rules-music-rules
+PASS app-video-background-plugin
+PASS android-keyboard-resize
+PASS ios-bundle-id
+PASS ts-tsx-syntax — 198/198
+
+== Phase 14C regression static ==
+Phase14C functional V1: 44 PASS / 0 FAIL
+PASS | exists:src/app/home-whispers.tsx
+PASS | exists:src/app/home-polls.tsx
+PASS | exists:src/app/home-kitchen/index.tsx
+PASS | exists:src/app/home-kitchen/[recipeId].tsx
+PASS | exists:src/features/home/whispers/WhisperFeaturePanel.tsx
+PASS | exists:src/features/home/polls/PollFeaturePanel.tsx
+PASS | exists:src/features/home/kitchen/KitchenFeaturePanel.tsx
+PASS | exists:src/services/home/homeWhisperService.ts
+PASS | exists:src/services/home/homePollService.ts
+PASS | exists:src/services/home/homeKitchenService.ts
+PASS | exists:src/components/family/FamilyMemberPicker.tsx
+PASS | exists:src/types/homeLiving.ts
+PASS | exists:src/data/bloomRecipesV1.ts
+PASS | exists:firestore.rules
+PASS | exists:firestore.cloud.rules
+PASS | exists:firestore.indexes.json
+PASS | exists:Family_Bloom_Deploy_Firestore_Indexes.bat
+PASS | whisper pagination 20
+PASS | whisper retention 60d
+PASS | saved whisper snapshot
+PASS | direct recipient inbox
+PASS | whisper family/direct UX
+PASS | whisper 10 emotions
+PASS | whisper compact filter UX
+PASS | membership picker reused by whispers/polls
+PASS | member picker scalable search + virtualization
+PASS | missing-index fallback
+PASS | poll retention 30d
+PASS | poll frozen denominator + ballots
+PASS | poll group min 3
+PASS | poll anonymous UX
+PASS | poll expiry choices
+PASS | poll result buckets
+PASS | kitchen 100 recipes
+PASS | kitchen daily rotation
+PASS | kitchen membership-user preferences
+PASS | rules user private data
+PASS | rules polls/kitchen
+PASS | rules legacy whisper compatibility
+PASS | rules legacy poll compatibility
+PASS | push deep link source
+PASS | future Cloud push direct-only
+PASS | 7 Firestore indexes
+PASS | all TS/TSX syntax 198/198
+
+JSON: app.json/package.json/package-lock.json parsed successfully.
+Native/device/runtime/emulator checks were not run in this packaging environment.

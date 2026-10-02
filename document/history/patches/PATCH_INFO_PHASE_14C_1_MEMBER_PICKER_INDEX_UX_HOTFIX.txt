@@ -1,0 +1,17 @@
+FAMILY BLOOM — PHASE 14C.1 MEMBER PICKER + FILTER + INDEX UX HOTFIX
+Date: 2026-09-29
+Base: Family_Bloom_Phase_14C_NHA_MINH_FUNCTIONAL_V1_FULL_2026-09-29
+
+FIXES
+1) Lời thì thầm: bỏ chip người nhận cuộn ngang. Dùng FamilyMemberPicker full-screen, tìm kiếm + FlatList ảo hóa, chỉ lấy families/{familyId}/members (user thật), không lấy Person phả hệ.
+2) Cùng quyết định: Nhóm riêng dùng cùng FamilyMemberPicker, hỗ trợ 100/200+ member; người tạo được khóa trong nhóm; tối thiểu 3 người vẫn giữ nguyên.
+3) Lời thì thầm: bỏ 5 tab cuộn ngang. Màn feed dùng một control lọc gọn + nút bookmark riêng cho Lời đã lưu. Bộ lọc mở thành màn chọn rõ ràng: Mới nhất / Gửi riêng cho tôi / Tôi đã gửi / Chia sẻ với cả nhà.
+4) Rút ngắn subtitle Hero để không bị cắt ... trên màn hình nhỏ.
+5) Firestore missing-index UX: query tối ưu vẫn dùng composite indexes; nếu index vừa deploy/chưa Enabled, app dùng fallback bounded tạm thời và không phơi URL lỗi Firebase lên UI.
+6) Thêm Family_Bloom_Deploy_Phase_14C_Firestore.bat để deploy Rules + Indexes một lần.
+
+IMPORTANT
+- Vẫn PHẢI deploy firestore.indexes.json để có hiệu năng đúng khi dữ liệu lớn.
+- Fallback chỉ là đường an toàn tạm thời trong lúc index chưa sẵn sàng, không thay thế index production.
+- Không đổi schema, Rules semantics, Kitchen, Music, Games, Fund, Board.
+- Không cần Cloud Functions/Blaze cho hotfix này.

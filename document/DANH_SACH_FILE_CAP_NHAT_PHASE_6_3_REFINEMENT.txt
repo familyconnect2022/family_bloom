@@ -1,0 +1,24 @@
+APP / RUNTIME — COPY ĐÈ:
+src/app/family-graph.tsx
+src/app/family-graph-admin.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/ui/BloomConfirmModal.tsx
+src/constants/appConfiguration.ts
+
+TEST / DEVELOPMENT:
+scripts/test-familyGraphQueryEngine.js
+scripts/benchmark-familyGraphPhase63.js
+
+DOCUMENTATION:
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_6_3_GRAPH_QUERY_KINSHIP_FOCUS_INTEGRATION.md
+document/BUILD_CHECK_REPORT_PHASE_6_3_LAYOUT_DELETE_PERF.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_3_REFINEMENT.txt
+
+NO CHANGE:
+firestore.rules
+firestore.cloud.rules
+functions/
+persisted FamilyPerson/FamilyRelationship schema

@@ -1,0 +1,82 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+let pass = 0;
+let fail = 0;
+const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
+const check = (name, ok) => {
+  if (ok) { console.log(`PASS ${name}`); pass += 1; }
+  else { console.error(`FAIL ${name}`); fail += 1; }
+};
+
+const screen = read('src/app/home-fund.tsx');
+const service = read('src/services/home/homeFundService.ts');
+const types = read('src/types/homeLiving.ts');
+const paths = read('src/services/firebase/firestorePaths.ts');
+const rules = read('firestore.rules');
+const cloud = read('firestore.cloud.rules');
+const pkg = JSON.parse(read('package.json'));
+const app = JSON.parse(read('app.json'));
+const debugBat = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const relBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+
+check('canonical control type exists', /export type HomeFundControl/.test(types) && /primaryUid: string/.test(types));
+check('legacy duplicate governance type removed', !/export type HomeFundGovernance/.test(types));
+check('stats types declared once', (types.match(/export type HomeFundStatsPeriod/g) || []).length === 1 && (types.match(/export type HomeFundStats =/g) || []).length === 1);
+check('canonical fund audit path declared once', (paths.match(/familyHomeFundAudit:/g) || []).length === 1 && /familyHomeFundControl/.test(paths));
+check('owner initializes default treasurer', /ensureInitialControl/.test(service) && /ownerId !== actorUid/.test(service) && /Admin trở thành thủ quỹ mặc định/.test(service));
+check('UI initializes only default owner-admin', /uid !== defaultPrimaryUid/.test(screen) && /ensureInitialControl/.test(screen));
+check('handover requires explicit request', /requestHandover/.test(service) && /pendingTransferToUid/.test(service));
+check('handover recipient explicitly accepts or declines', /resolveHandover/.test(service) && /accept: boolean/.test(service) && /Đồng ý nhận quỹ/.test(screen) && /Từ chối/.test(screen));
+check('authority does not switch before acceptance', /Quyền chưa đổi cho tới khi người được chọn bấm Đồng ý/.test(screen) && /primaryUid: input.accept \? input.actorUid : current.primaryUid/.test(service));
+check('accepted handover resets previous helper team', /assistantUids: input.accept \? \[\] : current.assistantUids/.test(service) && /assistantTasks: input.accept \? \{\} : current.assistantTasks/.test(service));
+check('old admin receives no special post-handover write bypass', /function fundTeam\(\)/.test(rules) && !/fundTeam\(\).*graphAdmin/.test(rules));
+check('primary can cancel pending handover', /cancelHandover/.test(service) && /handover_cancel/.test(service));
+check('primary can choose up to two assistants', /unique.length > 2/.test(service) && /tối đa 2 người/.test(screen));
+check('assistant tasks are mandatory and described', /item.task.length < 3/.test(service) && /(Nhiệm vụ|phần việc)/.test(screen));
+check('existing family realtime member context reused', /useFamilyMembersRealtime/.test(screen));
+check('no separate members query added by fund service', !/familyMembers/.test(service) && !/collection\([^\n]*members/.test(service));
+check('only fund team gets create CTA', /Chỉ nhóm quỹ được nhập thu · chi/.test(screen) && /allow create: if fundTeam\(\)/.test(rules));
+check('primary can manage any recent row', /if \(isPrimary\) return true/.test(screen) && /fundPrimary\(\)/.test(rules));
+check('assistant can manage only own recent row', /isAssistant && item.createdByUid === uid/.test(screen) && /resource.data.createdByUid == request.auth.uid/.test(rules));
+check('3-day edit lock enforced in service', /EDIT_WINDOW_MS = 3 \* 24 \* 60 \* 60 \* 1000/.test(service) && /assertEditableWindow/.test(service));
+check('3-day edit lock enforced in Firestore rules', /duration.value\(3, 'd'\)/.test(rules));
+check('legacy rows without server creation time are safely locked', /!item.createdAtMillis/.test(service));
+check('create carries server timestamp', /createdAtTs: serverTimestamp\(\)/.test(service) && /createdAtTs == request.time/.test(rules));
+check('every ledger mutation writes an audit event', /"create"/.test(service) && /"update"/.test(service) && /"delete"/.test(service) && /auditPayload/.test(service));
+check('every governance mutation writes an audit event', /control_init/.test(service) && /handover_request/.test(service) && /handover_accept/.test(service) && /team_update/.test(service));
+check('audit records are immutable', /match \/homeFundAudit\/\{auditId\}/.test(rules) && /allow update, delete: if false/.test(rules));
+check('audit has before and after snapshots for financial edits', /beforeLabel/.test(types) && /afterLabel/.test(types) && /auditMoneyLabel/.test(service) && /Trước:/.test(screen) && /Sau:/.test(screen));
+check('balance mutation and audit are atomic', /runTransaction/.test(service) && /tx\.set\(auditRef/.test(service) && /tx\.set\(summaryRef/.test(service));
+check('rules validate exact create delta', /validFundCreateDelta/.test(rules));
+check('rules validate exact update delta', /validFundUpdateDelta/.test(rules));
+check('rules validate exact delete delta', /validFundDeleteDelta/.test(rules));
+check('rules link summary to audit', /fundSummaryAuditLinked/.test(rules));
+check('control mutation is linked to audit', /fundControlAuditIs/.test(rules));
+check('fake standalone audit entries are blocked by linked mutation', /fundAuditBackedByMutation/.test(rules));
+check('day month year analytics exist', /\["day", "month", "year"\]/.test(screen) && /statsBuckets/.test(service));
+check('analytics are bounded to 1000 usable rows', /STATS_SCAN_LIMIT = 1001/.test(service) && /slice\(0, STATS_SCAN_LIMIT - 1\)/.test(service));
+check('chart is custom RN view based', /function FundBarChart/.test(screen) && /chartBar/.test(screen));
+check('deterministic simulated stats available in DEV', /makeMockStats/.test(service) && /(Mô phỏng|Dữ liệu thử)/.test(screen) && /__DEV__/.test(screen));
+check('simulated stats never write Firestore', /RAM-only/.test(service) && !/makeMockStats[\s\S]{0,800}tx\.set/.test(service));
+check('audit list is bounded', /AUDIT_PAGE_SIZE = 30/.test(service) && /limit\(AUDIT_PAGE_SIZE\)/.test(service));
+check('history remains paginated 30', /PAGE_SIZE = 30/.test(service) && /Xem thêm 30 khoản/.test(screen));
+check('rules direct and cloud fund blocks match', (() => {
+  const marker = '// Phase 14S.1';
+  const end = 'match /homePolls/{pollId} {';
+  const a = rules.slice(rules.indexOf(marker), rules.indexOf(end, rules.indexOf(marker))).replace(/\s+/g, ' ').trim();
+  const b = cloud.slice(cloud.indexOf(marker), cloud.indexOf(end, cloud.indexOf(marker))).replace(/\s+/g, ' ').trim();
+  return a.length > 1000 && a === b;
+})());
+check('control rules cap assistants at two', /assistantUids.size\(\) <= 2/.test(rules));
+check('control rules require recipient acceptance to change primary', /Invited recipient accepts/.test(rules) && /resource.data.pendingTransferToUid == request.auth.uid/.test(rules));
+check('control rules reject direct arbitrary treasurer switch', /Primary proposes a handover/.test(rules) && /request.resource.data.primaryUid == resource.data.primaryUid/.test(rules));
+check('app version keeps 14S.1 update floor', app.expo.android.versionCode >= 142000 && Number(app.expo.ios.buildNumber) >= 8);
+check('package version remains semver after 14S.1', /^\d+\.\d+\.\d+$/.test(pkg.version));
+check('phase14s1 npm gate exists', pkg.scripts && pkg.scripts['phase14s1:check'] === 'node ./scripts/test-phase14s1-fund-governance-analytics.js');
+check('DEBUG build runs both fund gates', /phase14s:check/.test(debugBat) && /phase14s1:check/.test(debugBat));
+check('RELEASE build runs both fund gates', /phase14s:check/.test(relBat) && /phase14s1:check/.test(relBat));
+check('fund remains non-payment and no sensitive bank credentials', /không chuyển tiền thật/.test(screen) && !/accountNumber|cardNumber|cvv|bankPassword|pinCode/.test(service + types));
+
+console.log(`Phase14S.1 Fund Stewardship & Analytics: ${pass} PASS / ${fail} FAIL`);
+process.exit(fail ? 1 : 0);

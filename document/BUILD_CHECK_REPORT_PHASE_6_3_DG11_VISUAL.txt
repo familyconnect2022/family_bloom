@@ -1,0 +1,53 @@
+FAMILY BLOOM — PHASE 6.3 DG-11 + VISUAL TRUTH BUILD CHECK
+
+STATUS: PASS for static/pure validation; user device test remains final gate.
+
+DATA SAFETY
+- No Firestore schema change.
+- No migration/backfill.
+- No Firestore Rules change required.
+- No Firebase deploy required.
+- functions/index.js updated only to keep future Cloud mode source synchronized; DO NOT deploy now.
+
+DG-11
+- Multi-select parent-child composer expands N × M to canonical parent_child edges.
+- Partner remains pairwise 1 ↔ 1.
+- Natural Vietnamese preview + requested/new/existing counters.
+- Exact duplicates idempotent.
+- Conflicting subtype / self-reference / cycle reject.
+- Transaction result arrays are retry-safe.
+- Large Person picker is searchable and mounts at most 48 unselected choices at once.
+
+VISUAL TRUTH
+- Partner-connected people are atomic row units.
+- Same-lineage sibling units use tighter grouping than unrelated family units.
+- Unrelated family clusters use larger horizontal separation.
+- Child anchor uses explicit parent(s), never inferred spouse.
+- Dense generations expand logical canvas; no card compression/overlap.
+- Shared-parent couple connector vs single-parent connector remain visually distinct.
+- Device regression Hoàng Anh -> Kim Duyên vs Gia Khôi/Gia Minh -> Thanh Nhân + Kim Hồng covered by automated test.
+
+PERFORMANCE
+- generation assignment BFS O(P + R)
+- PersonNode memoized
+- GraphConnectors memoized
+- 3/5-generation bounded view retained
+- Full Tree progressive mount retained
+- centralized render/query/composer defaults
+
+VALIDATION RUN
+- DG-11 Batch Relationship Composer tests: PASS
+- Query + Kinship + Focus Subgraph tests: PASS
+- Dense/family-cluster layout tests: PASS
+- Synthetic benchmark 50/100/300/500 Persons: PASS
+- 500 Person live adapter run: ~8-10ms in artifact environment
+- Phase 2 static transpile check: PASS — 117 TS/TSX
+- Relative imports: PASS — 377 imports, 0 missing
+- functions/index.js syntax: PASS
+- functions/familyGraphCore.js syntax: PASS
+- functions/test-familyGraphCore.js syntax: PASS
+- familyGraphCore tests: PASS
+
+NOT CLAIMED
+- Full semantic tsc --noEmit is not claimed because node_modules are not bundled in artifact workspace.
+- Firebase Emulator/Rules compile is not claimed; Rules are unchanged and no publish is requested.

@@ -1,0 +1,1739 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function self(uid) { return signedIn() && request.auth.uid == uid; }
+    function member(familyId) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+    // ownerId là người tạo nhà và cũng là admin duy nhất trong Phase 2.
+    function owner(familyId) {
+      return signedIn() && get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid;
+    }
+    // Chấp nhận owner cũ để không làm hỏng dữ liệu đã tạo ở checkpoint trước.
+    function admin(familyId) {
+      return signedIn() && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+    }
+    function familyAccess(familyId) {
+      return member(familyId) || owner(familyId);
+    }
+
+
+    // Family Graph - Direct Firestore Development Mode.
+    // Authorization and structural validation live in Rules; deep graph-cycle validation
+    // remains client-side until a trusted backend is enabled before production.
+    function graphAdmin(familyId) {
+      return owner(familyId) || admin(familyId);
+    }
+    function graphMemberUid(familyId, uid) {
+      return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(uid));
+    }
+    function nonEmptyString(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+    function nullableString(value, maxLength) {
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+    function dateOnlyOrNull(value) {
+      return value == null || (value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+    function auditIso(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$');
+    }
+    function yearOrNull(value) {
+      return value == null || (value is int && value >= 1800 && value <= request.time.year());
+    }
+    function birthOrderOrNull(value) {
+      return value == null || (value is int && value > 0 && value <= 100);
+    }
+    function personIdsOptional(data) {
+      return !data.keys().hasAny(['personIds'])
+        || (data.personIds is list && data.personIds.size() <= 24);
+    }
+
+    function timelineAudienceOptional(data) {
+      return !data.keys().hasAny(['timelineAudience'])
+        || data.timelineAudience in ['self', 'family', 'persons'];
+    }
+    function validPersonData(data, familyId, personId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'linkedUid', 'displayName', 'gender', 'nickname',
+          'birthDate', 'birthYear', 'birthPlace', 'deathDate', 'deathYear',
+          'lifeStatus', 'birthOrder', 'avatarUrl', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'linkedUid', 'displayName', 'gender', 'nickname',
+          'birthDate', 'birthYear', 'birthPlace', 'deathDate', 'deathYear',
+          'lifeStatus', 'birthOrder', 'avatarUrl', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == personId
+        && data.familyId == familyId
+        && nonEmptyString(data.displayName, 160)
+        && data.gender in ['male', 'female', 'other']
+        && nullableString(data.nickname, 120)
+        && dateOnlyOrNull(data.birthDate)
+        && yearOrNull(data.birthYear)
+        && nullableString(data.birthPlace, 240)
+        && dateOnlyOrNull(data.deathDate)
+        && yearOrNull(data.deathYear)
+        && data.lifeStatus in ['living', 'deceased', 'unknown']
+        && birthOrderOrNull(data.birthOrder)
+        && (data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 1500 && data.avatarUrl.matches('^https://.*')))
+        && nullableString(data.description, 4000)
+        && (data.linkedUid == null || nonEmptyString(data.linkedUid, 200))
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt)
+        && (data.lifeStatus != 'living' || (data.deathDate == null && data.deathYear == null))
+        && ((data.deathDate == null && data.deathYear == null) || data.lifeStatus == 'deceased')
+        && (data.birthYear == null || data.deathYear == null || data.deathYear >= data.birthYear)
+        && (data.birthDate == null || data.deathDate == null || data.deathDate >= data.birthDate);
+    }
+    function afterPersonLinkMatches(familyId, personId, uid) {
+      return uid == null
+        || (graphMemberUid(familyId, uid)
+          && existsAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid))
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.uid == uid
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.familyId == familyId
+          && getAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(uid)).data.personId == personId);
+    }
+    function oldPersonLinkReleased(familyId, beforeUid, afterUid) {
+      return beforeUid == null
+        || beforeUid == afterUid
+        || !existsAfter(/databases/$(database)/documents/families/$(familyId)/personLinks/$(beforeUid));
+    }
+    function validPersonLinkData(data, familyId, uid) {
+      return data.keys().hasAll(['familyId', 'uid', 'personId', 'createdByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['familyId', 'uid', 'personId', 'createdByUid', 'createdAt', 'updatedAt'])
+        && data.familyId == familyId
+        && data.uid == uid
+        && nonEmptyString(data.personId, 180)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt);
+    }
+    function validRelationshipData(data, familyId, relationshipId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'type', 'personAId', 'personBId', 'subtype',
+          'partnerStatus', 'startDate', 'endDate', 'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'type', 'personAId', 'personBId', 'subtype',
+          'partnerStatus', 'startDate', 'endDate', 'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == relationshipId
+        && data.familyId == familyId
+        && data.type in ['parent_child', 'partner']
+        && nonEmptyString(data.personAId, 180)
+        && nonEmptyString(data.personBId, 180)
+        && data.personAId != data.personBId
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt)
+        && existsAfter(/databases/$(database)/documents/families/$(familyId)/persons/$(data.personAId))
+        && existsAfter(/databases/$(database)/documents/families/$(familyId)/persons/$(data.personBId))
+        && ((data.type == 'parent_child'
+            && relationshipId == 'pc_' + data.personAId + '_' + data.personBId
+            && data.subtype in ['biological', 'adoptive', 'step', 'unknown']
+            && data.partnerStatus == null
+            && data.startDate == null
+            && data.endDate == null)
+          || (data.type == 'partner'
+            && data.personAId < data.personBId
+            && relationshipId == 'pt_' + data.personAId + '_' + data.personBId
+            && data.subtype == null
+            && data.partnerStatus in ['partner', 'married', 'separated', 'divorced', 'widowed']
+            && dateOnlyOrNull(data.startDate)
+            && dateOnlyOrNull(data.endDate)
+            && (data.startDate == null || data.endDate == null || data.endDate >= data.startDate)));
+    }
+
+    function validTimelineEntryData(data, familyId, personId, entryId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'personId', 'date', 'title', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'personId', 'date', 'title', 'description',
+          'createdByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == entryId
+        && data.familyId == familyId
+        && data.personId == personId
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && nonEmptyString(data.title, 160)
+        && nullableString(data.description, 4000)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt)
+        && auditIso(data.updatedAt);
+    }
+    function validPersonAlbumRefData(data, familyId, personId, albumId) {
+      return data.keys().hasAll([
+          'id', 'familyId', 'personId', 'mediaAssetId', 'caption',
+          'createdByUid', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'familyId', 'personId', 'mediaAssetId', 'caption',
+          'createdByUid', 'createdAt'
+        ])
+        && data.id == albumId
+        && data.mediaAssetId == albumId
+        && data.familyId == familyId
+        && data.personId == personId
+        && nullableString(data.caption, 4000)
+        && nonEmptyString(data.createdByUid, 200)
+        && auditIso(data.createdAt);
+    }
+    function attachedPersonAlbumAssetAfter(familyId, personId, assetId) {
+      return existsAfter(/databases/$(database)/documents/media_assets/$(assetId))
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.id == assetId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.familyId == familyId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.entityType == 'person'
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.entityId == personId
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.purpose == 'album'
+        && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.status == 'attached';
+    }
+
+    match /users/{uid} {
+      allow create: if self(uid) && request.resource.data.uid == uid;
+      allow read: if self(uid);
+      allow update: if self(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (!request.resource.data.keys().hasAny(['activeFamilyId'])
+          || !resource.data.keys().hasAny(['activeFamilyId'])
+          || request.resource.data.activeFamilyId == resource.data.activeFamilyId
+          || (request.resource.data.activeFamilyId is string
+            && exists(/databases/$(database)/documents/users/$(uid)/memberships/$(request.resource.data.activeFamilyId))
+            && exists(/databases/$(database)/documents/families/$(request.resource.data.activeFamilyId)/members/$(uid))));
+      allow delete: if self(uid);
+
+      match /memberships/{familyId} {
+        allow read: if self(uid);
+        // User tự tạo membership admin chỉ khi đang tạo family mới và ownerId của family là chính họ.
+        // Admin hiện hữu chỉ được tạo membership member/child cho người khác khi duyệt.
+        allow create: if request.resource.data.familyId == familyId
+          && ((self(uid)
+            && request.resource.data.role == 'admin'
+            && getAfter(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid)
+            || (admin(familyId) && request.resource.data.role in ['member', 'child']));
+        allow update, delete: if false;
+      }
+
+      // Phase 13 — private native FCM/APNs device registry. Tokens never grant
+      // family access and are readable only by their owner on the client.
+      match /pushTokens/{tokenId} {
+        allow read, delete: if self(uid);
+        allow create: if self(uid)
+          && request.resource.data.keys().hasOnly([
+            'token','platform','enabled','permissionGranted','permissionRequestedAt',
+            'deviceName','osVersion','appVersion','createdAt','updatedAt','lastSeenAt'
+          ])
+          && nonEmptyString(request.resource.data.token, 2000)
+          && request.resource.data.platform in ['android','ios']
+          && request.resource.data.enabled is bool
+          && request.resource.data.permissionGranted is bool
+          && nullableString(request.resource.data.permissionRequestedAt, 80)
+          && nullableString(request.resource.data.deviceName, 200)
+          && nullableString(request.resource.data.osVersion, 100)
+          && nullableString(request.resource.data.appVersion, 80)
+          && auditIso(request.resource.data.createdAt)
+          && auditIso(request.resource.data.updatedAt)
+          && auditIso(request.resource.data.lastSeenAt);
+        allow update: if self(uid)
+          && request.resource.data.keys().hasOnly([
+            'token','platform','enabled','permissionGranted','permissionRequestedAt',
+            'deviceName','osVersion','appVersion','createdAt','updatedAt','lastSeenAt'
+          ])
+          && request.resource.data.token == resource.data.token
+          && request.resource.data.platform == resource.data.platform
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.enabled is bool
+          && request.resource.data.permissionGranted is bool
+          && nullableString(request.resource.data.permissionRequestedAt, 80)
+          && nullableString(request.resource.data.deviceName, 200)
+          && nullableString(request.resource.data.osVersion, 100)
+          && nullableString(request.resource.data.appVersion, 80)
+          && auditIso(request.resource.data.updatedAt)
+          && auditIso(request.resource.data.lastSeenAt);
+      }
+
+      match /diagnostics/{diagnosticId} {
+        allow read, delete: if self(uid);
+        allow create: if self(uid)
+          && request.resource.data.keys().hasOnly(['id','code','context','fatal','platform','appVersion','createdAt'])
+          && request.resource.data.id == diagnosticId
+          && nonEmptyString(request.resource.data.code, 80)
+          && nonEmptyString(request.resource.data.context, 120)
+          && request.resource.data.fatal is bool
+          && request.resource.data.platform in ['android','ios','web']
+          && nullableString(request.resource.data.appVersion, 80)
+          && auditIso(request.resource.data.createdAt);
+        allow update: if false;
+      }
+    
+        // Phase 14C — private saved whisper snapshots owned by the user.
+        match /savedHomeWhispers/{whisperId} {
+          allow read, create, update, delete: if request.auth != null && request.auth.uid == uid;
+        }
+
+        // Phase 14D — personal music favorites. This is account-private UI state,
+        // never a family membership or genealogy source.
+        match /homeMusicFavorites/{trackId} {
+          allow read, create, update, delete: if request.auth != null && request.auth.uid == uid;
+        }
+
+        // Direct-whisper notification inbox. A sender may create exactly one event for the
+        // recipient proven by the newly-created source whisper. Only the recipient can read it.
+        match /homeInbox/{eventId} {
+          allow read, delete: if request.auth != null && request.auth.uid == uid;
+          allow create: if request.auth != null
+            && request.resource.data.keys().hasOnly([
+              'id','type','familyId','sourceId','senderUid','senderName','recipientUid','title','body','createdAt','readAt'
+            ])
+            && request.resource.data.id == eventId
+            && request.resource.data.type == 'home_whisper'
+            && request.resource.data.sourceId == eventId
+            && request.resource.data.recipientUid == uid
+            && request.resource.data.readAt == null
+            && auditIso(request.resource.data.createdAt)
+            && (
+              (request.resource.data.senderUid == request.auth.uid
+                && existsAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId))
+                && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.authorUid == request.auth.uid
+                && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.recipientUid == uid
+                && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.audience == 'direct')
+              ||
+              (request.auth.uid == uid
+                && request.resource.data.title == 'Bạn có một lời thì thầm 💌'
+                && request.resource.data.body == 'Một lời thì thầm đang chờ bạn trong Nhà Mình.'
+                && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId))
+                && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.authorUid == request.resource.data.senderUid
+                && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.authorName == request.resource.data.senderName
+                && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.createdAt == request.resource.data.createdAt
+                && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.recipientUid == uid
+                && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/homeWhispers/$(eventId)).data.audience == 'direct')
+            );
+          allow update: if request.auth != null
+            && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt','deliveredAt','inAppSeenAt'])
+            && (request.resource.data.readAt == null || auditIso(request.resource.data.readAt))
+            && (!request.resource.data.keys().hasAny(['deliveredAt'])
+              || request.resource.data.deliveredAt == null
+              || auditIso(request.resource.data.deliveredAt))
+            && (!request.resource.data.keys().hasAny(['inAppSeenAt'])
+              || request.resource.data.inAppSeenAt == null
+              || auditIso(request.resource.data.inAppSeenAt));
+        }
+    }
+
+
+    function proposalTarget(p) {
+      return /databases/$(database)/documents/families/$(p.familyId)/$(p.entity)/$(p.targetId);
+    }
+    function validProposal(p, familyId, proposalId) {
+      return p.keys().hasOnly(['id','familyId','entity','action','targetId','before','after','reason','createdByUid','createdAt','status','reviewedByUid','reviewedAt','reviewNote','applied'])
+        && p.id == proposalId && p.familyId == familyId
+        && p.entity in ['persons','relationships'] && p.action in ['create','update','delete']
+        && nonEmptyString(p.targetId, 400) && !p.targetId.matches('.*[/].*')
+        && nonEmptyString(p.reason, 2000) && p.createdByUid == request.auth.uid && auditIso(p.createdAt)
+        && p.status == 'pending' && p.reviewedByUid == null && p.reviewedAt == null && p.reviewNote == null && p.applied == null
+        && ((p.action == 'create' && p.before == null && !exists(proposalTarget(p)))
+          || (p.action != 'create' && p.before == get(proposalTarget(p)).data))
+        && ((p.action == 'delete' && p.after == null)
+          || (p.action != 'delete'
+            && ((p.entity == 'persons' && validPersonData(p.after, familyId, p.targetId)
+                  && ((p.action == 'create' && p.after.linkedUid == null) || (p.action == 'update' && p.after.linkedUid == p.before.linkedUid)))
+              || (p.entity == 'relationships' && validRelationshipData(p.after, familyId, p.targetId)))
+            && ((p.action == 'create' && p.after.createdByUid == request.auth.uid && p.after.createdAt == p.createdAt && p.after.updatedAt == p.createdAt)
+              || (p.action == 'update' && p.after.createdByUid == p.before.createdByUid && p.after.createdAt == p.before.createdAt && p.after.updatedAt == p.before.updatedAt))));
+    }
+    function proposalApplied(p) {
+      return ((p.action == 'create' && !exists(proposalTarget(p)))
+          || (p.action != 'create' && get(proposalTarget(p)).data == p.before))
+        && ((p.action == 'delete' && p.applied == null && !existsAfter(proposalTarget(p)))
+          || (p.action != 'delete' && getAfter(proposalTarget(p)).data == p.applied
+            && p.applied.diff(p.after).affectedKeys().hasOnly(['createdByUid','createdAt','updatedAt'])
+            && p.applied.updatedAt == p.reviewedAt
+            && ((p.action == 'create' && p.applied.createdByUid == request.auth.uid && p.applied.createdAt == p.reviewedAt)
+              || (p.action == 'update' && p.applied.createdByUid == p.before.createdByUid && p.applied.createdAt == p.before.createdAt))));
+    }
+
+    match /family_codes/{familyCode} {
+      // Alias duy nhất để người dùng tra familyId khi gia nhập. Đây không phải dữ liệu riêng tư.
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.id == familyCode
+        && request.resource.data.familyCode == familyCode
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.familyId is string
+        && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.ownerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /media_assets/{mediaId} {
+      // Media assets are lifecycle records for Cloudinary files. The owner can create/update their own asset;
+      // family members can read family-scoped assets. Provider files are never stored in Firestore itself.
+      allow create: if signedIn()
+        && request.resource.data.id == mediaId
+        && request.resource.data.ownerUid == request.auth.uid
+        && (request.resource.data.familyId == null || familyAccess(request.resource.data.familyId));
+      allow read: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || (resource.data.familyId != null && familyAccess(resource.data.familyId)));
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'secureUrl','publicId','thumbnailUrl','status','updatedAt'
+        ]);
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Phase 14U server-only lock. Firebase Admin bypasses client rules.
+    match /chessActiveUsers/{uid} {
+      allow read, write: if false;
+    }
+
+    match /families/{familyId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.id == familyId;
+      allow read: if familyAccess(familyId);
+      allow update: if owner(familyId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.id == resource.data.id;
+      // Production safety: recursive family deletion needs a trusted backend.
+      allow delete: if false;
+
+      match /graphProposalState/{stateId} { allow read: if familyAccess(familyId); allow write: if false; }
+
+      match /graphProposals/{proposalId} {
+        allow read: if familyAccess(familyId);
+        allow create: if member(familyId) && !graphAdmin(familyId)
+          && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role == 'member' && validProposal(request.resource.data, familyId, proposalId);
+        allow update: if familyAccess(familyId) && resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedByUid','reviewedAt','reviewNote','applied'])
+          && request.resource.data.reviewedByUid == request.auth.uid && auditIso(request.resource.data.reviewedAt)
+          && nullableString(request.resource.data.reviewNote, 2000)
+          && ((resource.data.createdByUid == request.auth.uid && request.resource.data.status == 'withdrawn' && request.resource.data.applied == null)
+            || (graphAdmin(familyId) && request.resource.data.status == 'rejected' && nonEmptyString(request.resource.data.reviewNote, 2000) && request.resource.data.applied == null)
+            || false);
+        allow delete: if false;
+      }
+
+      match /members/{uid} {
+        // Thành viên xem profile projection; admin có thể tạo member sau khi duyệt request.
+        allow read: if member(familyId);
+        allow create: if ((self(uid) && getAfter(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid) || admin(familyId))
+          && request.resource.data.uid == uid
+          && request.resource.data.role in ['admin', 'member', 'child', 'owner'];
+        // Không cho client đổi role, nhằm đảm bảo chỉ có admin duy nhất ở Phase 2.
+        allow update: if (self(uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role)
+          || (owner(familyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role);
+        allow delete: if owner(familyId) || self(uid);
+
+        // Phase 11 — private per-user activity inbox.
+        match /activities/{activityId} {
+          allow read: if self(uid) && member(familyId);
+          allow create: if familyAccess(familyId)
+            && exists(/databases/$(database)/documents/families/$(familyId)/members/$(uid))
+            && request.resource.data.id == activityId
+            && request.resource.data.familyId == familyId
+            && request.resource.data.audience == 'target'
+            && request.resource.data.targetUid == uid
+            && request.resource.data.actorUid == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        // Phase 11 performance — tiny per-user badge summary. It is only a UX hint,
+        // never an authorization source. It contains only counters; family members may read it
+        // so idempotent client transactions can advance the target counter safely.
+        match /activityMeta/{summaryId} {
+          allow read: if familyAccess(familyId);
+          allow create: if summaryId == 'badge'
+            && familyAccess(familyId)
+            && exists(/databases/$(database)/documents/families/$(familyId)/members/$(uid))
+            && request.resource.data.keys().hasOnly(['familyId','uid','count','updatedAt','lastActivityId'])
+            && request.resource.data.familyId == familyId
+            && request.resource.data.uid == uid
+            && request.resource.data.count == 1
+            && auditIso(request.resource.data.updatedAt)
+            && nonEmptyString(request.resource.data.lastActivityId, 300);
+          allow update: if summaryId == 'badge'
+            && familyAccess(familyId)
+            && request.resource.data.keys().hasOnly(['familyId','uid','count','updatedAt','lastActivityId'])
+            && request.resource.data.familyId == resource.data.familyId
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.count == resource.data.count + 1
+            && auditIso(request.resource.data.updatedAt)
+            && nonEmptyString(request.resource.data.lastActivityId, 300);
+          allow delete: if false;
+        }
+      }
+
+      match /joinRequests/{uid} {
+        // User chưa là member vẫn được gửi request tới family tồn tại.
+        allow create: if self(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.familyId == familyId
+          && request.resource.data.status == 'pending'
+          && request.resource.data.applicant.uid == uid
+          && !exists(/databases/$(database)/documents/users/$(uid)/memberships/$(familyId))
+          && exists(/databases/$(database)/documents/families/$(familyId));
+        // Người xin xem request của chính mình; admin xem các request của nhà.
+        allow read: if self(uid) || admin(familyId);
+        allow update: if (self(uid) && resource.data.status == 'rejected'
+          && request.resource.data.uid == uid && request.resource.data.familyId == familyId
+          && request.resource.data.applicant.uid == uid && request.resource.data.status == 'pending'
+          && !exists(/databases/$(database)/documents/users/$(uid)/memberships/$(familyId)))
+          || (admin(familyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.familyId == resource.data.familyId
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['approved', 'rejected']
+          && (request.resource.data.status == 'rejected'
+            || (existsAfter(/databases/$(database)/documents/families/$(familyId)/members/$(uid))
+              && existsAfter(/databases/$(database)/documents/users/$(uid)/memberships/$(familyId)))));
+        allow delete: if admin(familyId) || self(uid);
+      }
+
+      // Family Graph - Direct Firestore Development Mode.
+      // Member được đọc. Chỉ owner/admin được ghi và phải qua validation bên dưới.
+      // Deep parent-cycle validation vẫn được client kiểm tra; trước production nên chuyển
+      // mutation nhạy cảm sang trusted backend nếu cần integrity mạnh hơn.
+      match /persons/{personId} {
+        allow read: if familyAccess(familyId);
+        // Cloud Function mode: Admin SDK is the only Family Graph write path.
+        allow create, update, delete: if false;
+
+        match /timeline/{entryId} {
+          allow read: if familyAccess(familyId);
+          allow create, update, delete: if false;
+        }
+
+        match /album/{albumId} {
+          allow read: if familyAccess(familyId);
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /relationships/{relationshipId} {
+        allow read: if familyAccess(familyId);
+        allow create, update, delete: if false;
+      }
+
+      match /personLinks/{uid} {
+        allow read: if familyAccess(familyId);
+        allow create, update, delete: if false;
+      }
+
+
+      // Phase 11 — family-visible activity stream. These are immutable summaries,
+      // never an authorization source of truth.
+      match /activities/{activityId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.id == activityId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.audience == 'family'
+          && request.resource.data.targetUid == null
+          && request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+
+      // Phase 11 performance — one tiny counter document replaces repeated Activity
+      // list downloads on Home. This is presentation metadata only.
+      match /activityMeta/{summaryId} {
+        allow read: if familyAccess(familyId);
+        allow create: if summaryId == 'badge'
+          && familyAccess(familyId)
+          && request.resource.data.keys().hasOnly(['familyId','count','updatedAt','lastActivityId'])
+          && request.resource.data.familyId == familyId
+          && request.resource.data.count == 1
+          && auditIso(request.resource.data.updatedAt)
+          && nonEmptyString(request.resource.data.lastActivityId, 300);
+        allow update: if summaryId == 'badge'
+          && familyAccess(familyId)
+          && request.resource.data.keys().hasOnly(['familyId','count','updatedAt','lastActivityId'])
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.count == resource.data.count + 1
+          && auditIso(request.resource.data.updatedAt)
+          && nonEmptyString(request.resource.data.lastActivityId, 300);
+        allow delete: if false;
+      }
+
+      // Phase 14C — Nhà Mình functional collections (same document contracts as Direct Mode).
+      match /homeWhispers/{whisperId} {
+              // Phase 14C V2 keeps Phase 14A family-only documents readable so existing data is not migrated.
+              allow read: if familyAccess(familyId)
+                && (!(resource.data.keys().hasAny(['viewerUids'])) || request.auth.uid in resource.data.viewerUids);
+
+              // Backward-compatible create: old installed builds may still create the Phase 14A family-only shape.
+              allow create: if familyAccess(familyId) && (
+                (request.resource.data.keys().hasOnly([
+                    'id','familyId','authorUid','authorName','message','tone','createdAt','updatedAt'
+                  ])
+                  && request.resource.data.id == whisperId
+                  && request.resource.data.familyId == familyId
+                  && request.resource.data.authorUid == request.auth.uid
+                  && nonEmptyString(request.resource.data.authorName, 80)
+                  && nonEmptyString(request.resource.data.message, 500)
+                  && request.resource.data.tone in ['warm','thanks','miss','cheer']
+                  && auditIso(request.resource.data.createdAt)
+                  && request.resource.data.createdAt == request.resource.data.updatedAt)
+                ||
+                (request.resource.data.keys().hasOnly([
+                    'id','familyId','authorUid','authorName','audience','recipientUid','recipientName',
+                    'viewerUids','message','emotion','heartUids','createdAt','updatedAt','expireAt'
+                  ])
+                  && request.resource.data.id == whisperId
+                  && request.resource.data.familyId == familyId
+                  && request.resource.data.authorUid == request.auth.uid
+                  && nonEmptyString(request.resource.data.authorName, 80)
+                  && nonEmptyString(request.resource.data.message, 500)
+                  && request.resource.data.audience in ['family','direct']
+                  && request.resource.data.emotion in ['heart','love','smile','touched','sad','hug','thanks','laugh','flower','sparkles']
+                  && request.resource.data.viewerUids is list
+                  && request.resource.data.viewerUids.size() >= 1
+                  && request.resource.data.viewerUids.size() <= 200
+                  && request.resource.data.viewerUids.toSet().size() == request.resource.data.viewerUids.size()
+                  && request.auth.uid in request.resource.data.viewerUids
+                  && request.resource.data.heartUids is list
+                  && request.resource.data.heartUids.size() == 0
+                  && request.resource.data.expireAt is timestamp
+                  && request.resource.data.expireAt > request.time
+                  && auditIso(request.resource.data.createdAt)
+                  && request.resource.data.createdAt == request.resource.data.updatedAt
+                  && (
+                    (request.resource.data.audience == 'family'
+                      && request.resource.data.recipientUid == null
+                      && request.resource.data.recipientName == null)
+                    ||
+                    (request.resource.data.audience == 'direct'
+                      && request.resource.data.recipientUid is string
+                      && request.resource.data.recipientUid != request.auth.uid
+                      && request.resource.data.recipientUid in request.resource.data.viewerUids
+                      && request.resource.data.viewerUids.size() == 2
+                      && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.resource.data.recipientUid)))
+                  ))
+              );
+
+              // V2 visible users may only toggle their own heart. Legacy whispers remain immutable.
+              allow update: if familyAccess(familyId)
+                && resource.data.keys().hasAny(['viewerUids'])
+                && request.auth.uid in resource.data.viewerUids
+                && request.resource.data.id == resource.data.id
+                && request.resource.data.familyId == resource.data.familyId
+                && request.resource.data.authorUid == resource.data.authorUid
+                && request.resource.data.authorName == resource.data.authorName
+                && request.resource.data.audience == resource.data.audience
+                && request.resource.data.recipientUid == resource.data.recipientUid
+                && request.resource.data.recipientName == resource.data.recipientName
+                && request.resource.data.viewerUids == resource.data.viewerUids
+                && request.resource.data.message == resource.data.message
+                && request.resource.data.emotion == resource.data.emotion
+                && request.resource.data.createdAt == resource.data.createdAt
+                && request.resource.data.expireAt == resource.data.expireAt
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['heartUids','updatedAt'])
+                && request.resource.data.heartUids is list
+                && request.resource.data.heartUids.toSet().size() == request.resource.data.heartUids.size()
+                && request.resource.data.heartUids.toSet().difference(resource.data.heartUids.toSet()).hasOnly([request.auth.uid])
+                && resource.data.heartUids.toSet().difference(request.resource.data.heartUids.toSet()).hasOnly([request.auth.uid])
+                && auditIso(request.resource.data.updatedAt);
+
+              allow delete: if familyAccess(familyId) && (
+                (!(resource.data.keys().hasAny(['audience']))
+                  && (resource.data.authorUid == request.auth.uid || graphAdmin(familyId)))
+                ||
+                (resource.data.keys().hasAny(['audience'])
+                  && (resource.data.authorUid == request.auth.uid
+                    || (request.auth.uid in resource.data.viewerUids && request.time >= resource.data.expireAt)))
+              );
+            }
+
+      // Phase 14R — Hộp thời gian thật. Metadata stays readable to intended
+      // recipients so devices can show a locked preview / schedule a local reminder,
+      // while title + message live in /content/main and remain unreadable until openAt.
+      match /homeTimeCapsules/{capsuleId} {
+        allow read: if familyAccess(familyId)
+          && (resource.data.createdByUid == request.auth.uid
+            || request.auth.uid in resource.data.recipientUids);
+
+        allow create: if familyAccess(familyId)
+          && request.resource.data.keys().hasOnly([
+            'id','familyId','createdByUid','createdByName','audience','recipientUids',
+            'previewMode','openAt','revealTheme','openedByUids','createdAt','updatedAt'
+          ])
+          && request.resource.data.id == capsuleId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.createdByUid == request.auth.uid
+          && nonEmptyString(request.resource.data.createdByName, 80)
+          && request.resource.data.audience in ['family','selected']
+          && request.resource.data.recipientUids is list
+          && request.resource.data.recipientUids.size() >= 1
+          && request.resource.data.recipientUids.size() <= 500
+          && request.resource.data.recipientUids.toSet().size() == request.resource.data.recipientUids.size()
+          && !(request.auth.uid in request.resource.data.recipientUids)
+          && request.resource.data.previewMode in ['hidden','locked']
+          && request.resource.data.openAt is timestamp
+          && request.resource.data.openAt > request.time
+          && request.resource.data.revealTheme in ['warm','formal','festive']
+          && (!request.resource.data.keys().hasAny(['openedByUids'])
+            || (request.resource.data.openedByUids is list
+              && request.resource.data.openedByUids.size() == 0))
+          && auditIso(request.resource.data.createdAt)
+          && request.resource.data.updatedAt == request.resource.data.createdAt
+          && existsAfter(/databases/$(database)/documents/families/$(familyId)/homeTimeCapsules/$(capsuleId)/content/main);
+
+        function existingOpenedByUids() {
+          return resource.data.keys().hasAny(['openedByUids']) ? resource.data.openedByUids : [];
+        }
+
+        function validRecipientOpenSummary() {
+          return request.auth.uid in resource.data.recipientUids
+            && request.time >= resource.data.openAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openedByUids'])
+            && request.resource.data.openedByUids is list
+            && request.resource.data.openedByUids.toSet().size() == request.resource.data.openedByUids.size()
+            && request.resource.data.openedByUids.toSet().difference(resource.data.recipientUids.toSet()).size() == 0
+            && existingOpenedByUids().toSet().difference(request.resource.data.openedByUids.toSet()).size() == 0
+            && request.resource.data.openedByUids.toSet().difference(existingOpenedByUids().toSet()).hasOnly([request.auth.uid])
+            && request.auth.uid in request.resource.data.openedByUids;
+        }
+
+        allow update: if familyAccess(familyId) && (
+          (resource.data.createdByUid == request.auth.uid
+            && request.time < resource.data.openAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'createdByName','audience','recipientUids','previewMode','openAt','revealTheme','updatedAt'
+            ])
+            && request.resource.data.id == resource.data.id
+            && request.resource.data.familyId == resource.data.familyId
+            && request.resource.data.createdByUid == resource.data.createdByUid
+            && request.resource.data.createdAt == resource.data.createdAt
+            && nonEmptyString(request.resource.data.createdByName, 80)
+            && request.resource.data.audience in ['family','selected']
+            && request.resource.data.recipientUids is list
+            && request.resource.data.recipientUids.size() >= 1
+            && request.resource.data.recipientUids.size() <= 500
+            && request.resource.data.recipientUids.toSet().size() == request.resource.data.recipientUids.size()
+            && !(request.auth.uid in request.resource.data.recipientUids)
+            && request.resource.data.previewMode in ['hidden','locked']
+            && request.resource.data.openAt is timestamp
+            && request.resource.data.openAt > request.time
+            && request.resource.data.revealTheme in ['warm','formal','festive']
+            && auditIso(request.resource.data.updatedAt))
+          || validRecipientOpenSummary()
+        );
+
+        allow delete: if familyAccess(familyId)
+          && resource.data.createdByUid == request.auth.uid
+          && request.time < resource.data.openAt;
+
+        match /content/{contentId} {
+          function capsuleData() {
+            return get(/databases/$(database)/documents/families/$(familyId)/homeTimeCapsules/$(capsuleId)).data;
+          }
+          function capsuleDataAfter() {
+            return getAfter(/databases/$(database)/documents/families/$(familyId)/homeTimeCapsules/$(capsuleId)).data;
+          }
+          function validTimeCapsuleContent(data) {
+            return contentId == 'main'
+              && data.keys().hasOnly(['title','message'])
+              && nonEmptyString(data.title, 140)
+              && nonEmptyString(data.message, 4000);
+          }
+
+          allow read: if familyAccess(familyId)
+            && (capsuleData().createdByUid == request.auth.uid
+              || (request.auth.uid in capsuleData().recipientUids
+                && request.time >= capsuleData().openAt));
+
+          allow create: if familyAccess(familyId)
+            && capsuleDataAfter().createdByUid == request.auth.uid
+            && request.time < capsuleDataAfter().openAt
+            && validTimeCapsuleContent(request.resource.data);
+
+          allow update: if familyAccess(familyId)
+            && capsuleData().createdByUid == request.auth.uid
+            && request.time < capsuleData().openAt
+            && validTimeCapsuleContent(request.resource.data);
+
+          allow delete: if familyAccess(familyId)
+            && capsuleData().createdByUid == request.auth.uid
+            && request.time < capsuleData().openAt;
+        }
+
+        match /opens/{uid} {
+          function openedCapsuleData() {
+            return get(/databases/$(database)/documents/families/$(familyId)/homeTimeCapsules/$(capsuleId)).data;
+          }
+
+          allow read: if familyAccess(familyId)
+            && (request.auth.uid == uid || openedCapsuleData().createdByUid == request.auth.uid);
+
+          allow create, update: if familyAccess(familyId)
+            && request.auth.uid == uid
+            && uid in openedCapsuleData().recipientUids
+            && request.time >= openedCapsuleData().openAt
+            && request.resource.data.keys().hasOnly(['uid','openedAt'])
+            && request.resource.data.uid == uid
+            && request.resource.data.openedAt is timestamp;
+        }
+      }
+
+      // Phase 14S.1 — Quỹ gia đình: one accountable treasurer, up to two helpers,
+      // explicit handover acceptance, 3-day edit lock, immutable audit and exact balance deltas.
+      function fundControlPath() {
+        return /databases/$(database)/documents/families/$(familyId)/homeFundMeta/control;
+      }
+      function fundControlExists() {
+        return exists(fundControlPath());
+      }
+      function fundControlData() {
+        return get(fundControlPath()).data;
+      }
+      function fundAssistant(data, uid) {
+        return data.assistantUids is list
+          && ((data.assistantUids.size() > 0 && data.assistantUids[0] == uid)
+            || (data.assistantUids.size() > 1 && data.assistantUids[1] == uid));
+      }
+      function fundTeam() {
+        return signedIn()
+          && fundControlExists()
+          && (fundControlData().primaryUid == request.auth.uid
+            || fundAssistant(fundControlData(), request.auth.uid));
+      }
+      function fundPrimary() {
+        return signedIn()
+          && fundControlExists()
+          && fundControlData().primaryUid == request.auth.uid;
+      }
+      function fundAuditPath(auditId) {
+        return /databases/$(database)/documents/families/$(familyId)/homeFundAudit/$(auditId);
+      }
+      function fundTransactionPath(transactionId) {
+        return /databases/$(database)/documents/families/$(familyId)/homeFundTransactions/$(transactionId);
+      }
+      function fundSummaryPath() {
+        return /databases/$(database)/documents/families/$(familyId)/homeFundMeta/summary;
+      }
+      function fundSigned(data) { return data.type == 'income' ? data.amountVnd : 0 - data.amountVnd; }
+      function fundIncome(data) { return data.type == 'income' ? data.amountVnd : 0; }
+      function fundExpense(data) { return data.type == 'expense' ? data.amountVnd : 0; }
+      function validFundAssistantTasks(data) {
+        return data.assistantUids is list
+          && data.assistantUids.size() <= 2
+          && data.assistantTasks is map
+          && data.assistantTasks.keys().hasOnly(data.assistantUids)
+          && (data.assistantUids.size() < 1 || (
+            graphMemberUid(familyId, data.assistantUids[0])
+            && data.assistantUids[0] != data.primaryUid
+            && data.assistantTasks[data.assistantUids[0]] is string
+            && data.assistantTasks[data.assistantUids[0]].size() >= 3
+            && data.assistantTasks[data.assistantUids[0]].size() <= 160
+          ))
+          && (data.assistantUids.size() < 2 || (
+            graphMemberUid(familyId, data.assistantUids[1])
+            && data.assistantUids[1] != data.primaryUid
+            && data.assistantUids[1] != data.assistantUids[0]
+            && data.assistantTasks[data.assistantUids[1]] is string
+            && data.assistantTasks[data.assistantUids[1]].size() >= 3
+            && data.assistantTasks[data.assistantUids[1]].size() <= 160
+          ));
+      }
+      function validFundPending(data) {
+        return (
+            data.pendingTransferToUid == null
+            && data.pendingTransferRequestedByUid == null
+            && data.pendingTransferRequestedAt == null
+            && data.pendingTransferNote == null
+          ) || (
+            nonEmptyString(data.pendingTransferToUid, 200)
+            && data.pendingTransferToUid != data.primaryUid
+            && graphMemberUid(familyId, data.pendingTransferToUid)
+            && data.pendingTransferRequestedByUid == data.primaryUid
+            && auditIso(data.pendingTransferRequestedAt)
+            && (data.pendingTransferNote == null
+              || (data.pendingTransferNote is string && data.pendingTransferNote.size() <= 200))
+          );
+      }
+      function validFundControl(data) {
+        return data.keys().hasOnly([
+            'familyId','primaryUid','assistantUids','assistantTasks',
+            'pendingTransferToUid','pendingTransferRequestedByUid','pendingTransferRequestedAt','pendingTransferNote',
+            'version','lastAuditId','updatedByUid','updatedAt','updatedAtTs'
+          ])
+          && data.familyId == familyId
+          && nonEmptyString(data.primaryUid, 200)
+          && graphMemberUid(familyId, data.primaryUid)
+          && validFundAssistantTasks(data)
+          && validFundPending(data)
+          && data.version is int && data.version >= 1
+          && nonEmptyString(data.lastAuditId, 300)
+          && data.updatedByUid == request.auth.uid
+          && auditIso(data.updatedAt)
+          && data.updatedAtTs is timestamp
+          && data.updatedAtTs == request.time;
+      }
+      function fundControlAuditIs(action) {
+        let id = request.resource.data.lastAuditId;
+        return existsAfter(fundAuditPath(id))
+          && getAfter(fundAuditPath(id)).data.familyId == familyId
+          && getAfter(fundAuditPath(id)).data.action == action
+          && getAfter(fundAuditPath(id)).data.actorUid == request.auth.uid;
+      }
+
+      match /homeFundMeta/control {
+        allow read: if familyAccess(familyId);
+
+        // The family owner/admin is the deterministic bootstrap treasurer. This privilege
+        // disappears after a successful handover unless the new treasurer adds that admin back.
+        allow create: if owner(familyId)
+          && validFundControl(request.resource.data)
+          && request.resource.data.primaryUid == request.auth.uid
+          && request.resource.data.assistantUids.size() == 0
+          && request.resource.data.pendingTransferToUid == null
+          && request.resource.data.version == 1
+          && fundControlAuditIs('control_init');
+
+        allow update: if familyAccess(familyId)
+          && validFundControl(request.resource.data)
+          && request.resource.data.version == resource.data.version + 1
+          && (
+            // Primary changes only the helper team.
+            (resource.data.primaryUid == request.auth.uid
+              && request.resource.data.primaryUid == resource.data.primaryUid
+              && request.resource.data.pendingTransferToUid == resource.data.pendingTransferToUid
+              && request.resource.data.pendingTransferRequestedByUid == resource.data.pendingTransferRequestedByUid
+              && request.resource.data.pendingTransferRequestedAt == resource.data.pendingTransferRequestedAt
+              && request.resource.data.pendingTransferNote == resource.data.pendingTransferNote
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'assistantUids','assistantTasks','version','lastAuditId','updatedByUid','updatedAt','updatedAtTs'
+              ])
+              && fundControlAuditIs('team_update'))
+            ||
+            // Primary proposes a handover. Authority stays with primary until recipient accepts.
+            (resource.data.primaryUid == request.auth.uid
+              && resource.data.pendingTransferToUid == null
+              && request.resource.data.primaryUid == resource.data.primaryUid
+              && request.resource.data.assistantUids == resource.data.assistantUids
+              && request.resource.data.assistantTasks == resource.data.assistantTasks
+              && nonEmptyString(request.resource.data.pendingTransferToUid, 200)
+              && request.resource.data.pendingTransferRequestedByUid == request.auth.uid
+              && auditIso(request.resource.data.pendingTransferRequestedAt)
+              && fundControlAuditIs('handover_request')
+              && getAfter(fundAuditPath(request.resource.data.lastAuditId)).data.targetUid == request.resource.data.pendingTransferToUid)
+            ||
+            // Primary cancels a pending handover.
+            (resource.data.primaryUid == request.auth.uid
+              && resource.data.pendingTransferToUid != null
+              && request.resource.data.primaryUid == resource.data.primaryUid
+              && request.resource.data.assistantUids == resource.data.assistantUids
+              && request.resource.data.assistantTasks == resource.data.assistantTasks
+              && request.resource.data.pendingTransferToUid == null
+              && request.resource.data.pendingTransferRequestedByUid == null
+              && request.resource.data.pendingTransferRequestedAt == null
+              && request.resource.data.pendingTransferNote == null
+              && fundControlAuditIs('handover_cancel'))
+            ||
+            // Invited recipient declines: current treasurer keeps all authority.
+            (resource.data.pendingTransferToUid == request.auth.uid
+              && request.resource.data.primaryUid == resource.data.primaryUid
+              && request.resource.data.assistantUids == resource.data.assistantUids
+              && request.resource.data.assistantTasks == resource.data.assistantTasks
+              && request.resource.data.pendingTransferToUid == null
+              && request.resource.data.pendingTransferRequestedByUid == null
+              && request.resource.data.pendingTransferRequestedAt == null
+              && request.resource.data.pendingTransferNote == null
+              && fundControlAuditIs('handover_decline'))
+            ||
+            // Invited recipient accepts: recipient becomes primary; old helpers are reset.
+            (resource.data.pendingTransferToUid == request.auth.uid
+              && request.resource.data.primaryUid == request.auth.uid
+              && request.resource.data.assistantUids.size() == 0
+              && request.resource.data.assistantTasks.size() == 0
+              && request.resource.data.pendingTransferToUid == null
+              && request.resource.data.pendingTransferRequestedByUid == null
+              && request.resource.data.pendingTransferRequestedAt == null
+              && request.resource.data.pendingTransferNote == null
+              && fundControlAuditIs('handover_accept'))
+          );
+        allow delete: if false;
+      }
+
+      function validFundTransaction(data, transactionId) {
+        return data.keys().hasOnly([
+            'id','familyId','type','amountVnd','category','note','occurredOn','monthKey',
+            'createdByUid','createdByName','createdAt','createdAtTs',
+            'updatedAt','updatedAtTs','updatedByUid','revision'
+          ])
+          && data.id == transactionId
+          && data.familyId == familyId
+          && data.type in ['income','expense']
+          && data.amountVnd is int && data.amountVnd > 0 && data.amountVnd <= 1000000000
+          && data.category in ['contribution','groceries','household','event','travel','gift','refund','other']
+          && data.note is string && data.note.size() <= 240
+          && data.occurredOn is string && data.occurredOn.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && data.monthKey is string && data.monthKey.matches('^[0-9]{4}-[0-9]{2}$')
+          && nonEmptyString(data.createdByUid, 200)
+          && nonEmptyString(data.createdByName, 80)
+          && auditIso(data.createdAt)
+          && data.createdAtTs is timestamp
+          && auditIso(data.updatedAt)
+          && data.updatedAtTs is timestamp
+          && nonEmptyString(data.updatedByUid, 200)
+          && data.revision is int && data.revision >= 1;
+      }
+      function fundSummaryAfter() {
+        return getAfter(fundSummaryPath()).data;
+      }
+      function fundTxAuditLinked(transactionId, action) {
+        let summary = fundSummaryAfter();
+        return existsAfter(fundSummaryPath())
+          && summary.familyId == familyId
+          && summary.lastMutationId == transactionId
+          && summary.lastMutationKind == action
+          && summary.updatedByUid == request.auth.uid
+          && nonEmptyString(summary.lastAuditId, 300)
+          && existsAfter(fundAuditPath(summary.lastAuditId))
+          && getAfter(fundAuditPath(summary.lastAuditId)).data.action == action
+          && getAfter(fundAuditPath(summary.lastAuditId)).data.transactionId == transactionId
+          && getAfter(fundAuditPath(summary.lastAuditId)).data.actorUid == request.auth.uid;
+      }
+      function fundCanManageExistingTransaction() {
+        return fundPrimary()
+          || (fundAssistant(fundControlData(), request.auth.uid)
+            && resource.data.createdByUid == request.auth.uid);
+      }
+
+      match /homeFundTransactions/{transactionId} {
+        allow read: if familyAccess(familyId);
+        allow create: if fundTeam()
+          && validFundTransaction(request.resource.data, transactionId)
+          && request.resource.data.createdByUid == request.auth.uid
+          && request.resource.data.updatedByUid == request.auth.uid
+          && request.resource.data.createdAtTs == request.time
+          && request.resource.data.updatedAtTs == request.time
+          && request.resource.data.revision == 1
+          && fundTxAuditLinked(transactionId, 'create');
+
+        allow update: if fundTeam()
+          && fundCanManageExistingTransaction()
+          && resource.data.createdAtTs is timestamp
+          && request.time < resource.data.createdAtTs + duration.value(3, 'd')
+          && validFundTransaction(request.resource.data, transactionId)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.createdByUid == resource.data.createdByUid
+          && request.resource.data.createdByName == resource.data.createdByName
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.createdAtTs == resource.data.createdAtTs
+          && request.resource.data.updatedByUid == request.auth.uid
+          && request.resource.data.updatedAtTs == request.time
+          && request.resource.data.revision == resource.data.revision + 1
+          && fundTxAuditLinked(transactionId, 'update');
+
+        allow delete: if fundTeam()
+          && fundCanManageExistingTransaction()
+          && resource.data.createdAtTs is timestamp
+          && request.time < resource.data.createdAtTs + duration.value(3, 'd')
+          && fundTxAuditLinked(transactionId, 'delete');
+      }
+
+      function validFundSummary(data) {
+        return data.keys().hasOnly([
+            'familyId','balanceVnd','totalIncomeVnd','totalExpenseVnd','transactionCount',
+            'lastMutationId','lastMutationKind','lastAuditId','updatedByUid','updatedAt'
+          ])
+          && data.familyId == familyId
+          && data.balanceVnd is int
+          && data.totalIncomeVnd is int && data.totalIncomeVnd >= 0
+          && data.totalExpenseVnd is int && data.totalExpenseVnd >= 0
+          && data.transactionCount is int && data.transactionCount >= 0
+          && nonEmptyString(data.lastMutationId, 300)
+          && data.lastMutationKind in ['create','update','delete']
+          && nonEmptyString(data.lastAuditId, 300)
+          && data.updatedByUid == request.auth.uid
+          && auditIso(data.updatedAt);
+      }
+      function fundSummaryAuditLinked() {
+        let id = request.resource.data.lastAuditId;
+        return existsAfter(fundAuditPath(id))
+          && getAfter(fundAuditPath(id)).data.familyId == familyId
+          && getAfter(fundAuditPath(id)).data.transactionId == request.resource.data.lastMutationId
+          && getAfter(fundAuditPath(id)).data.action == request.resource.data.lastMutationKind
+          && getAfter(fundAuditPath(id)).data.actorUid == request.auth.uid;
+      }
+      function validFundFirstCreate() {
+        let id = request.resource.data.lastMutationId;
+        let afterTx = getAfter(fundTransactionPath(id)).data;
+        return request.resource.data.lastMutationKind == 'create'
+          && !exists(fundTransactionPath(id))
+          && existsAfter(fundTransactionPath(id))
+          && request.resource.data.balanceVnd == fundSigned(afterTx)
+          && request.resource.data.totalIncomeVnd == fundIncome(afterTx)
+          && request.resource.data.totalExpenseVnd == fundExpense(afterTx)
+          && request.resource.data.transactionCount == 1;
+      }
+      function validFundCreateDelta() {
+        let id = request.resource.data.lastMutationId;
+        let afterTx = getAfter(fundTransactionPath(id)).data;
+        return request.resource.data.lastMutationKind == 'create'
+          && !exists(fundTransactionPath(id))
+          && existsAfter(fundTransactionPath(id))
+          && request.resource.data.balanceVnd == resource.data.balanceVnd + fundSigned(afterTx)
+          && request.resource.data.totalIncomeVnd == resource.data.totalIncomeVnd + fundIncome(afterTx)
+          && request.resource.data.totalExpenseVnd == resource.data.totalExpenseVnd + fundExpense(afterTx)
+          && request.resource.data.transactionCount == resource.data.transactionCount + 1;
+      }
+      function validFundUpdateDelta() {
+        let id = request.resource.data.lastMutationId;
+        let beforeTx = get(fundTransactionPath(id)).data;
+        let afterTx = getAfter(fundTransactionPath(id)).data;
+        return request.resource.data.lastMutationKind == 'update'
+          && exists(fundTransactionPath(id))
+          && existsAfter(fundTransactionPath(id))
+          && request.resource.data.balanceVnd == resource.data.balanceVnd - fundSigned(beforeTx) + fundSigned(afterTx)
+          && request.resource.data.totalIncomeVnd == resource.data.totalIncomeVnd - fundIncome(beforeTx) + fundIncome(afterTx)
+          && request.resource.data.totalExpenseVnd == resource.data.totalExpenseVnd - fundExpense(beforeTx) + fundExpense(afterTx)
+          && request.resource.data.transactionCount == resource.data.transactionCount;
+      }
+      function validFundDeleteDelta() {
+        let id = request.resource.data.lastMutationId;
+        let beforeTx = get(fundTransactionPath(id)).data;
+        return request.resource.data.lastMutationKind == 'delete'
+          && exists(fundTransactionPath(id))
+          && !existsAfter(fundTransactionPath(id))
+          && request.resource.data.balanceVnd == resource.data.balanceVnd - fundSigned(beforeTx)
+          && request.resource.data.totalIncomeVnd == resource.data.totalIncomeVnd - fundIncome(beforeTx)
+          && request.resource.data.totalExpenseVnd == resource.data.totalExpenseVnd - fundExpense(beforeTx)
+          && request.resource.data.transactionCount == resource.data.transactionCount - 1
+          && request.resource.data.transactionCount >= 0;
+      }
+
+      match /homeFundMeta/summary {
+        allow read: if familyAccess(familyId);
+        allow create: if fundTeam()
+          && validFundSummary(request.resource.data)
+          && fundSummaryAuditLinked()
+          && validFundFirstCreate();
+        allow update: if fundTeam()
+          && validFundSummary(request.resource.data)
+          && request.resource.data.familyId == resource.data.familyId
+          && fundSummaryAuditLinked()
+          && (validFundCreateDelta() || validFundUpdateDelta() || validFundDeleteDelta());
+        allow delete: if false;
+      }
+
+      function validFundAudit(data, auditId) {
+        return data.keys().hasOnly([
+            'familyId','action','transactionId','actorUid','actorName','targetUid','detail',
+            'beforeLabel','afterLabel','createdAt','createdAtTs'
+          ])
+          && data.familyId == familyId
+          && data.action in [
+            'create','update','delete','control_init','handover_request','handover_accept',
+            'handover_decline','handover_cancel','team_update'
+          ]
+          && (data.transactionId == null || nonEmptyString(data.transactionId, 300))
+          && data.actorUid == request.auth.uid
+          && nonEmptyString(data.actorName, 80)
+          && (data.targetUid == null || nonEmptyString(data.targetUid, 200))
+          && data.detail is string && data.detail.size() <= 300
+          && (data.beforeLabel == null || (data.beforeLabel is string && data.beforeLabel.size() <= 420))
+          && (data.afterLabel == null || (data.afterLabel is string && data.afterLabel.size() <= 420))
+          && auditIso(data.createdAt)
+          && data.createdAtTs is timestamp
+          && data.createdAtTs == request.time;
+      }
+      function fundAuditBackedByMutation(auditId) {
+        return (
+          request.resource.data.action in ['create','update','delete']
+          && existsAfter(fundSummaryPath())
+          && getAfter(fundSummaryPath()).data.lastAuditId == auditId
+          && getAfter(fundSummaryPath()).data.lastMutationId == request.resource.data.transactionId
+          && getAfter(fundSummaryPath()).data.lastMutationKind == request.resource.data.action
+        ) || (
+          request.resource.data.action in [
+            'control_init','handover_request','handover_accept','handover_decline','handover_cancel','team_update'
+          ]
+          && existsAfter(fundControlPath())
+          && getAfter(fundControlPath()).data.lastAuditId == auditId
+        );
+      }
+
+      match /homeFundAudit/{auditId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && validFundAudit(request.resource.data, auditId)
+          && fundAuditBackedByMutation(auditId);
+        allow update, delete: if false;
+      }
+
+
+      match /homePolls/{pollId} {
+              function pollBallotPath(uid) {
+                return /databases/$(database)/documents/families/$(familyId)/homePolls/$(pollId)/ballots/$(uid);
+              }
+
+              // Legacy Phase 14A polls had no eligibleUids and remain whole-family content.
+              allow read: if familyAccess(familyId)
+                && (!(resource.data.keys().hasAny(['eligibleUids'])) || request.auth.uid in resource.data.eligibleUids);
+
+              // Keep old clients functional while all new Phase 14C polls use the fixed eligible snapshot model.
+              allow create: if familyAccess(familyId) && (
+                (request.resource.data.keys().hasOnly([
+                    'id','familyId','createdByUid','createdByName','question','options','optionIds','votes','status','createdAt','updatedAt'
+                  ])
+                  && request.resource.data.id == pollId
+                  && request.resource.data.familyId == familyId
+                  && request.resource.data.createdByUid == request.auth.uid
+                  && nonEmptyString(request.resource.data.createdByName, 80)
+                  && nonEmptyString(request.resource.data.question, 220)
+                  && request.resource.data.options is list
+                  && request.resource.data.options.size() >= 2
+                  && request.resource.data.options.size() <= 6
+                  && request.resource.data.optionIds is list
+                  && request.resource.data.optionIds.size() == request.resource.data.options.size()
+                  && request.resource.data.votes is map
+                  && request.resource.data.votes.size() == 0
+                  && request.resource.data.status == 'open'
+                  && auditIso(request.resource.data.createdAt)
+                  && request.resource.data.createdAt == request.resource.data.updatedAt)
+                ||
+                (request.resource.data.keys().hasOnly([
+                    'id','familyId','createdByUid','createdByName','question','description','audience',
+                    'eligibleUids','eligibleCount','anonymous','agreeCount','disagreeCount','votedCount',
+                    'createdAt','updatedAt','expiresAt','deleteAt'
+                  ])
+                  && request.resource.data.id == pollId
+                  && request.resource.data.familyId == familyId
+                  && request.resource.data.createdByUid == request.auth.uid
+                  && nonEmptyString(request.resource.data.createdByName, 80)
+                  && nonEmptyString(request.resource.data.question, 220)
+                  && request.resource.data.description is string
+                  && request.resource.data.description.size() <= 1200
+                  && request.resource.data.audience in ['family','group']
+                  && request.resource.data.eligibleUids is list
+                  && request.resource.data.eligibleUids.size() >= 1
+                  && request.resource.data.eligibleUids.size() <= 200
+                  && request.resource.data.eligibleUids.toSet().size() == request.resource.data.eligibleUids.size()
+                  && request.resource.data.eligibleCount == request.resource.data.eligibleUids.size()
+                  && request.auth.uid in request.resource.data.eligibleUids
+                  && (request.resource.data.audience != 'group' || request.resource.data.eligibleUids.size() >= 3)
+                  && request.resource.data.anonymous is bool
+                  && request.resource.data.agreeCount == 0
+                  && request.resource.data.disagreeCount == 0
+                  && request.resource.data.votedCount == 0
+                  && request.resource.data.expiresAt is timestamp
+                  && request.resource.data.deleteAt is timestamp
+                  && request.resource.data.expiresAt > request.time
+                  && request.resource.data.deleteAt > request.resource.data.expiresAt
+                  && auditIso(request.resource.data.createdAt)
+                  && request.resource.data.createdAt == request.resource.data.updatedAt)
+              );
+
+              allow update: if familyAccess(familyId) && (
+                // Legacy Phase 14A vote/close behavior.
+                (!(resource.data.keys().hasAny(['eligibleUids']))
+                  && request.resource.data.id == resource.data.id
+                  && request.resource.data.familyId == resource.data.familyId
+                  && request.resource.data.createdByUid == resource.data.createdByUid
+                  && request.resource.data.createdAt == resource.data.createdAt
+                  && request.resource.data.question == resource.data.question
+                  && request.resource.data.options == resource.data.options
+                  && request.resource.data.optionIds == resource.data.optionIds
+                  && (
+                    (resource.data.status == 'open'
+                      && request.resource.data.status == resource.data.status
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes','updatedAt'])
+                      && request.resource.data.votes is map
+                      && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
+                      && request.resource.data.votes[request.auth.uid] in resource.data.optionIds
+                      && auditIso(request.resource.data.updatedAt))
+                    || (resource.data.createdByUid == request.auth.uid
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+                      && request.resource.data.status == 'closed'
+                      && auditIso(request.resource.data.updatedAt))
+                  ))
+                ||
+                // V2 counters move only with this user's protected ballot in the same transaction.
+                (resource.data.keys().hasAny(['eligibleUids'])
+                  && request.auth.uid in resource.data.eligibleUids
+                  && request.time < resource.data.expiresAt
+                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['agreeCount','disagreeCount','votedCount','updatedAt'])
+                  && request.resource.data.agreeCount >= 0
+                  && request.resource.data.disagreeCount >= 0
+                  && request.resource.data.votedCount >= 0
+                  && request.resource.data.votedCount <= resource.data.eligibleCount
+                  && request.resource.data.agreeCount + request.resource.data.disagreeCount == request.resource.data.votedCount
+                  && auditIso(request.resource.data.updatedAt)
+                  && existsAfter(pollBallotPath(request.auth.uid))
+                  && getAfter(pollBallotPath(request.auth.uid)).data.uid == request.auth.uid
+                  && getAfter(pollBallotPath(request.auth.uid)).data.choice in ['agree','disagree']
+                  && (
+                    (!exists(pollBallotPath(request.auth.uid))
+                      && request.resource.data.votedCount == resource.data.votedCount + 1
+                      && ((getAfter(pollBallotPath(request.auth.uid)).data.choice == 'agree'
+                          && request.resource.data.agreeCount == resource.data.agreeCount + 1
+                          && request.resource.data.disagreeCount == resource.data.disagreeCount)
+                        || (getAfter(pollBallotPath(request.auth.uid)).data.choice == 'disagree'
+                          && request.resource.data.disagreeCount == resource.data.disagreeCount + 1
+                          && request.resource.data.agreeCount == resource.data.agreeCount)))
+                    ||
+                    (exists(pollBallotPath(request.auth.uid))
+                      && request.resource.data.votedCount == resource.data.votedCount
+                      && ((get(pollBallotPath(request.auth.uid)).data.choice == getAfter(pollBallotPath(request.auth.uid)).data.choice
+                          && request.resource.data.agreeCount == resource.data.agreeCount
+                          && request.resource.data.disagreeCount == resource.data.disagreeCount)
+                        || (get(pollBallotPath(request.auth.uid)).data.choice == 'agree'
+                          && getAfter(pollBallotPath(request.auth.uid)).data.choice == 'disagree'
+                          && request.resource.data.agreeCount == resource.data.agreeCount - 1
+                          && request.resource.data.disagreeCount == resource.data.disagreeCount + 1)
+                        || (get(pollBallotPath(request.auth.uid)).data.choice == 'disagree'
+                          && getAfter(pollBallotPath(request.auth.uid)).data.choice == 'agree'
+                          && request.resource.data.disagreeCount == resource.data.disagreeCount - 1
+                          && request.resource.data.agreeCount == resource.data.agreeCount + 1)))
+                  ))
+              );
+
+              allow delete: if familyAccess(familyId) && (
+                (!(resource.data.keys().hasAny(['eligibleUids']))
+                  && (resource.data.createdByUid == request.auth.uid || graphAdmin(familyId)))
+                ||
+                (resource.data.keys().hasAny(['eligibleUids'])
+                  && (resource.data.createdByUid == request.auth.uid
+                    || (request.auth.uid in resource.data.eligibleUids && request.time >= resource.data.deleteAt)))
+              );
+
+              match /ballots/{uid} {
+                function parentPoll() {
+                  return get(/databases/$(database)/documents/families/$(familyId)/homePolls/$(pollId)).data;
+                }
+                allow read: if familyAccess(familyId)
+                  && (request.auth.uid == uid || (!parentPoll().anonymous && request.auth.uid in parentPoll().eligibleUids));
+                allow create: if familyAccess(familyId)
+                  && request.auth.uid == uid
+                  && request.auth.uid in parentPoll().eligibleUids
+                  && request.time < parentPoll().expiresAt
+                  && request.resource.data.keys().hasOnly(['uid','displayName','choice','createdAt','updatedAt','deleteAt'])
+                  && request.resource.data.uid == request.auth.uid
+                  && request.resource.data.displayName is string
+                  && request.resource.data.displayName.size() <= 80
+                  && ((parentPoll().anonymous && request.resource.data.displayName == '') || (!parentPoll().anonymous && request.resource.data.displayName.size() > 0))
+                  && request.resource.data.choice in ['agree','disagree']
+                  && auditIso(request.resource.data.createdAt)
+                  && request.resource.data.createdAt == request.resource.data.updatedAt
+                  && request.resource.data.deleteAt == parentPoll().deleteAt;
+                allow update: if familyAccess(familyId)
+                  && request.auth.uid == uid
+                  && request.auth.uid in parentPoll().eligibleUids
+                  && request.time < parentPoll().expiresAt
+                  && request.resource.data.uid == resource.data.uid
+                  && request.resource.data.createdAt == resource.data.createdAt
+                  && request.resource.data.deleteAt == resource.data.deleteAt
+                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['choice','displayName','updatedAt'])
+                  && request.resource.data.choice in ['agree','disagree']
+                  && request.resource.data.displayName is string
+                  && request.resource.data.displayName.size() <= 80
+                  && ((parentPoll().anonymous && request.resource.data.displayName == '') || (!parentPoll().anonymous && request.resource.data.displayName.size() > 0))
+                  && auditIso(request.resource.data.updatedAt);
+                allow delete: if familyAccess(familyId)
+                  && request.auth.uid in parentPoll().eligibleUids
+                  && request.time >= parentPoll().deleteAt;
+              }
+            }
+
+            // Phase 14D — Nhạc Nhà Mình.
+      // A cycle is generated once then frozen; all members read the exact same snapshot.
+      match /homeMusicCycles/{cycleId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.keys().hasOnly(['id','familyId','provider','startsAt','endsAt','createdAt','tracks','mix'])
+          && request.resource.data.id == cycleId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.provider == 'audius'
+          && nonEmptyString(request.resource.data.startsAt, 80)
+          && nonEmptyString(request.resource.data.endsAt, 80)
+          && auditIso(request.resource.data.createdAt)
+          && request.resource.data.tracks is list
+          && request.resource.data.tracks.size() >= 1
+          && request.resource.data.tracks.size() <= 30
+          && request.resource.data.mix is map;
+        allow update, delete: if false;
+      }
+
+      // Songs explicitly shared by actual family users. Re-adding the same provider track
+      // is prevented in the UI; only the original sharer can update/delete its document.
+      match /homeMusicSongs/{trackId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.familyId == familyId
+          && request.resource.data.sharedByUid == request.auth.uid
+          && request.resource.data.provider == 'audius'
+          && request.resource.data.providerTrackId == trackId
+          && nonEmptyString(request.resource.data.title, 300)
+          && nonEmptyString(request.resource.data.artist, 300)
+          && auditIso(request.resource.data.sharedAt);
+        allow update: if familyAccess(familyId)
+          && resource.data.sharedByUid == request.auth.uid
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.sharedByUid == resource.data.sharedByUid
+          && request.resource.data.providerTrackId == resource.data.providerTrackId;
+        allow delete: if familyAccess(familyId) && resource.data.sharedByUid == request.auth.uid;
+      }
+
+// Phase 14C — Bếp Nhà Mình. Preferences belong to actual membership users, never graph Persons.
+      match /homeKitchenPreferences/{uid} {
+        allow read: if familyAccess(familyId);
+        allow create, update: if familyAccess(familyId)
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['familyId','uid','tags','updatedAt'])
+          && request.resource.data.familyId == familyId
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.tags is list
+          && request.resource.data.tags.size() >= 1
+          && request.resource.data.tags.size() <= 5
+          && request.resource.data.tags.toSet().size() == request.resource.data.tags.size()
+          && request.resource.data.tags.toSet().hasOnly(['normal','vegetarian','lowerSugar','controlledCarb','lowerSodium'])
+          && auditIso(request.resource.data.updatedAt);
+        allow delete: if familyAccess(familyId) && request.auth.uid == uid;
+      }
+
+      // Phase 14U — Cờ vua realtime. Render/Firebase Admin is the only writer.
+      // Mobile may read only games where the authenticated user is one of the two players.
+      // Queries must include playerUids array-contains request.auth.uid and stay bounded.
+      match /chessGames/{gameId} {
+        function chessPlayerCanRead() {
+          return familyAccess(familyId)
+            && resource.data.familyId == familyId
+            && resource.data.playerUids is list
+            && request.auth.uid in resource.data.playerUids;
+        }
+        allow get: if chessPlayerCanRead();
+        allow list: if chessPlayerCanRead()
+          && request.query.limit != null
+          && request.query.limit <= 20;
+        allow create, update, delete: if false;
+      }
+
+      // Phase 14T — Trò chơi Nhà Mình. Sessions freeze the real membership users who
+      // joined the round. Hidden answers stay private until the creator reveals the round;
+      // story/bingo/public clue rows are explicitly marked public.
+      match /homeGameSessions/{sessionId} {
+        function gameSessionPath() {
+          return /databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId);
+        }
+        function gameSecretPath() {
+          return /databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)/secrets/main;
+        }
+        function gameParent() {
+          return get(gameSessionPath()).data;
+        }
+        function validGameType(value) {
+          return value in ['know_each_other','guess_person','memory_owner','truth_lie','story_chain','family_bingo'];
+        }
+        function validGameStatus(value) {
+          return value in ['playing','revealed','completed'];
+        }
+        function gameParticipant() {
+          return familyAccess(familyId) && request.auth.uid in gameParent().participantUids;
+        }
+
+        allow read: if familyAccess(familyId)
+          && request.auth.uid in resource.data.participantUids;
+
+        allow create: if familyAccess(familyId)
+          && request.resource.data.keys().hasOnly([
+            'id','familyId','gameType','title','createdByUid','createdByName',
+            'participantUids','participantNames','status','prompts','subjectUid','subjectName',
+            'turnUids','turnNames','bingoCellIds','memoryPreview','submittedUids','createdAt','updatedAt'
+          ])
+          && request.resource.data.id == sessionId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.createdByUid == request.auth.uid
+          && validGameType(request.resource.data.gameType)
+          && nonEmptyString(request.resource.data.title, 120)
+          && nonEmptyString(request.resource.data.createdByName, 80)
+          && request.resource.data.participantUids is list
+          && request.resource.data.participantUids.size() >= 1
+          && request.resource.data.participantUids.size() <= 50
+          && request.resource.data.participantUids.toSet().size() == request.resource.data.participantUids.size()
+          && request.auth.uid in request.resource.data.participantUids
+          && request.resource.data.participantNames is list
+          && request.resource.data.participantNames.size() == request.resource.data.participantUids.size()
+          && request.resource.data.status == 'playing'
+          && request.resource.data.prompts is list
+          && request.resource.data.prompts.size() <= 6
+          && request.resource.data.turnUids is list
+          && request.resource.data.turnUids.size() <= 50
+          && request.resource.data.turnNames is list
+          && request.resource.data.turnNames.size() == request.resource.data.turnUids.size()
+          && request.resource.data.bingoCellIds is list
+          && request.resource.data.bingoCellIds.size() <= 9
+          && request.resource.data.memoryPreview is map
+          && request.resource.data.submittedUids is list
+          && request.resource.data.submittedUids.size() == 0
+          && auditIso(request.resource.data.createdAt)
+          && request.resource.data.updatedAt == request.resource.data.createdAt;
+
+        allow update: if familyAccess(familyId)
+          && request.auth.uid in resource.data.participantUids
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.gameType == resource.data.gameType
+          && request.resource.data.title == resource.data.title
+          && request.resource.data.createdByUid == resource.data.createdByUid
+          && request.resource.data.createdByName == resource.data.createdByName
+          && request.resource.data.participantUids == resource.data.participantUids
+          && request.resource.data.participantNames == resource.data.participantNames
+          && request.resource.data.prompts == resource.data.prompts
+          && request.resource.data.subjectUid == resource.data.subjectUid
+          && request.resource.data.subjectName == resource.data.subjectName
+          && request.resource.data.turnUids == resource.data.turnUids
+          && request.resource.data.turnNames == resource.data.turnNames
+          && request.resource.data.bingoCellIds == resource.data.bingoCellIds
+          && request.resource.data.memoryPreview == resource.data.memoryPreview
+          && request.resource.data.createdAt == resource.data.createdAt
+          && auditIso(request.resource.data.updatedAt)
+          && (
+            (request.auth.uid == resource.data.createdByUid
+              && request.resource.data.submittedUids == resource.data.submittedUids
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+              && validGameStatus(request.resource.data.status))
+            ||
+            (request.resource.data.status == resource.data.status
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedUids','updatedAt'])
+              && request.resource.data.submittedUids is list
+              && request.resource.data.submittedUids.size() <= resource.data.participantUids.size()
+              && request.resource.data.submittedUids.toSet().difference(resource.data.submittedUids.toSet()).hasOnly([request.auth.uid])
+              && resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet()).size() == 0)
+          );
+
+        allow delete: if familyAccess(familyId) && resource.data.createdByUid == request.auth.uid;
+
+        match /responses/{uid} {
+          function parentGame() {
+            return get(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)).data;
+          }
+          function secretGame() {
+            return get(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)/secrets/main).data;
+          }
+          function expectedPublic() {
+            return parentGame().gameType in ['story_chain','family_bingo']
+              || ((parentGame().gameType == 'guess_person' || parentGame().gameType == 'truth_lie')
+                && exists(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)/secrets/main)
+                && secretGame().subjectUid == request.auth.uid);
+          }
+          function validResponseShape(data) {
+            return data.keys().hasOnly([
+              'uid','displayName','answers','textLines','selectedIds','guessUid','guessName',
+              'choiceIndex','public','submittedAt','updatedAt'
+            ])
+            && data.uid == request.auth.uid
+            && nonEmptyString(data.displayName, 80)
+            && data.answers is list && data.answers.size() <= 10
+            && data.textLines is list && data.textLines.size() <= 3
+            && data.selectedIds is list && data.selectedIds.size() <= 9
+            && data.selectedIds.toSet().size() == data.selectedIds.size()
+            && (data.guessUid == null || data.guessUid is string)
+            && (data.guessName == null || data.guessName is string)
+            && (data.choiceIndex == null || data.choiceIndex is int)
+            && data.public == expectedPublic()
+            && auditIso(data.submittedAt)
+            && auditIso(data.updatedAt);
+          }
+
+          allow read: if familyAccess(familyId)
+            && request.auth.uid in parentGame().participantUids
+            && (request.auth.uid == uid || resource.data.public == true || parentGame().status in ['revealed','completed']);
+
+          allow create: if familyAccess(familyId)
+            && request.auth.uid == uid
+            && request.auth.uid in parentGame().participantUids
+            && (parentGame().status == 'playing' || parentGame().gameType == 'family_bingo')
+            && validResponseShape(request.resource.data)
+            && request.resource.data.submittedAt == request.resource.data.updatedAt;
+
+          allow update: if familyAccess(familyId)
+            && request.auth.uid == uid
+            && request.auth.uid in parentGame().participantUids
+            && (parentGame().status == 'playing' || parentGame().gameType == 'family_bingo')
+            && validResponseShape(request.resource.data)
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.submittedAt == resource.data.submittedAt
+            && request.resource.data.public == resource.data.public;
+
+          allow delete: if familyAccess(familyId)
+            && (request.auth.uid == uid || parentGame().createdByUid == request.auth.uid);
+        }
+
+        match /secrets/{secretId} {
+          function parentGame() {
+            return get(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)).data;
+          }
+          function parentGameAfter() {
+            return getAfter(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(sessionId)).data;
+          }
+          allow read: if secretId == 'main'
+            && familyAccess(familyId)
+            && request.auth.uid in parentGame().participantUids
+            && (request.auth.uid in resource.data.allowedUids || parentGame().status in ['revealed','completed']);
+          allow create: if secretId == 'main'
+            && familyAccess(familyId)
+            && parentGameAfter().createdByUid == request.auth.uid
+            && request.resource.data.keys().hasOnly([
+              'sessionId','familyId','allowedUids','subjectUid','subjectName','memoryAuthorUid','memoryAuthorName',
+              'memoryMomentId','lieIndex','createdAt','updatedAt'
+            ])
+            && request.resource.data.sessionId == sessionId
+            && request.resource.data.familyId == familyId
+            && request.resource.data.allowedUids is list
+            && request.auth.uid in request.resource.data.allowedUids
+            && request.resource.data.allowedUids.size() <= 3
+            && request.resource.data.allowedUids.toSet().size() == request.resource.data.allowedUids.size()
+            && (request.resource.data.lieIndex == null || request.resource.data.lieIndex is int)
+            && auditIso(request.resource.data.createdAt)
+            && request.resource.data.updatedAt == request.resource.data.createdAt;
+          allow update: if secretId == 'main'
+            && familyAccess(familyId)
+            && request.auth.uid in resource.data.allowedUids
+            && request.resource.data.sessionId == resource.data.sessionId
+            && request.resource.data.familyId == resource.data.familyId
+            && request.resource.data.allowedUids == resource.data.allowedUids
+            && request.resource.data.subjectUid == resource.data.subjectUid
+            && request.resource.data.subjectName == resource.data.subjectName
+            && request.resource.data.memoryAuthorUid == resource.data.memoryAuthorUid
+            && request.resource.data.memoryAuthorName == resource.data.memoryAuthorName
+            && request.resource.data.memoryMomentId == resource.data.memoryMomentId
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lieIndex','updatedAt'])
+            && request.resource.data.lieIndex is int
+            && request.resource.data.lieIndex >= 0 && request.resource.data.lieIndex <= 2
+            && auditIso(request.resource.data.updatedAt);
+          allow delete: if secretId == 'main'
+            && familyAccess(familyId)
+            && parentGame().createdByUid == request.auth.uid;
+        }
+      }
+
+
+      match /events/{eventId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.id == eventId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.createdByUid == request.auth.uid
+          && personIdsOptional(request.resource.data)
+          && request.resource.data.moderationStatus == 'visible'
+          && request.resource.data.moderatedByUid == null
+          && request.resource.data.moderatedAt == null;
+
+        // Creator owns event content. Admin/Owner moderation is a separate lane:
+        // they may only hide/unhide and may never edit/delete another creator's event.
+        allow update: if familyAccess(familyId)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.createdByUid == resource.data.createdByUid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && personIdsOptional(request.resource.data)
+          && (
+            (resource.data.createdByUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'title', 'dateISO', 'dateKey', 'year', 'month', 'day', 'allDay',
+                'eventType', 'notificationLevel', 'participantsMode', 'participantIds', 'personIds', 'recurrence',
+                'description', 'location', 'attachments', 'attachmentPublicIds',
+                'coverAttachmentId', 'updatedAt'
+              ]))
+            || (graphAdmin(familyId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'moderationStatus', 'moderatedByUid', 'moderatedAt', 'updatedAt'
+              ])
+              && request.resource.data.moderationStatus in ['visible', 'hidden']
+              && request.resource.data.moderatedByUid == request.auth.uid
+              && auditIso(request.resource.data.moderatedAt))
+          );
+
+        allow delete: if familyAccess(familyId)
+          && resource.data.createdByUid == request.auth.uid;
+      }
+
+      match /moments/{postId} {
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId)
+          && request.resource.data.id == postId
+          && request.resource.data.familyId == familyId
+          && request.resource.data.authorUid == request.auth.uid
+          && personIdsOptional(request.resource.data)
+          && timelineAudienceOptional(request.resource.data)
+          && request.resource.data.visibility == 'family';
+
+        // 1) Người tạo được sửa nội dung, media và đích Timeline của bài đăng của chính mình.
+        // 2) Thành viên được cập nhật summary reaction/comment qua transaction hiện có.
+        // 3) Admin/Owner chỉ được đổi trạng thái hiển thị trên trang Kỷ niệm.
+        //    Admin KHÔNG được sửa caption/media và KHÔNG được xóa bài của người khác.
+        allow update: if familyAccess(familyId)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.authorUid == resource.data.authorUid
+          && request.resource.data.visibility == resource.data.visibility
+          && personIdsOptional(request.resource.data)
+          && (
+            (resource.data.authorUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'caption', 'media', 'mediaAssetIds', 'personIds', 'timelineAudience', 'notifyFamily', 'updatedAt'
+              ]))
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'reactionCounts', 'commentCount', 'updatedAt'
+            ])
+            || (graphAdmin(familyId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'moderationStatus', 'moderatedByUid', 'moderatedAt', 'updatedAt'
+              ])
+              && request.resource.data.moderationStatus in ['visible', 'hidden']
+              && request.resource.data.moderatedByUid == request.auth.uid
+              && auditIso(request.resource.data.moderatedAt))
+          );
+
+        // Quyền xóa thuộc duy nhất người tạo bài. Admin không có quyền xóa thay.
+        allow delete: if familyAccess(familyId)
+          && resource.data.authorUid == request.auth.uid;
+
+        match /comments/{commentId} {
+          allow read: if familyAccess(familyId);
+          allow create: if familyAccess(familyId)
+            && request.resource.data.id == commentId
+            && request.resource.data.postId == postId
+            && request.resource.data.authorUid == request.auth.uid;
+          allow update: if familyAccess(familyId)
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.postId == resource.data.postId;
+          // Bình luận cũng chỉ người viết tự xóa; admin không xóa nội dung thay người khác.
+          allow delete: if familyAccess(familyId)
+            && resource.data.authorUid == request.auth.uid;
+        }
+
+        match /reactions/{uid} {
+          allow read: if familyAccess(familyId);
+          allow create, update: if familyAccess(familyId) && self(uid)
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.reaction in ['like','love','haha','wow','sad','celebrate'];
+          allow delete: if familyAccess(familyId) && self(uid);
+        }
+      }
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}

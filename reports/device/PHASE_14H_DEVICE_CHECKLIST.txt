@@ -1,0 +1,13 @@
+FAMILY BLOOM PHASE 14H — FOCUS OVERLAY VISIBILITY DEVICE CHECKLIST
+
+[ ] Từ 3 thế hệ, bấm Nhánh ở một Person -> Focus card nhìn thấy rõ trên lớp nền mờ nhẹ.
+[ ] Từ 5 thế hệ và Toàn phả hệ làm lại -> Focus card đều xuất hiện.
+[ ] Focus card chiếm xấp xỉ 80% Canvas View, không phải toàn màn hình.
+[ ] Animation mở đi từ node đã chọn tới khung Focus, không bật đùng 100%.
+[ ] Nếu nhánh chưa xong, thấy “Đang chuẩn bị nhánh của ...”.
+[ ] Khi Focus mở: 3/5/Toàn phả hệ không bấm được; Canvas dưới không pan/zoom.
+[ ] Pan/pinch trong Focus vẫn hoạt động.
+[ ] Nút “Trở lại” đóng Focus; nút X đóng Focus; Android Back đóng Focus.
+[ ] Chạm nền frosted ngoài card đóng Focus.
+[ ] Đóng Focus -> Canvas dưới giữ nguyên node/line, mode, zoom và pan trước đó.
+[ ] Focus A -> chạm B trong Focus -> vẫn dùng một overlay, không chồng modal.

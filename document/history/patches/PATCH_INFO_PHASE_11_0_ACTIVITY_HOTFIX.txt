@@ -1,0 +1,15 @@
+FAMILY BLOOM — PHASE 11.0 ACTIVITY BADGE / DEEP-LINK / GRAPH UX HOTFIX
+Date: 2026-09-26
+Base: Family_Bloom_Phase_11_0_ACTIVITY_CENTER_FULL_2026-09-26.zip
+
+Fixes:
+- Tagged Person notification badge resolves linked accounts through both Person.linkedUid and personLinks fallback.
+- Moment activity metadata retries twice with deterministic activity ids without rolling back a successful publish.
+- Home badge refreshes twice after the existing realtime Moment/Event head changes; no new realtime listener.
+- Activity Center -> Moment carries family scope and opens the target with a direct getById read instead of paging old feed pages.
+- A lightweight Bloom “Đang mở kỷ niệm…” status is visible while the target Moment resolves.
+- Family Graph shows an explicit admin “Thêm” action beside Search so the add-person entry is no longer hidden.
+- Composer restores spacing between “Chọn người liên quan” and “Ảnh / Video” so the two touch targets do not look attached.
+- Composer copy clarifies that only linked accounts can receive the in-app notification.
+
+Firestore rules/schema: unchanged from Phase 11.0.

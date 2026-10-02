@@ -1,0 +1,21 @@
+PHASE 8.2C — FILES UPDATED
+
+Runtime source
+- src/app/(tabs)/moments.tsx
+- src/app/(tabs)/planner.tsx
+- src/components/familyGraph/FamilyGraphPrototype.tsx
+- src/hooks/usePendingFamilyReviews.ts
+
+Tests
+- scripts/test-phase82c-tab-regression.js (new)
+- scripts/test-phase82b-first-frame.js (historical entry now delegates to current 8.2C gate)
+- scripts/test-phase8-reliability.js
+
+Documentation
+- PATCH_INFO.txt
+- document/PHASE_8_2C_TAB_REGRESSION_CORRECTION.md
+- document/BUILD_CHECK_REPORT_PHASE_8_2C.txt
+- document/DANH_SACH_FILE_CAP_NHAT_PHASE_8_2C.txt
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+- document/PHASE_8_2B_FIRST_FRAME_JS_YIELD.md (superseded note)
+- document/BUILD_CHECK_REPORT_PHASE_8_2B.txt (superseded note)

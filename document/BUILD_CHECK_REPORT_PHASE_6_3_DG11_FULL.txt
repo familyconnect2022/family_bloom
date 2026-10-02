@@ -1,0 +1,30 @@
+FAMILY BLOOM — PHASE 6.3 DG-11 + VISUAL TRUTH — FULL BUILD CHECK
+
+BASELINE
+- Phase 6.2 RELATION_UPLOAD_EVENT_HOTFIX_FULL
+- + Phase 6.3 Query/Kinship/Focus UI
+- + Phase 6.3 Dense Layout/Safe Delete/Bloom Confirm
+- + Phase 6.3 DG-11/Visual Truth
+
+FULL-BUILD RECOVERY
+- Restored src/hooks/useFamilyGraph.ts from the canonical Phase 6.2 Graph Foundation package.
+- Restored src/services/familyGraph/familyGraphRepository.ts from the canonical Phase 6.2 Graph Foundation package.
+- These two runtime files were absent from the prior Phase 6.2 full archive even though current Graph code imports them.
+- Relative import audit after recovery: PASS, 0 missing imports across 117 TS/TSX files.
+
+CHECKS
+- Family Graph Query + Kinship + Focus Subgraph tests: PASS
+- DG-11 Batch Relationship Composer tests: PASS
+- Family Graph dense layout tests: PASS
+- 50/100/300/500 synthetic benchmark: PASS
+- Phase 2 static transpile/architecture check: PASS (117 TS/TSX)
+- functions/index.js syntax: PASS
+- functions/familyGraphCore.js syntax: PASS
+- familyGraphCore tests: PASS
+
+NOT CLAIMED
+- Full npm semantic typecheck is not claimed in this artifact workspace because node_modules are not bundled.
+
+FIREBASE
+- No new Firestore Rules publish required for Phase 6.3 DG-11.
+- No Cloud Functions deploy required now.

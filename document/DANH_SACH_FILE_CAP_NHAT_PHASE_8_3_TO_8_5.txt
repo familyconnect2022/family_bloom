@@ -1,0 +1,30 @@
+FAMILY BLOOM — FILES CHANGED / ADDED — PHASE 8.3 → 8.5
+
+RUNTIME
+src/context/MomentPublishContext.tsx
+src/services/media/mediaService.ts
+src/utils/momentPublishPolicy.ts                              [NEW]
+src/components/moments/MomentFamilyMultiPicker.tsx            [NEW]
+src/components/moments/PendingMomentCard.tsx
+src/app/(tabs)/moments.tsx
+src/context/AuthContext.tsx
+src/components/family/FamilySwitcherModal.tsx
+src/constants/theme.ts
+src/app/family-memberships.tsx
+src/app/(tabs)/planner.tsx
+src/hooks/useFamilyEvents.ts
+src/services/familyGraph/familyGraphService.ts
+src/services/familyGraph/crossFamilyGraphBridge.ts             [NEW]
+src/constants/featureFlags.ts
+
+TESTS
+scripts/test-phase7-multifamily.js
+scripts/test-phase8-reliability.js                             [NEW]
+
+DOCUMENTATION
+document/PHASE_8_3_TO_8_5_RELIABILITY_POLISH_REALTIME.md       [NEW]
+document/BUILD_CHECK_REPORT_PHASE_8_3_TO_8_5.txt                [NEW]
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_8_3_TO_8_5.txt           [NEW]
+document/PHASE_8_TODO_POLISH_RELIABILITY.md
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+PATCH_INFO.txt

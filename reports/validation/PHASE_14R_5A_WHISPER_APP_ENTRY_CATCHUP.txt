@@ -1,0 +1,38 @@
+FAMILY BLOOM — PHASE 14R.5A VALIDATION
+Date: 2026-10-01
+Base: Phase 14R.5 Whisper Notification & Stability Pass
+
+ROOT CAUSE
+The Phase 14R.5 inbox snapshot could arrive during cold-start while React Native AppState was still inactive/unknown. The old flow claimed deliveredAt before confirming any user-visible delivery. If local notification scheduling was unavailable or startup transitioned to foreground immediately, the inbox event could be consumed with no in-app toast.
+
+FIX
+- Cache latest bounded private inbox snapshot.
+- Never consume whisper delivery while cold-start is inactive/unknown.
+- Retry cached inbox immediately on AppState active.
+- Add transactional recipient-only inAppSeenAt acknowledgement shared by Release + DEV.
+- Foreground unread catch-up is independent from earlier OS delivery and appears once per inbox event.
+- Background local notification claims are released when Android does not accept scheduling.
+- readAt also seals inAppSeenAt.
+- Firestore client/cloud rules allow and validate only readAt/deliveredAt/inAppSeenAt acknowledgement updates.
+- Version: 1.0.6 / Android 140510 / iOS 6.
+
+VALIDATION
+Phase 14R.5 regression: 27 PASS / 0 FAIL
+Phase 14R.5A: 24 PASS / 0 FAIL
+Phase 14R.4G: 14 PASS / 0 FAIL
+Phase 14R.4F: 10 PASS / 0 FAIL
+Phase 14R.4E: 22 PASS / 0 FAIL
+Phase 14R.4D: 26 PASS / 0 FAIL
+Phase 14R.4: 16 PASS / 0 FAIL
+Phase 14R: 49 PASS / 0 FAIL
+Phase 14R.3: 8 PASS / 0 FAIL
+Phase 14R.2: 25 PASS / 0 FAIL
+Phase 14R.1: 45 PASS / 0 FAIL
+Changed TS/TSX syntax transpile: PASS
+
+DEVICE REQUIREMENT
+Deploy firestore.rules before testing because the recipient acknowledgement schema adds inAppSeenAt.
+Test with a NEW direct whisper after 14R.5A is installed.
+
+MIXED-VERSION COVERAGE
+Recipient-side bounded repair supports the common test state where Release is still pre-14R.5 and DEV is newer. A recent direct whisper with no homeInbox row is repaired transactionally only after rules verify the source direct whisper belongs to that recipient.

@@ -1,0 +1,42 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+let pass = 0;
+let fail = 0;
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const check = (name, ok) => { if (ok) { console.log(`PASS ${name}`); pass++; } else { console.error(`FAIL ${name}`); fail++; } };
+
+const play = read('src/app/(tabs)/play.tsx');
+const list = read('src/app/home-time-capsules.tsx');
+const service = read('src/services/home/homeTimeCapsuleService.ts');
+const bridge = read('src/components/system/BloomPushBridge.tsx');
+const compose = read('src/app/home-time-capsule-compose.tsx');
+const detail = read('src/app/home-time-capsule/[capsuleId].tsx');
+const activity = read('src/services/activity/activityService.ts');
+const activityTypes = read('src/types/activity.ts');
+const notifications = read('src/app/notifications.tsx');
+const debugBat = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+const localNotifications = read('src/services/push/localNotificationService.ts');
+
+check('Nhà Mình hub subscribes to recipient capsule state before entry', /home\.time_capsules\.recipient\.all/.test(play) && /watchRecipientCapsules/.test(play));
+check('Nhà Mình hub visibly highlights ready boxes', /MỞ NGAY/.test(play) && /hubCardAttention/.test(play) && /hubStatusAttention/.test(play));
+check('Nhà Mình hub highlights locked preview boxes waiting to open', /HỘP ĐANG CHỜ/.test(play) && /previewMode === "locked"/.test(play));
+check('hidden preview is not advertised before open time', /previewMode === "locked" \|\| isTimeCapsuleOpen/.test(play));
+check('recipient watcher exposes all state transitions', /watchRecipientCapsules\(/.test(service));
+check('sender watcher exists for openedByUids realtime state', /watchCreatedCapsules\(/.test(service) && /createdByUid/.test(service));
+check('horizontal collection subscribes to sender realtime state', /home\.time_capsules\.created\.all/.test(list) && /watchCreatedCapsules/.test(list));
+check('global bridge shares sender realtime listener', /home\.time_capsules\.created\.all/.test(bridge) && /newlyOpened/.test(bridge));
+check('sender gets foreground notification toast on remote-device open', /Hộp thời gian vừa được mở/.test(bridge) && /Tất cả người nhận đã mở/.test(bridge));
+check('recipient exact-time local notification remains scheduled', /Hộp thời gian đã đến lúc mở/.test(localNotifications) && /sourceType: "home_time_capsule"/.test(localNotifications));
+check('locked preview creates persistent recipient activity notice', /createTimeCapsuleWaitingNotices/.test(compose) && /previewMode === "locked"/.test(compose));
+check('hidden preview does not create early waiting activity notice', /if \(previewMode === "locked"\)/.test(compose));
+check('first open creates persistent sender activity notice', /createTimeCapsuleOpenedNotice/.test(detail) && /!openedBefore/.test(detail));
+check('activity model supports time capsule deep links', /home_time_capsule/.test(activityTypes) && /home_time_capsule/.test(activity));
+check('Activity Center opens exact capsule', /home_time_capsule/.test(notifications) && /home-time-capsule\//.test(notifications));
+check('DEBUG build verifies the single generated applicationId before install', /check-generated-android-package\.js/.test(debugBat) && /com\.familybloom\.android/.test(debugBat));
+check('RELEASE build verifies the same generated applicationId before build', /check-generated-android-package\.js/.test(releaseBat) && /com\.familybloom\.android/.test(releaseBat));
+check('generated native applicationId guard exists', fs.existsSync(path.join(root, 'scripts/setup/check-generated-android-package.js')));
+
+console.log(`Phase14R.4E live-state checks: ${pass} PASS / ${fail} FAIL`);
+process.exit(fail ? 1 : 0);

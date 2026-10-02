@@ -1,0 +1,35 @@
+PHASE 14T.0A — MAIN CHANGED/ADDED FILES
+
+app.config.js
+app.json
+package.json
+google-services.json
+src/components/system/BloomPushBridge.tsx
+scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+scripts/android/Family_Bloom_Android_Metro_Only.bat
+scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+scripts/setup/check-generated-android-package.js
+scripts/setup/apply-phase14t0a-cleanup.js
+scripts/test-phase14t0a-single-android-cleanup.js
+scripts/test-phase14r4e-time-capsule-live-state.js
+scripts/test-phase14r5-whisper-notification-stability.js
+scripts/test-phase14r5a-whisper-app-entry-catchup.js
+scripts/test-phase14s1-fund-governance-analytics.js
+scripts/test-phase14s1a-fund-form-ux.js
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP.md
+document/BUILD_CHECK_REPORT_CHESS_BASELINE_CLEANUP.txt
+document/DANH_SACH_FILE_CAP_NHAT_CHESS_BASELINE_CLEANUP.txt
+
+REMOVED ACTIVE LEGACY DUAL-APP FILES
+- assets/branding/dev/
+- config/firebase/google-services.dev.json
+- config/firebase/README_DEV_FIREBASE.txt
+- plugins/withBloomDebugApplicationIdSuffix.js
+- plugins/bloomDebugApplicationIdSuffixCore.js
+- scripts/android/Family_Bloom_Android_DEV_Build_And_Run.bat
+- scripts/android/Family_Bloom_Android_DEV_Metro_Only.bat
+- scripts/android/Family_Bloom_Android_Print_DEV_SHA.bat
+- scripts/setup/check-dev-firebase.js
+- scripts/setup/check-generated-android-debug-suffix.js
+- dual-app-only Phase 14R static test scripts

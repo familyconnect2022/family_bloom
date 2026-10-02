@@ -1,0 +1,11 @@
+FAMILY BLOOM PHASE 14R.3 — DEV FIREBASE + GENERATED LOCK GATE HOTFIX
+Date: 2026-10-01
+Base: Phase 14R.2 Expo Doctor / Build Fix corrected FULL
+
+Fixes
+- Embedded the user-provided DEV Firebase Android config at config/firebase/google-services.dev.json.
+- Validates project family-connect-4184f and package com.familybloom.android.dev before DEV build/Metro use.
+- Fixed Phase 14R.2 static gate false-negative: package-lock may be absent in a clean source ZIP or present after npm install, but when present it must be synchronized with the watched Expo SDK dependencies.
+- Added phase14r3:check to DEV and RELEASE build gates.
+
+No data migration, Firestore schema change, Rules change, Functions change, or persisted semantics change.

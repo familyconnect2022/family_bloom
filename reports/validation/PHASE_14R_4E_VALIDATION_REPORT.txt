@@ -1,0 +1,36 @@
+FAMILY BLOOM — PHASE 14R.4E VALIDATION REPORT
+Date: 2026-10-01
+Base: Phase 14R.4D Horizontal Box Collection
+
+STATIC GATES
+- Phase 13 release readiness: 11 PASS / 0 FAIL
+- Phase 14N: 13 PASS / 0 FAIL
+- Phase 14Q: 34 PASS / 0 FAIL
+- Phase 14R: 49 PASS / 0 FAIL
+- Phase 14R.1 dual Android variants: 45 PASS / 0 FAIL
+- Phase 14R.2 Expo doctor/build fix: 25 PASS / 0 FAIL
+- Phase 14R.3 DEV Firebase/lock gate: 8 PASS / 0 FAIL
+- Phase 14R.4 UX/realtime: 16 PASS / 0 FAIL
+- Phase 14R.4D horizontal boxes: 26 PASS / 0 FAIL
+- Phase 14R.4E live state: 22 PASS / 0 FAIL
+- TypeScript/TSX syntax parse: 210 / 210 files PASS
+
+14R.4E COVERAGE
+- Nhà Mình status highlight before entering Hộp thời gian.
+- Hidden-preview privacy retained until due.
+- Shared bounded recipient + creator realtime queries.
+- Sender lid state reacts to openedByUids from recipient device.
+- Recipient waiting Activity Center event for Báo trước.
+- Sender Activity Center event on first recipient open.
+- Exact recipient local reveal reminder preserved.
+- Foreground realtime notification toasts.
+- RELEASE and DEV package separation hardened with native debug .dev suffix.
+- Build scripts validate generated applicationId and DEV side-by-side installation.
+
+DEVICE/SERVER REQUIREMENTS
+- Deploy Firestore rules for canonical openedByUids sender-side live state.
+- Reliable OS remote push while target app is fully killed requires the existing Functions push transport to be deployed.
+- Run one official DEV or RELEASE clean-prebuild after applying 14R.4E before using a manual npx expo run:android against an older native android/ tree.
+
+LIMITATION OF THIS VALIDATION
+No Windows Gradle/APK/device installation was executed in this container. Final RELEASE+DEV coexistence and two-device notification behavior must be confirmed on real Android devices.

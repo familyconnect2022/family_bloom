@@ -1,0 +1,15 @@
+Family Bloom Phase 8.7C — Bloom UI & Timeline Finalization
+Baseline: Phase 8.7A FULL + Phase 8.7B Visual Feedback
+
+Changes:
+- White default card/content surfaces on pale Bloom page background.
+- Semantic focus/accent palette for future themes.
+- Planner moderation moved below page header.
+- Family Timeline Back moved to the left.
+- Family Timeline adaptive Year > Month > Day hierarchy.
+- Family Timeline SectionList virtualization for long histories.
+- Person Timeline progressive 30-item mounting + adaptive year/month headers.
+- Timeline media tap guidance.
+- Play Performance Lab / hero surfaces changed to white.
+- Existing media loading feedback and toast semantics from 8.7B preserved.
+- Runtime singleton/listener/Graph performance architecture untouched.

@@ -1,0 +1,34 @@
+Family Bloom Phase 14Q — Time Capsule / Bloom Time Reveal Prototype
+Validation date: 2026-10-01
+Base: Family_Bloom_Phase_14N_FOCUS_FIRST_CATALOG_FIRST_FULL_2026-09-30.zip
+
+SCOPE
+- Visual/device prototype only; no Firestore reads/writes for Time Capsule.
+- No firestore.rules, firestore.cloud.rules, firestore.indexes.json or Functions changes.
+- No dependency added. Uses existing react-native-reanimated 4.5.1 and expo-haptics ~57.0.3.
+- Visible Phòng nhạc panel is replaced in Nhà Mình by a Hộp thời gian prototype entry. Existing music source is preserved untouched.
+
+VALIDATION
+PASS Phase 14Q dedicated static checks: 14/14
+PASS TypeScript/TSX transpile syntax: 206/206
+PASS relative/@ import resolution: 845/845
+PASS Phase 14N regression: 13/13
+PASS Phase 14J Graph focus regression: 18/18
+PASS Phase 14C Nhà Mình functional regression: 44/44
+PASS changed-file scope: 7 files relative to original 14N
+PASS Firestore rules/index files unchanged from original 14N
+PASS no third-party animation dependency introduced
+
+CHANGED / ADDED FILES
+- src/app/(tabs)/play.tsx
+- src/app/home-time-capsule-demo.tsx
+- src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx
+- scripts/test-phase14q-time-capsule-reveal.js
+- package.json
+- PATCH_INFO_PHASE_14Q_TIME_CAPSULE_REVEAL_PROTOTYPE.txt
+- PHASE_14Q_TIME_CAPSULE_DEVICE_CHECKLIST.txt
+
+DEVICE STATUS
+- Static validation is PASS.
+- Native visual quality, timing, FPS and haptic feel still require the user's real Android device test.
+- Do not treat the prototype as functional Time Capsule storage/scheduling yet.

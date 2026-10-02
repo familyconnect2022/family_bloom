@@ -1,0 +1,31 @@
+FAMILY BLOOM — BUILD CHECK REPORT PHASE 14C
+Date: 2026-09-29
+Base: Phase 14B.1 NHA_MINH_UI_SHELL FULL
+
+PASS
+- Phase14C functional static contract: 40/40 PASS.
+- TS/TSX syntax transpile across src: 191/191 PASS.
+- Phase14B.1 UI Shell regression: 27/27 PASS.
+- Phase13 Release Readiness: 11/11 PASS.
+- functions/pushNotifications.js syntax: PASS.
+- functions/index.js syntax: PASS.
+- firebase.json JSON parse: PASS.
+- firestore.indexes.json JSON parse: PASS.
+- firestore.rules brace balance: PASS.
+- firestore.cloud.rules brace balance: PASS.
+- Recipe catalog: 100 rows / 100 unique ids / 100 unique names.
+- home-music.tsx SHA-256 exactly matches Phase 14B.1 base.
+
+EXPECTED NON-GATE
+- Old Phase14A test script reports 3 textual/architecture assertions FAIL because Phase14C supersedes the old homeHubService and 5-recipe constant. This is expected; Phase14C has its own gate and backward-compatible Firestore rules for legacy Phase14A documents/clients.
+
+NOT RUN / NOT CLAIMED
+- Native Android build/runtime.
+- Firestore Rules emulator execution.
+- Real multi-account privacy validation.
+- Real FCM remote push (requires Functions deploy/Blaze).
+- Device performance numbers.
+
+DEPLOY IMPACT
+- Deploy firestore.rules and firestore.indexes.json before testing V2 queries.
+- Functions deployment is optional/deferred; core V2 data/UI can be tested on Spark.

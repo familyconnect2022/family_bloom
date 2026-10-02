@@ -1,0 +1,52 @@
+Family Bloom — Phase 14K Vietnamese Music Signal Match
+Date: 2026-09-30
+Base: Phase 14J FULLSCREEN_FOCUS_LOCATE
+
+GOAL
+- Automatic family playlist is Vietnamese-language only.
+- Keep 20 tracks / 3-day cycle and the approved 25/20/15/20/20 mix.
+- NCT public Vietnamese chart/editorial pages are discovery signals only; no NCT audio/API runtime dependency.
+- Zing remains a secondary editorial cross-check, not a runtime dependency, because its public chart routes currently require the JS app shell.
+- Playback remains via the existing MusicProvider (Audius in V1).
+
+IMPLEMENTATION
+1. Added src/data/vietnameseMusicCatalogV1.ts with an 80+ seed Vietnamese-language catalog.
+   - current Top 50 Vietnamese signals
+   - new-week/release signals
+   - Vietnamese acoustic/chill signals
+   - Vietnamese happy signals
+   - Top 100 Nhac Tre signals
+2. Added src/services/home/music/vietnameseMusicMatcher.ts.
+   - strict title + artist evidence
+   - strips accents only for matching, NEVER for language inference
+   - rejects unsolicited cover/remix/karaoke/instrumental/sped/slowed variants
+   - max 4 provider requests concurrently
+   - positive/negative in-memory match cache
+3. Playlist generator now resolves all five mix buckets only from curated Vietnamese seeds.
+   - no provider-global trending/recent pool
+   - no generic "relax/happy/acoustic chill" query pool
+   - no foreign-language fallback
+   - if provider coverage cannot reach 20 verified Vietnamese tracks, Bloom reports the shortage instead of inserting unrelated music
+4. Cycle id is versioned with _vi1, forcing a fresh Vietnamese cycle even if a pre-14K 3-day cycle already exists.
+5. Search remains provider-wide by design. The Vietnamese-only contract applies to automatic Playlist; users may still explicitly favorite/share a search result.
+6. No Firestore Rules / indexes / Functions / native dependency changes.
+
+SOURCE SNAPSHOT NOTE
+The catalog snapshot was curated on 2026-09-30 from public NCT chart/editorial surfaces. It stores only song/artist discovery metadata and category signals. Family Bloom neither downloads nor streams NCT/Zing media.
+
+VALIDATION
+Run:
+  npm run phase14k:check
+  npm run phase14j:check
+  npm run phase14d:check
+  npm run phase14c:check
+
+DEVICE CHECK
+- Playlist existing before 14K should regenerate under *_3d_vi1.
+- Playlist must either show 20 curated Vietnamese-language tracks or show the friendly "not enough Vietnamese matches" message.
+- It must never fill missing slots with arbitrary Audius trending/global results.
+- Search / Favorite / Bài hát Nhà Mình / player regression.
+- Observe console [FamilyBloom/HomeMusic] only for diagnostics; no raw technical error should be shown to user.
+
+KNOWN LIMITATION / DECISION GATE
+Audius catalog coverage for current commercial Vietnamese music cannot be proven from the build environment. Phase 14K intentionally fails closed. Real-device/network testing will measure coverage before we decide whether Audius remains the playback provider.

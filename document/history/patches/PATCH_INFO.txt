@@ -1,0 +1,40 @@
+FAMILY BLOOM — PHASE 10 RELIABILITY / OFFLINE / WHOLE-APP PERFORMANCE
+Base: Family_Bloom_Phase_9_2AB_MEMORY_BOOK_FULL_2026-09-26
+Date: 2026-09-26
+
+MAIN CHANGES
+- Moment publish retry reuses successful media checkpoints; foreground resume requeues failed in-session jobs.
+- Full owner Moment edit: text + Tôi/Toàn gia đình/Thành viên + related people + add/remove media.
+- Normal publish/update progress uses neutral Bloom task feedback, not error styling.
+- Technical implementation copy cleaned from normal user UI where audited.
+- Action/button spacing normalized across shared dialogs and affected screens.
+- Performance Lab visible only when signed-in auth email contains `huynh235` (UI-only test gate).
+- Real-use performance probe increased to 60 seconds.
+- New RAM-only stress tests: Moments, Family Timeline, Events, Memory Book at 100/200; Graph 50–500 retained.
+- Timeline stress uses the same production Year/Month/Day projection as the real Family Timeline.
+- Remaining Back buttons audited; standard Bloom Back is on the left for the affected secondary screens.
+- iOS bundle identifier remains corrected: com.family.ios.
+
+IMPORTANT
+- No fake performance data is written to Firebase/Cloudinary.
+- Phase 10 does not add a local persistence dependency. Pending upload resume is guaranteed for the current app process/session; do not claim force-stop/process-death persistence.
+- Performance/test email check is NOT a security/authorization rule.
+
+DEVICE TEST
+See document/PHASE_10_RELIABILITY_OFFLINE_PERFORMANCE.md
+
+PHASE 10 UX RESPONSIVENESS PASS — 2026-09-26
+- Graph branch opening now uses an isolated preparing overlay + double-paint barrier before focus/render work begins.
+- Added branch_open performance trace to prove transition_painted occurs before graph_work_started.
+- Added shared BloomStickyHeader and moved Back/header actions outside long scrolling content on major detail/test screens.
+- Standardized remaining page-navigation Back controls to canonical BloomBackButton; internal picker/calendar chevrons are intentionally unchanged.
+- No listener, Graph layout, Firebase, Cloudinary, or production-data-path changes.
+
+PHASE 11.1 SMART FAMILY REMINDERS — 2026-09-26
+- Chuyện trong nhà now derives smart, per-user reminders from bounded Event/Moment reads without a new realtime listener.
+- Birthday and memorial reminders appear the day before and on the day; Event importance controls badge prominence and near-time behavior.
+- On This Day stays a quiet discovery item and never lights the badge.
+- 3+ simultaneous reminders are grouped into one concise item.
+- New user-facing Nhắc thông minh settings persist per user.
+- Home badge includes unread smart reminders with RAM caches to protect Phase 10 performance.
+- No Firestore Rules redeploy is required on top of Phase 11.0.

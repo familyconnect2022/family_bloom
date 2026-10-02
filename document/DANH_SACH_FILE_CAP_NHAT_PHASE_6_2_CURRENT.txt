@@ -1,0 +1,47 @@
+APP / RUNTIME — COPY ĐÈ:
+src/app/(tabs)/moments.tsx
+src/app/(tabs)/planner.tsx
+src/app/family-graph-admin.tsx
+src/app/family-graph.tsx
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/familyGraph/familyGraphPrototypeData.ts
+src/components/moments/MomentCard.tsx
+src/components/ui/BloomInputComponents/BloomDatePicker.tsx
+src/components/ui/BloomInputComponents/BloomInputAvatar.tsx
+src/components/ui/BloomInputComponents/index.ts
+src/constants/appPaths.ts
+src/constants/featureFlags.ts
+src/hooks/useFamilyPersonContent.ts
+src/services/error/errorService.ts
+src/services/event/eventService.ts
+src/services/familyGraph/familyGraphCloudGateway.ts
+src/services/familyGraph/familyGraphMutationService.ts
+src/services/familyGraph/familyGraphService.ts
+src/services/familyGraph/familyPersonContentService.ts
+src/services/firebase/firestorePaths.ts
+src/services/media/mediaService.ts
+src/services/moments/momentsService.ts
+src/types/errors.ts
+src/types/familyGraph.ts
+src/types/media.ts
+src/types/moments.ts
+src/utils/familyGraph.ts
+
+FIREBASE RULES:
+firestore.rules                 # ACTIVE NOW: Spark / Direct Firestore
+firestore.cloud.rules           # FUTURE: Blaze + Cloud Function mode
+
+CLOUD FUNCTION SOURCE — COPY ĐỂ GIỮ ĐỒNG BỘ, CHƯA DEPLOY TRÊN SPARK:
+functions/index.js
+functions/familyGraphCore.js
+functions/test-familyGraphCore.js
+
+DOCUMENTATION — TỪ NAY TẤT CẢ .md NẰM TRONG document/:
+document/README.md
+document/PHASE_6_2_OWNERSHIP_MODERATION_CLOUD_SWITCH.md
+document/CAP_NHAT_VA_TEST_PHASE_6_2_CURRENT.md
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/FAMILY_BLOOM_FIRESTORE_RULES_DIRECT_DEV.txt
+document/FAMILY_BLOOM_FIRESTORE_RULES_CLOUD_MODE.txt

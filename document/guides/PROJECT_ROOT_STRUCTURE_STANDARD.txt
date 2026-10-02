@@ -1,0 +1,38 @@
+FAMILY BLOOM — CLEAN PROJECT ROOT STANDARD
+Effective: 2026-10-01
+
+The project root is reserved for source/configuration files that tools expect there, plus top-level source folders.
+
+ROOT SHOULD CONTAIN
+- .github/
+- assets/
+- document/
+- functions/
+- plugins/
+- reports/
+- scripts/
+- src/
+- .gitignore
+- .prettierrc
+- LICENSE
+- app.json
+- package.json / package-lock.json
+- tsconfig.json
+- firebase.json
+- firestore.rules / firestore.cloud.rules / firestore.indexes.json
+- google-services.json / GoogleService-Info.plist
+
+ORGANIZATION
+- scripts/android/: Android build/install BAT helpers
+- scripts/firebase/: Firebase deploy BAT helpers
+- scripts/maintenance/: maintenance utilities
+- scripts/setup/: legacy/setup helpers
+- reports/device/: device test checklists
+- reports/validation/: validation/static reports
+- document/history/patches/: historical patch notes
+- document/history/phase-notes/: phase notes
+- document/guides/: operational guides
+- dist/android/: generated APK output; created by build scripts and not required in source archives
+
+RULE
+Future FULL builds should preserve this organization instead of placing phase notes, reports, or BAT utilities back in root.

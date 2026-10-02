@@ -1,0 +1,4 @@
+Family Bloom Phase 13 — Android RC1 source hardening
+Base: Phase 12 Bloom Supper True Full-bleed
+Includes: Bloom Supper final polish, internal/release separation, native push-token registry, Firestore security hardening, privacy-safe runtime diagnostics, versioning/splash, Android test checklist.
+Deferred: Blaze Cloud Functions live validation; iOS real-device validation.

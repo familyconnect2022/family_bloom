@@ -1,0 +1,19 @@
+COPY ĐÈ CÁC FILE SAU:
+
+src/app/family-graph.tsx
+src/app/family-graph-admin.tsx
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/familyGraph/FamilyGraphPersonSheet.tsx
+src/hooks/useFamilyPersonContent.ts
+src/services/familyGraph/familyPersonContentService.ts
+scripts/test-familyGraphLayout.js
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/PHASE_6_3_PERSON_DETAIL_UNASSIGNED_ALBUM_REFINEMENT.md
+document/BUILD_CHECK_REPORT_PHASE_6_3_PERSON_DETAIL_REFINEMENT.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_6_3_PERSON_DETAIL.txt
+
+KHÔNG CẦN COPY/PUBLISH:
+- firestore.rules (không thay đổi)
+- firestore.cloud.rules (không thay đổi)
+- functions/ (không thay đổi)
+- android/ (không thay đổi)

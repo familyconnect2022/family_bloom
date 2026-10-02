@@ -1,0 +1,31 @@
+Family Bloom — Phase 14S.1A device checklist
+
+A. Date picker crash
+[ ] Open Quỹ gia đình -> Ghi khoản thu/chi.
+[ ] Tap Ngày ghi quỹ.
+[ ] Pick another valid day and tap confirm.
+[ ] No red error screen; selected day is shown in the form.
+[ ] Save a real test row and confirm occurredOn matches the chosen day.
+
+B. Multiline keyboard
+[ ] Open Nhóm quỹ and choose one helper.
+[ ] Focus the task field near the bottom of the screen.
+[ ] Type 3-5 lines. The active field stays above the keyboard while it grows.
+[ ] Repeat in Bàn giao quỹ -> lời nhắn.
+[ ] Repeat in Ghi khoản mới -> Ghi chú.
+[ ] Drag/scroll manually while keyboard is open; screen remains controllable.
+
+C. Dữ liệu thử (DEBUG/test build only)
+[ ] Tap "Dữ liệu thử" in Thống kê quỹ.
+[ ] Balance, month totals, history rows, Nhật ký quỹ and chart all show sample values.
+[ ] Switch Ngày / Tháng / Năm; chart changes without network writes.
+[ ] Turn "Dữ liệu thử" off; the real fund data returns unchanged.
+[ ] Confirm no mock-fund-* documents appear in Firestore.
+
+D. Copy polish
+[ ] Fund screens no longer show "user thật" wording.
+[ ] Visible audit language says "Nhật ký quỹ" and reads naturally.
+
+E. Update install
+[ ] DEBUG/test build cài đúng package com.familybloom.android trên thiết bị test.
+[ ] Không còn yêu cầu Release và Debug cài song song trên cùng Android profile.

@@ -1,0 +1,14 @@
+FAMILY BLOOM — PHASE 10 STRESS MEDIA RUNTIME HOTFIX
+Base: Family_Bloom_Phase_10_UX_RESPONSIVENESS_STICKY_HEADERS_FULL_2026-09-26.zip
+
+Fixes the developer-only Performance Lab crashes seen on Android in Timeline and Memory Book synthetic stress screens.
+
+Changed:
+- src/app/performance-data-test.tsx
+  - removes render-time dependency on imported syntheticMediaUriFor helper
+  - uses bundled local static images for Timeline and Memory Book stress rows
+  - keeps test media visible while remaining RAM/local-only
+- scripts/test-phase10-stress-media-runtime-hotfix.js
+- document/PHASE_10_STRESS_MEDIA_RUNTIME_HOTFIX.md
+
+No production data-path, Firebase, Cloudinary, listener, Graph algorithm, or authorization changes.

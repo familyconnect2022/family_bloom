@@ -1,0 +1,12 @@
+const fs = require('fs');
+const must = (p, s) => { const x = fs.readFileSync(p, 'utf8'); if (!x.includes(s)) throw new Error(`${p}: missing ${s}`); };
+must('src/constants/e2eTest.ts', 'enabled: __DEV__');
+must('src/services/performance/e2eTestHarnessService.ts', 'E2E_REAL_FAMILY_BLOCKED');
+must('src/services/performance/e2eTestHarnessService.ts', 'familyNamePrefix');
+must('src/services/performance/automatedRegressionService.ts', 'Tabs navigator singleton');
+must('src/services/performance/automatedRegressionService.ts', 'Realtime listener duplicates');
+must('src/services/performance/automatedRegressionService.ts', '50, 100, 200, 300, 500');
+must('src/services/performance/automatedRegressionService.ts', 'coverage');
+must('src/app/performance-test.tsx', 'Đánh giá regression tự động');
+must('src/app/performance-test.tsx', 'automatedRegressionService.exportText');
+console.log('PASS Phase 11.2B harness safety + automated regression + report contracts');

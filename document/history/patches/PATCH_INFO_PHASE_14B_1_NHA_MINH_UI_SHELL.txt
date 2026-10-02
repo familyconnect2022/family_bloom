@@ -1,0 +1,28 @@
+FAMILY BLOOM · PHASE 14B.1 · NHÀ MÌNH BLOOM SUPPER UI SHELL
+Date: 2026-09-29
+Base: Phase 14A Nhà Mình V1 (PASS)
+
+Scope
+- UI/visual shell only for the next Nhà Mình areas; no new Firestore collections or business rules.
+- New Bloom Supper full-bleed preview screens:
+  * Bảng tin Nhà Mình
+  * Trò chơi nhỏ
+  * Phòng nhạc
+  * Quỹ gia đình
+- Existing Thì thầm / Cùng quyết định / Bếp Nhà Mình now use purpose-specific hero illustrations.
+- Nhà Mình hub links to all four new UI preview screens.
+- Added purpose-aware BloomHeroHeader variants: whisper, poll, kitchen, notice, game, music, fund.
+- All preview financial/music/game content is explicitly sample/UI-only.
+
+Safety
+- No package.json/package-lock.json/app.json changes.
+- No Firestore rules changes required for this UI-only phase.
+- Phase 14A logic and Phase 13 RC safety remain intact.
+
+Validation
+- Phase 14B.1 UI Shell contract: 27/27 PASS
+- Phase 14A Nhà Mình V1: 13/13 PASS
+- Phase 13 Release Readiness: 11/11 PASS
+- Phase 12 Bloom Supper full-bleed: 11/11 PASS
+- Phase 11 Final Performance Gate contract: PASS
+- TS/TSX syntax transpile check: PASS for all changed/new files

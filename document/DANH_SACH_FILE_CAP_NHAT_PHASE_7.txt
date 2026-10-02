@@ -1,0 +1,34 @@
+PHASE 7 — FILES ADDED / UPDATED
+
+ADDED
+src/components/family/FamilySwitcherModal.tsx
+src/app/family-select.tsx
+src/app/family-memberships.tsx
+scripts/test-phase7-multifamily.js
+document/PHASE_6_5_CLOSED.md
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_PHASE_6_5_CLOSED.md
+document/PHASE_7_MULTI_FAMILY_EXPERIENCE_ISOLATION.md
+document/BUILD_CHECK_REPORT_PHASE_7.txt
+document/DANH_SACH_FILE_CAP_NHAT_PHASE_7.txt
+
+UPDATED
+src/context/AuthContext.tsx
+src/services/family/familyService.ts
+src/app/_layout.tsx
+src/components/system/BloomAppBootstrap.tsx
+src/app/(tabs)/index.tsx
+src/app/(tabs)/family.tsx
+src/app/profile.tsx
+firestore.rules
+firestore.cloud.rules
+document/MULTI_FAMILY_DATA_ARCHITECTURE.md
+document/PHASE_6_5_REVIEW_CURRENT.md
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+PATCH_INFO.txt
+
+NO CHANGE
+package.json / package-lock.json
+app.json
+functions runtime contracts
+persisted FamilyPerson/FamilyRelationship semantics
+Moment/Event/Timeline schema

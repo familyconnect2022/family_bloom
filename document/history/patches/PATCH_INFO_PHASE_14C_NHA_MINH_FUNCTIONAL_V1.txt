@@ -1,0 +1,61 @@
+FAMILY BLOOM — PHASE 14C NHA MINH FUNCTIONAL V1
+Date: 2026-09-29
+Base: Family_Bloom_Phase_14B_1_NHA_MINH_UI_SHELL_FULL_2026-09-29.zip
+
+IMPLEMENTED
+1) Lời thì thầm V2
+- Audience: Cả nhà / Người thân.
+- Recipient list uses families/{familyId}/members only; never genealogy Persons.
+- Direct whisper visible only to sender + selected recipient.
+- Family whisper requires confirmation; no family-wide push event.
+- 10 sender emotion emojis; readers can toggle heart.
+- Filters: Tất cả / Gửi đến tôi / Tôi đã gửi / Cả nhà / Lời đã lưu.
+- Pagination 20/page; 60-day expiry; independent saved snapshot.
+- Spark-friendly physical cleanup after expiry.
+- Future Cloud Function source sends remote push only to direct recipient when Functions are deployed.
+
+2) Cùng quyết định V2
+- Audience: Cả nhà / Nhóm riêng.
+- Group minimum 3 actual family users; creator always included.
+- Free-form description/rules field.
+- Expiry: Hôm nay / Ngày mai / Chọn ngày.
+- Anonymous / named voting.
+- Frozen eligible user snapshot + fixed denominator.
+- Votes: Đồng ý / Không đồng ý; derived Chưa bỏ phiếu / Không bỏ phiếu.
+- Active + Đã kết thúc views; voting controls disappear after expiry.
+- Results retained 30 days after expiry then physical cleanup.
+- Anonymous ballots are stored in protected per-UID subcollection; other users cannot read names/ballots.
+
+3) Bếp Nhà Mình V1
+- 100 Bloom-owned Vietnamese recipe seeds bundled locally.
+- No runtime recipe API required.
+- Per-membership-user preferences: normal / vegetarian / lower sugar / controlled carb / lower sodium.
+- Deterministic daily breakfast/lunch/dinner rotation; swap and search.
+- Recipe ingredients + steps + health disclaimer; no disease-treatment claims.
+
+4) Phòng nhạc
+- Phase 14B.1 shell intentionally preserved byte-for-byte.
+- No data schema/functionality added because the Music contract has not yet been designed/approved.
+
+FIREBASE IMPACT
+- firestore.rules changed; backward compatible with Phase 14A legacy whisper/poll documents.
+- firestore.cloud.rules source synchronized for future Cloud mode.
+- firestore.indexes.json added with 7 composite indexes.
+- firebase.json now references firestore.indexes.json.
+- functions/pushNotifications.js + functions/index.js include direct-whisper push source for future Blaze deployment.
+- Current Spark testing does NOT require Functions deployment. Remote OS push for direct whispers requires future Functions deployment/Blaze; Firestore homeInbox is written now.
+- No new npm/native dependency.
+
+VALIDATION IN BUILD ENVIRONMENT
+- Phase 14C static: 40/40 PASS.
+- All src TS/TSX syntax transpile: 191/191 PASS.
+- Phase 14B.1 UI shell regression: 27/27 PASS.
+- Phase 13 release readiness: 11/11 PASS.
+- home-music.tsx SHA-256 unchanged from Phase 14B.1.
+- functions JS syntax PASS; firebase/indexes JSON PASS.
+- Native Android/device runtime and Firestore emulator rules were NOT run here; user device test still required.
+
+DEPLOY FOR DEVICE TEST
+1. Deploy firestore.rules.
+2. Deploy firestore.indexes.json (helper BAT included).
+3. Functions are optional/deferred until Blaze; do not deploy just to test core UI/data on Spark.

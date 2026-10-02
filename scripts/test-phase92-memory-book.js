@@ -1,0 +1,2 @@
+const fs=require('fs'); const must=(p,x)=>{const s=fs.readFileSync(p,'utf8'); if(!s.includes(x)) throw new Error(`${p} missing ${x}`)};
+must('src/app/memory-book.tsx','FlatList'); must('src/app/memory-book.tsx','Biên tập'); must('src/services/memoryBookService.ts','loadSourceMoments'); must('src/services/moments/momentsService.ts','listFamilyTimelineOnce'); must('src/services/moments/momentsService.ts','listForPersonOnce'); must('app.json','com.family.ios'); must('firestore.rules','match /memoryBooks/{bookId}'); console.log('Phase 9.2A + 9.2B Memory Book contracts PASS');

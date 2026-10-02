@@ -1,0 +1,26 @@
+Family Bloom Phase 14Q V2 — Bloom Time Reveal redesign
+Date: 2026-10-01
+Base: Family_Bloom_Phase_14Q_TIME_CAPSULE_REVEAL_PROTOTYPE_FULL_2026-10-01.zip
+
+Scope
+- Visual/motion redesign only.
+- No Firestore schema/rules/index/function changes.
+- No new dependency.
+
+Main changes
+- Replaced V1 segmented pose-like lid animation with one continuous UI-thread Reanimated timeline.
+- Removed rotateX/perspective lid animation for Android smoothness.
+- Rebuilt gift box with layered lid/body/ribbon/bow/seal depth.
+- Replaced single weak background glow with layered white-gold-pink halos + bright seam/core glow.
+- Reduced/bounded particles to 12 lightweight transform/opacity Views.
+- Letter now visibly rises from behind the box and settles as the focal card.
+- Added second subtle haptic at lid/glow release and cleanup on unmount/reset.
+- Added V2 static checks and device checklist.
+
+Files replaced/added by this patch
+- src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx
+- scripts/test-phase14q-time-capsule-reveal.js
+- document/PHASE_14Q_V2_BLOOM_TIME_REVEAL_REDESIGN.md
+- PHASE_14Q_V2_DEVICE_CHECKLIST.txt
+- PHASE_14Q_V2_VALIDATION_REPORT.txt
+- PATCH_INFO_PHASE_14Q_V2_BLOOM_TIME_REVEAL.txt

@@ -1,0 +1,17 @@
+Family Bloom Phase 11.2A Notification Sound Hotfix — 2026-09-27
+
+Base: Family_Bloom_Phase_11_2A_ANDROID_BUILD_HOTFIX_FULL_2026-09-27.zip
+
+Fix:
+- Removes the literal expo-notifications sound value "default" from Android channel/content setup.
+- Expo SDK 57 on this device/runtime resolves a string sound as a bundled custom sound and raised: Custom sound 'default' not found in native app.
+- bloom_normal stays explicitly silent (sound: null).
+- bloom_notable and bloom_important rely on Android notification-channel default/system sound behavior plus the existing vibration/importance settings.
+- Scheduled notification content no longer supplies a sound filename; Android 8+ channel behavior remains authoritative.
+- No Firestore rules/schema/listener changes.
+- No Cloud Functions/FCM messaging dependency.
+
+Recommended rebuild:
+  npm install
+  npx expo prebuild --clean --platform android
+  npx expo run:android

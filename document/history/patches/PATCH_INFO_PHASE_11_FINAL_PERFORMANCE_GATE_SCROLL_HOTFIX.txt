@@ -1,0 +1,30 @@
+FAMILY BLOOM · PHASE 11 FINAL PERFORMANCE GATE · SCROLL HOTFIX
+Date: 2026-09-27
+
+Base:
+- Family_Bloom_Phase_11_FINAL_PERFORMANCE_GATE_FULL_2026-09-27.zip
+
+Fix:
+- Fix Android crash: "scrollToIndex should be used in conjunction with getItemLayout or onScrollToIndexFailed".
+- Timeline stress SectionList now implements onScrollToIndexFailed.
+- Unmeasured offscreen target falls back to safe offset scrolling instead of crashing Final Gate.
+- Jump measurement is single-completion guarded and pending timer is cleaned on unmount.
+- Report records "Stress timeline scroll fallback" when fallback is needed.
+
+Changed files:
+- src/app/performance-data-test.tsx
+- scripts/test-phase11-final-performance-gate.js
+- document/PHASE_11_FINAL_PERFORMANCE_GATE_SCROLL_HOTFIX.md
+- PATCH_INFO_PHASE_11_FINAL_PERFORMANCE_GATE_SCROLL_HOTFIX.txt
+
+Verification:
+- PASS Phase 11 Final Performance Gate automation + safety + coverage contracts
+- PASS Phase 11.2B harness safety + automated regression + report contracts
+- PASS Phase 11.2B Firebase E2E sender + cleanup safety contracts
+- PASS TypeScript syntax/transpile check for changed performance source
+
+No changes to:
+- Firebase/Auth/Security Rules
+- Event/Moment production writes
+- Notification scheduling/delivery/deep-link logic
+- package.json / package-lock.json / app.json
