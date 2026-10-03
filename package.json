@@ -86,7 +86,12 @@
     "phase14s1a:check": "node ./scripts/test-phase14s1a-fund-form-ux.js",
     "phase14t:check": "node ./scripts/test-phase14t-home-games.js",
     "phase14t0a:check": "node ./scripts/test-phase14t0a-single-android-cleanup.js",
-    "phase14u:check": "node ./scripts/test-phase14u-chess.js"
+    "phase14u:check": "node ./scripts/test-phase14u-chess.js",
+    "phase14v:check": "node ./scripts/test-phase14v-family-game-policy.js",
+    "phase14v1:check": "node ./scripts/test-phase14v1-global-chess-presence-fx.js",
+    "phase14v2:check": "node ./scripts/test-phase14v2-chess-test-bot.js",
+    "phase14v2a:check": "node ./scripts/test-phase14v2a-chess-auth-diagnostics.js",
+    "phase14v2b:check": "node ./scripts/test-phase14v2b-chess-coldstart-presence-hotfix.js"
   },
   "private": true
 }

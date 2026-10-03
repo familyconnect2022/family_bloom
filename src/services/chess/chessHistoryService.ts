@@ -4,7 +4,7 @@ import type { ChessFinishReason, ChessResult, ChessTimeControl } from "../../typ
 export type ChessHistoryItem = {
   id: string; familyId: string; whiteUid: string; blackUid: string; playerUids: string[];
   result: ChessResult; finishReason: ChessFinishReason; timeControl: ChessTimeControl;
-  fen: string; pgn: string; startedAt: string | null; endedAt: string | null;
+  fen: string; pgn: string; startedAt: string | null; endedAt: string | null; testBotUid?: string | null; isTestGame?: boolean;
 };
 
 export type ChessHistoryPage = { items: ChessHistoryItem[]; cursor: unknown | null; hasMore: boolean };

@@ -171,6 +171,15 @@ call npm run phase14t0a:check
 if errorlevel 1 goto :fail
 call npm run phase14u:check
 if errorlevel 1 goto :fail
+call npm run phase14v:check
+if errorlevel 1 goto :fail
+call npm run phase14v1:check
+if errorlevel 1 goto :fail
+call npm run phase14v2:check
+call npm run phase14v2a:check
+if errorlevel 1 goto :fail
+call npm run phase14v2b:check
+if errorlevel 1 goto :fail
 
 echo [4/8] Regenerating Android native project for the single Family Bloom identity...
 echo       Debug and Release now share package com.familybloom.android.

@@ -4,7 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { BloomKeyboardScreen } from "../components/layout/BloomKeyboardScreen";
-import { FamilyMemberPicker } from "../components/family/FamilyMemberPicker";
 import { BloomButton } from "../components/ui/BloomButtonComponents";
 import { BloomHeroHeader } from "../components/ui/BloomHeroHeader";
 import { BloomCard, BloomPill } from "../components/ui/BloomPageComponents";
@@ -14,11 +13,12 @@ import { GAME_COPY } from "../data/homeGameQuestionBank";
 import { useAuth } from "../context/AuthContext";
 import { familyService } from "../services/family/familyService";
 import { homeGameService } from "../services/home/homeGameService";
+import { formatHomeGameDeadline, getHomeGamePlayWindow, HOME_GAME_MAX_ACTIVE_PER_TYPE } from "../services/home/homeGamePolicy";
 import type { FamilyMember } from "../types";
 import type { HomeGameType } from "../types/homeLiving";
 
 const VALID_TYPES = new Set<HomeGameType>(["know_each_other", "guess_person", "memory_owner", "truth_lie", "story_chain", "family_bingo"]);
-const needsSubject = (type: HomeGameType) => type === "know_each_other" || type === "guess_person" || type === "truth_lie";
+const subjectGame = (type: HomeGameType) => type === "know_each_other" || type === "guess_person" || type === "truth_lie";
 
 export default function HomeGameCreateScreen() {
   const router = useRouter();
@@ -29,12 +29,17 @@ export default function HomeGameCreateScreen() {
   const gameType: HomeGameType = VALID_TYPES.has(raw as HomeGameType) ? raw as HomeGameType : "know_each_other";
   const meta = GAME_COPY[gameType];
   const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [selectedUids, setSelectedUids] = useState<string[]>([]);
-  const [subjectUids, setSubjectUids] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
   const uid = user?.uid ?? "";
   const displayName = userProfile?.shortName || userProfile?.displayName || "Bạn";
+  const window = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setClockNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!activeFamilyId || !uid) return;
@@ -43,40 +48,25 @@ export default function HomeGameCreateScreen() {
     familyService.listMembers(activeFamilyId)
       .then(rows => {
         if (!live) return;
-        const sorted = [...rows].sort((a, b) => (a.shortName || a.displayName).localeCompare(b.shortName || b.displayName, "vi"));
-        setMembers(sorted);
-        const all = sorted.slice(0, 50).map(item => item.uid);
-        setSelectedUids(all.includes(uid) ? all : [uid, ...all].slice(0, 50));
-        setSubjectUids([uid]);
+        const sorted = [...rows]
+          .filter(member => !!member.uid)
+          .sort((a, b) => (a.shortName || a.displayName).localeCompare(b.shortName || b.displayName, "vi"));
+        setMembers(sorted.slice(0, 50));
       })
       .catch(() => showToast({ title: "Chưa tải được thành viên", message: "Thử lại khi mạng ổn định hơn.", duration: 3000 }))
       .finally(() => live && setLoading(false));
     return () => { live = false; };
   }, [activeFamilyId, showToast, uid]);
 
-  useEffect(() => {
-    if (!subjectUids[0] || selectedUids.includes(subjectUids[0])) return;
-    setSubjectUids([selectedUids[0] || uid]);
-  }, [selectedUids, subjectUids, uid]);
-
-  const selectedMembers = useMemo(() => selectedUids.map(id => members.find(member => member.uid === id)).filter((item): item is FamilyMember => !!item), [members, selectedUids]);
-  const subject = useMemo(() => members.find(member => member.uid === subjectUids[0]) ?? null, [members, subjectUids]);
-
-  const subjectLabel = gameType === "guess_person" ? "Người bí mật" : gameType === "truth_lie" ? "Người ra 3 câu" : "Người để cả nhà đoán";
-  const subjectHint = gameType === "guess_person"
-    ? "Người này sẽ trả lời 3 manh mối. Danh tính chỉ lộ khi mở kết quả."
-    : gameType === "truth_lie"
-      ? "Mỗi ván một người viết 2 câu thật + 1 câu bịa. Tạo ván khác để đổi lượt."
-      : "Người này trả lời 5 câu trước, những người còn lại đoán lựa chọn của họ.";
-
   const create = async () => {
     if (!activeFamilyId || !uid || saving) return;
-    if (gameType !== "family_bingo" && selectedMembers.length < 2) {
-      showToast({ title: "Cần thêm người chơi", message: "Chọn ít nhất 2 người trong Nhà Mình.", duration: 2800 });
+    const latestWindow = getHomeGamePlayWindow();
+    if (!latestWindow.canCreate) {
+      showToast({ title: "Hẹn nhà mình sáng mai nhé", message: latestWindow.message || "Trò chơi mới sẽ mở lại từ 6:00 sáng.", duration: 4200 });
       return;
     }
-    if (needsSubject(gameType) && !subject) {
-      showToast({ title: "Chưa chọn người", message: "Chọn một người trong nhóm để bắt đầu ván.", duration: 2800 });
+    if (gameType !== "family_bingo" && members.length < 2) {
+      showToast({ title: "Nhà mình cần thêm người", message: "Trò này cần ít nhất 2 thành viên thật trong Nhà Mình.", duration: 3000 });
       return;
     }
     setSaving(true);
@@ -86,14 +76,12 @@ export default function HomeGameCreateScreen() {
         creatorUid: uid,
         creatorName: displayName,
         gameType,
-        participantUids: selectedMembers.map(item => item.uid),
-        participantNames: selectedMembers.map(item => item.shortName || item.displayName),
-        subjectUid: subject?.uid ?? null,
-        subjectName: subject ? (subject.shortName || subject.displayName) : null,
+        participantUids: members.map(item => item.uid),
+        participantNames: members.map(item => item.shortName || item.displayName),
       });
       router.replace(`/home-game/${id}` as never);
     } catch (error) {
-      showToast({ title: "Chưa tạo được ván", message: error instanceof Error ? error.message : "Thử lại sau nhé.", duration: 3500 });
+      showToast({ title: "Chưa tạo được lượt chơi", message: error instanceof Error ? error.message : "Thử lại sau nhé.", duration: 4200 });
     } finally {
       setSaving(false);
     }
@@ -103,7 +91,7 @@ export default function HomeGameCreateScreen() {
     <BloomKeyboardScreen contentContainerStyle={styles.content}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <BloomHeroHeader
-        eyebrow="TẠO VÁN NHÀ MÌNH"
+        eyebrow="TẠO LƯỢT NHÀ MÌNH"
         title={meta.title}
         subtitle={meta.short}
         variant="game"
@@ -116,56 +104,58 @@ export default function HomeGameCreateScreen() {
         <BloomCard style={styles.ruleCard}>
           <View style={[styles.icon, { backgroundColor: meta.tone }]}><Ionicons name={meta.icon as any} size={26} color={COLORS.primaryText} /></View>
           <View style={styles.ruleCopy}>
-            <Text style={styles.ruleTitle}>Chơi theo lượt, không cần online cùng lúc</Text>
-            <Text style={styles.ruleText}>Bloom đóng băng danh sách người chơi khi tạo ván. Câu trả lời bí mật chỉ hiện khi người tạo mở kết quả.</Text>
-            <View style={styles.pills}><BloomPill icon="time-outline" label={meta.minutes} /><BloomPill icon="leaf-outline" label="Không áp lực điểm số" /></View>
+            <Text style={styles.ruleTitle}>Cả nhà tự động cùng tham gia</Text>
+            <Text style={styles.ruleText}>Không cần chọn người chơi. Bloom lấy snapshot membership thật của Nhà Mình khi tạo lượt để mọi người có thể ghé vào lúc thuận tiện.</Text>
+            <View style={styles.pills}><BloomPill icon="people-outline" label={`${members.length} thành viên`} /><BloomPill icon="time-outline" label="Tối đa 4 giờ" /></View>
           </View>
         </BloomCard>
 
-        <FamilyMemberPicker
-          label="Ai sẽ chơi?"
-          hint="Danh sách lấy từ membership thật của Nhà Mình. Có thể chọn tối đa 50 người."
-          members={members}
-          selectedUids={selectedUids}
-          onChange={setSelectedUids}
-          mode="multiple"
-          currentUid={uid}
-          lockedUids={[uid]}
-          variant="game"
-        />
+        <BloomCard tone="soft" style={styles.policyCard}>
+          <Ionicons name={window.canCreate ? "sunny-outline" : "moon-outline"} size={22} color={COLORS.primary} />
+          <View style={styles.policyCopy}>
+            <Text style={styles.policyTitle}>{window.canCreate ? "Phòng game đang mở" : "Nhà mình nghỉ ngơi nhé 🌙"}</Text>
+            <Text style={styles.policyText}>
+              {window.canCreate
+                ? `Có thể tạo lượt từ 06:00 đến trước 22:00. Mỗi lượt tối đa 4 giờ và lượt này sẽ tự khép lại lúc ${formatHomeGameDeadline(window.endsAtMs)}.`
+                : window.message}
+            </Text>
+            <Text style={styles.policySub}>Mỗi trò có tối đa {HOME_GAME_MAX_ACTIVE_PER_TYPE} lượt đang hoạt động cùng lúc trong một nhà.</Text>
+          </View>
+        </BloomCard>
 
-        {needsSubject(gameType) && (
-          <FamilyMemberPicker
-            label={subjectLabel}
-            hint={subjectHint}
-            members={members.filter(member => selectedUids.includes(member.uid))}
-            selectedUids={subjectUids}
-            onChange={setSubjectUids}
-            mode="single"
-            currentUid={uid}
-            variant="game"
-          />
+        {subjectGame(gameType) && (
+          <BloomCard tone="soft" style={styles.noteCard}>
+            <Ionicons name="shuffle-outline" size={21} color={COLORS.primary} />
+            <Text style={styles.noteText}>Nhân vật của lượt được Bloom chọn theo vòng xoay công bằng trong gia đình. Người tạo chỉ là người mở lượt, không mặc định trở thành nhân vật chính.</Text>
+          </BloomCard>
         )}
 
         {gameType === "memory_owner" && (
           <BloomCard tone="soft" style={styles.noteCard}>
             <Ionicons name="images-outline" size={21} color={COLORS.primary} />
-            <Text style={styles.noteText}>Bloom sẽ lấy ngẫu nhiên một Moment gia đình gần đây trong nhóm người chơi, giấu tên người đăng và chỉ lộ đáp án khi kết thúc.</Text>
+            <Text style={styles.noteText}>Bloom lấy ngẫu nhiên một Moment gia đình phù hợp, giấu người đăng và chỉ mở đáp án khi lượt hết thời gian.</Text>
+          </BloomCard>
+        )}
+
+        {gameType === "story_chain" && (
+          <BloomCard tone="soft" style={styles.noteCard}>
+            <Ionicons name="book-outline" size={21} color={COLORS.primary} />
+            <Text style={styles.noteText}>Thứ tự được xáo tự động cho cả nhà. Không cần chờ đủ mọi người để “kết thúc” — đến 22:00 lượt sẽ tự khép lại với những đoạn đã có.</Text>
           </BloomCard>
         )}
 
         {gameType === "family_bingo" && (
           <BloomCard tone="soft" style={styles.noteCard}>
             <Ionicons name="grid-outline" size={21} color={COLORS.primary} />
-            <Text style={styles.noteText}>Mỗi người có cùng một bảng 3×3 nhưng tự đánh dấu trên thiết bị của mình. Cả nhà có thể chơi xuyên suốt một ngày.</Text>
+            <Text style={styles.noteText}>Mỗi người giữ tiến độ riêng trên cùng bảng 3×3. Lượt Bingo cũng tự khép lại khi hết thời gian thay vì chờ đủ thành viên.</Text>
           </BloomCard>
         )}
 
         <BloomButton
-          title={saving ? "Đang tạo ván…" : loading ? "Đang tải thành viên…" : "Bắt đầu ván"}
-          icon="game-controller-outline"
+          title={saving ? "Đang tạo lượt…" : loading ? "Đang tải thành viên…" : window.canCreate ? "Bắt đầu cho cả nhà" : "Mở lại lúc 06:00"}
+          icon={window.canCreate ? "game-controller-outline" : "moon-outline"}
           isLoading={saving}
-          disabled={loading || saving || !selectedMembers.length}
+          disabled={loading || saving || !members.length || !window.canCreate}
           onPress={() => void create()}
         />
       </View>
@@ -182,6 +172,11 @@ const styles = StyleSheet.create({
   ruleTitle: { color: COLORS.primaryText, fontSize: 13.5, lineHeight: 18, fontWeight: "900" },
   ruleText: { marginTop: 4, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15.5 },
   pills: { marginTop: 9, flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  policyCard: { flexDirection: "row", alignItems: "flex-start", gap: 11 },
+  policyCopy: { flex: 1 },
+  policyTitle: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "900" },
+  policyText: { marginTop: 4, color: COLORS.secondaryText, fontSize: 10.8, lineHeight: 16 },
+  policySub: { marginTop: 7, color: COLORS.primary, fontSize: 9.8, lineHeight: 14, fontWeight: "800" },
   noteCard: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   noteText: { flex: 1, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17 },
 });

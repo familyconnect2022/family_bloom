@@ -1556,6 +1556,56 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Phase 14V — shared family-game capacity + fair target rotation. Four
+      // deterministic slots per game type make concurrent creation bounded without
+      // a collection-count transaction. Viet Nam play hours are 06:00–<22:00,
+      // equivalent to UTC hour >=23 or <15 (Asia/Ho_Chi_Minh is UTC+7 year-round).
+      match /homeGameActiveSlots/{slotKey} {
+        function validSlotGameType(value) {
+          return value in ['know_each_other','guess_person','memory_owner','truth_lie','story_chain','family_bingo'];
+        }
+        function validGamePlayHour() {
+          return request.time.hours() >= 23 || request.time.hours() < 15;
+        }
+        function validSlotData(data) {
+          return data.keys().hasOnly(['familyId','gameType','slotId','sessionId','subjectUid','playDateKey','endsAtMs','updatedAt'])
+            && data.familyId == familyId
+            && validSlotGameType(data.gameType)
+            && data.slotId is int && data.slotId >= 0 && data.slotId < 4
+            && nonEmptyString(data.sessionId, 128)
+            && (data.subjectUid == null || data.subjectUid is string)
+            && nonEmptyString(data.playDateKey, 10)
+            && data.endsAtMs is int
+            && data.endsAtMs > request.time.toMillis()
+            && data.endsAtMs <= request.time.toMillis() + 14400000
+            && auditIso(data.updatedAt);
+        }
+        allow read: if familyAccess(familyId);
+        allow create: if familyAccess(familyId) && validGamePlayHour() && validSlotData(request.resource.data);
+        allow update: if familyAccess(familyId)
+          && request.time.toMillis() >= resource.data.endsAtMs
+          && validGamePlayHour()
+          && validSlotData(request.resource.data);
+        allow delete: if familyAccess(familyId)
+          && (request.time.toMillis() >= resource.data.endsAtMs
+            || (exists(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(resource.data.sessionId))
+              && get(/databases/$(database)/documents/families/$(familyId)/homeGameSessions/$(resource.data.sessionId)).data.createdByUid == request.auth.uid));
+      }
+
+      match /homeGameRotations/{gameType} {
+        allow read: if familyAccess(familyId);
+        allow create, update: if familyAccess(familyId)
+          && request.resource.data.keys().hasOnly(['familyId','gameType','playDateKey','usedUids','updatedAt'])
+          && request.resource.data.familyId == familyId
+          && request.resource.data.gameType == gameType
+          && nonEmptyString(request.resource.data.playDateKey, 10)
+          && request.resource.data.usedUids is list
+          && request.resource.data.usedUids.size() <= 50
+          && request.resource.data.usedUids.toSet().size() == request.resource.data.usedUids.size()
+          && auditIso(request.resource.data.updatedAt);
+        allow delete: if false;
+      }
+
       // Phase 14T — Trò chơi Nhà Mình. Sessions freeze the real membership users who
       // joined the round. Hidden answers stay private until the creator reveals the round;
       // story/bingo/public clue rows are explicitly marked public.
@@ -1586,7 +1636,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'id','familyId','gameType','title','createdByUid','createdByName',
             'participantUids','participantNames','status','prompts','subjectUid','subjectName',
-            'turnUids','turnNames','bingoCellIds','memoryPreview','submittedUids','createdAt','updatedAt'
+            'turnUids','turnNames','bingoCellIds','memoryPreview','submittedUids','endsAtMs','playDateKey','slotId','createdAt','updatedAt'
           ])
           && request.resource.data.id == sessionId
           && request.resource.data.familyId == familyId
@@ -1613,6 +1663,13 @@ service cloud.firestore {
           && request.resource.data.memoryPreview is map
           && request.resource.data.submittedUids is list
           && request.resource.data.submittedUids.size() == 0
+          && request.resource.data.endsAtMs is int
+          && request.resource.data.endsAtMs > request.time.toMillis()
+          && request.resource.data.endsAtMs <= request.time.toMillis() + 14400000
+          && nonEmptyString(request.resource.data.playDateKey, 10)
+          && request.resource.data.slotId is int
+          && request.resource.data.slotId >= 0 && request.resource.data.slotId < 4
+          && (request.time.hours() >= 23 || request.time.hours() < 15)
           && auditIso(request.resource.data.createdAt)
           && request.resource.data.updatedAt == request.resource.data.createdAt;
 
@@ -1633,20 +1690,28 @@ service cloud.firestore {
           && request.resource.data.turnNames == resource.data.turnNames
           && request.resource.data.bingoCellIds == resource.data.bingoCellIds
           && request.resource.data.memoryPreview == resource.data.memoryPreview
+          && request.resource.data.keys().hasAny(['endsAtMs']) == resource.data.keys().hasAny(['endsAtMs'])
+          && request.resource.data.keys().hasAny(['playDateKey']) == resource.data.keys().hasAny(['playDateKey'])
+          && request.resource.data.keys().hasAny(['slotId']) == resource.data.keys().hasAny(['slotId'])
+          && (!resource.data.keys().hasAny(['endsAtMs']) || request.resource.data.endsAtMs == resource.data.endsAtMs)
+          && (!resource.data.keys().hasAny(['playDateKey']) || request.resource.data.playDateKey == resource.data.playDateKey)
+          && (!resource.data.keys().hasAny(['slotId']) || request.resource.data.slotId == resource.data.slotId)
           && request.resource.data.createdAt == resource.data.createdAt
           && auditIso(request.resource.data.updatedAt)
           && (
             (request.auth.uid == resource.data.createdByUid
               && request.resource.data.submittedUids == resource.data.submittedUids
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
-              && validGameStatus(request.resource.data.status))
+              && validGameStatus(request.resource.data.status)
+              && (!resource.data.keys().hasAny(['endsAtMs']) || request.time.toMillis() >= resource.data.endsAtMs))
             ||
             (request.resource.data.status == resource.data.status
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedUids','updatedAt'])
               && request.resource.data.submittedUids is list
               && request.resource.data.submittedUids.size() <= resource.data.participantUids.size()
               && request.resource.data.submittedUids.toSet().difference(resource.data.submittedUids.toSet()).hasOnly([request.auth.uid])
-              && resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet()).size() == 0)
+              && resource.data.submittedUids.toSet().difference(request.resource.data.submittedUids.toSet()).size() == 0
+              && (!resource.data.keys().hasAny(['endsAtMs']) || request.time.toMillis() < resource.data.endsAtMs))
           );
 
         allow delete: if familyAccess(familyId) && resource.data.createdByUid == request.auth.uid;
@@ -1685,12 +1750,13 @@ service cloud.firestore {
 
           allow read: if familyAccess(familyId)
             && request.auth.uid in parentGame().participantUids
-            && (request.auth.uid == uid || resource.data.public == true || parentGame().status in ['revealed','completed']);
+            && (request.auth.uid == uid || resource.data.public == true || parentGame().status in ['revealed','completed'] || (parentGame().keys().hasAny(['endsAtMs']) && request.time.toMillis() >= parentGame().endsAtMs));
 
           allow create: if familyAccess(familyId)
             && request.auth.uid == uid
             && request.auth.uid in parentGame().participantUids
             && (parentGame().status == 'playing' || parentGame().gameType == 'family_bingo')
+            && (!parentGame().keys().hasAny(['endsAtMs']) || request.time.toMillis() < parentGame().endsAtMs)
             && validResponseShape(request.resource.data)
             && request.resource.data.submittedAt == request.resource.data.updatedAt;
 
@@ -1698,6 +1764,7 @@ service cloud.firestore {
             && request.auth.uid == uid
             && request.auth.uid in parentGame().participantUids
             && (parentGame().status == 'playing' || parentGame().gameType == 'family_bingo')
+            && (!parentGame().keys().hasAny(['endsAtMs']) || request.time.toMillis() < parentGame().endsAtMs)
             && validResponseShape(request.resource.data)
             && request.resource.data.uid == resource.data.uid
             && request.resource.data.submittedAt == resource.data.submittedAt
@@ -1717,7 +1784,7 @@ service cloud.firestore {
           allow read: if secretId == 'main'
             && familyAccess(familyId)
             && request.auth.uid in parentGame().participantUids
-            && (request.auth.uid in resource.data.allowedUids || parentGame().status in ['revealed','completed']);
+            && (request.auth.uid in resource.data.allowedUids || parentGame().status in ['revealed','completed'] || (parentGame().keys().hasAny(['endsAtMs']) && request.time.toMillis() >= parentGame().endsAtMs));
           allow create: if secretId == 'main'
             && familyAccess(familyId)
             && parentGameAfter().createdByUid == request.auth.uid

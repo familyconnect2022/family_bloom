@@ -26,7 +26,7 @@ export class ChessGameManager {
     return next;
   }
 
-  async create(familyId: string, uidA: string, uidB: string, timeControl: ChessTimeControl, createRequestId?: string) {
+  async create(familyId: string, uidA: string, uidB: string, timeControl: ChessTimeControl, createRequestId?: string, options?: { testBotUid?: string | null }) {
     const gameId = randomUUID();
     const whiteUid = Math.random() < 0.5 ? uidA : uidB; const blackUid = whiteUid === uidA ? uidB : uidA;
     const chess = new Chess(); const now = iso();
@@ -36,10 +36,10 @@ export class ChessGameManager {
       whiteRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       timeControl, result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
-      recentRequestIds: createRequestId ? [createRequestId] : [], createdAt: now, startedAt: now, endedAt: null, updatedAt: now,
+      recentRequestIds: createRequestId ? [createRequestId] : [], testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: now, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
-    const runtime: Runtime = { game, chess, turnStartedMono: timeControl.kind === "clocked" ? performance.now() : null, connectedUids: new Set() };
+    const runtime: Runtime = { game, chess, turnStartedMono: timeControl.kind === "clocked" ? performance.now() : null, connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []) };
     this.games.set(gameId, runtime);
     return this.publicState(runtime);
   }
@@ -54,7 +54,7 @@ export class ChessGameManager {
       stored.status = "paused"; stored.revision += 1; stored.updatedAt = iso();
       await this.persistence.save(stored);
     }
-    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set() };
+    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []) };
     this.games.set(gameId, runtime); return runtime;
   }
 
@@ -216,7 +216,7 @@ export class ChessGameManager {
     const legalMoves = r.game.status === "active" ? (r.chess.moves({ verbose: true }) as Array<{from:string;to:string;promotion?:string}>).map((m) => ({ from:m.from, to:m.to, ...(m.promotion ? {promotion:m.promotion as "q"|"r"|"b"|"n"}: {}) })) : [];
     const checkSquare = r.chess.isCheck() ? this.findKingSquare(r.chess, r.chess.turn()) : null;
     const { id, playerUids, recentRequestIds, updatedAt, ...rest } = r.game;
-    return { ...rest, gameId:id, whiteRemainingMs:white, blackRemainingMs:black, legalMoves, checkSquare, serverNowMs:Date.now() };
+    return { ...rest, gameId:id, ply:r.chess.history().length, whiteRemainingMs:white, blackRemainingMs:black, legalMoves, checkSquare, serverNowMs:Date.now() };
   }
   private findKingSquare(chess: Chess, color: Color): string | null { const board=chess.board(); for(let row=0;row<board.length;row++) for(let file=0;file<board[row].length;file++){ const p=board[row][file]; if(p?.type==="k"&&p.color===color) return `${"abcdefgh"[file]}${8-row}`; } return null; }
 }

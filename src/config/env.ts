@@ -13,6 +13,7 @@ type CloudinaryExtra = {
 type ExpoExtra = {
   googleWebClientId?: string;
   chessSocketUrl?: string;
+  chessTestBotEnabled?: boolean;
   cloudinary?: CloudinaryExtra;
 };
 
@@ -22,6 +23,7 @@ const uploadPresets = cloudinary.uploadPresets ?? {};
 
 export const ENV = {
   chessSocketUrl: process.env.EXPO_PUBLIC_CHESS_SOCKET_URL ?? extra.chessSocketUrl ?? "",
+  chessTestBotEnabled: (process.env.EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED ?? String(extra.chessTestBotEnabled ?? "")).toLowerCase() === "true",
   googleWebClientId: extra.googleWebClientId ?? "",
   cloudinary: {
     cloudName: cloudinary.cloudName ?? "",

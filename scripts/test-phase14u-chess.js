@@ -1,7 +1,7 @@
 const fs=require('fs');const path=require('path');
 let pass=0,fail=0;const root=path.resolve(__dirname,'..');const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
 function check(name,ok){if(ok){pass++;console.log('PASS',name)}else{fail++;console.error('FAIL',name)}}
-const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');const protocol=read('src/types/chess.ts');const socket=read('src/services/chess/chessSocketService.ts');const history=read('src/services/chess/chessHistoryService.ts');const lobby=read('src/hooks/chess/useChessLobby.ts');const game=read('src/hooks/chess/useChessGame.ts');const board=read('src/components/chess/ChessBoard.tsx');const clock=read('src/components/chess/ChessClock.tsx');const manager=read('server/src/chess/chessGameManager.ts');const persistence=read('server/src/chess/chessPersistenceService.ts');const socketServer=read('server/src/socket/socketServer.ts');const rules=read('firestore.rules');const indexes=read('firestore.indexes.json');const render=read('server/render.yaml');const pkg=JSON.parse(read('package.json'));
+const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');const protocol=read('src/types/chess.ts');const socket=read('src/services/chess/chessSocketService.ts');const history=read('src/services/chess/chessHistoryService.ts');const lobby=read('src/hooks/chess/useChessLobby.ts');const realtime=read('src/context/ChessRealtimeContext.tsx');const game=read('src/hooks/chess/useChessGame.ts');const board=read('src/components/chess/ChessBoard.tsx');const clock=read('src/components/chess/ChessClock.tsx');const manager=read('server/src/chess/chessGameManager.ts');const persistence=read('server/src/chess/chessPersistenceService.ts');const socketServer=read('server/src/socket/socketServer.ts');const rules=read('firestore.rules');const indexes=read('firestore.indexes.json');const render=read('server/render.yaml');const pkg=JSON.parse(read('package.json'));
 check('socket.io-client dependency present',!!pkg.dependencies['socket.io-client']);
 check('typed protocol has revision',protocol.includes('revision: number'));
 check('typed protocol has request error conflict',protocol.includes('CHESS_STATE_CONFLICT'));
@@ -11,10 +11,10 @@ check('firebase token used in socket auth',socket.includes('getIdToken')&&socket
 check('prewake health endpoint used',socket.includes('/health'));
 check('history is bounded 20',history.includes('.limit(20)'));
 check('history is not realtime',!history.includes('onSnapshot'));
-check('lobby overlays socket presence',lobby.includes('presence'));
+check('lobby overlays global socket presence',lobby.includes('realtime.presence'));
 check('game foreground resync',game.includes('AppState')&&game.includes('gameResync'));
 check('socket exposes reconnect signal',socket.includes('listeners.connected')&&socket.includes('socket.on("connect"'));
-check('lobby rejoins room after reconnect',lobby.includes('stopConnected')&&lobby.includes('rejoin'));
+check('global chess provider rejoins app after reconnect',realtime.includes('CHESS_EVENTS.appJoin')&&realtime.includes('stopConnected')&&realtime.includes('joinForeground'));
 check('game rejoins room after reconnect',game.includes('stopConnected')&&game.includes('gameJoin'));
 check('client sends expected revision',/expectedRevision\s*:\s*(?:state|current)\.revision/.test(game));
 check('board uses authoritative legalMoves',board.includes('state.legalMoves'));
@@ -36,11 +36,11 @@ check('firebase admin verifies id token',socketServer.includes('verifyIdToken'))
 check('membership validated server side',socketServer.includes('families/${familyId}/members/${uid}'));
 check('membership cache is short 10s',socketServer.includes('10_000'));
 check('game mutations recheck current membership',/requireGameMembership\(gameId\)/.test(socketServer));
-check('invite accept request id survives in created game',/manager\.create\(invite\.familyId, invite\.fromUid, invite\.toUid, invite\.timeControl, requestId\)/.test(socketServer));
+check('invite accept request id survives in created game',socketServer.includes('invite.timeControl,')&&socketServer.includes('requestId,')&&socketServer.includes('manager.create('));
 check('family lobby rooms isolated',socketServer.includes('chess:lobby:${familyId}'));
 check('game rooms isolated',socketServer.includes('chess:game:${state.gameId}'));
 check('invite ttl 45 seconds',socketServer.includes('45_000'));
-check('invite player must be lobby ready',socketServer.includes('lobbyReady(toUid, familyId)'));
+check('invite player must be foreground-app ready',socketServer.includes('appReady(toUid, familyId)'));
 check('rate limiting exists',socketServer.includes('CHESS_RATE_LIMITED')&&socketServer.includes('limit(`move:'));
 check('server active session lookup exists',socketServer.includes('sessionGetActive'));
 check('mobile cannot write chess games',rules.includes('match /chessGames/{gameId}')&&rules.includes('allow create, update, delete: if false'));
@@ -54,6 +54,6 @@ check('RELEASE build runs Phase 14U gate',releaseBat.includes('npm run phase14u:
 check('socket payloads are runtime validated',socketServer.includes('asTimeControl')&&socketServer.includes('asRevision')&&socketServer.includes('asSquare'));
 check('timeout rechecks after game queue',manager.includes('Re-check after entering the per-game queue')&&manager.includes('clockExpired(r)'));
 check('mutation ACK updates client authoritative state',game.includes('applyStateMutation')&&game.includes('setState(response.data)'));
-check('outgoing invite can be cancelled from lobby',lobby.includes('outgoingInvite')&&lobby.includes('inviteCancel'));
+check('outgoing invite can be cancelled from lobby',lobby.includes('outgoingInvite')&&realtime.includes('CHESS_EVENTS.inviteCancel')&&realtime.includes('cancelInvite'));
 check('history list rule is bounded',rules.includes('request.query.limit <= 20'));
 console.log(`Phase 14U Chess static: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

@@ -98,7 +98,7 @@ Do not commit service-account JSON/private keys.
 
 11) RENDER DEPLOYMENT
 - server/render.yaml: region singapore, plan free, rootDir server.
-- Build: npm install --no-audit --no-fund && npm run build
+- Current Render build command (hotfix applied): npm install --include=dev --no-audit --no-fund && npm run build
 - Start: npm start
 - Bind: 0.0.0.0 + process.env.PORT
 - Health: GET /health => {"ok":true}; endpoint performs no heavy Firestore query.

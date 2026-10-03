@@ -1,0 +1,23 @@
+const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');let pass=0,fail=0;
+function check(name,ok){if(ok){pass++;console.log('PASS',name)}else{fail++;console.error('FAIL',name)}}
+const socket=read('src/services/chess/chessSocketService.ts');
+const ctx=read('src/context/ChessRealtimeContext.tsx');
+const server=read('server/src/socket/socketServer.ts');
+const pkg=JSON.parse(read('package.json'));
+const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+check('Chess client uses RNFirebase modular getAuth API',socket.includes('import { getAuth } from "@react-native-firebase/auth"')&&socket.includes('getAuth().currentUser'));
+check('legacy callable auth API removed from Chess socket service',!socket.includes('import auth from "@react-native-firebase/auth"')&&!socket.includes('auth().currentUser'));
+check('prewake diagnostics logs URL health status and elapsed time',socket.includes('[ChessDebug]')&&socket.includes('prewake:response')&&socket.includes('response.status')&&socket.includes('elapsedMs'));
+check('prewake fails explicitly on non-2xx health response',socket.includes('if (!response.ok) throw new Error(`CHESS_HEALTH_HTTP_${response.status}`)'));
+check('connect diagnostics record Firebase user presence without printing token',socket.includes('connect:auth')&&socket.includes('hasFirebaseUser')&&socket.includes('tokenPresent'));
+check('socket connect_error and disconnect are diagnosed',socket.includes('socket:connect_error')&&socket.includes('socket:disconnect'));
+check('ACK diagnostics expose event and typed server error code',socket.includes('emitAck:response')&&socket.includes('errorCode'));
+check('global foreground join no longer swallows connection error',ctx.includes('chessDebugError("joinForeground failed", error)'));
+check('Render auth failure logs reason without logging token',server.includes('[chess][auth] verify failed')&&!server.includes('console.warn("[chess][auth] verify failed", { token'));
+check('Render logs successful app family join',server.includes('[chess] app joined'));
+check('socket.io client dependency remains installed',!!pkg.dependencies['socket.io-client']);
+check('DEBUG helper runs Phase 14V.2A gate',debugBat.includes('phase14v2a:check'));
+check('RELEASE helper runs Phase 14V.2A gate',releaseBat.includes('phase14v2a:check'));
+console.log(`Phase 14V.2A Chess Auth + Diagnostics Hotfix: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

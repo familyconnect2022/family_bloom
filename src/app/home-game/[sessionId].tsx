@@ -16,6 +16,7 @@ import { GAME_COPY, TRUTH_LIE_IDEAS, getBingoCell } from "../../data/homeGameQue
 import { useAuth } from "../../context/AuthContext";
 import { familyService } from "../../services/family/familyService";
 import { homeGameService } from "../../services/home/homeGameService";
+import { formatHomeGameDeadline } from "../../services/home/homeGamePolicy";
 import { momentsService } from "../../services/moments/momentsService";
 import type { FamilyMember } from "../../types";
 import type { HomeGameResponse, HomeGameSecret, HomeGameSession } from "../../types/homeLiving";
@@ -61,6 +62,14 @@ export default function HomeGameDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [savedStory, setSavedStory] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setClockNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const effectiveStatus = session?.endsAtMs && clockNow >= session.endsAtMs ? "completed" : (session?.status ?? "playing");
 
   const reloadMine = useCallback(async () => {
     if (!activeFamilyId || !sessionId || !uid) return;
@@ -87,7 +96,7 @@ export default function HomeGameDetailScreen() {
   }, [activeFamilyId, reloadMine, sessionId, uid]);
 
   useEffect(() => {
-    if (!activeFamilyId || !sessionId || !session || session.status === "playing") {
+    if (!activeFamilyId || !sessionId || !session || effectiveStatus === "playing") {
       setAllResponses([]);
       return;
     }
@@ -98,7 +107,7 @@ export default function HomeGameDetailScreen() {
       setAllResponses(rows);
       setSecret(sec);
     }).catch(() => undefined);
-  }, [activeFamilyId, session?.status, sessionId]);
+  }, [activeFamilyId, effectiveStatus, session, sessionId]);
 
   const meta = session ? GAME_COPY[session.gameType] : null;
   const isCreator = session?.createdByUid === uid;
@@ -239,7 +248,7 @@ export default function HomeGameDetailScreen() {
         : session.gameType === "story_chain"
           ? session.turnUids.length > 0 && session.turnUids.every(turnUid => session.submittedUids.includes(turnUid))
           : session.submittedUids.length >= 1;
-  const canReveal = isCreator && session.status === "playing" && revealReady;
+  const canReveal = !session.endsAtMs && isCreator && effectiveStatus === "playing" && revealReady;
 
   const renderChoicePrompts = (targetLabel: string, publicFlag: boolean) => (
     <View style={styles.sectionStack}>
@@ -284,13 +293,13 @@ export default function HomeGameDetailScreen() {
 
   const renderGame = () => {
     if (session.gameType === "know_each_other") {
-      if (session.status !== "playing") return knowResult();
-      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã trả lời" description={isCreator ? "Khi đủ vui, bạn có thể mở kết quả cho cả nhà." : "Đợi người tạo ván mở kết quả nhé."} />;
+      if (effectiveStatus !== "playing") return knowResult();
+      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã trả lời" description={session.endsAtMs ? `Kết quả sẽ tự mở khi lượt khép lại lúc ${formatHomeGameDeadline(session.endsAtMs)}.` : isCreator ? "Khi đủ vui, bạn có thể mở kết quả cho cả nhà." : "Đợi người tạo ván mở kết quả nhé."} />;
       return renderChoicePrompts(subjectPublic ? "Trả lời thật về bạn" : `Bạn nghĩ ${session.subjectName} sẽ chọn gì?`, false);
     }
 
     if (session.gameType === "guess_person") {
-      if (session.status !== "playing") {
+      if (effectiveStatus !== "playing") {
         return <View style={styles.sectionStack}><BloomSectionHeader title="Người bí mật là…" /><BloomCard style={styles.revealCard}><Ionicons name="person-circle" size={46} color={COLORS.primary} /><Text style={styles.revealTitle}>{secret?.subjectName || "Một người trong nhà"}</Text><Text style={styles.revealSub}>{allResponses.filter(row => row.guessUid === secret?.subjectUid).length}/{Math.max(1, allResponses.filter(row => row.uid !== secret?.subjectUid).length)} người đoán đúng</Text></BloomCard></View>;
       }
       if (secretSubject) {
@@ -298,20 +307,20 @@ export default function HomeGameDetailScreen() {
         return renderChoicePrompts("Bạn đang là người bí mật", true);
       }
       if (!subjectResponse) return <BloomEmptyState icon="eye-off-outline" title="Người bí mật đang chuẩn bị manh mối" description="Khi họ trả lời xong 3 câu, phần đoán người sẽ tự hiện ở đây." />;
-      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã chốt đáp án" description="Đợi người tạo ván mở danh tính nhé." />;
+      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã chốt đáp án" description={session.endsAtMs ? `Danh tính sẽ tự mở lúc ${formatHomeGameDeadline(session.endsAtMs)}.` : "Đợi người tạo ván mở danh tính nhé."} />;
       return <View style={styles.sectionStack}><BloomSectionHeader title="Ba manh mối" subtitle="Các câu trả lời này đến từ chính người bí mật" />{session.prompts.map((prompt,index)=><BloomCard key={prompt.id} style={styles.resultCard}><Text style={styles.resultPrompt}>{prompt.prompt}</Text><Text style={styles.resultAnswer}>{subjectResponse.answers[index] || "…"}</Text></BloomCard>)}{renderMemberGuess("Bạn nghĩ đó là ai?")}</View>;
     }
 
     if (session.gameType === "memory_owner") {
-      if (session.status !== "playing") {
+      if (effectiveStatus !== "playing") {
         return <View style={styles.sectionStack}><BloomSectionHeader title="Ký ức này thuộc về…" /><BloomCard style={styles.revealCard}><Ionicons name="images" size={42} color={COLORS.primary} /><Text style={styles.revealTitle}>{secret?.memoryAuthorName || "Một người thân"}</Text><Text style={styles.revealSub}>{allResponses.filter(row => row.guessUid === secret?.memoryAuthorUid).length}/{Math.max(1, allResponses.length)} người đoán đúng</Text></BloomCard></View>;
       }
-      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã đoán" description="Đợi người tạo ván mở tên người đã lưu Moment này." />;
+      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã đoán" description={session.endsAtMs ? `Tên người lưu Moment sẽ tự mở lúc ${formatHomeGameDeadline(session.endsAtMs)}.` : "Đợi người tạo ván mở tên người đã lưu Moment này."} />;
       return <View style={styles.sectionStack}><BloomSectionHeader title="Một Moment đã giấu tên" subtitle="Bloom chỉ dùng Moment gia đình trong nhóm người chơi" /><BloomCard style={styles.memoryCard}>{session.memoryPreview.mediaUrl ? <Image source={{ uri: session.memoryPreview.mediaUrl }} style={styles.memoryImage} contentFit="cover" /> : <View style={styles.memoryPlaceholder}><Ionicons name="images-outline" size={34} color={COLORS.primary} /></View>}<Text style={styles.memoryCaption}>{session.memoryPreview.caption}</Text></BloomCard>{renderMemberGuess("Ai đã lưu ký ức này?")}</View>;
     }
 
     if (session.gameType === "truth_lie") {
-      if (session.status !== "playing") {
+      if (effectiveStatus !== "playing") {
         const statements = subjectResponse?.textLines ?? [];
         return <View style={styles.sectionStack}><BloomSectionHeader title="Câu bịa là…" subtitle={`Ván của ${session.subjectName}`} />{statements.map((line,index)=><BloomCard key={index} style={[styles.resultCard, secret?.lieIndex === index && styles.lieCard]}><Text style={styles.statementIndex}>CÂU {index + 1}</Text><Text style={styles.resultPrompt}>{line}</Text>{secret?.lieIndex === index ? <Text style={styles.lieLabel}>CÂU BỊA ✨</Text> : <Text style={styles.truthLabel}>Câu thật</Text>}</BloomCard>)}</View>;
       }
@@ -320,7 +329,7 @@ export default function HomeGameDetailScreen() {
         return <View style={styles.sectionStack}><BloomSectionHeader title="Viết 2 thật · 1 bịa" subtitle="Đừng làm câu bịa quá lộ nhé" />{truthLines.map((value,index)=><View key={index} style={styles.truthInputBlock}><BloomTextInput label={`Câu ${index + 1}`} value={value} multiline maxLength={400} onChangeText={text=>setTruthLines(current=>current.map((item,i)=>i===index?text:item))} placeholder={TRUTH_LIE_IDEAS[(index * 13 + session.id.length) % TRUTH_LIE_IDEAS.length]} /><Pressable onPress={()=>setTruthLieIndex(index)} style={[styles.liePick, truthLieIndex===index && styles.liePickActive]}><Ionicons name={truthLieIndex===index?"radio-button-on":"radio-button-off"} size={18} color={truthLieIndex===index?COLORS.primary:COLORS.secondaryText}/><Text style={styles.liePickText}>Đây là câu bịa</Text></Pressable></View>)}<BloomButton title="Gửi 3 câu" isLoading={busy} onPress={()=>void submitTruth()} /></View>;
       }
       if (!subjectResponse) return <BloomEmptyState icon="create-outline" title={`${session.subjectName} đang nghĩ 3 câu`} description="Khi ba câu xuất hiện, bạn sẽ chọn câu mình nghĩ là bịa." />;
-      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã đoán" description="Chờ mở kết quả để xem mình có bắt bài được không." />;
+      if (myResponse) return <BloomEmptyState icon="checkmark-circle-outline" title="Bạn đã đoán" description={session.endsAtMs ? `Kết quả sẽ tự mở lúc ${formatHomeGameDeadline(session.endsAtMs)}.` : "Chờ mở kết quả để xem mình có bắt bài được không."} />;
       return <View style={styles.sectionStack}><BloomSectionHeader title={`Câu nào của ${session.subjectName} là bịa?`} />{subjectResponse.textLines.map((line,index)=><Pressable key={index} onPress={()=>setChoiceIndex(index)} style={[styles.statementCard, choiceIndex===index && styles.statementCardSelected]}><View style={[styles.statementNumber, choiceIndex===index && styles.statementNumberSelected]}><Text style={[styles.statementNumberText, choiceIndex===index && styles.statementNumberTextSelected]}>{index+1}</Text></View><Text style={styles.statementText}>{line}</Text></Pressable>)}<BloomButton title="Chốt câu bịa" disabled={choiceIndex==null} isLoading={busy} onPress={()=>void submitTruthGuess()} /></View>;
     }
 
@@ -330,10 +339,10 @@ export default function HomeGameDetailScreen() {
       const nextUid = nextIndex >= 0 ? session.turnUids[nextIndex] : null;
       const nextName = nextIndex >= 0 ? session.turnNames[nextIndex] : null;
       const finished = ordered.length === session.turnUids.length;
-      if (session.status !== "playing") {
+      if (effectiveStatus !== "playing") {
         return <View style={styles.sectionStack}><BloomSectionHeader title="Câu chuyện hoàn chỉnh" subtitle="Mỗi người chỉ thêm một đoạn, nhưng cả nhà cùng tạo ra kết thúc." /><BloomCard style={styles.storyFull}><Text style={styles.storyStarter}>{session.prompts[0]?.prompt}</Text>{ordered.map((row,index)=><View key={row.uid} style={styles.storyLineRow}><Text style={styles.storyLineName}>{index+1}. {row.displayName}</Text><Text style={styles.storyLineText}>{row.textLines[0]}</Text></View>)}</BloomCard>{isCreator&&<BloomButton title={savedStory?"Đã lưu thành Moment":"Lưu thành Moment"} variant={savedStory?"positive":"outline"} disabled={savedStory} icon="images-outline" onPress={()=>void saveStoryMoment()} />}</View>;
       }
-      return <View style={styles.sectionStack}><BloomSectionHeader title="Mở đầu" /><BloomCard style={styles.storyStarterCard}><Text style={styles.storyStarter}>{session.prompts[0]?.prompt}</Text></BloomCard>{ordered.length>0&&<BloomCard tone="soft" style={styles.lastLineCard}><Text style={styles.lastLineKicker}>CÂU GẦN NHẤT · {ordered[ordered.length-1].displayName}</Text><Text style={styles.lastLineText}>{ordered[ordered.length-1].textLines[0]}</Text></BloomCard>}{finished?<BloomEmptyState icon="book-outline" title="Câu chuyện đã đủ lượt" description={isCreator?"Bạn có thể mở toàn bộ câu chuyện ngay bây giờ.":"Đợi người tạo ván mở toàn bộ câu chuyện."}/>:nextUid===uid?<><BloomTextInput label="Tới lượt bạn" value={storyLine} onChangeText={setStoryLine} multiline maxLength={220} placeholder="Thêm một hoặc hai câu để nối tiếp…" /><BloomButton title="Gửi câu của tôi" disabled={!storyLine.trim()} isLoading={busy} onPress={()=>void submitStory()} /></>:<BloomEmptyState icon="hourglass-outline" title={`Đang tới lượt ${nextName}`} description="Bạn sẽ được báo ngay trong ván khi tới lượt mình." />}</View>;
+      return <View style={styles.sectionStack}><BloomSectionHeader title="Mở đầu" /><BloomCard style={styles.storyStarterCard}><Text style={styles.storyStarter}>{session.prompts[0]?.prompt}</Text></BloomCard>{ordered.length>0&&<BloomCard tone="soft" style={styles.lastLineCard}><Text style={styles.lastLineKicker}>CÂU GẦN NHẤT · {ordered[ordered.length-1].displayName}</Text><Text style={styles.lastLineText}>{ordered[ordered.length-1].textLines[0]}</Text></BloomCard>}{finished?<BloomEmptyState icon="book-outline" title="Câu chuyện đã đủ lượt" description={session.endsAtMs ? `Lượt sẽ tự khép lại lúc ${formatHomeGameDeadline(session.endsAtMs)} với những đoạn đã có.` : isCreator ? "Bạn có thể mở toàn bộ câu chuyện ngay bây giờ." : "Đợi người tạo ván mở toàn bộ câu chuyện."}/>:nextUid===uid?<><BloomTextInput label="Tới lượt bạn" value={storyLine} onChangeText={setStoryLine} multiline maxLength={220} placeholder="Thêm một hoặc hai câu để nối tiếp…" /><BloomButton title="Gửi câu của tôi" disabled={!storyLine.trim()} isLoading={busy} onPress={()=>void submitStory()} /></>:<BloomEmptyState icon="hourglass-outline" title={`Đang tới lượt ${nextName}`} description="Bạn sẽ được báo ngay trong ván khi tới lượt mình." />}</View>;
     }
 
     if (session.gameType === "family_bingo") {
@@ -350,14 +359,14 @@ export default function HomeGameDetailScreen() {
         <StatusBar translucent backgroundColor="transparent" style="dark" />
         <BloomHeroHeader eyebrow="TRÒ CHƠI NHÀ MÌNH" title={session.title} subtitle={`${session.participantUids.length} người · ${progress} đã tham gia`} variant="game" onBack={() => router.back()} roundedBottom compact />
         <View style={styles.body}>
-          <View style={styles.topPills}><BloomPill icon="people-outline" label={`${session.participantUids.length} người`} /><BloomPill icon={session.status==="playing"?"play-circle-outline":"sparkles-outline"} label={session.status==="playing"?"Đang chơi":"Đã mở kết quả"} /><BloomPill icon="person-outline" label={`Tạo bởi ${session.createdByName}`} /></View>
+          <View style={styles.topPills}><BloomPill icon="people-outline" label={`${session.participantUids.length} người`} /><BloomPill icon={effectiveStatus==="playing"?"play-circle-outline":"sparkles-outline"} label={effectiveStatus==="playing"?"Đang chơi":"Đã khép lại"} />{session.endsAtMs ? <BloomPill icon="moon-outline" label={`Đến ${formatHomeGameDeadline(session.endsAtMs)}`} /> : null}<BloomPill icon="person-outline" label={`Tạo bởi ${session.createdByName}`} /></View>
 
           {renderGame()}
 
           {canReveal && session.gameType !== "family_bingo" && (
             <BloomCard style={styles.hostCard}>
               <View style={styles.hostIcon}><Ionicons name="key-outline" size={21} color={COLORS.primary} /></View>
-              <View style={styles.hostCopy}><Text style={styles.hostTitle}>Bạn là người tạo ván</Text><Text style={styles.hostText}>Mở kết quả khi đã đủ vui. Người chưa trả lời vẫn có thể xem đáp án sau khi mở.</Text></View>
+              <View style={styles.hostCopy}><Text style={styles.hostTitle}>Ván cũ chưa có hẹn giờ</Text><Text style={styles.hostText}>Đây là ván tạo trước chính sách mới. Bạn vẫn có thể mở kết quả thủ công để giữ tương thích dữ liệu cũ.</Text></View>
               <BloomButton title="Mở kết quả" customStyle={styles.hostButton} onPress={()=>void reveal()} />
             </BloomCard>
           )}

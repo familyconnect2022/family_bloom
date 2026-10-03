@@ -351,6 +351,10 @@ export type HomeGameSession = {
   bingoCellIds: string[];
   memoryPreview: HomeGameMemoryPreview;
   submittedUids: string[];
+  /** V1 family-game play window. Null only for legacy sessions created before Phase 14V. */
+  endsAtMs: number | null;
+  playDateKey: string | null;
+  slotId: number | null;
   createdAt: string;
   updatedAt: string;
 };

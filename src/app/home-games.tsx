@@ -6,24 +6,33 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../components/ui/BloomHeroHeader";
 import { BloomCard, BloomEmptyState, BloomPill, BloomSectionHeader } from "../components/ui/BloomPageComponents";
+import { useBloomToast } from "../components/ui/BloomToast";
 import { COLORS } from "../constants/theme";
 import { GAME_COPY } from "../data/homeGameQuestionBank";
 import { useAuth } from "../context/AuthContext";
 import { homeGameService } from "../services/home/homeGameService";
+import { formatHomeGameDeadline, getHomeGamePlayWindow, homeGameStatusLabel } from "../services/home/homeGamePolicy";
 import { subscribeSharedRealtime } from "../services/realtime/sharedRealtimeRegistry";
 import type { HomeGameSession, HomeGameType } from "../types/homeLiving";
 
 const TYPES: HomeGameType[] = ["know_each_other", "guess_person", "memory_owner", "truth_lie", "story_chain", "family_bingo"];
 
-const statusLabel = (item: HomeGameSession) => item.status === "playing" ? "Đang chơi" : item.status === "revealed" ? "Đã mở kết quả" : "Đã xong";
 
 export default function HomeGamesScreen() {
   const router = useRouter();
   const { user, userProfile, activeFamilyId } = useAuth();
+  const { showToast } = useBloomToast();
   const [sessions, setSessions] = useState<HomeGameSession[]>([]);
   const [demoCount, setDemoCount] = useState<0 | 10 | 50 | 100>(0);
+  const [clockNow, setClockNow] = useState(Date.now());
   const uid = user?.uid ?? "";
   const displayName = userProfile?.shortName || userProfile?.displayName || "Bạn";
+  const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setClockNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!activeFamilyId || !uid) {
@@ -46,7 +55,14 @@ export default function HomeGamesScreen() {
 
   const todayType = TYPES[new Date().getDate() % TYPES.length];
   const today = GAME_COPY[todayType];
-  const create = (type: HomeGameType) => router.push({ pathname: "/home-game-create" as never, params: { type } } as never);
+  const create = (type: HomeGameType) => {
+    const latest = getHomeGamePlayWindow();
+    if (!latest.canCreate) {
+      showToast({ title: "Hẹn nhà mình sáng mai nhé", message: latest.message || "Trò chơi mới sẽ mở lại từ 6:00 sáng.", duration: 4200 });
+      return;
+    }
+    router.push({ pathname: "/home-game-create" as never, params: { type } } as never);
+  };
   const open = (id: string) => router.push(`/home-game/${id}` as never);
 
   return (
@@ -73,8 +89,8 @@ export default function HomeGamesScreen() {
                 <Text style={styles.todayText}>{today.short}</Text>
               </View>
             </View>
-            <View style={styles.pills}><BloomPill icon="people-outline" label="Chơi cùng người thật trong Nhà Mình" /><BloomPill icon="time-outline" label={today.minutes} /></View>
-            <View style={styles.todayAction}><Text style={styles.todayActionText}>Tạo ván mới</Text><Ionicons name="arrow-forward" size={18} color={COLORS.white} /></View>
+            <View style={styles.pills}><BloomPill icon="people-outline" label="Cả nhà tự động tham gia" /><BloomPill icon="time-outline" label="06:00–22:00" /></View>
+            <View style={[styles.todayAction, !playWindow.canCreate && styles.todayActionSleeping]}><Text style={styles.todayActionText}>{playWindow.canCreate ? "Tạo lượt mới" : "Mở lại lúc 06:00"}</Text><Ionicons name={playWindow.canCreate ? "arrow-forward" : "moon-outline"} size={18} color={COLORS.white} /></View>
           </BloomCard>
 
           <BloomSectionHeader title="Cờ vua realtime" subtitle="Một bàn cờ riêng cho hai thành viên đang online cùng lúc." />
@@ -123,10 +139,10 @@ export default function HomeGamesScreen() {
                 return (
                   <Pressable key={item.id} disabled={item.id.startsWith("sim-")} onPress={() => open(item.id)} style={({ pressed }) => [styles.sessionCard, pressed && styles.pressed]}>
                     <View style={[styles.sessionIcon, { backgroundColor: meta.tone }]}><Ionicons name={meta.icon as any} size={22} color={COLORS.primaryText} /></View>
-                    <Text style={styles.sessionStatus}>{statusLabel(item)}</Text>
+                    <Text style={styles.sessionStatus}>{homeGameStatusLabel(item, clockNow)}</Text>
                     <Text style={styles.sessionTitle} numberOfLines={2}>{item.title}</Text>
                     <Text style={styles.sessionMeta}>{item.participantUids.length} người · {item.submittedUids.length} đã tham gia</Text>
-                    <Text style={styles.sessionTime}>{new Date(item.updatedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</Text>
+                    <Text style={styles.sessionTime}>{item.endsAtMs ? `Khép lại ${formatHomeGameDeadline(item.endsAtMs)}` : new Date(item.updatedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</Text>
                   </Pressable>
                 );
               })}
@@ -137,7 +153,7 @@ export default function HomeGamesScreen() {
 
           <BloomCard tone="soft" style={styles.noteCard}>
             <Ionicons name="leaf-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.noteText}>Bloom chỉ dùng thành viên thật của Nhà Mình. Sáu trò gia đình vẫn chơi bất đồng bộ; riêng Cờ vua dùng realtime khi hai người cùng muốn ngồi vào bàn.</Text>
+            <Text style={styles.noteText}>Phòng game chỉ mở lượt mới từ 06:00 đến trước 22:00 để nhà mình có khoảng nghỉ buổi tối. Sáu trò gia đình tự lấy toàn bộ membership thật; Cờ vua chỉ cho thách đấu khi hai người đang ở sảnh và còn trong khung giờ chơi.</Text>
           </BloomCard>
         </View>
       </ScrollView>
@@ -158,6 +174,7 @@ const styles = StyleSheet.create({
   pills: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   todayAction: { minHeight: 46, borderRadius: 18, backgroundColor: COLORS.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   todayActionText: { color: COLORS.white, fontSize: 13.5, fontWeight: "900" },
+  todayActionSleeping: { opacity: 0.72 },
   chessCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: "#FFF9FC" },
   chessIcon: { width: 52, height: 52, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "#F4DDE7" },
   chessCopy: { flex: 1, gap: 5 },

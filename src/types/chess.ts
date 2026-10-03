@@ -1,5 +1,5 @@
 export type ChessColor = "w" | "b";
-export type ChessPresenceStatus = "offline" | "online" | "in_lobby" | "in_game" | "reconnecting";
+export type ChessPresenceStatus = "offline" | "online_app" | "in_lobby" | "in_game" | "busy" | "reconnecting";
 export type ChessGameStatus = "waiting" | "active" | "paused" | "finished" | "cancelled";
 export type ChessResult = "white" | "black" | "draw" | null;
 export type ChessFinishReason =
@@ -23,6 +23,7 @@ export type ChessGameState = {
   pgn: string;
   turn: ChessColor;
   revision: number;
+  ply: number;
   whiteRemainingMs: number | null;
   blackRemainingMs: number | null;
   timeControl: ChessTimeControl;
@@ -36,9 +37,12 @@ export type ChessGameState = {
   createdAt: string;
   startedAt: string | null;
   endedAt: string | null;
+  testBotUid?: string | null;
+  isTestGame?: boolean;
 };
 
 export type ChessPresence = { uid: string; status: ChessPresenceStatus };
+export type ChessInviteRejected = { inviteId: string; byUid: string };
 export type ChessInvite = {
   inviteId: string;
   familyId: string;
@@ -46,6 +50,8 @@ export type ChessInvite = {
   toUid: string;
   timeControl: ChessTimeControl;
   expiresAt: number;
+  isTestBot?: boolean;
+  fromDisplayName?: string;
 };
 
 export type ChessErrorCode =
@@ -53,7 +59,7 @@ export type ChessErrorCode =
   | "CHESS_NOT_PLAYER" | "CHESS_NOT_YOUR_TURN" | "CHESS_ILLEGAL_MOVE"
   | "CHESS_GAME_FINISHED" | "CHESS_ALREADY_IN_GAME" | "CHESS_INVITE_EXPIRED"
   | "CHESS_PLAYER_OFFLINE" | "CHESS_INVALID_PROMOTION" | "CHESS_STATE_CONFLICT"
-  | "CHESS_SERVER_RECOVERING" | "CHESS_RATE_LIMITED" | "CHESS_INVALID_REQUEST";
+  | "CHESS_SERVER_RECOVERING" | "CHESS_RATE_LIMITED" | "CHESS_QUIET_HOURS" | "CHESS_TEST_BOT_DISABLED" | "CHESS_INVALID_REQUEST";
 
 export type ChessAck<T = undefined> = T extends undefined
   ? { ok: true } | { ok: false; errorCode: ChessErrorCode; message?: string }
@@ -77,15 +83,19 @@ export const CHESS_ERROR_COPY: Record<ChessErrorCode, string> = {
   CHESS_GAME_FINISHED: "Ván cờ đã kết thúc.",
   CHESS_ALREADY_IN_GAME: "Bạn đang có một ván cờ realtime khác.",
   CHESS_INVITE_EXPIRED: "Lời thách đấu đã hết hạn.",
-  CHESS_PLAYER_OFFLINE: "Người thân chưa sẵn sàng trong sảnh cờ.",
+  CHESS_PLAYER_OFFLINE: "Người thân hiện không online trong Family Bloom.",
   CHESS_INVALID_PROMOTION: "Quân phong cấp không hợp lệ.",
   CHESS_STATE_CONFLICT: "Trạng thái ván đã thay đổi. Bloom sẽ đồng bộ lại.",
   CHESS_SERVER_RECOVERING: "Máy chủ đang khôi phục ván cờ.",
   CHESS_RATE_LIMITED: "Bạn thao tác hơi nhanh. Thử lại sau một chút nhé.",
+  CHESS_QUIET_HOURS: "Nhà mình nghỉ ngơi nhé 🌙 Mình hẹn nhau chơi tiếp từ 6:00 sáng.",
+  CHESS_TEST_BOT_DISABLED: "Đối thủ thử nghiệm đang được tắt trên máy chủ.",
   CHESS_INVALID_REQUEST: "Yêu cầu cờ vua không hợp lệ.",
 };
 
 export const CHESS_EVENTS = {
+  appJoin: "chess:app:join",
+  appLeave: "chess:app:leave",
   lobbyJoin: "chess:lobby:join",
   lobbyLeave: "chess:lobby:leave",
   presenceUpdate: "chess:presence:update",
@@ -95,6 +105,7 @@ export const CHESS_EVENTS = {
   inviteReject: "chess:invite:reject",
   inviteCancel: "chess:invite:cancel",
   inviteExpired: "chess:invite:expired",
+  inviteRejected: "chess:invite:rejected",
   gameJoin: "chess:game:join",
   gameState: "chess:game:state",
   gameMove: "chess:game:move",
@@ -106,5 +117,9 @@ export const CHESS_EVENTS = {
   gameOver: "chess:game:gameOver",
   gameResync: "chess:game:resync",
   sessionGetActive: "chess:session:getActive",
+  testBotInvite: "chess:test:bot:invite",
   serverError: "server:error",
 } as const;
+
+export const CHESS_TEST_BOT_UID_PREFIX = "__bloom_test_bot__";
+export const isChessTestBotUid = (uid: string | null | undefined) => !!uid && uid.startsWith(CHESS_TEST_BOT_UID_PREFIX);

@@ -1,0 +1,26 @@
+PHASE 14V.2A — CHESS CONNECTION DIAGNOSTIC CHECKLIST
+
+Expected client sequence in Metro:
+[ChessDebug] prewake:start
+[ChessDebug] prewake:response { status: 200, ok: true, ... }
+[ChessDebug] connect:auth { hasFirebaseUser: true, ... }
+[ChessDebug] connect:idToken ready { tokenPresent: true }
+[ChessDebug] socket:connect ...
+[ChessDebug] connect:ready ...
+[ChessDebug] emitAck:response { event: 'chess:app:join', ok: true }
+
+Expected Render sequence:
+[chess] authenticated ...
+[chess] app joined ...
+
+Interpretation if it stops:
+- CHESS_SOCKET_URL_MISSING: root .env is missing or Metro did not reload it.
+- prewake:failed: phone cannot reach /health or Render returned non-2xx.
+- hasFirebaseUser:false: app Auth state is not ready when Chess tries to connect.
+- getIdToken failed: Firebase Auth/token issue on device.
+- socket:connect_error CHESS_UNAUTHORIZED + Render [chess][auth] verify failed: Firebase Admin/project/token verification issue.
+- socket:connect_error without matching Render auth log: transport/network/URL problem before Socket reaches auth middleware.
+- socket connects but chess:app:join returns CHESS_NOT_FAMILY_MEMBER: membership path/data mismatch for activeFamilyId.
+- app:join ok but lobby still error: send subsequent emitAck lines and Render command-failed log.
+
+For support, capture Metro lines starting [ChessDebug] and Render lines starting [chess]. Never share Firebase private keys or ID tokens.

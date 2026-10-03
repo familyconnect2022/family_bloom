@@ -1,0 +1,90 @@
+FAMILY BLOOM — PHASE 14V.2 ONE-DEVICE CHESS TEST BOT
+Date: 2026-10-03
+Status before device test: IMPLEMENTED / STATIC PASS / RUNTIME NOT CERTIFIED
+
+PURPOSE
+- Test Chess with one Android phone before a second real device is available.
+- Bloom Bot is a test harness only. It is NOT Stockfish, not ranked AI, not a real family member.
+- It uses the same authoritative server game/clock/persistence path as a real opponent.
+
+A. ENABLE TEST BOT
+1) Root app .env:
+   EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+   EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true
+2) Render -> family-bloom-chess -> Environment:
+   CHESS_TEST_BOT_ENABLED=true
+3) Redeploy Render latest source.
+4) Restart Metro only:
+   npx expo start --dev-client --clear
+5) No new native dependency was added; expo run:android is not required only for this phase.
+
+B. SERVER HEALTH
+[ ] Open https://family-bloom-chess.onrender.com/health -> {"ok":true}
+[ ] Render logs show server listening and no Firebase Admin credential error.
+
+C. DELAYED GLOBAL CHALLENGE OVERLAY — ONE PHONE
+[ ] Open Chess Lobby.
+[ ] Card "Bloom Bot · Đối thủ thử nghiệm" is visible.
+[ ] Choose a time control.
+[ ] Tap "Test thách đấu 5s".
+[ ] App exits the Chess Lobby automatically.
+[ ] About 5 seconds later, centered challenge overlay appears on the other Family Bloom screen.
+[ ] Overlay shows Bloom Bot / chess knight / time control / countdown / Accept / Reject.
+[ ] Reject once -> overlay closes and gentle Bloom Bot message appears.
+[ ] Repeat -> Accept -> app navigates directly to exact Chess board.
+
+D. GAMEPLAY WITH BOT
+[ ] White/Black is assigned by server, not fixed by client.
+[ ] If Bloom Bot is White, it makes the opening move automatically after ~0.7–1.35s.
+[ ] If user is White, make one legal move; Bloom Bot replies automatically.
+[ ] Bot never makes an illegal move.
+[ ] Board state/turn/revision stay synchronized after repeated moves.
+[ ] Server clock continues authoritatively.
+[ ] Legal destination hints still work for the human.
+
+E. GLOBAL TURN TOAST
+[ ] Make a move, immediately navigate away from Chess board before Bot replies.
+[ ] When Bot replies and it becomes your turn, normal Bloom toast appears.
+[ ] Copy includes "Đến lượt bạn • Nước N" or check-specific copy.
+[ ] Tap toast -> returns to exact active Chess game.
+
+F. BATTLE FX
+During natural play, observe when these events happen:
+[ ] Capture -> lightweight capture FX/copy.
+[ ] Major capture -> stronger FX.
+[ ] Check -> "CHIẾU!" treatment.
+[ ] Promotion if reached -> promotion FX.
+[ ] Checkmate -> finale FX.
+[ ] Effect selector Full / Light / Off still works.
+Note: Bloom Bot is not an analysis engine, so promotion/checkmate may require more than one test game.
+
+G. DRAW / RESIGN / REMATCH
+[ ] Offer draw -> Bloom Bot automatically rejects after a short delay; game remains valid.
+[ ] Resign -> authoritative result saved normally.
+[ ] After finished game, tap Chơi lại before 22:00 -> a NEW test game is created immediately.
+[ ] Rematch does not reset the old game document.
+[ ] Outside 06:00–<22:00, new bot challenge/rematch is blocked by the same gentle quiet-hours policy.
+
+H. BACKGROUND / RECOVERY
+[ ] During active timed bot game, background app briefly.
+[ ] App is no longer challenge-online while backgrounded.
+[ ] Timed game clock is not paused just because phone backgrounded.
+[ ] Foreground again -> reconnect/resync returns authoritative game state.
+[ ] Optional: redeploy/restart Render during a bot game, then reopen app.
+[ ] Restored bot game resumes fairness-first from durable checkpoint when human reconnects.
+
+I. HISTORY
+[ ] Finish a bot game.
+[ ] Chess History shows "Bloom Bot" and "Thử nghiệm".
+[ ] Test game remains readable only by the authenticated real player through existing Chess rules.
+
+J. DISABLE AFTER TESTING
+1) Root app .env:
+   EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=false
+2) Render Environment:
+   CHESS_TEST_BOT_ENABLED=false
+3) Redeploy Render and restart Metro.
+[ ] Bloom Bot card disappears from Chess Lobby.
+[ ] Normal human-vs-human Chess behavior is unchanged.
+
+DO NOT CALL RUNTIME PASS UNTIL THE RELEVANT BOXES ABOVE ARE VERIFIED ON DEVICE + RENDER.

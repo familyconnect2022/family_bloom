@@ -1,11 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
 import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
-import { ChessDomainError, type ChessTimeControl } from "../chess/chessTypes.js";
+import { ChessDomainError, type ChessTimeControl, type PublicGameState } from "../chess/chessTypes.js";
+import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 
 const E = {
+  appJoin: "chess:app:join",
+  appLeave: "chess:app:leave",
   lobbyJoin: "chess:lobby:join",
   lobbyLeave: "chess:lobby:leave",
   presenceUpdate: "chess:presence:update",
@@ -15,6 +18,7 @@ const E = {
   inviteReject: "chess:invite:reject",
   inviteCancel: "chess:invite:cancel",
   inviteExpired: "chess:invite:expired",
+  inviteRejected: "chess:invite:rejected",
   gameJoin: "chess:game:join",
   gameState: "chess:game:state",
   gameMove: "chess:game:move",
@@ -25,10 +29,11 @@ const E = {
   gameRematch: "chess:game:rematch",
   gameResync: "chess:game:resync",
   sessionGetActive: "chess:session:getActive",
+  testBotInvite: "chess:test:bot:invite",
 } as const;
 
 type Ack = (response: unknown) => void;
-type SocketData = { uid: string; lobbyFamilyId?: string; gameId?: string; gameFamilyId?: string };
+type SocketData = { uid: string; appFamilyId?: string; lobbyFamilyId?: string; gameId?: string; gameFamilyId?: string };
 type Invite = {
   inviteId: string;
   familyId: string;
@@ -36,10 +41,13 @@ type Invite = {
   toUid: string;
   timeControl: ChessTimeControl;
   expiresAt: number;
+  isTestBot?: boolean;
+  fromDisplayName?: string;
 };
 
 type Bucket = { count: number; resetAt: number };
 const memberCache = new Map<string, { ok: boolean; expires: number }>();
+const memberInFlight = new Map<string, Promise<boolean>>();
 const invites = new Map<string, Invite>();
 const rematchVotes = new Map<string, Set<string>>();
 const buckets = new Map<string, Bucket>();
@@ -47,6 +55,28 @@ const buckets = new Map<string, Bucket>();
 const ALLOWED_TIME_CONTROLS = new Set(["180000:2000", "300000:0", "600000:0", "600000:5000", "unlimited"]);
 const DOC_ID = /^[^/]{1,128}$/;
 const SQUARE = /^[a-h][1-8]$/;
+const TEST_BOT_ENABLED = /^(1|true|yes)$/i.test(process.env.CHESS_TEST_BOT_ENABLED ?? "");
+const TEST_BOT_UID_PREFIX = "__bloom_test_bot__";
+const TEST_BOT_NAME = "Bloom Bot";
+
+function testBotUidFor(uid: string) {
+  return `${TEST_BOT_UID_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0, 24)}`;
+}
+
+function fenHasPieceAt(fen: string, square: string) {
+  const [board] = fen.split(" ");
+  const rows = board.split("/");
+  const targetFile = square.charCodeAt(0) - 97;
+  const targetRank = Number(square[1]);
+  const row = rows[8 - targetRank];
+  let file = 0;
+  for (const char of row) {
+    if (/\d/.test(char)) { file += Number(char); continue; }
+    if (file === targetFile) return true;
+    file += 1;
+  }
+  return false;
+}
 
 function invalid(message = "CHESS_INVALID_REQUEST"): never {
   throw new ChessDomainError("CHESS_INVALID_REQUEST", message);
@@ -81,6 +111,12 @@ function asPromotion(value: unknown) {
   if (value == null) return null;
   if (value !== "q" && value !== "r" && value !== "b" && value !== "n") invalid("Invalid promotion");
   return value;
+}
+
+function asOptionalTestDelay(value: unknown) {
+  if (value == null) return 0;
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 10_000) invalid("Invalid test bot delay");
+  return value as number;
 }
 
 function asTimeControl(value: unknown): ChessTimeControl {
@@ -121,19 +157,96 @@ function safe<T>(ack: Ack, fn: () => Promise<T>) {
 
 export function installChessSocket(io: Server<any, any, any, SocketData>) {
   const persistence = new ChessPersistenceService(adminDb);
+  const botTimers = new Map<string, { revision: number; timer: NodeJS.Timeout }>();
   const manager = new ChessGameManager(
     persistence,
-    (gameId, state) => io.to(`chess:game:${gameId}`).emit(E.gameState, state),
+    (gameId, state) => {
+      io.to(`chess:game:${gameId}`).emit(E.gameState, state);
+      scheduleTestBotAction(state);
+      if (state.status === "finished") void emitPresence(state.familyId);
+    },
   );
+
+  function clearBotTimer(gameId: string) {
+    const existing = botTimers.get(gameId);
+    if (existing) clearTimeout(existing.timer);
+    botTimers.delete(gameId);
+  }
+
+  function chooseTestBotMove(state: PublicGameState) {
+    if (!state.legalMoves.length) return null;
+    const scored = state.legalMoves.map((move) => {
+      let score = Math.random();
+      if (fenHasPieceAt(state.fen, move.to)) score += 5;
+      if (move.promotion) score += 8;
+      const center = ["d4", "e4", "d5", "e5"].includes(move.to);
+      if (center) score += 0.8;
+      return { move, score };
+    }).sort((a, b) => b.score - a.score);
+    return scored[0]?.move ?? null;
+  }
+
+  function scheduleTestBotAction(state: PublicGameState) {
+    const botUid = state.testBotUid;
+    if (!TEST_BOT_ENABLED || !botUid) return;
+    if (state.status !== "active") { clearBotTimer(state.gameId); return; }
+
+    const botColor = state.whiteUid === botUid ? "w" : state.blackUid === botUid ? "b" : null;
+    const shouldRejectDraw = !!state.drawOfferByUid && state.drawOfferByUid !== botUid;
+    const shouldMove = !!botColor && state.turn === botColor;
+    if (!shouldRejectDraw && !shouldMove) { clearBotTimer(state.gameId); return; }
+
+    const existing = botTimers.get(state.gameId);
+    if (existing?.revision === state.revision) return;
+    clearBotTimer(state.gameId);
+    const delay = 700 + Math.floor(Math.random() * 650);
+    const timer = setTimeout(() => {
+      void (async () => {
+        botTimers.delete(state.gameId);
+        try {
+          const latest = await manager.state(state.gameId, botUid);
+          if (latest.status !== "active" || latest.revision !== state.revision) return;
+          if (latest.drawOfferByUid && latest.drawOfferByUid !== botUid) {
+            await manager.rejectDraw(latest.gameId, botUid, `bot-draw-${latest.gameId}-${latest.revision}`);
+            return;
+          }
+          const latestBotColor = latest.whiteUid === botUid ? "w" : "b";
+          if (latest.turn !== latestBotColor) return;
+          const move = chooseTestBotMove(latest);
+          if (!move) return;
+          await manager.move(
+            latest.gameId,
+            botUid,
+            `bot-move-${latest.gameId}-${latest.revision}`,
+            latest.revision,
+            move.from,
+            move.to,
+            move.promotion ?? null,
+          );
+        } catch (error) {
+          console.warn("[chess:test-bot] action skipped", { gameId: state.gameId, error: error instanceof Error ? error.message : String(error) });
+        }
+      })();
+    }, delay);
+    timer.unref();
+    botTimers.set(state.gameId, { revision: state.revision, timer });
+  }
 
   async function isMember(uid: string, familyId: string) {
     const key = `${familyId}:${uid}`;
     const cached = memberCache.get(key);
     if (cached && cached.expires > Date.now()) return cached.ok;
-    const snap = await adminDb.doc(`families/${familyId}/members/${uid}`).get();
-    const ok = snap.exists;
-    memberCache.set(key, { ok, expires: Date.now() + 10_000 });
-    return ok;
+    const pending = memberInFlight.get(key);
+    if (pending) return pending;
+    const read = adminDb.doc(`families/${familyId}/members/${uid}`).get()
+      .then((snap) => {
+        const ok = snap.exists;
+        memberCache.set(key, { ok, expires: Date.now() + 10_000 });
+        return ok;
+      })
+      .finally(() => memberInFlight.delete(key));
+    memberInFlight.set(key, read);
+    return read;
   }
 
   async function requireMember(uid: string, familyId: string) {
@@ -145,24 +258,37 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
   }
 
   function socketsForUidInFamily(uid: string, familyId: string) {
-    return socketsForUid(uid).filter((socket) => socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId);
+    return socketsForUid(uid).filter((socket) => socket.data.appFamilyId === familyId || socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId);
   }
 
   function lobbyReady(uid: string, familyId: string) {
     return socketsForUid(uid).some((socket) => socket.data.lobbyFamilyId === familyId);
   }
 
+  function appReady(uid: string, familyId: string) {
+    return socketsForUid(uid).some((socket) => socket.data.appFamilyId === familyId);
+  }
+
   async function emitPresence(familyId: string) {
     const uids = new Set<string>();
     for (const socket of io.sockets.sockets.values()) {
-      if (socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId) uids.add(socket.data.uid);
+      if (socket.data.appFamilyId === familyId || socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId) uids.add(socket.data.uid);
     }
     const items = await Promise.all([...uids].map(async (uid) => {
       const active = await persistence.getActiveForUid(uid);
-      const status = active?.familyId === familyId ? "in_game" : active ? "online" : lobbyReady(uid, familyId) ? "in_lobby" : "online";
+      const status = active?.familyId === familyId ? "in_game" : active ? "busy" : lobbyReady(uid, familyId) ? "in_lobby" : appReady(uid, familyId) ? "online_app" : "offline";
       return { uid, status };
     }));
-    io.to(`chess:lobby:${familyId}`).emit(E.presenceUpdate, items);
+    io.to(`chess:family:${familyId}`).to(`chess:lobby:${familyId}`).emit(E.presenceUpdate, items);
+  }
+
+  function refreshPresenceSoon(familyId: string) {
+    void emitPresence(familyId).catch((error) => {
+      console.warn("[chess] presence refresh failed", {
+        familyId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    });
   }
 
   async function expireInvite(inviteId: string) {
@@ -177,11 +303,19 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
-      if (typeof token !== "string" || !token) return next(new Error("CHESS_UNAUTHORIZED"));
+      if (typeof token !== "string" || !token) {
+        console.warn("[chess][auth] missing token", { socketId: socket.id });
+        return next(new Error("CHESS_UNAUTHORIZED"));
+      }
       const decoded = await adminAuth.verifyIdToken(token);
       socket.data.uid = decoded.uid;
       next();
-    } catch {
+    } catch (error) {
+      console.warn("[chess][auth] verify failed", {
+        socketId: socket.id,
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+      });
       next(new Error("CHESS_UNAUTHORIZED"));
     }
   });
@@ -196,20 +330,62 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       return state;
     };
 
+    socket.on(E.appJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`app:${uid}`, 12, 10_000);
+      const familyId = asId(asRecord(raw).familyId, "familyId");
+      await requireMember(uid, familyId);
+      const previousFamilyId = socket.data.appFamilyId;
+      if (previousFamilyId && previousFamilyId !== familyId) {
+        socket.leave(`chess:family:${previousFamilyId}`);
+        if (socket.data.lobbyFamilyId === previousFamilyId) {
+          socket.leave(`chess:lobby:${previousFamilyId}`);
+          delete socket.data.lobbyFamilyId;
+        }
+        delete socket.data.appFamilyId;
+        refreshPresenceSoon(previousFamilyId);
+      }
+      socket.data.appFamilyId = familyId;
+      await socket.join(`chess:family:${familyId}`);
+      refreshPresenceSoon(familyId);
+      console.info("[chess] app joined", { uid, familyId, socketId: socket.id });
+      return { ready: true };
+    }));
+
+    socket.on(E.appLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const familyId = asId(asRecord(raw).familyId, "familyId");
+      if (socket.data.appFamilyId === familyId) {
+        socket.leave(`chess:family:${familyId}`);
+        delete socket.data.appFamilyId;
+      }
+      if (socket.data.lobbyFamilyId === familyId) {
+        socket.leave(`chess:lobby:${familyId}`);
+        delete socket.data.lobbyFamilyId;
+      }
+      await emitPresence(familyId);
+      return { left: true };
+    }));
+
     socket.on(E.lobbyJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`lobby:${uid}`, 12, 10_000);
       const payload = asRecord(raw);
       const familyId = asId(payload.familyId, "familyId");
       await requireMember(uid, familyId);
+      if (socket.data.appFamilyId !== familyId) {
+        const previousAppFamilyId = socket.data.appFamilyId;
+        if (previousAppFamilyId) socket.leave(`chess:family:${previousAppFamilyId}`);
+        socket.data.appFamilyId = familyId;
+        await socket.join(`chess:family:${familyId}`);
+        if (previousAppFamilyId && previousAppFamilyId !== familyId) refreshPresenceSoon(previousAppFamilyId);
+      }
       const previousFamilyId = socket.data.lobbyFamilyId;
       if (previousFamilyId && previousFamilyId !== familyId) {
         socket.leave(`chess:lobby:${previousFamilyId}`);
         delete socket.data.lobbyFamilyId;
-        await emitPresence(previousFamilyId);
+        refreshPresenceSoon(previousFamilyId);
       }
       socket.data.lobbyFamilyId = familyId;
       await socket.join(`chess:lobby:${familyId}`);
-      await emitPresence(familyId);
+      refreshPresenceSoon(familyId);
       return { ready: true };
     }));
 
@@ -222,6 +398,45 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       return { left: true };
     }));
 
+    socket.on(E.testBotInvite, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`testbot:${uid}`, 4, 30_000);
+      if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+      const payload = asRecord(raw);
+      asRequestId(payload.requestId);
+      const familyId = asId(payload.familyId, "familyId");
+      const timeControl = asTimeControl(payload.timeControl);
+      const delayMs = asOptionalTestDelay(payload.delayMs);
+      assertFamilyGameCreationOpen();
+      await requireMember(uid, familyId);
+      if (await persistence.getActiveForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+
+      const botUid = testBotUidFor(uid);
+      const existing = [...invites.values()].find((invite) =>
+        invite.isTestBot && invite.familyId === familyId && invite.toUid === uid && invite.expiresAt > Date.now(),
+      );
+      if (existing) return existing;
+
+      const invite: Invite = {
+        inviteId: randomUUID(),
+        familyId,
+        fromUid: botUid,
+        toUid: uid,
+        timeControl,
+        expiresAt: Date.now() + delayMs + 45_000,
+        isTestBot: true,
+        fromDisplayName: TEST_BOT_NAME,
+      };
+      invites.set(invite.inviteId, invite);
+      const deliver = setTimeout(() => {
+        const current = invites.get(invite.inviteId);
+        if (!current || current.expiresAt <= Date.now()) return;
+        for (const targetSocket of socketsForUidInFamily(uid, familyId)) targetSocket.emit(E.inviteReceived, current);
+      }, delayMs);
+      deliver.unref();
+      setTimeout(() => void expireInvite(invite.inviteId), delayMs + 45_100).unref();
+      return invite;
+    }));
+
     socket.on(E.inviteCreate, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`invite:${uid}`, 5, 30_000);
       const payload = asRecord(raw);
@@ -229,12 +444,13 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const familyId = asId(payload.familyId, "familyId");
       const toUid = asId(payload.toUid, "toUid");
       const timeControl = asTimeControl(payload.timeControl);
+      assertFamilyGameCreationOpen();
       if (toUid === uid) invalid();
       await requireMember(uid, familyId);
       await requireMember(toUid, familyId);
       if (await persistence.getActiveForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
       if (await persistence.getActiveForUid(toUid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
-      if (!lobbyReady(toUid, familyId)) throw new ChessDomainError("CHESS_PLAYER_OFFLINE");
+      if (!appReady(toUid, familyId)) throw new ChessDomainError("CHESS_PLAYER_OFFLINE");
 
       const existing = [...invites.values()].find((invite) =>
         invite.familyId === familyId && invite.fromUid === uid && invite.toUid === toUid && invite.expiresAt > Date.now(),
@@ -257,8 +473,11 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       if (!invite || invite.expiresAt <= Date.now()) throw new ChessDomainError("CHESS_INVITE_EXPIRED");
       if (invite.toUid !== uid) invalid();
       invites.delete(invite.inviteId);
+      for (const targetSocket of socketsForUidInFamily(invite.toUid, invite.familyId)) {
+        targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+      }
       for (const senderSocket of socketsForUidInFamily(invite.fromUid, invite.familyId)) {
-        senderSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+        senderSocket.emit(E.inviteRejected, { inviteId: invite.inviteId, byUid: uid });
       }
       return { rejected: true };
     }));
@@ -297,10 +516,18 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         throw new ChessDomainError("CHESS_INVITE_EXPIRED");
       }
 
+      assertFamilyGameCreationOpen();
       if (invite.toUid !== uid) invalid();
-      await requireMember(invite.fromUid, invite.familyId);
+      if (!invite.isTestBot) await requireMember(invite.fromUid, invite.familyId);
       await requireMember(invite.toUid, invite.familyId);
-      const state = await manager.create(invite.familyId, invite.fromUid, invite.toUid, invite.timeControl, requestId);
+      const state = await manager.create(
+        invite.familyId,
+        invite.fromUid,
+        invite.toUid,
+        invite.timeControl,
+        requestId,
+        invite.isTestBot ? { testBotUid: invite.fromUid } : undefined,
+      );
       invites.delete(invite.inviteId);
 
       for (const playerUid of [invite.fromUid, invite.toUid]) {
@@ -311,6 +538,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           playerSocket.emit(E.gameState, state);
         }
       }
+      scheduleTestBotAction(state);
       await emitPresence(invite.familyId);
       return { gameId: state.gameId, state };
     }));
@@ -335,6 +563,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       socket.data.gameId = gameId;
       socket.data.gameFamilyId = familyId;
       await socket.join(`chess:game:${gameId}`);
+      scheduleTestBotAction(state);
       await emitPresence(familyId);
       return state;
     }));
@@ -383,10 +612,30 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     socket.on(E.gameRematch, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`rematch:${uid}`, 4, 20_000);
       const payload = asRecord(raw);
-      asRequestId(payload.requestId);
+      const requestId = asRequestId(payload.requestId);
       const gameId = asId(payload.gameId, "gameId");
       const old = await requireGameMembership(gameId);
       if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
+      if (!isFamilyGameCreationOpen()) {
+        rematchVotes.delete(gameId);
+        throw new ChessDomainError("CHESS_QUIET_HOURS", "Nhà mình nghỉ ngơi nhé 🌙 Mình hẹn nhau chơi tiếp từ 6:00 sáng.");
+      }
+      if (old.testBotUid) {
+        if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+        const humanUid = old.whiteUid === old.testBotUid ? old.blackUid : old.whiteUid;
+        if (uid !== humanUid) invalid();
+        const next = await manager.create(old.familyId, humanUid, old.testBotUid, old.timeControl, requestId, { testBotUid: old.testBotUid });
+        for (const playerSocket of socketsForUidInFamily(humanUid, old.familyId)) {
+          playerSocket.leave(`chess:game:${gameId}`);
+          playerSocket.data.gameId = next.gameId;
+          playerSocket.data.gameFamilyId = old.familyId;
+          await playerSocket.join(`chess:game:${next.gameId}`);
+          playerSocket.emit(E.gameState, next);
+        }
+        scheduleTestBotAction(next);
+        await emitPresence(old.familyId);
+        return { waiting: false, gameId: next.gameId, state: next };
+      }
       const votes = rematchVotes.get(gameId) ?? new Set<string>();
       votes.add(uid);
       rematchVotes.set(gameId, votes);
@@ -408,12 +657,12 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     }));
 
     socket.on("disconnect", () => {
-      const familyId = socket.data.lobbyFamilyId ?? socket.data.gameFamilyId;
+      const familyIds = new Set([socket.data.appFamilyId, socket.data.lobbyFamilyId, socket.data.gameFamilyId].filter((value): value is string => !!value));
       const gameId = socket.data.gameId;
       if (gameId && !socketsForUid(uid).some((other) => other.id !== socket.id && other.data.gameId === gameId)) {
         manager.disconnect(gameId, uid);
       }
-      if (familyId) setTimeout(() => void emitPresence(familyId), 8_000).unref();
+      for (const familyId of familyIds) setTimeout(() => void emitPresence(familyId), 8_000).unref();
       console.info("[chess] disconnected", { uid, socketId: socket.id });
     });
   });

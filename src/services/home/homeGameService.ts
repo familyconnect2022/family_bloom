@@ -23,6 +23,7 @@ import type {
   HomeGameType,
 } from "../../types/homeLiving";
 import { momentsService } from "../moments/momentsService";
+import { getHomeGamePlayWindow, HOME_GAME_MAX_ACTIVE_PER_TYPE } from "./homeGamePolicy";
 
 const SESSION_LIMIT = 80;
 const nowIso = () => new Date().toISOString();
@@ -30,6 +31,10 @@ const sessionsPath = (familyId: string) => `families/${familyId}/homeGameSession
 const sessionPath = (familyId: string, sessionId: string) => `${sessionsPath(familyId)}/${sessionId}`;
 const responsePath = (familyId: string, sessionId: string, uid: string) => `${sessionPath(familyId, sessionId)}/responses/${uid}`;
 const secretPath = (familyId: string, sessionId: string) => `${sessionPath(familyId, sessionId)}/secrets/main`;
+const activeSlotsPath = (familyId: string) => `families/${familyId}/homeGameActiveSlots`;
+const activeSlotPath = (familyId: string, gameType: HomeGameType, slotId: number) => `${activeSlotsPath(familyId)}/${gameType}_${slotId}`;
+const rotationPath = (familyId: string, gameType: HomeGameType) => `families/${familyId}/homeGameRotations/${gameType}`;
+const isSubjectGame = (gameType: HomeGameType) => ["know_each_other", "guess_person", "truth_lie"].includes(gameType);
 
 const normalizePrompt = (raw: any): HomeGamePrompt => ({
   id: String(raw?.id ?? ""),
@@ -60,6 +65,9 @@ const normalizeSession = (id: string, raw: any): HomeGameSession => ({
     mediaType: raw?.memoryPreview?.mediaType === "image" || raw?.memoryPreview?.mediaType === "video" ? raw.memoryPreview.mediaType : "none",
   },
   submittedUids: Array.isArray(raw?.submittedUids) ? raw.submittedUids.filter((item: unknown): item is string => typeof item === "string") : [],
+  endsAtMs: Number.isFinite(raw?.endsAtMs) ? Number(raw.endsAtMs) : null,
+  playDateKey: typeof raw?.playDateKey === "string" ? raw.playDateKey : null,
+  slotId: Number.isInteger(raw?.slotId) ? Number(raw.slotId) : null,
   createdAt: String(raw?.createdAt ?? ""),
   updatedAt: String(raw?.updatedAt ?? raw?.createdAt ?? ""),
 });
@@ -129,8 +137,6 @@ export type CreateHomeGameInput = {
   gameType: HomeGameType;
   participantUids: string[];
   participantNames: string[];
-  subjectUid?: string | null;
-  subjectName?: string | null;
 };
 
 export type SubmitHomeGameResponseInput = {
@@ -154,54 +160,32 @@ export const homeGameService = {
     const db = getFirestore();
     const meta = GAME_COPY[input.gameType];
     if (!meta) throw new Error("Trò chơi chưa được hỗ trợ.");
+
+    const window = getHomeGamePlayWindow();
+    if (!window.canCreate) throw new Error(window.message || "Nhà mình nghỉ ngơi nhé 🌙 Trò chơi mới sẽ mở lại từ 6:00 sáng.");
+
+    // Phase 14V: every real family member is eligible by default. The UI no
+    // longer offers a participant picker; this snapshot keeps a running game
+    // stable even if family membership changes later in the day.
     const participants = uniqueParticipants(input.participantUids, input.participantNames);
     if (!participants.uids.includes(input.creatorUid)) {
       participants.uids.unshift(input.creatorUid);
       participants.names.unshift(input.creatorName.trim().slice(0, 80) || "Bạn");
     }
     if (participants.uids.length < 2 && input.gameType !== "family_bingo") {
-      throw new Error("Cần ít nhất 2 người trong Nhà Mình để bắt đầu ván này.");
+      throw new Error("Nhà Mình cần ít nhất 2 thành viên để bắt đầu trò này.");
     }
-    if (participants.uids.length > 50) throw new Error("Một ván tối đa 50 người để giữ trải nghiệm nhẹ và dễ theo dõi.");
+    if (participants.uids.length > 50) throw new Error("Một ván tối đa 50 thành viên để giữ trải nghiệm nhẹ và dễ theo dõi.");
 
     const ref = doc(collection(db, sessionsPath(input.familyId)));
     const createdAt = nowIso();
     const seed = `${input.familyId}:${ref.id}:${createdAt}`;
-    let prompts: HomeGamePrompt[] = [];
-    let subjectUid: string | null = null;
-    let subjectName: string | null = null;
-    let turnUids: string[] = [];
-    let turnNames: string[] = [];
-    let bingoCellIds: string[] = [];
     let memoryPreview = { caption: "", mediaUrl: "", mediaType: "none" as const };
-    let secret: HomeGameSecret | null = null;
+    let memorySecret: Pick<HomeGameSecret, "memoryAuthorUid" | "memoryAuthorName" | "memoryMomentId"> | null = null;
 
-    if (input.gameType === "know_each_other") {
-      subjectUid = input.subjectUid || input.creatorUid;
-      const subjectIndex = participants.uids.indexOf(subjectUid);
-      if (subjectIndex < 0) throw new Error("Người được chọn phải nằm trong nhóm chơi.");
-      subjectName = input.subjectName || participants.names[subjectIndex];
-      prompts = seededPick(KNOW_EACH_OTHER_QUESTIONS, 5, seed);
-    } else if (input.gameType === "guess_person") {
-      const targetUid = input.subjectUid || seededPick(participants.uids, 1, seed)[0];
-      const targetIndex = participants.uids.indexOf(targetUid);
-      if (targetIndex < 0) throw new Error("Người bí mật phải nằm trong nhóm chơi.");
-      const targetName = input.subjectName || participants.names[targetIndex];
-      prompts = seededPick(GUESS_PERSON_CLUES, 3, seed);
-      secret = {
-        sessionId: ref.id,
-        familyId: input.familyId,
-        allowedUids: Array.from(new Set([input.creatorUid, targetUid])),
-        subjectUid: targetUid,
-        subjectName: targetName,
-        memoryAuthorUid: null,
-        memoryAuthorName: null,
-        memoryMomentId: null,
-        lieIndex: null,
-        createdAt,
-        updatedAt: createdAt,
-      };
-    } else if (input.gameType === "memory_owner") {
+    // Moment lookup stays outside the Firestore transaction so the transaction
+    // remains short and never performs a network query after writes begin.
+    if (input.gameType === "memory_owner") {
       const moments = (await momentsService.listFamilyTimelineOnce(input.familyId, 60))
         .filter(item => item.caption.trim().length > 0 || item.media.length > 0)
         .filter(item => participants.uids.includes(item.authorUid));
@@ -213,74 +197,163 @@ export const homeGameService = {
         mediaUrl: media?.thumbnailUrl || media?.secureUrl || "",
         mediaType: media?.type === "video" ? "video" : media?.type === "image" ? "image" : "none",
       };
-      secret = {
-        sessionId: ref.id,
-        familyId: input.familyId,
-        allowedUids: [input.creatorUid],
-        subjectUid: null,
-        subjectName: null,
+      memorySecret = {
         memoryAuthorUid: chosen.authorUid,
         memoryAuthorName: chosen.authorName,
         memoryMomentId: chosen.id,
-        lieIndex: null,
-        createdAt,
-        updatedAt: createdAt,
       };
-    } else if (input.gameType === "truth_lie") {
-      subjectUid = input.subjectUid || input.creatorUid;
-      const subjectIndex = participants.uids.indexOf(subjectUid);
-      if (subjectIndex < 0) throw new Error("Người ra câu phải nằm trong nhóm chơi.");
-      subjectName = input.subjectName || participants.names[subjectIndex];
-      secret = {
-        sessionId: ref.id,
-        familyId: input.familyId,
-        allowedUids: Array.from(new Set([input.creatorUid, subjectUid])),
-        subjectUid,
-        subjectName,
-        memoryAuthorUid: null,
-        memoryAuthorName: null,
-        memoryMomentId: null,
-        lieIndex: null,
-        createdAt,
-        updatedAt: createdAt,
-      };
-    } else if (input.gameType === "story_chain") {
-      const starterIndex = hash(seed) % STORY_STARTERS.length;
-      prompts = [{ id: `story_${starterIndex}`, category: "Mở đầu", prompt: STORY_STARTERS[starterIndex], options: [] }];
-      const order = seededPick(participants.uids.map((uid, index) => ({ uid, name: participants.names[index] })), participants.uids.length, seed);
-      turnUids = order.map(item => item.uid);
-      turnNames = order.map(item => item.name);
-    } else if (input.gameType === "family_bingo") {
-      const indices = seededPick(BINGO_CELLS.map((_, index) => index), 9, seed);
-      bingoCellIds = indices.map(index => `bingo_${index}`);
     }
 
-    const session: HomeGameSession = {
-      id: ref.id,
-      familyId: input.familyId,
-      gameType: input.gameType,
-      title: meta.title,
-      createdByUid: input.creatorUid,
-      createdByName: input.creatorName.trim().slice(0, 80) || "Người thân",
-      participantUids: participants.uids,
-      participantNames: participants.names,
-      status: "playing",
-      prompts,
-      subjectUid,
-      subjectName,
-      turnUids,
-      turnNames,
-      bingoCellIds,
-      memoryPreview,
-      submittedUids: [],
-      createdAt,
-      updatedAt: createdAt,
-    };
+    const slotRefs = Array.from({ length: HOME_GAME_MAX_ACTIVE_PER_TYPE }, (_, slotId) =>
+      doc(db, activeSlotPath(input.familyId, input.gameType, slotId)),
+    );
+    const rotationRef = doc(db, rotationPath(input.familyId, input.gameType));
 
-    const batch = writeBatch(db);
-    batch.set(ref, session as unknown as Record<string, unknown>);
-    if (secret) batch.set(doc(db, secretPath(input.familyId, ref.id)), secret as unknown as Record<string, unknown>);
-    await batch.commit();
+    await runTransaction(db, async tx => {
+      // All reads happen before any write. A deterministic four-slot pool makes
+      // the "max 4 active rounds of the same game" rule atomic even when two
+      // phones create a round at the same time.
+      const slotSnaps = [];
+      for (const slotRef of slotRefs) slotSnaps.push(await tx.get(slotRef));
+      const rotationSnap = isSubjectGame(input.gameType) ? await tx.get(rotationRef) : null;
+
+      const nowMs = Date.now();
+      const slotId = slotSnaps.findIndex(snap => !snap.exists() || Number(snap.data()?.endsAtMs ?? 0) <= nowMs);
+      if (slotId < 0) {
+        throw new Error("Trò này đang rộn ràng rồi 💛 Nhà mình đã có 4 lượt đang chơi. Chờ một lượt khép lại rồi quay lại nhé.");
+      }
+
+      let prompts: HomeGamePrompt[] = [];
+      let subjectUid: string | null = null;
+      let subjectName: string | null = null;
+      let turnUids: string[] = [];
+      let turnNames: string[] = [];
+      let bingoCellIds: string[] = [];
+      let secret: HomeGameSecret | null = null;
+
+      if (isSubjectGame(input.gameType)) {
+        const rawRotation = rotationSnap?.exists() ? rotationSnap.data() : null;
+        let usedUids = rawRotation?.playDateKey === window.playDateKey && Array.isArray(rawRotation?.usedUids)
+          ? rawRotation.usedUids.filter((value: unknown): value is string => typeof value === "string" && participants.uids.includes(value))
+          : [];
+        let candidates = participants.uids.filter(uid => !usedUids.includes(uid));
+        if (!candidates.length) {
+          usedUids = [];
+          candidates = [...participants.uids];
+        }
+        // On a fresh cycle, prefer somebody other than the creator when the
+        // family has a choice. The creator still enters later rotations fairly.
+        if (!usedUids.length && candidates.length > 1) {
+          const nonCreator = candidates.filter(uid => uid !== input.creatorUid);
+          if (nonCreator.length) candidates = nonCreator;
+        }
+        subjectUid = seededPick(candidates, 1, `${seed}:subject`)[0] ?? participants.uids[0] ?? null;
+        const subjectIndex = subjectUid ? participants.uids.indexOf(subjectUid) : -1;
+        subjectName = subjectIndex >= 0 ? participants.names[subjectIndex] : "Người thân";
+        tx.set(rotationRef, {
+          familyId: input.familyId,
+          gameType: input.gameType,
+          playDateKey: window.playDateKey,
+          usedUids: Array.from(new Set([...usedUids, subjectUid].filter(Boolean))),
+          updatedAt: createdAt,
+        });
+      }
+
+      if (input.gameType === "know_each_other") {
+        prompts = seededPick(KNOW_EACH_OTHER_QUESTIONS, 5, seed);
+      } else if (input.gameType === "guess_person") {
+        prompts = seededPick(GUESS_PERSON_CLUES, 3, seed);
+        secret = {
+          sessionId: ref.id,
+          familyId: input.familyId,
+          allowedUids: Array.from(new Set([input.creatorUid, subjectUid].filter((value): value is string => !!value))),
+          subjectUid,
+          subjectName,
+          memoryAuthorUid: null,
+          memoryAuthorName: null,
+          memoryMomentId: null,
+          lieIndex: null,
+          createdAt,
+          updatedAt: createdAt,
+        };
+      } else if (input.gameType === "memory_owner") {
+        secret = {
+          sessionId: ref.id,
+          familyId: input.familyId,
+          allowedUids: [input.creatorUid],
+          subjectUid: null,
+          subjectName: null,
+          memoryAuthorUid: memorySecret?.memoryAuthorUid ?? null,
+          memoryAuthorName: memorySecret?.memoryAuthorName ?? null,
+          memoryMomentId: memorySecret?.memoryMomentId ?? null,
+          lieIndex: null,
+          createdAt,
+          updatedAt: createdAt,
+        };
+      } else if (input.gameType === "truth_lie") {
+        secret = {
+          sessionId: ref.id,
+          familyId: input.familyId,
+          allowedUids: Array.from(new Set([input.creatorUid, subjectUid].filter((value): value is string => !!value))),
+          subjectUid,
+          subjectName,
+          memoryAuthorUid: null,
+          memoryAuthorName: null,
+          memoryMomentId: null,
+          lieIndex: null,
+          createdAt,
+          updatedAt: createdAt,
+        };
+      } else if (input.gameType === "story_chain") {
+        const starterIndex = hash(seed) % STORY_STARTERS.length;
+        prompts = [{ id: `story_${starterIndex}`, category: "Mở đầu", prompt: STORY_STARTERS[starterIndex], options: [] }];
+        const order = seededPick(participants.uids.map((uid, index) => ({ uid, name: participants.names[index] })), participants.uids.length, seed);
+        turnUids = order.map(item => item.uid);
+        turnNames = order.map(item => item.name);
+      } else if (input.gameType === "family_bingo") {
+        const indices = seededPick(BINGO_CELLS.map((_, index) => index), 9, seed);
+        bingoCellIds = indices.map(index => `bingo_${index}`);
+      }
+
+      const session: HomeGameSession = {
+        id: ref.id,
+        familyId: input.familyId,
+        gameType: input.gameType,
+        title: meta.title,
+        createdByUid: input.creatorUid,
+        createdByName: input.creatorName.trim().slice(0, 80) || "Người thân",
+        participantUids: participants.uids,
+        participantNames: participants.names,
+        status: "playing",
+        prompts,
+        subjectUid,
+        subjectName,
+        turnUids,
+        turnNames,
+        bingoCellIds,
+        memoryPreview,
+        submittedUids: [],
+        endsAtMs: window.endsAtMs,
+        playDateKey: window.playDateKey,
+        slotId,
+        createdAt,
+        updatedAt: createdAt,
+      };
+
+      tx.set(slotRefs[slotId], {
+        familyId: input.familyId,
+        gameType: input.gameType,
+        slotId,
+        sessionId: ref.id,
+        subjectUid,
+        playDateKey: window.playDateKey,
+        endsAtMs: window.endsAtMs,
+        updatedAt: createdAt,
+      });
+      tx.set(ref, session as unknown as Record<string, unknown>);
+      if (secret) tx.set(doc(db, secretPath(input.familyId, ref.id)), secret as unknown as Record<string, unknown>);
+    });
+
     return ref.id;
   },
 
@@ -332,6 +405,7 @@ export const homeGameService = {
       if (!sSnap.exists()) throw new Error("Ván chơi không còn tồn tại.");
       const session = normalizeSession(sSnap.id, sSnap.data());
       if (!session.participantUids.includes(input.uid)) throw new Error("Bạn không thuộc ván chơi này.");
+      if (session.endsAtMs && Date.now() >= session.endsAtMs) throw new Error("Lượt chơi hôm nay đã khép lại rồi 🌙 Hẹn nhà mình từ 6:00 sáng nhé.");
       if (session.status !== "playing" && session.gameType !== "family_bingo") throw new Error("Ván chơi đã mở kết quả.");
 
       const existing = await tx.get(rRef);
@@ -370,6 +444,7 @@ export const homeGameService = {
       if (!sSnap.exists() || !secretSnap.exists()) throw new Error("Ván chơi chưa sẵn sàng.");
       const session = normalizeSession(sSnap.id, sSnap.data());
       const secret = normalizeSecret(secretSnap.data());
+      if (session.endsAtMs && Date.now() >= session.endsAtMs) throw new Error("Lượt chơi hôm nay đã khép lại rồi 🌙 Hẹn nhà mình từ 6:00 sáng nhé.");
       if (session.gameType !== "truth_lie" || secret.subjectUid !== input.uid) throw new Error("Chỉ người ra câu mới được tạo ba câu chuyện.");
       const response: HomeGameResponse = {
         uid: input.uid,
@@ -398,6 +473,9 @@ export const homeGameService = {
       if (!snap.exists()) throw new Error("Ván chơi không còn tồn tại.");
       const session = normalizeSession(snap.id, snap.data());
       if (session.createdByUid !== actorUid) throw new Error("Chỉ người tạo ván mới được mở kết quả.");
+      if (session.endsAtMs && Date.now() < session.endsAtMs) {
+        throw new Error("Ván này sẽ tự mở kết quả khi hết thời gian. Cả nhà cứ chơi thong thả nhé.");
+      }
       tx.update(ref, { status, updatedAt: nowIso() });
     });
   },
@@ -414,6 +492,11 @@ export const homeGameService = {
     responses.docs.forEach(row => batch.delete(row.ref));
     if (["guess_person", "memory_owner", "truth_lie"].includes(session.gameType)) {
       batch.delete(doc(db, secretPath(familyId, sessionId)));
+    }
+    if (session.slotId != null) {
+      const slotRef = doc(db, activeSlotPath(familyId, session.gameType, session.slotId));
+      const slotSnap = await getDoc(slotRef);
+      if (slotSnap.exists() && slotSnap.data()?.sessionId === session.id) batch.delete(slotRef);
     }
     batch.delete(ref);
     await batch.commit();
@@ -444,6 +527,9 @@ export const homeGameService = {
         bingoCellIds: gameType === "family_bingo" ? Array.from({ length: 9 }, (_, i) => `bingo_${(index * 3 + i) % BINGO_CELLS.length}`) : [],
         memoryPreview: gameType === "memory_owner" ? { caption: "Một buổi chiều cả nhà cùng ngồi lại và cười rất lâu vì một chuyện nhỏ.", mediaUrl: "", mediaType: "none" } : { caption: "", mediaUrl: "", mediaType: "none" },
         submittedUids: index % 3 === 0 ? [uid, "demo-a"] : [uid],
+        endsAtMs: Date.now() + Math.max(1, 10 - (index % 8)) * 60 * 60 * 1000,
+        playDateKey: "demo",
+        slotId: index % 4,
         createdAt: d.toISOString(),
         updatedAt: d.toISOString(),
       };

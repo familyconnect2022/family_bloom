@@ -1,0 +1,54 @@
+FAMILY BLOOM — PHASE 14V.1 GLOBAL CHESS PRESENCE + CHALLENGE OVERLAY + BATTLE FX
+Date: 2026-10-03
+Delivery: FULL CODE (user requested no more patch-only delivery)
+
+IMPLEMENTED
+- Chess presence moved from Lobby-only to authenticated foreground app-wide presence.
+- One shared Chess Socket.IO connection across Family Bloom tabs through ChessRealtimeProvider.
+- Background/terminated app is not challengeable; foreground resume reconnects and authoritative-resyncs active game.
+- New server family room: chess:family:<familyId>.
+- Challenge validation uses appReady presence plus existing membership + one-active-game locks.
+- Lobby differentiates online_app / in_lobby / in_game / busy / offline.
+- Large centered custom challenge overlay with avatar, name, time control, countdown, Accept, Reject.
+- Accept navigates directly to exact Chess game.
+- Reject emits dedicated chess:invite:rejected and challenger receives gentle in-app feedback.
+- Active game continues while user visits other Family Bloom tabs.
+- Tappable turn toast: “Đến lượt bạn • Nước N”; distinct check toast; exact game deep-link.
+- Authoritative public state now includes ply from server chess.js history.
+- Battle FX after authoritative revision only: capture, major capture, capture+check, check, promotion, checkmate, timeout, resignation, draw.
+- Battle FX has four visual intensity levels internally and user-facing modes: Đầy đủ / Nhẹ / Tắt.
+- Battle FX uses lightweight Animated + expo-haptics only; no Stockfish judgment and no new sound dependency.
+- Quiet hours 06:00–<22:00 remain enforced server-side for challenge/accept/rematch.
+
+SERVER IMPACT
+- Render backend must be pushed/redeployed.
+- No new Firebase collection, index, Rule, migration, or secret.
+- Existing Firestore Chess persistence schema remains compatible; `ply` is runtime public state only, not a required persisted field.
+- Render build command remains:
+  npm install --include=dev --no-audit --no-fund && npm run build
+- Start command remains:
+  npm start
+
+MOBILE IMPACT
+- No new npm/native dependency.
+- Existing socket.io-client and expo-haptics are reused.
+- After merging/using this FULL source, restart Metro with:
+  npx expo start --dev-client --clear
+- Native rebuild is not required solely for Phase 14V.1 JavaScript/TypeScript changes.
+
+VALIDATION ACTUALLY RUN
+- phase14v1:check = 33 PASS / 0 FAIL
+- phase14u:check = 54 PASS / 0 FAIL
+- phase14v:check = 26 PASS / 0 FAIL
+- phase14t:check = 44 PASS / 0 FAIL
+- phase14t0a:check = 21 PASS / 0 FAIL
+- phase13:check = 11 PASS / 0 FAIL
+- phase14r5a:check = 30 PASS / 0 FAIL
+- phase14s1a:check = 25 PASS / 0 FAIL
+- TS/TSX syntax transpile = 239 files / 0 diagnostics
+- server internal strict TypeScript compile with external dependency stubs = PASS
+
+VALIDATION LIMITATION
+- `npm install --include=dev` in the packaging environment timed out, so a dependency-resolved server typecheck/build was not re-certified here.
+- The user previously built/deployed the Phase 14U Render server successfully; Phase 14V.1 still requires a new Render deploy and two-device runtime retest.
+- Do not mark Phase 14V.1 runtime PASS until challenge overlay, app-wide presence, turn toast, Battle FX and reconnect behavior are observed on real devices.

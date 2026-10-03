@@ -9,6 +9,7 @@ import { BloomDialogProvider } from "../components/ui/BloomDialogProvider";
 import { BLOOM_MOTION } from "../constants/motion";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
+import { ChessRealtimeProvider } from "../context/ChessRealtimeContext";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
 import { TabStartupProvider, useTabStartup } from "../context/TabStartupContext";
 import { HomeMusicPlayerProvider } from "../context/HomeMusicPlayerContext";
@@ -183,7 +184,9 @@ function FamilySession() {
   const sessionKey = useMemo(() => `${user?.uid ?? "guest"}:${activeFamilyId ?? "no-family"}`, [activeFamilyId, user?.uid]);
   return (
     <FamilyRealtimeProvider key={sessionKey}>
-      <TabStartupProvider><RootNavigator /></TabStartupProvider>
+      <ChessRealtimeProvider>
+        <TabStartupProvider><RootNavigator /></TabStartupProvider>
+      </ChessRealtimeProvider>
     </FamilyRealtimeProvider>
   );
 }

@@ -1,3 +1,85 @@
+# CHECKPOINT 2026-10-03 — PHASE 14V.2B CHESS COLD-START + FALSE-DISCONNECT HOTFIX — IMPLEMENTED / AWAITING DEVICE RETEST
+
+- Device diagnostics proved the Render/Firebase/Socket path is working: the observed cold start reached `socket:connect` / `connect:ready`, `/health` returned HTTP 200 after ~22.9s, and `chess:lobby:join` returned `ok:true`. The visible “Không thể kết nối máy chủ cờ vua” banner was therefore a client-state false negative, not a failed Render connection.
+- Root cause: global `chess:app:join` still used the generic 12s Socket ACK timeout while first cold-start membership/presence work could exceed it. `joinForeground` converted that timeout into a hard `error` state even if the Socket was already connected and a concurrent lobby join succeeded.
+- Fix: `emitAck` now supports command-specific timeout windows; app join uses 30s, active-session restore 20s, and lobby join 30s while normal gameplay retains the 12s default. If app join times out with `CHESS_SERVER_RECOVERING` but Socket.IO is connected, the UI stays in connecting/retry rather than hard error. A successful lobby join explicitly repairs connection state to `ready`.
+- Server fix: app/lobby join ACK no longer waits for presence fan-out. Room/membership state is committed first, then presence refresh runs asynchronously. Concurrent app/lobby joins dedupe the initial Firestore membership lookup through an in-flight promise map while keeping the existing 10s result cache.
+- Presence semantics remain Phase 14V.1: navigating between Family Bloom screens while app remains foreground must keep the global Chess socket. Actual Android background/home/other-app state intentionally sends app leave + disconnect so the member is not falsely challengeable outside the app. `[ChessDebug] appState:change` now logs route + transition to distinguish those cases during retest.
+- No schema/rules/index/native-dependency change. Render redeploy is required because `server/src/socket/socketServer.ts` changed; a Metro restart is enough for mobile JS.
+- Validation: Phase 14V.2B 18/18 PASS; Phase 14V.2A 13/13; Phase 14V.2 40/40; Phase 14V.1 33/33; Phase 14V 26/26; Phase 14U 54/54; Phase 14T 44/44; Phase 14T.0A 21/21; 239 TS/TSX files transpile with 0 syntax diagnostics; server strict internal typecheck with dependency stubs PASS. Runtime certification remains pending. Use `reports/device/PHASE_14V2B_CHESS_CONNECTION_RETEST.txt`.
+
+# CHECKPOINT 2026-10-03 — PHASE 14V.2A CHESS AUTH + CONNECTION DIAGNOSTICS HOTFIX — IMPLEMENTED / AWAITING RUNTIME RETEST
+
+- Fixed a real Android runtime crash in `src/services/chess/chessSocketService.ts`: Chess incorrectly used the legacy callable `auth().currentUser` API while this RNFirebase v26 project uses the modular `getAuth().currentUser` API. Reconnect and token-refresh paths now use `getAuth()` too.
+- Added temporary safe client diagnostics under the `[ChessDebug]` prefix for health prewake, Firebase user/token readiness (token value is never logged), Socket.IO connect/connect_error/disconnect/reconnect and typed ACK results. `joinForeground` no longer swallows the actual connection exception in dev logs.
+- Added Render-side diagnostics for missing/failed Firebase token verification and successful app-family join. Tokens/private keys are never printed.
+- `/health` prewake now checks HTTP status and explicitly fails on non-2xx rather than silently treating any response as healthy.
+- No schema migration, no new native dependency, no change to server-authoritative chess rules/clock. Render must be redeployed because server logging changed; the app only needs Metro restart for this hotfix.
+- Validation: Phase 14V.2A 13/13 PASS; Phase 14U 54/54; Phase 14V 26/26; Phase 14V.1 33/33; Phase 14V.2 40/40; Phase 14T.0A 21/21; 239 TS/TSX files have 0 syntax diagnostics. Runtime connection is NOT yet certified.
+
+---
+
+# CHECKPOINT 2026-10-03 — PHASE 14V.2 ONE-DEVICE CHESS TEST BOT — IMPLEMENTED / AWAITING DEVICE TEST
+
+- **Purpose:** provide a temporary one-device opponent so Chess can be runtime-tested before a second physical phone is available. This is a test harness, not a product AI opponent and not Stockfish.
+- **Opt-in only:** mobile requires `EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true`; Render requires `CHESS_TEST_BOT_ENABLED=true`. Both default to false in `.env.example`. Disable both after the one-device test window.
+- **Server-side bot identity:** every authenticated human gets a deterministic synthetic bot UID derived from a SHA-256 digest of the real UID. It is never inserted into family membership/Profile and never appears as a real member. The human must still pass normal Firebase Auth + family membership validation.
+- **Authoritative path preserved:** bot games still use the same `ChessGameManager`, `chess.js`, Firestore durable game document, active-user locks, per-game mutation queue, request/revision flow, server clock and timeout scheduler. The bot chooses only moves from the server's current authoritative legal-move list.
+- **Bot move policy:** lightweight test heuristic only — small random score, preference for captures, promotions and central squares. No engine evaluation, ranking, ELO or move-quality judgment. Bot responds after roughly 0.7–1.35 seconds to feel like a remote player without blocking UI.
+- **Recovery:** persisted bot games carry `testBotUid` / `isTestGame`. On Render restart the synthetic bot is treated as an automated connected participant, so the fairness-first `active -> paused -> resume when human reconnects` recovery still works.
+- **One-device global-overlay test:** Chess Lobby exposes a clearly labeled `Bloom Bot · Đối thủ thử nghiệm` card only when the client flag is enabled. `Test thách đấu 5s` schedules an incoming bot challenge five seconds later and automatically exits the lobby, allowing the global centered challenge overlay to be tested on another app tab with one phone. Invite TTL remains 45 seconds after delivery.
+- **Gameplay test helpers:** Accept creates a normal random-color game; bot moves automatically when it owns the turn; a human draw offer is automatically rejected after a short delay; resign/timeout/checkmate use the normal authoritative paths; `Chơi lại` against the bot creates a new test game immediately while still respecting 06:00–<22:00 quiet hours.
+- **UI labeling:** global challenge overlay shows `Bloom Bot` with a chess-knight identity and states that it is a test opponent, not ranked AI. Game screen and history label the synthetic opponent/test game so it cannot be mistaken for a family account.
+- **No new native dependency:** only TS/JS/server changes. After setting client env, Metro restart with `npx expo start --dev-client --clear` is sufficient; no new `expo run:android` is required solely for Phase 14V.2. The Render backend must be redeployed because `server/src` changed.
+- **Validation:** Phase 14V.2 static 40/40 PASS; Phase 14U Chess 54/54 PASS; Phase 14V 26/26 PASS; Phase 14V.1 33/33 PASS; Phase 14T 44/44 PASS; Phase 14T.0A 21/21 PASS; Phase 13 11/11 PASS; Whisper R5A 30/30 PASS; Fund S1A 25/25 PASS; 239 TS/TSX files transpile with 0 syntax diagnostics; server strict internal typecheck with external declaration stubs PASS. Dependency-resolved server build must still be run on the user's machine/Render before runtime certification.
+
+## PHASE 14V.2 TEST BOT ENABLEMENT
+
+```text
+Mobile root .env:
+EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true
+
+Render Environment:
+CHESS_TEST_BOT_ENABLED=true
+
+After test:
+set both test-bot flags back to false and redeploy/restart Metro.
+```
+
+---
+
+# CHECKPOINT 2026-10-03 — PHASE 14V.1 GLOBAL CHESS PRESENCE + CHALLENGE OVERLAY + BATTLE FX — IMPLEMENTED / AWAITING DEVICE RETEST
+
+- **Current delivery convention — SUPERSEDES OLD PATCH-ONLY INSTRUCTIONS:** from this checkpoint forward, deliver a complete FULL CODE ZIP for code changes unless the user explicitly asks to return to patch delivery. Historical patch instructions lower in this handoff are archival and must not override this current rule.
+- **Presence semantics changed intentionally:** a valid authenticated member is Chess-online while Family Bloom is foreground in the active family, even when they are on Home, Moments, Graph, Nhà Mình, etc. Opening/closing the Chess Lobby no longer owns the Socket.IO lifecycle. Background/terminated app is not presented as online; no fake background availability is claimed without real remote push.
+- **Global Socket owner:** `ChessRealtimeProvider` lives inside the active-family session. It pre-wakes/connects Render on foreground, joins `chess:family:<familyId>`, restores an active Chess game when present, leaves/disconnects on background, and keeps one shared Socket.IO connection across app tabs.
+- **Challengeable users:** server challenge validation now requires foreground `appReady` presence, not Chess-lobby-only presence. Lobby status can be `online_app`, `in_lobby`, `in_game`, `busy`, or offline. One-active-game UID lock remains authoritative and still spans families.
+- **Global challenge overlay:** incoming challenge appears anywhere in the foreground app as a custom centered Bloom Chess card with challenger avatar/name, time-control, expiry countdown, and Accept/Reject buttons. Accept server-validates again then navigates directly to `/chess-game/[gameId]`. Reject sends a dedicated `chess:invite:rejected` event; the challenger sees gentle copy that the person is not convenient to play now.
+- **In-game tab notifications:** when an active player leaves the board but stays in Family Bloom, authoritative game-state events remain subscribed. When the opponent moves and it becomes the user’s turn, a normal tappable Bloom toast shows `Đến lượt bạn • Nước N`; check uses the stronger `Vua của bạn đang bị chiếu • Nước N`. Tapping returns to the exact game. Draw-only/revision-only mutations do not generate false turn toasts.
+- **Authoritative ply:** public server state now includes `ply = chess.history().length`, used only for UI move-number copy; server remains source-of-truth.
+- **Bloom Chess Battle FX:** board feedback is derived only from newer authoritative server revisions. Capture, major-piece capture, capture+check, check, promotion, checkmate, timeout, resignation and draw have progressively stronger motion/haptic/copy. FX is `pointerEvents=none`, never blocks the board, and can be cycled `Đầy đủ / Nhẹ / Tắt` on the game screen. No Stockfish-style move-quality judgment is invented. Dedicated sound cues are intentionally not added in this pass to avoid a new audio dependency before device tuning.
+- **Quiet-hours preserved:** challenge/accept/rematch remain server-blocked outside 06:00–<22:00 Viet Nam time. An existing timed game may finish naturally after 22:00.
+- **Render deployment impact:** this phase changes `server/src`; push/redeploy `family-bloom-chess` after using this FULL source. Existing Render build command remains `npm install --include=dev --no-audit --no-fund && npm run build`.
+- **Validation:** Phase 14V.1 static 33/33 PASS; Phase 14U Chess 54/54 PASS; Phase 14V family-game policy 26/26 PASS; Phase 14T 44/44 PASS; Phase 14T.0A 21/21 PASS; Phase 13 11/11 PASS; Whisper R5A 30/30 PASS; Fund S1A 25/25 PASS; 239 TS/TSX files transpile with 0 syntax diagnostics; server strict internal typecheck with external declaration stubs PASS. Dependency-resolved install in this packaging environment timed out, so device/Render runtime is not declared PASS here.
+
+---
+
+# CHECKPOINT 2026-10-03 — PHASE 14V FAMILY GAME POLICY + QUIET HOURS — IMPLEMENTED / AWAITING DEVICE RETEST
+
+- **Whole game room quiet hours:** new game creation/challenges/rematches are allowed only from 06:00 up to but not including 22:00 in the Family Bloom V1 family timezone `Asia/Ho_Chi_Minh` (UTC+7, no DST). Existing realtime Chess games are allowed to finish naturally after 22:00; only new challenge/accept/rematch actions are blocked.
+- **Six family games are family-wide by default:** create UI no longer has a participant or subject picker. The session freezes the current real family membership snapshot (max 50) so everyone in the family is eligible without waiting for every member to answer.
+- **Time-based lifecycle:** a new asynchronous family-game round lasts at most 4 hours and is always capped by the 22:00 room close. Result visibility becomes time-based; new timed sessions do not rely on the creator pressing “Mở kết quả”. Legacy pre-14V sessions retain their manual-reveal compatibility path.
+- **Capacity:** each game type has exactly four deterministic active slots per family. A fifth concurrent create attempt returns gentle “trò này đang rộn ràng” copy. Expired slots can be atomically reused in the next transaction; deleting a creator-owned session releases its slot early.
+- **Fair Family Rotation:** `know_each_other`, `guess_person`, and `truth_lie` choose their subject from real membership using a per-family/per-game daily rotation. A fresh rotation prefers a non-creator when possible; the creator remains eligible in later turns and nobody is permanently excluded.
+- **Firestore enforcement:** new `homeGameActiveSlots` and `homeGameRotations` are additive. Session create and response writes are constrained by server-side `request.time`; UTC hours `>=23 || <15` correspond to 06:00–<22:00 Viet Nam time. Hidden responses/secrets become readable after `endsAtMs`. No new Firestore index is required.
+- **Chess quiet-hours enforcement:** Render server now returns typed `CHESS_QUIET_HOURS` for new invite, late invite accept, or rematch outside the play window. Mobile copy is gentle and rematch/challenge UI is disabled accordingly.
+- **Chess presence semantics (superseded by Phase 14V.1):** foreground anywhere in Family Bloom is now Chess-online for the active family; Lobby only adds the richer `in_lobby` status. Background/terminated is offline for challengeability. An active game remains locked `in_game` and its timed server clock continues through player disconnect/background.
+- **Validation:** Phase 14V static 26/26 PASS; Phase 14T regression 44/44 PASS; Phase 14U Chess 54/54 PASS; Phase 14T.0A single Android identity 21/21 PASS; 236 TS/TSX files transpile with 0 syntax errors; new server quiet-hours types/policy strict TypeScript check PASS. Full dependency-resolved server install/typecheck could not be rerun in the packaging environment because `npm install` timed out; the user's already deployed Phase 14U server build remains the runtime baseline and the current FULL source requires a Render redeploy.
+- **Runtime/deploy impact:** deploy updated Firestore Rules (no index change), push/redeploy Render backend, restart Metro/app JS bundle, then test family game creation before/after 22:00, 4-slot capacity, auto-expiry/result reveal, Family Rotation, Chess background/lobby presence, challenge and rematch quiet-hours behavior.
+
+---
+
 # CHECKPOINT 2026-10-03 — PHASE 14U CHESS REALTIME MVP — IMPLEMENTED / AWAITING RUNTIME CERTIFICATION
 
 - **Base authority:** Phase 14T.0A single Android identity cleanup (`com.familybloom.android`) remains the immutable base. The six asynchronous Nhà Mình games and Family Fund line are preserved.
@@ -11,12 +93,12 @@
 - **Durability:** every accepted move persists the authoritative game document before the success ACK/broadcast path completes. `requestId` history + monotonic `revision` handle retries/stale commands. Per-game mutations are serialized. Runtime state rolls back if Firestore persistence fails. Timeout is re-checked after entering the per-game queue so a queued deadline cannot incorrectly flag the player after a valid move changed the turn.
 - **Recovery:** if a process restores a persisted `active` game after infrastructure restart, it first persists `paused`; clocks do not charge unprovable server downtime. The game resumes only after both players reconnect. A normal single-player disconnect while the server is alive does **not** pause a timed clock.
 - **Reconnect:** Socket.IO reconnect explicitly rejoins lobby/game rooms and resyncs authoritative state. App foreground also requests resync; the device clock is never authoritative.
-- **Invite:** Chess-lobby-ready targets only, 45-second server expiry, server-random color, rate limiting, duplicate-pair reuse, sender-side pending state and cancellation. Reject/cancel/expiry close the matching UI state on both sides. Important commands use acknowledgements.
+- **Invite (updated by Phase 14V.1):** any foreground-app-ready member in the active family may be challenged, not only someone on the Chess Lobby. Invite TTL remains 45 seconds, colors remain server-random, and reject/cancel/expiry synchronize both sides. Important commands use acknowledgements.
 - **Modes implemented:** 3+2, 5+0, 10+0, 10+5, No clock.
 - **Gameplay implemented:** legal moves, castling/en-passant/promotion through `chess.js`, check/checkmate, stalemate, insufficient material, threefold repetition, fifty-move rule, draw offer/accept/reject, resign, timeout, rematch creates a new game.
 - **Firestore additive schema:** `families/{familyId}/chessGames/{gameId}` for durable game/history; `chessActiveUsers/{uid}` server-only active lock. Client may read only a game where its UID is in `playerUids`; client Chess writes are denied. One composite index supports bounded history (`playerUids` array-contains + `status` + `endedAt desc`).
 - **History:** one-shot query, 20/page, no persistent history listener. Firestore `list` Rules also require `request.query.limit <= 20`. Shows opponent/avatar/color/result/reason/time-control/date.
-- **Cold start:** opening Chess pre-wakes `/health` while Socket.IO connects; server is not woken by general Family Bloom startup.
+- **Cold start (updated by Phase 14V.1):** because challenges must arrive on any foreground tab, authenticated active-family foreground now pre-wakes/connects the Chess service. Background/terminated does not keep the service artificially alive.
 - **Configuration:** mobile uses one `EXPO_PUBLIC_CHESS_SOCKET_URL`; backend secrets remain Render environment variables only. No Firebase Admin secret is committed.
 - **Validation performed in this patch:** TS/TSX syntax/transpile 233 files / 0 errors; Phase 14U static 54/54 PASS; Phase 14T 44/44 PASS; Phase 14T.0A 21/21 PASS; Phase 13 11/11 PASS; Whisper R5A 30/30 PASS; Fund S 35/35, S1 51/51, S1A 25/25 PASS. Backend strict compiler gate with external declaration stubs PASS.
 - **Validation limitation:** backend dependency install timed out in the current environment, so a dependency-resolved `npm install && npm run typecheck` is **not** certified here. Render deployment, Firebase Admin credentials, Rules/index deployment, cold start, process restart and two-real-device gameplay are **not runtime PASS yet**.
@@ -36,7 +118,7 @@ FIREBASE_PRIVATE_KEY=<service-account private key, secret>
 NODE_ENV=production
 
 Render build/start:
-npm install --no-audit --no-fund && npm run build
+npm install --include=dev --no-audit --no-fund && npm run build
 npm start
 
 Firestore:
@@ -54,7 +136,7 @@ Family_Bloom_Deploy_Firestore_Indexes.bat
 - Legacy dual-app runtime assets/plugins/build scripts/checkers are removed from the active source. Historical Phase 14R dual-app documents remain archival only and must not be treated as current architecture.
 - Project-root `.txt` files are no longer allowed. Patch notes live under `document/history/patches/`; device checklists live under `reports/device/`; implementation/validation reports live under `reports/validation/`.
 - **Chess architecture decision — CONFIRMED:** Render Free Web Service (Singapore) + Socket.IO + `chess.js` + Firebase Admin token verification; Firebase stays on Spark; server is authoritative for chess rules/state/clock; Firestore is durable persistence only, never clock/presence transport.
-- Chess refinement decisions also confirmed: persist every accepted move before success ACK; use request-id idempotency + monotonic per-game `revision`; use monotonic elapsed-time sources in-process; serialize mutations per game; support multiple sockets per UID; do not keep the chess socket alive outside Chess unless an active game requires it; distinguish player disconnect from infrastructure outage; restore from durable checkpoint; online V1 invites target Chess-lobby-ready users; timeout/draw semantics must follow chess rules rather than blindly declaring the opponent winner.
+- Chess refinement decisions also confirmed: persist every accepted move before success ACK; use request-id idempotency + monotonic per-game `revision`; use monotonic elapsed-time sources in-process; serialize mutations per game; support multiple sockets per UID; Phase 14V.1 supersedes the older socket-lifetime rule: keep one Chess socket while the authenticated app is foreground so challenges can arrive on any tab; distinguish player disconnect from infrastructure outage; restore from durable checkpoint; Phase 14V.1 invites target foreground-app-ready users in the active family; timeout/draw semantics must follow chess rules rather than blindly declaring the opponent winner.
 - Before Chess server implementation, Firebase DEV/PROD multi-project ambiguity is removed by this single-app cleanup. The server will validate the canonical Firebase project actually present in the source during implementation review.
 - **Version:** Family Bloom 1.3.1 / Android `versionCode 143010` / iOS build `11`.
 - **Status:** cleanup baseline implemented; Chess realtime server/client is the next implementation phase and has not been runtime-certified yet.
@@ -71,7 +153,7 @@ Game state and clock: server authoritative
 Persistence: Firestore durable checkpoints/results/history only
 Clock writes: never once per second
 Concurrency: multiple Socket.IO rooms / multiple games
-Cold start: pre-wake only when entering Games/Chess
+Cold start: Phase 14V.1+ pre-wakes Chess while authenticated app is foreground so global challenges can arrive
 Unexpected server outage: fairness-first recovery from persisted state
 Player-only disconnect: timed clock continues
 Deployment portability: protocol must not depend on Render vendor APIs
