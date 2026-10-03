@@ -1,0 +1,22 @@
+PHASE 14V.3C — CHESS SMOOTH MOTION RUNTIME CHECKLIST
+
+1. Open a Bloom Bot game and make a normal legal move.
+   PASS: piece starts moving immediately after destination tap; no visible wait for server ACK.
+2. Watch Bloom Bot reply.
+   PASS: bot piece slides to its new square; no teleport/jump feeling.
+3. Make 5–10 rapid normal moves across the test game.
+   PASS: board remains responsive; only one pending move can be submitted at a time.
+4. Trigger a capture.
+   PASS: capture FX is shorter and board remains readable.
+5. Set FX mode Light, then Off.
+   PASS: movement stays equally responsive.
+6. Observe Metro logs after each move.
+   Record: [ChessPerf] move:roundtrip elapsedMs.
+7. Temporarily test a rejected/stale move if reproducible.
+   PASS: visual piece rolls back instead of remaining in an invalid square.
+8. Test castling, en-passant and promotion separately.
+   NOTE: these are special multi-piece/removal paths and must be runtime verified.
+9. Background/foreground once during a game.
+   PASS: reconnect/resync wins over any stale visual state.
+10. Finish game.
+   PASS: final board/result comes from authoritative state and history remains correct.

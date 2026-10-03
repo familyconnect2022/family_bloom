@@ -10,6 +10,7 @@ import { COLORS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 import { useFamilyMembersRealtime } from "../context/FamilyRealtimeContext";
 import { chessHistoryService, type ChessHistoryItem } from "../services/chess/chessHistoryService";
+import { safeRouterBack } from "../utils/safeRouterBack";
 
 const control = (value: ChessHistoryItem["timeControl"]) => value.kind === "unlimited"
   ? "Không giờ"
@@ -70,7 +71,7 @@ export default function ChessHistoryScreen() {
           title="Những ván đã chơi"
           subtitle="Chỉ hai người trong ván mới đọc được bản ghi và PGN của ván đó."
           variant="game"
-          onBack={() => router.back()}
+          onBack={() => safeRouterBack(router, "/chess-lobby" as never)}
           roundedBottom
           compact
         />

@@ -8,25 +8,45 @@ import { ScreenContainer } from "../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../components/ui/BloomHeroHeader";
 import { BloomCard, BloomEmptyState, BloomSectionHeader } from "../components/ui/BloomPageComponents";
 import { useBloomToast } from "../components/ui/BloomToast";
+import { CHESS_PIECE_THEME_OPTIONS, DEFAULT_CHESS_PIECE_THEME } from "../constants/chessThemes";
 import { COLORS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 import { useFamilyMembersRealtime } from "../context/FamilyRealtimeContext";
 import { useChessLobby } from "../hooks/chess/useChessLobby";
 import { CHESS_ERROR_COPY, CHESS_TIME_CONTROLS, type ChessTimeControl } from "../types/chess";
 import { getHomeGamePlayWindow } from "../services/gameRoomPolicy";
+import { profileService } from "../services/profile/profileService";
+import { safeRouterBack } from "../utils/safeRouterBack";
 
 export default function ChessLobbyScreen() {
   const router = useRouter();
-  const { user, activeFamilyId } = useAuth();
+  const { user, userProfile, activeFamilyId, refreshProfile } = useAuth();
   const membersRealtime = useFamilyMembersRealtime();
   const { showToast } = useBloomToast();
   const [timeControl, setTimeControl] = useState<ChessTimeControl>(CHESS_TIME_CONTROLS[2].value);
   const [clockNow, setClockNow] = useState(Date.now());
+  const [savingThemeId, setSavingThemeId] = useState<string | null>(null);
   const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
   const lobby = useChessLobby(activeFamilyId);
   const presence = useMemo(() => new Map(lobby.presence.map((item) => [item.uid, item.status])), [lobby.presence]);
   const members = membersRealtime?.familyId === activeFamilyId ? membersRealtime.members : [];
   const outgoingMember = lobby.outgoingInvite ? members.find((member) => member.uid === lobby.outgoingInvite?.toUid) : null;
+
+  const currentTheme = userProfile?.chessPieceTheme ?? DEFAULT_CHESS_PIECE_THEME;
+
+  const selectPieceTheme = async (themeId: string) => {
+    if (!user || themeId === currentTheme || savingThemeId) return;
+    try {
+      setSavingThemeId(themeId);
+      await profileService.updateChessPieceTheme(user.uid, themeId as typeof currentTheme);
+      await refreshProfile();
+      showToast({ type: "success", title: "Đã đổi bộ quân cờ", message: "Đây là thiết lập cá nhân, người khác vẫn có thể dùng bộ khác." });
+    } catch {
+      showToast({ type: "warning", message: "Không lưu được bộ quân cờ. Thử lại giúp mình nhé." });
+    } finally {
+      setSavingThemeId(null);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setClockNow(Date.now()), 30_000);
@@ -66,7 +86,7 @@ export default function ChessLobbyScreen() {
       return;
     }
     showToast({ type: "info", title: "Bloom Bot sẽ gọi sau 5 giây ♟️", message: "Bloom đưa bạn ra khỏi sảnh để kiểm tra lời thách đấu có hiện ở tab khác." });
-    setTimeout(() => router.back(), 250);
+    setTimeout(() => safeRouterBack(router, "/home-games" as never), 250);
   };
 
   const connectionCopy = lobby.connection === "waking"
@@ -86,7 +106,7 @@ export default function ChessLobbyScreen() {
           title="Một bàn cờ, hai người thân"
           subtitle="Luật, lượt và đồng hồ đều do máy chủ giữ. Bạn chỉ cần chọn người muốn chơi."
           variant="game"
-          onBack={() => router.back()}
+          onBack={() => safeRouterBack(router, "/home-games" as never)}
           roundedBottom
           compact
         />
@@ -142,6 +162,37 @@ export default function ChessLobbyScreen() {
             })}
           </ScrollView>
 
+          <BloomSectionHeader
+            title="Bộ quân cờ của bạn"
+            subtitle="Thiết lập cá nhân: bạn chọn bộ nào cũng được, người thân vẫn có thể dùng bộ khác."
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.themeRow}>
+            {CHESS_PIECE_THEME_OPTIONS.map((theme) => {
+              const active = currentTheme === theme.id;
+              const disabled = !!savingThemeId && savingThemeId !== theme.id;
+              const loading = savingThemeId === theme.id;
+              return (
+                <Pressable
+                  key={theme.id}
+                  onPress={() => void selectPieceTheme(theme.id)}
+                  style={[styles.themeCard, active && styles.themeCardActive, disabled && styles.disabled]}
+                >
+                  <View style={styles.themePreviewWrap}>
+                    <Image source={theme.previewPiece} style={styles.themePreview} contentFit="contain" />
+                  </View>
+                  <View style={styles.themeCopy}>
+                    <Text style={styles.themeTitle}>{theme.title}</Text>
+                    <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
+                  </View>
+                  <View style={[styles.themePill, active && styles.themePillActive]}>
+                    <Text style={[styles.themePillText, active && styles.themePillTextActive]}>
+                      {loading ? "Đang lưu…" : active ? "Đang dùng" : "Chọn"}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           {lobby.testBotEnabled ? (
             <BloomCard tone="soft" style={styles.botCard}>
@@ -227,6 +278,18 @@ const styles = StyleSheet.create({
   controlActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   controlText: { color: COLORS.primaryText, fontSize: 11.5, fontWeight: "900" },
   controlTextActive: { color: COLORS.white },
+  themeRow: { gap: 10, paddingRight: 8 },
+  themeCard: { width: 194, minHeight: 112, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, padding: 12, gap: 9 },
+  themeCardActive: { borderColor: COLORS.primary, backgroundColor: "#FFF8FC" },
+  themePreviewWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: "#F8E8F0", alignItems: "center", justifyContent: "center" },
+  themePreview: { width: 42, height: 42 },
+  themeCopy: { gap: 3 },
+  themeTitle: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "900" },
+  themeSubtitle: { color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15 },
+  themePill: { alignSelf: "flex-start", minHeight: 28, paddingHorizontal: 11, borderRadius: 999, backgroundColor: "#F4EDF1", alignItems: "center", justifyContent: "center" },
+  themePillActive: { backgroundColor: COLORS.primary },
+  themePillText: { color: COLORS.primaryText, fontSize: 10, fontWeight: "900" },
+  themePillTextActive: { color: COLORS.white },
   memberCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13 },
   avatar: { width: 44, height: 44, borderRadius: 16, overflow: "hidden", backgroundColor: "#F9E8EF", alignItems: "center", justifyContent: "center" },
   initial: { fontSize: 16, color: COLORS.primary, fontWeight: "900" },

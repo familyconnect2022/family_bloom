@@ -1,4 +1,5 @@
 import { DEFAULT_SMART_REMINDER_PREFERENCES, type Gender, type UserProfile, type BloodType, type SmartReminderPreferences } from "../types/user";
+import { DEFAULT_CHESS_PIECE_THEME } from "../constants/chessThemes";
 
 const stringOrNull = (value: unknown): string | null => typeof value === "string" && value.trim() ? value : null;
 const genderOrOther = (value: unknown): Gender => value === "male" || value === "female" || value === "other" ? value : "other";
@@ -32,6 +33,7 @@ export const normalizeUserProfile = (raw: Record<string, unknown>, uidFallback?:
   fcmTokens: Array.isArray(raw.fcmTokens) ? raw.fcmTokens.filter((v): v is string => typeof v === "string") : [],
   pushNotificationsEnabled: typeof raw.pushNotificationsEnabled === "boolean" ? raw.pushNotificationsEnabled : true,
   smartReminderPreferences: smartReminderPreferences(raw.smartReminderPreferences),
+  chessPieceTheme: raw.chessPieceTheme === "classic" || raw.chessPieceTheme === "duotone" || raw.chessPieceTheme === "bloom" ? raw.chessPieceTheme : DEFAULT_CHESS_PIECE_THEME,
   activeFamilyId: stringOrNull(raw.activeFamilyId),
   createdAt: String(raw.createdAt ?? ""),
   updatedAt: String(raw.updatedAt ?? ""),

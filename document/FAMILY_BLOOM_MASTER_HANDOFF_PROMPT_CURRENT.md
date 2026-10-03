@@ -3428,3 +3428,13 @@ The watchdog is a client-only safety net. It does not ping Firestore, does not k
 Temporary diagnostics remain enabled in DEV under `[ChessDebug]`, including `foreground:focus` and `foreground:watchdog repair`. No Firebase token/private key is logged.
 
 Status: IMPLEMENTED + STATIC REGRESSION PASS; awaiting real-device background/foreground retest.
+
+## Chess Phase 14V.3C — Smooth Motion checkpoint (2026-10-03)
+- Runtime video showed perceived move lag because client waited for server validation + Firestore persistence + ACK before the piece visually changed, then teleported to the destination.
+- Client now uses a presentation-only optimistic slide (145ms native-driver animation) for ordinary legal moves while server-authoritative FEN/revision/clock remain unchanged.
+- Server acceptance reconciles the board to authoritative FEN; rejection rolls the piece back (110ms).
+- Opponent authoritative moves animate on arrival rather than teleporting.
+- Bloom Bot test delay reduced to 250–450ms; this is test-only pacing and does not change real-player networking.
+- Minor Battle FX durations shortened to reduce visual interruption.
+- Development log `[ChessPerf] move:roundtrip` records actual network/server ACK latency.
+- Special moves (castling/en-passant/promotion) require runtime verification because they have extra-piece semantics.

@@ -12,7 +12,8 @@
       "@assets/*": [
         "./assets/*"
       ]
-    }
+    },
+    "noEmit": true
   },
   "include": [
     "**/*.ts",

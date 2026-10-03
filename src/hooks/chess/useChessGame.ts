@@ -93,10 +93,11 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
     return response;
   }, [resync]);
 
-  const move = useCallback((from: string, to: string, promotion?: "q" | "r" | "b" | "n") => {
+  const move = useCallback(async (from: string, to: string, promotion?: "q" | "r" | "b" | "n") => {
     const current = stateRef.current;
-    if (!current) return Promise.resolve({ ok: false, errorCode: "CHESS_GAME_NOT_FOUND" } as const);
-    return applyStateMutation(CHESS_EVENTS.gameMove, {
+    if (!current) return { ok: false, errorCode: "CHESS_GAME_NOT_FOUND" } as const;
+    const startedAt = globalThis.performance?.now?.() ?? Date.now();
+    const response = await applyStateMutation(CHESS_EVENTS.gameMove, {
       requestId: requestId(),
       gameId: current.gameId,
       expectedRevision: current.revision,
@@ -104,6 +105,16 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
       to,
       promotion,
     });
+    if (__DEV__) {
+      const endedAt = globalThis.performance?.now?.() ?? Date.now();
+      console.log("[ChessPerf] move:roundtrip", {
+        from,
+        to,
+        ok: response.ok,
+        elapsedMs: Math.round(endedAt - startedAt),
+      });
+    }
+    return response;
   }, [applyStateMutation]);
 
   const resign = useCallback(() => gameId

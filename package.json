@@ -93,7 +93,8 @@
     "phase14v2a:check": "node ./scripts/test-phase14v2a-chess-auth-diagnostics.js",
     "phase14v2b:check": "node ./scripts/test-phase14v2b-chess-coldstart-presence-hotfix.js",
     "phase14v2c:check": "node ./scripts/test-phase14v2c-chess-foreground-resume.js",
-    "phase14v2d:check": "node ./scripts/test-phase14v2d-chess-history-bot-capability.js"
+    "phase14v2d:check": "node ./scripts/test-phase14v2d-chess-history-bot-capability.js",
+    "phase14v3c:check": "node ./scripts/test-phase14v3c-chess-smooth-motion.js"
   },
   "private": true
 }

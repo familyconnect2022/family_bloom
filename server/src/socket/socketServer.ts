@@ -199,7 +199,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     const existing = botTimers.get(state.gameId);
     if (existing?.revision === state.revision) return;
     clearBotTimer(state.gameId);
-    const delay = 700 + Math.floor(Math.random() * 650);
+    const delay = 250 + Math.floor(Math.random() * 200);
     const timer = setTimeout(() => {
       void (async () => {
         botTimers.delete(state.gameId);

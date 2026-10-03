@@ -45,7 +45,7 @@ check('test bot invite still refuses when human already active',/testBotInvite[\
 check('delayed bot invite supports cross-tab overlay test',server.includes('asOptionalTestDelay')&&server.includes('delayMs + 45_000'));
 check('delay is bounded to ten seconds',server.includes('(value as number) > 10_000'));
 check('lobby triggers delayed five-second test challenge',lobby.includes('requestTestBotChallenge(timeControl, 5_000)'));
-check('lobby leaves screen so global overlay can be verified',lobby.includes('setTimeout(() => router.back(), 250)'));
+check('lobby leaves screen so global overlay can be verified',lobby.includes('setTimeout(() => safeRouterBack(router, \"/home-games\" as never), 250)')||lobby.includes('setTimeout(() => router.back(), 250)'));
 check('test bot UI is clearly labeled non-AI',lobby.includes('Đối thủ thử nghiệm')&&overlay.includes('không phải AI xếp hạng'));
 check('overlay renders bot identity without fake family member',overlay.includes('invite.isTestBot')&&overlay.includes('♞'));
 check('global context resolves bot name',ctx.includes('isChessTestBotUid(uid)')&&ctx.includes('Bloom Bot'));

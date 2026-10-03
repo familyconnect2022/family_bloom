@@ -129,7 +129,7 @@ export function ChessBattleEffects({ event, mode = "full" }: { event: ChessBattl
     }
 
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 110, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, speed: 15, bounciness: mode === "light" ? 3 : 11, useNativeDriver: true }),
       Animated.spring(translateY, { toValue: 0, speed: 18, bounciness: 5, useNativeDriver: true }),
       Animated.sequence([
@@ -138,11 +138,11 @@ export function ChessBattleEffects({ event, mode = "full" }: { event: ChessBattl
       ]),
     ]).start();
 
-    const hold = event.intensity === "finale" ? 2100 : event.intensity === "dramatic" ? 1650 : 1200;
+    const hold = event.intensity === "finale" ? 1750 : event.intensity === "dramatic" ? 1100 : event.intensity === "active" ? 780 : 620;
     const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 0.96, duration: 260, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 0.96, duration: 180, useNativeDriver: true }),
       ]).start(() => setVisibleEvent(null));
     }, hold);
     return () => clearTimeout(timer);
