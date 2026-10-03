@@ -425,7 +425,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         challenger={challenger}
         busy={challengeBusy}
         onAccept={() => {
-          if (!incomingInvite || challengeBusy) return;
+          if (!incomingInvite || challengeBusy || !user) return;
           setChallengeBusy(true);
           void acceptInvite(incomingInvite.inviteId).then((response) => {
             if (!response.ok) showToast({ type: "warning", title: "Chưa vào được ván", message: CHESS_ERROR_COPY[response.errorCode] });

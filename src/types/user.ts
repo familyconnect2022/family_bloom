@@ -18,7 +18,6 @@ export const DEFAULT_SMART_REMINDER_PREFERENCES: SmartReminderPreferences = {
 
 /** Canonical domain model. Optional Firestore fields are normalized to null at the service boundary. */
 export interface UserProfile {
-  chessPieceTheme: "classic" | "duotone" | "bloom";
   uid: string;
   displayName: string;
   phoneNumber: string | null;

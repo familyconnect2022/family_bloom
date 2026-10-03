@@ -5,6 +5,8 @@ import { CHESS_EVENTS, type ChessAck, type ChessGameState } from "../../types/ch
 
 const requestId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
+type StateSource = "socket" | "join" | "rejoin" | "resync" | "ack";
+
 export function useChessGame(familyId: string | null, gameId: string | null) {
   const [state, setState] = useState<ChessGameState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -13,16 +15,52 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
   const joinedOnceRef = useRef(false);
   stateRef.current = state;
 
+  const commitState = useCallback((next: ChessGameState, source: StateSource) => {
+    const current = stateRef.current;
+    if (current && current.gameId === next.gameId) {
+      if (next.revision < current.revision) {
+        if (__DEV__) {
+          console.log("[ChessPerf] state:ignored-stale", {
+            source,
+            currentRevision: current.revision,
+            incomingRevision: next.revision,
+          });
+        }
+        return false;
+      }
+
+      if (next.revision === current.revision) {
+        // A reconnect/resync may legitimately refresh only the clock's server timestamp.
+        // Never let a duplicate ACK/socket packet replace the board with a different FEN
+        // for the same revision — that is what produced the visible "move back, move again" bounce.
+        if (next.fen !== current.fen) {
+          if (__DEV__) {
+            console.warn("[ChessPerf] state:ignored-same-revision-fen-conflict", {
+              source,
+              revision: next.revision,
+            });
+          }
+          return false;
+        }
+        if (next.serverNowMs <= current.serverNowMs) return false;
+      }
+    }
+
+    stateRef.current = next;
+    setState(next);
+    return true;
+  }, []);
+
   const resync = useCallback(async () => {
     if (!gameId) return;
     const response = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameResync, { gameId });
     if (response.ok) {
-      setState(response.data);
+      commitState(response.data, "resync");
       setError(null);
     } else {
       setError(response.errorCode);
     }
-  }, [gameId]);
+  }, [commitState, gameId]);
 
   useEffect(() => {
     if (!familyId || !gameId) return;
@@ -30,7 +68,7 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
 
     const stopState = chessSocketService.on("state", (next) => {
       if (live && next.gameId === gameId) {
-        setState(next);
+        commitState(next, "socket");
         setLoading(false);
         setError(null);
       }
@@ -40,7 +78,7 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
       if (!joinedOnceRef.current || !live) return;
       const response = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameJoin, { familyId, gameId });
       if (live && response.ok) {
-        setState(response.data);
+        commitState(response.data, "rejoin");
         setError(null);
       }
     };
@@ -54,7 +92,7 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
         if (!live) return;
         if (response.ok) {
           joinedOnceRef.current = true;
-          setState(response.data);
+          commitState(response.data, "join");
           setError(null);
         } else {
           setError(response.errorCode);
@@ -80,18 +118,18 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
         stateRef.current?.status === "active" || stateRef.current?.status === "paused" ? gameId : null,
       );
     };
-  }, [familyId, gameId, resync]);
+  }, [commitState, familyId, gameId, resync]);
 
   const applyStateMutation = useCallback(async (event: string, payload: Record<string, unknown>): Promise<ChessAck<ChessGameState>> => {
     const response = await chessSocketService.emitAck<ChessGameState>(event, payload);
     if (response.ok) {
-      setState(response.data);
+      commitState(response.data, "ack");
       setError(null);
     } else if (response.errorCode === "CHESS_STATE_CONFLICT") {
       void resync();
     }
     return response;
-  }, [resync]);
+  }, [commitState, resync]);
 
   const move = useCallback(async (from: string, to: string, promotion?: "q" | "r" | "b" | "n") => {
     const current = stateRef.current;

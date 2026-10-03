@@ -99,7 +99,7 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
   return null;
 }
 
-export function ChessBattleEffects({ event, mode = "full" }: { event: ChessBattleEvent | null; mode?: ChessFxMode }) {
+export function ChessBattleEffects({ event, mode = "full", onComplete }: { event: ChessBattleEvent | null; mode?: ChessFxMode; onComplete?: () => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.86)).current;
   const translateY = useRef(new Animated.Value(10)).current;
@@ -115,7 +115,12 @@ export function ChessBattleEffects({ event, mode = "full" }: { event: ChessBattl
   }, [visibleEvent]);
 
   useEffect(() => {
-    if (!event || mode === "off") { setVisibleEvent(null); return; }
+    if (!event) { setVisibleEvent(null); return; }
+    if (mode === "off") {
+      setVisibleEvent(null);
+      const timer = setTimeout(() => onComplete?.(), 0);
+      return () => clearTimeout(timer);
+    }
     setVisibleEvent(event);
     opacity.stopAnimation(); scale.stopAnimation(); translateY.stopAnimation(); glow.stopAnimation();
     opacity.setValue(0); scale.setValue(mode === "light" ? 0.96 : 0.78); translateY.setValue(mode === "light" ? 3 : 13); glow.setValue(0);
@@ -129,24 +134,27 @@ export function ChessBattleEffects({ event, mode = "full" }: { event: ChessBattl
     }
 
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 110, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, speed: 15, bounciness: mode === "light" ? 3 : 11, useNativeDriver: true }),
       Animated.spring(translateY, { toValue: 0, speed: 18, bounciness: 5, useNativeDriver: true }),
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: event.intensity === "finale" ? 900 : 520, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: event.intensity === "finale" ? 1450 : event.intensity === "dramatic" ? 1000 : 760, useNativeDriver: true }),
       ]),
     ]).start();
 
-    const hold = event.intensity === "finale" ? 1750 : event.intensity === "dramatic" ? 1100 : event.intensity === "active" ? 780 : 620;
+    const hold = event.intensity === "finale" ? 2600 : event.intensity === "dramatic" ? 1850 : event.intensity === "active" ? 1450 : 1100;
     const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 0.96, duration: 180, useNativeDriver: true }),
-      ]).start(() => setVisibleEvent(null));
+        Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 0.96, duration: 260, useNativeDriver: true }),
+      ]).start(() => {
+        setVisibleEvent(null);
+        onComplete?.();
+      });
     }, hold);
     return () => clearTimeout(timer);
-  }, [event?.key, glow, mode, opacity, scale, translateY]);
+  }, [event?.key, glow, mode, onComplete, opacity, scale, translateY]);
 
   if (!visibleEvent || mode === "off") return null;
 

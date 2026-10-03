@@ -406,7 +406,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const familyId = asId(payload.familyId, "familyId");
       const timeControl = asTimeControl(payload.timeControl);
       const delayMs = asOptionalTestDelay(payload.delayMs);
-      assertFamilyGameCreationOpen();
+      // Bloom Bot is a one-device test/training opponent, so quiet hours do not apply.
       await requireMember(uid, familyId);
       if (await persistence.getActiveForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
 
@@ -516,7 +516,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         throw new ChessDomainError("CHESS_INVITE_EXPIRED");
       }
 
-      assertFamilyGameCreationOpen();
+      if (!invite.isTestBot) assertFamilyGameCreationOpen();
       if (invite.toUid !== uid) invalid();
       if (!invite.isTestBot) await requireMember(invite.fromUid, invite.familyId);
       await requireMember(invite.toUid, invite.familyId);
@@ -616,7 +616,8 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const gameId = asId(payload.gameId, "gameId");
       const old = await requireGameMembership(gameId);
       if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
-      if (!isFamilyGameCreationOpen()) {
+      // Human-vs-human rematches still respect quiet hours; Bloom Bot rematches are allowed anytime.
+      if (!old.testBotUid && !isFamilyGameCreationOpen()) {
         rematchVotes.delete(gameId);
         throw new ChessDomainError("CHESS_QUIET_HOURS", "Nhà mình nghỉ ngơi nhé 🌙 Mình hẹn nhau chơi tiếp từ 6:00 sáng.");
       }

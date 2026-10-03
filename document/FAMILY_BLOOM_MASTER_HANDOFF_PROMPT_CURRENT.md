@@ -3438,3 +3438,35 @@ Status: IMPLEMENTED + STATIC REGRESSION PASS; awaiting real-device background/fo
 - Minor Battle FX durations shortened to reduce visual interruption.
 - Development log `[ChessPerf] move:roundtrip` records actual network/server ACK latency.
 - Special moves (castling/en-passant/promotion) require runtime verification because they have extra-piece semantics.
+
+## Chess Phase 14V.3E — Per-game personal piece theme lock (2026-10-03)
+- Chess piece theme remains a PERSONAL user preference (`users/{uid}.chessPieceTheme`), never a family/global setting.
+- Available local transparent sets: `classic` (ivory/black), `duotone` (sculpted white/charcoal), `bloom` (pink/rose-gold).
+- The always-visible theme picker was removed from Chess Lobby.
+- Outgoing challenge flow: tap Challenge -> pre-game setup modal -> select personal piece set -> persist preference -> send invite.
+- Incoming challenge overlay includes the same personal piece selector before Accept.
+- Test Bot does not show a duplicate picker when summoned; the selector appears on the incoming Bloom Bot challenge overlay.
+- When `gameId` is created, ChessGameScreen snapshots the selected piece theme and passes that locked value to ChessBoard. Live profile changes cannot alter the active game's pieces.
+- Rematch is a NEW game: after the finished result card, pressing Play Again opens the pre-game piece selector again before the rematch command.
+- Opponents may use different piece themes in the same realtime game. Theme never enters server-authoritative chess state and does not affect rules/FEN/clock/persistence.
+- No Firestore Rules/index change required; only an additive personal profile field is used.
+- Status: static gates PASS; real-device visual/runtime verification still required.
+
+## Chess Phase 14V.3F — Reconcile gate + FX timing (2026-10-03)
+- Device video exposed a visible bounce: optimistic move completed, then a stale/same-revision state could briefly restore the old FEN before the newer authoritative state arrived.
+- `useChessGame` now uses one monotonic `commitState()` gate for socket, join/rejoin, resync and ACK state updates.
+- Lower revisions are ignored; same-revision conflicting FEN is ignored. This preserves server authority without letting duplicated/out-of-order packets visually rewind the board.
+- Battle FX are queued and delayed until after piece motion settles. Capture/check/promotion/finale effects stay visible longer so the player can understand what happened.
+
+## Chess Phase 14V.3G — One default WebP piece set (2026-10-03)
+- User removed personal piece-theme selection entirely. There is now ONE default piece set for all Chess gameplay.
+- Default assets come from the user-provided 12-piece WebP set: `wk/wq/wr/wb/wn/wp` and `bk/bq/br/bb/bn/bp`.
+- Source artwork was 1920x1920 RGBA WebP. App assets are resized to 384x384 lossless WebP with alpha transparency preserved to reduce decode/RAM cost while staying sharp on mobile chess squares.
+- Chess Lobby no longer has a theme picker or pre-game theme modal.
+- Incoming challenge overlay no longer has a theme picker.
+- Game route no longer carries `pieceTheme`; rematch no longer asks for a theme.
+- `ChessBoard` uses one static local `PIECE_IMAGES` map pointing to `assets/images/chess/pieces-webp-default/*.webp`.
+- Obsolete `ChessPreGameThemeModal`, `chessThemes.ts`, profile `chessPieceTheme` normalization/update code and the Phase 14V.3E active test entry were removed. Existing Firestore documents that still contain an old `chessPieceTheme` field are simply ignored; there is NO migration and NO destructive data write.
+- Phase 14V.3F reconcile/FX timing and Phase 14V.3C smooth optimistic animation remain preserved.
+- No Render/server change, Firestore Rules/index change, native dependency change, or Firebase billing change.
+- Runtime device verification still required for final visual sharpness, move smoothness and special-move animations.

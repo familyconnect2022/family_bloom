@@ -2,8 +2,22 @@ import { Image } from "expo-image";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { CHESS_PIECE_THEME_SOURCES, DEFAULT_CHESS_PIECE_THEME } from "../../constants/chessThemes";
-import type { ChessColor, ChessGameState, ChessPieceThemeId } from "../../types/chess";
+import type { ChessColor, ChessGameState } from "../../types/chess";
+
+const PIECE_IMAGES: Record<string, number> = {
+  wp: require("../../../assets/images/chess/pieces-webp-default/wp.webp"),
+  wn: require("../../../assets/images/chess/pieces-webp-default/wn.webp"),
+  wb: require("../../../assets/images/chess/pieces-webp-default/wb.webp"),
+  wr: require("../../../assets/images/chess/pieces-webp-default/wr.webp"),
+  wq: require("../../../assets/images/chess/pieces-webp-default/wq.webp"),
+  wk: require("../../../assets/images/chess/pieces-webp-default/wk.webp"),
+  bp: require("../../../assets/images/chess/pieces-webp-default/bp.webp"),
+  bn: require("../../../assets/images/chess/pieces-webp-default/bn.webp"),
+  bb: require("../../../assets/images/chess/pieces-webp-default/bb.webp"),
+  br: require("../../../assets/images/chess/pieces-webp-default/br.webp"),
+  bq: require("../../../assets/images/chess/pieces-webp-default/bq.webp"),
+  bk: require("../../../assets/images/chess/pieces-webp-default/bk.webp"),
+};
 
 const BOARD_FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const BOARD_RANKS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -11,13 +25,15 @@ const MOVE_ANIMATION_MS = 145;
 const ROLLBACK_ANIMATION_MS = 110;
 
 type VisualMove = {
+  id: number;
   from: string;
   to: string;
   piece: string;
   baseRevision: number;
+  basePly: number;
   optimistic: boolean;
   animationFinished: boolean;
-  serverConfirmed: boolean;
+  confirmedState: ChessGameState | null;
 };
 
 function parseFen(fen: string) {
@@ -44,18 +60,27 @@ function isLightSquare(square: string) {
   return (file + rank) % 2 === 1;
 }
 
+function moveMatchesState(move: VisualMove, next: ChessGameState) {
+  const lastMove = next.lastMove;
+  return (
+    next.revision > move.baseRevision
+    && next.ply > move.basePly
+    && !!lastMove
+    && lastMove.from === move.from
+    && lastMove.to === move.to
+  );
+}
+
 export function ChessBoard({
   state,
   myColor,
   onMove,
   onPromotion,
-  pieceTheme = DEFAULT_CHESS_PIECE_THEME,
 }: {
   state: ChessGameState;
   myColor: ChessColor;
-  onMove: (from: string, to: string) => Promise<boolean>;
+  onMove: (from: string, to: string) => Promise<ChessGameState | null>;
   onPromotion: (from: string, to: string) => void;
-  pieceTheme?: ChessPieceThemeId;
 }) {
   const { width } = useWindowDimensions();
   const size = Math.min(width - 28, 430);
@@ -63,22 +88,30 @@ export function ChessBoard({
   const boardSize = cell * 8;
   const ranks = myColor === "w" ? [...BOARD_RANKS].reverse() : [...BOARD_RANKS];
   const files = myColor === "w" ? [...BOARD_FILES] : [...BOARD_FILES].reverse();
-  const pieceImages = CHESS_PIECE_THEME_SOURCES[pieceTheme] ?? CHESS_PIECE_THEME_SOURCES[DEFAULT_CHESS_PIECE_THEME];
 
   const [selected, setSelected] = useState<string | null>(null);
   const [displayFen, setDisplayFen] = useState(state.fen);
+  const [displayMarkers, setDisplayMarkers] = useState(() => ({ lastMove: state.lastMove, checkSquare: state.checkSquare }));
   const [visualMove, setVisualMove] = useState<VisualMove | null>(null);
   const visualMoveRef = useRef<VisualMove | null>(null);
-  const previousStateRef = useRef(state);
   const latestStateRef = useRef(state);
+  const displayFenRef = useRef(state.fen);
+  const displayRevisionRef = useRef(state.revision);
+  const queuedStateRef = useRef<ChessGameState | null>(null);
+  const moveIdRef = useRef(0);
+  const mountedRef = useRef(true);
   const progress = useRef(new Animated.Value(0)).current;
 
-  visualMoveRef.current = visualMove;
   latestStateRef.current = state;
 
   const board = useMemo(() => parseFen(displayFen), [displayFen]);
   const authoritativeBoard = useMemo(() => parseFen(state.fen), [state.fen]);
   const legal = selected ? state.legalMoves.filter((move) => move.from === selected) : [];
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    progress.stopAnimation();
+  }, [progress]);
 
   const squarePoint = (square: string) => {
     const fileIndex = files.indexOf(square[0] as (typeof BOARD_FILES)[number]);
@@ -86,110 +119,220 @@ export function ChessBoard({
     return { x: fileIndex * cell, y: rankIndex * cell };
   };
 
-  const startSlide = (nextMove: VisualMove, onFinished?: () => void) => {
+  const commitDisplayState = (next: ChessGameState) => {
+    if (next.revision < displayRevisionRef.current) return;
+    displayRevisionRef.current = next.revision;
+    setDisplayMarkers({ lastMove: next.lastMove, checkSquare: next.checkSquare });
+    if (displayFenRef.current !== next.fen) {
+      displayFenRef.current = next.fen;
+      setDisplayFen(next.fen);
+    }
+  };
+
+  const queueAuthoritativeState = (next: ChessGameState) => {
+    if (next.gameId !== latestStateRef.current.gameId) return;
+    const queued = queuedStateRef.current;
+    if (!queued || next.revision > queued.revision || (next.revision === queued.revision && next.serverNowMs > queued.serverNowMs)) {
+      queuedStateRef.current = next;
+    }
+  };
+
+  function drainAuthoritativeQueue() {
+    if (!mountedRef.current || visualMoveRef.current) return;
+
+    const latest = latestStateRef.current;
+    const queued = queuedStateRef.current;
+    const candidate = !queued || latest.revision > queued.revision ? latest : queued;
+    queuedStateRef.current = null;
+
+    if (candidate.gameId !== latest.gameId) return;
+    if (candidate.revision < displayRevisionRef.current) return;
+
+    if (candidate.fen === displayFenRef.current) {
+      displayRevisionRef.current = Math.max(displayRevisionRef.current, candidate.revision);
+      return;
+    }
+
+    const lastMove = candidate.lastMove;
+    const oldBoard = parseFen(displayFenRef.current);
+    const piece = lastMove ? oldBoard.get(lastMove.from) : undefined;
+    if (!lastMove || !piece) {
+      // A large reconnect jump can legitimately skip more than one ply. In that case a clean
+      // authoritative snap is safer than inventing an animation from a square that is no longer valid.
+      commitDisplayState(candidate);
+      return;
+    }
+
+    startSlide({
+      id: ++moveIdRef.current,
+      from: lastMove.from,
+      to: lastMove.to,
+      piece,
+      baseRevision: displayRevisionRef.current,
+      basePly: Math.max(0, candidate.ply - 1),
+      optimistic: false,
+      animationFinished: false,
+      confirmedState: candidate,
+    });
+  }
+
+  const scheduleQueueDrain = () => {
+    requestAnimationFrame(() => {
+      if (mountedRef.current) drainAuthoritativeQueue();
+    });
+  };
+
+  const settleVisualMove = (move: VisualMove, confirmedState: ChessGameState) => {
+    const current = visualMoveRef.current;
+    if (!current || current.id !== move.id) return;
+
+    // Critical anti-jitter ordering: first put the authoritative destination FEN underneath the
+    // overlay, then remove the moving overlay. React batches these updates into the same commit,
+    // so there is never a frame where the old source square can flash back on screen.
+    commitDisplayState(confirmedState);
+    visualMoveRef.current = null;
+    setVisualMove(null);
+    progress.setValue(0);
+
+    const latest = latestStateRef.current;
+    if (latest.revision > confirmedState.revision || latest.fen !== confirmedState.fen) {
+      queueAuthoritativeState(latest);
+    }
+    scheduleQueueDrain();
+  };
+
+  const confirmVisualMove = (moveId: number, confirmedState: ChessGameState) => {
+    const current = visualMoveRef.current;
+    if (!current || current.id !== moveId) return false;
+    if (current.optimistic && !moveMatchesState(current, confirmedState)) return false;
+
+    const updated: VisualMove = { ...current, confirmedState };
+    visualMoveRef.current = updated;
+    setVisualMove(updated);
+
+    if (updated.animationFinished) settleVisualMove(updated, confirmedState);
+    return true;
+  };
+
+  function startSlide(nextMove: VisualMove) {
     progress.stopAnimation();
     progress.setValue(0);
     visualMoveRef.current = nextMove;
     setVisualMove(nextMove);
+
     Animated.timing(progress, {
       toValue: 1,
       duration: MOVE_ANIMATION_MS,
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (!finished) return;
-      setVisualMove((current) => {
-        if (!current || current.from !== nextMove.from || current.to !== nextMove.to) return current;
-        const updated = { ...current, animationFinished: true };
-        if (updated.serverConfirmed) {
-          setDisplayFen(latestStateRef.current.fen);
-          progress.setValue(0);
-          return null;
-        }
-        return updated;
-      });
-      onFinished?.();
+      if (!finished || !mountedRef.current) return;
+      const current = visualMoveRef.current;
+      if (!current || current.id !== nextMove.id) return;
+
+      const updated: VisualMove = { ...current, animationFinished: true };
+      visualMoveRef.current = updated;
+      setVisualMove(updated);
+
+      if (updated.confirmedState) {
+        settleVisualMove(updated, updated.confirmedState);
+      }
     });
-  };
+  }
 
   const rollbackVisualMove = (move: VisualMove) => {
+    const current = visualMoveRef.current;
+    if (!current || current.id !== move.id) return;
+
     Animated.timing(progress, {
       toValue: 0,
       duration: ROLLBACK_ANIMATION_MS,
       useNativeDriver: true,
     }).start(() => {
+      if (!mountedRef.current) return;
+      const latestMove = visualMoveRef.current;
+      if (!latestMove || latestMove.id !== move.id) return;
+      visualMoveRef.current = null;
       setVisualMove(null);
-      setDisplayFen(state.fen);
       progress.setValue(0);
+
+      const latest = latestStateRef.current;
+      if (latest.revision > displayRevisionRef.current || latest.fen !== displayFenRef.current) {
+        queueAuthoritativeState(latest);
+      }
+      scheduleQueueDrain();
     });
   };
 
   useEffect(() => {
-    const previous = previousStateRef.current;
-    previousStateRef.current = state;
-    if (state.revision === previous.revision && state.fen === previous.fen) return;
-
     const pending = visualMoveRef.current;
-    if (pending?.optimistic && state.revision > pending.baseRevision) {
-      const confirmed = { ...pending, serverConfirmed: true };
-      setVisualMove(confirmed);
-      if (confirmed.animationFinished) {
-        setDisplayFen(state.fen);
-        setVisualMove(null);
-        progress.setValue(0);
+    if (pending) {
+      if (pending.optimistic && moveMatchesState(pending, state)) {
+        confirmVisualMove(pending.id, state);
+      } else if (state.revision > displayRevisionRef.current || state.fen !== displayFenRef.current) {
+        // Do not let a fast bot/opponent state replace the board underneath an active move.
+        // Keep only the newest authoritative state and play it after the current overlay settles.
+        queueAuthoritativeState(state);
       }
       return;
     }
 
-    if (!pending && state.lastMove && state.fen !== displayFen) {
-      const oldBoard = parseFen(displayFen);
-      const piece = oldBoard.get(state.lastMove.from);
-      if (piece) {
-        startSlide(
-          {
-            from: state.lastMove.from,
-            to: state.lastMove.to,
-            piece,
-            baseRevision: previous.revision,
-            optimistic: false,
-            animationFinished: false,
-            serverConfirmed: true,
-          },
-          () => setDisplayFen(state.fen),
-        );
-        return;
-      }
+    if (state.fen === displayFenRef.current) {
+      displayRevisionRef.current = Math.max(displayRevisionRef.current, state.revision);
+      return;
     }
 
-    if (!pending) setDisplayFen(state.fen);
+    queueAuthoritativeState(state);
+    drainAuthoritativeQueue();
+    // state.revision/fen are the authoritative visual transition key. Clock-only packets do not
+    // need to restart board reconciliation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.revision, state.fen]);
 
   const submitNormalMove = async (from: string, to: string) => {
-    if (visualMoveRef.current) return;
+    if (visualMoveRef.current || queuedStateRef.current) return;
     const piece = authoritativeBoard.get(from);
     if (!piece) return;
+
     const nextMove: VisualMove = {
+      id: ++moveIdRef.current,
       from,
       to,
       piece,
       baseRevision: state.revision,
+      basePly: state.ply,
       optimistic: true,
       animationFinished: false,
-      serverConfirmed: false,
+      confirmedState: null,
     };
     startSlide(nextMove);
-    const accepted = await onMove(from, to);
+
+    const confirmedState = await onMove(from, to);
     const latest = visualMoveRef.current;
-    if (!latest || latest.from !== from || latest.to !== to) return;
-    if (!accepted) {
+    if (!latest || latest.id !== nextMove.id) return;
+
+    if (!confirmedState) {
       rollbackVisualMove(latest);
       return;
     }
-    setVisualMove((current) => (current ? { ...current, serverConfirmed: true } : current));
+
+    // ACK acceptance alone never removes the overlay. We latch the exact authoritative FEN returned
+    // by the server and wait until BOTH that state and the native animation are ready.
+    if (!confirmVisualMove(nextMove.id, confirmedState)) {
+      if (__DEV__) {
+        console.warn("[ChessPerf] visual:ack-move-mismatch", {
+          from,
+          to,
+          baseRevision: nextMove.baseRevision,
+          confirmedRevision: confirmedState.revision,
+          confirmedLastMove: confirmedState.lastMove,
+        });
+      }
+      rollbackVisualMove(latest);
+    }
   };
 
   const tap = (square: string) => {
-    if (visualMoveRef.current) return;
+    if (visualMoveRef.current || queuedStateRef.current) return;
     const piece = authoritativeBoard.get(square);
     if (selected) {
       const candidates = legal.filter((move) => move.to === square);
@@ -223,8 +366,8 @@ export function ChessBoard({
               const square = `${file}${rank}`;
               const piece = hiddenSquares?.has(square) ? undefined : board.get(square);
               const target = !visualMove && legal.some((move) => move.to === square);
-              const lastMove = !!state.lastMove && (state.lastMove.from === square || state.lastMove.to === square);
-              const check = state.checkSquare === square;
+              const lastMove = !!displayMarkers.lastMove && (displayMarkers.lastMove.from === square || displayMarkers.lastMove.to === square);
+              const check = displayMarkers.checkSquare === square;
               const light = isLightSquare(square);
               const showRankLabel = fileIndex === 0;
               const showFileLabel = rankIndex === ranks.length - 1;
@@ -244,7 +387,7 @@ export function ChessBoard({
                   {showRankLabel ? <Text style={[styles.rankLabel, light ? styles.labelOnLight : styles.labelOnDark]}>{rank}</Text> : null}
                   {showFileLabel ? <Text style={[styles.fileLabel, light ? styles.labelOnLight : styles.labelOnDark]}>{file}</Text> : null}
                   {piece ? (
-                    <Image source={pieceImages[piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
+                    <Image source={PIECE_IMAGES[piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
                   ) : null}
                   {target ? <View style={styles.targetDot} /> : null}
                 </Pressable>
@@ -264,7 +407,7 @@ export function ChessBoard({
               },
             ]}
           >
-            <Image source={pieceImages[visualMove.piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
+            <Image source={PIECE_IMAGES[visualMove.piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
           </Animated.View>
         ) : null}
       </View>

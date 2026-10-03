@@ -53,7 +53,7 @@ check('DEBUG build runs Phase 14U gate',debugBat.includes('npm run phase14u:chec
 check('RELEASE build runs Phase 14U gate',releaseBat.includes('npm run phase14u:check'));
 check('socket payloads are runtime validated',socketServer.includes('asTimeControl')&&socketServer.includes('asRevision')&&socketServer.includes('asSquare'));
 check('timeout rechecks after game queue',manager.includes('Re-check after entering the per-game queue')&&manager.includes('clockExpired(r)'));
-check('mutation ACK updates client authoritative state',game.includes('applyStateMutation')&&game.includes('setState(response.data)'));
+check('mutation ACK updates client authoritative state',game.includes('applyStateMutation')&&game.includes('commitState(response.data, \"ack\")'));
 check('outgoing invite can be cancelled from lobby',lobby.includes('outgoingInvite')&&realtime.includes('CHESS_EVENTS.inviteCancel')&&realtime.includes('cancelInvite'));
 check('history list rule is bounded',rules.includes('request.query.limit <= 20'));
 console.log(`Phase 14U Chess static: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

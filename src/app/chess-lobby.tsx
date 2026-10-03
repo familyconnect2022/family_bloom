@@ -8,45 +8,26 @@ import { ScreenContainer } from "../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../components/ui/BloomHeroHeader";
 import { BloomCard, BloomEmptyState, BloomSectionHeader } from "../components/ui/BloomPageComponents";
 import { useBloomToast } from "../components/ui/BloomToast";
-import { CHESS_PIECE_THEME_OPTIONS, DEFAULT_CHESS_PIECE_THEME } from "../constants/chessThemes";
 import { COLORS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 import { useFamilyMembersRealtime } from "../context/FamilyRealtimeContext";
 import { useChessLobby } from "../hooks/chess/useChessLobby";
 import { CHESS_ERROR_COPY, CHESS_TIME_CONTROLS, type ChessTimeControl } from "../types/chess";
 import { getHomeGamePlayWindow } from "../services/gameRoomPolicy";
-import { profileService } from "../services/profile/profileService";
 import { safeRouterBack } from "../utils/safeRouterBack";
 
 export default function ChessLobbyScreen() {
   const router = useRouter();
-  const { user, userProfile, activeFamilyId, refreshProfile } = useAuth();
+  const { user, activeFamilyId } = useAuth();
   const membersRealtime = useFamilyMembersRealtime();
   const { showToast } = useBloomToast();
   const [timeControl, setTimeControl] = useState<ChessTimeControl>(CHESS_TIME_CONTROLS[2].value);
   const [clockNow, setClockNow] = useState(Date.now());
-  const [savingThemeId, setSavingThemeId] = useState<string | null>(null);
   const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
   const lobby = useChessLobby(activeFamilyId);
   const presence = useMemo(() => new Map(lobby.presence.map((item) => [item.uid, item.status])), [lobby.presence]);
   const members = membersRealtime?.familyId === activeFamilyId ? membersRealtime.members : [];
   const outgoingMember = lobby.outgoingInvite ? members.find((member) => member.uid === lobby.outgoingInvite?.toUid) : null;
-
-  const currentTheme = userProfile?.chessPieceTheme ?? DEFAULT_CHESS_PIECE_THEME;
-
-  const selectPieceTheme = async (themeId: string) => {
-    if (!user || themeId === currentTheme || savingThemeId) return;
-    try {
-      setSavingThemeId(themeId);
-      await profileService.updateChessPieceTheme(user.uid, themeId as typeof currentTheme);
-      await refreshProfile();
-      showToast({ type: "success", title: "Đã đổi bộ quân cờ", message: "Đây là thiết lập cá nhân, người khác vẫn có thể dùng bộ khác." });
-    } catch {
-      showToast({ type: "warning", message: "Không lưu được bộ quân cờ. Thử lại giúp mình nhé." });
-    } finally {
-      setSavingThemeId(null);
-    }
-  };
 
   useEffect(() => {
     const timer = setInterval(() => setClockNow(Date.now()), 30_000);
@@ -59,7 +40,7 @@ export default function ChessLobbyScreen() {
     }
   }, [lobby.activeGameId, router]);
 
-  const challenge = async (uid: string) => {
+  const sendChallenge = async (uid: string) => {
     const latest = getHomeGamePlayWindow();
     if (!latest.canCreate) {
       showToast({ type: "info", title: "Nhà mình nghỉ ngơi nhé 🌙", message: "Lời thách đấu mới sẽ mở lại từ 6:00 sáng." });
@@ -75,11 +56,7 @@ export default function ChessLobbyScreen() {
 
 
   const summonTestBot = async () => {
-    const latest = getHomeGamePlayWindow();
-    if (!latest.canCreate) {
-      showToast({ type: "info", title: "Nhà mình nghỉ ngơi nhé 🌙", message: "Đối thủ thử nghiệm cũng hẹn bạn từ 6:00 sáng." });
-      return;
-    }
+    // Bloom Bot is intentionally available outside the family 06:00–22:00 play window.
     const response = await lobby.requestTestBotChallenge(timeControl, 5_000);
     if (!response.ok) {
       showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
@@ -126,7 +103,7 @@ export default function ChessLobbyScreen() {
               <Ionicons name="moon-outline" size={21} color={COLORS.primary} />
               <View style={styles.memberCopy}>
                 <Text style={styles.memberName}>Nhà mình nghỉ ngơi nhé 🌙</Text>
-                <Text style={styles.memberStatus}>Bạn vẫn có thể xem lịch sử hoặc kết thúc ván đang chơi. Thách đấu và chơi lại mở từ 6:00 sáng.</Text>
+                <Text style={styles.memberStatus}>Bạn vẫn có thể xem lịch sử hoặc kết thúc ván đang chơi. Thách đấu người thân mở lại từ 6:00 sáng; Bloom Bot vẫn có thể chơi bất kỳ lúc nào.</Text>
               </View>
             </BloomCard>
           ) : null}
@@ -162,49 +139,17 @@ export default function ChessLobbyScreen() {
             })}
           </ScrollView>
 
-          <BloomSectionHeader
-            title="Bộ quân cờ của bạn"
-            subtitle="Thiết lập cá nhân: bạn chọn bộ nào cũng được, người thân vẫn có thể dùng bộ khác."
-          />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.themeRow}>
-            {CHESS_PIECE_THEME_OPTIONS.map((theme) => {
-              const active = currentTheme === theme.id;
-              const disabled = !!savingThemeId && savingThemeId !== theme.id;
-              const loading = savingThemeId === theme.id;
-              return (
-                <Pressable
-                  key={theme.id}
-                  onPress={() => void selectPieceTheme(theme.id)}
-                  style={[styles.themeCard, active && styles.themeCardActive, disabled && styles.disabled]}
-                >
-                  <View style={styles.themePreviewWrap}>
-                    <Image source={theme.previewPiece} style={styles.themePreview} contentFit="contain" />
-                  </View>
-                  <View style={styles.themeCopy}>
-                    <Text style={styles.themeTitle}>{theme.title}</Text>
-                    <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
-                  </View>
-                  <View style={[styles.themePill, active && styles.themePillActive]}>
-                    <Text style={[styles.themePillText, active && styles.themePillTextActive]}>
-                      {loading ? "Đang lưu…" : active ? "Đang dùng" : "Chọn"}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
           {lobby.testBotEnabled ? (
             <BloomCard tone="soft" style={styles.botCard}>
               <View style={styles.botAvatar}><Text style={styles.botPiece}>♞</Text></View>
               <View style={styles.memberCopy}>
                 <Text style={styles.memberName}>Bloom Bot · Đối thủ thử nghiệm</Text>
-                <Text style={styles.memberStatus}>Dành cho lúc bạn chỉ có 1 máy. Bot chọn nước hợp lệ tự động, ưu tiên ăn quân/phong cấp khi có thể.</Text>
+                <Text style={styles.memberStatus}>Dành cho lúc bạn chỉ có 1 máy. Bot chơi được cả sau 22:00; các ván với người thân vẫn giữ khung 06:00–22:00.</Text>
               </View>
               <Pressable
-                disabled={!playWindow.canCreate || lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite}
+                disabled={lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite}
                 onPress={() => void summonTestBot()}
-                style={[styles.challenge, (!playWindow.canCreate || lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite) && styles.disabled]}
+                style={[styles.challenge, (lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite) && styles.disabled]}
               >
                 <Text style={styles.challengeText}>Test thách đấu 5s</Text>
               </Pressable>
@@ -238,7 +183,7 @@ export default function ChessLobbyScreen() {
                   </View>
                   <Pressable
                     disabled={!ready || lobby.connection !== "ready" || !!lobby.outgoingInvite}
-                    onPress={() => void challenge(member.uid)}
+                    onPress={() => void sendChallenge(member.uid)}
                     style={[styles.challenge, (!ready || lobby.connection !== "ready" || !!lobby.outgoingInvite) && styles.disabled]}
                   >
                     <Text style={styles.challengeText}>Thách đấu</Text>
@@ -278,18 +223,6 @@ const styles = StyleSheet.create({
   controlActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   controlText: { color: COLORS.primaryText, fontSize: 11.5, fontWeight: "900" },
   controlTextActive: { color: COLORS.white },
-  themeRow: { gap: 10, paddingRight: 8 },
-  themeCard: { width: 194, minHeight: 112, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, padding: 12, gap: 9 },
-  themeCardActive: { borderColor: COLORS.primary, backgroundColor: "#FFF8FC" },
-  themePreviewWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: "#F8E8F0", alignItems: "center", justifyContent: "center" },
-  themePreview: { width: 42, height: 42 },
-  themeCopy: { gap: 3 },
-  themeTitle: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "900" },
-  themeSubtitle: { color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15 },
-  themePill: { alignSelf: "flex-start", minHeight: 28, paddingHorizontal: 11, borderRadius: 999, backgroundColor: "#F4EDF1", alignItems: "center", justifyContent: "center" },
-  themePillActive: { backgroundColor: COLORS.primary },
-  themePillText: { color: COLORS.primaryText, fontSize: 10, fontWeight: "900" },
-  themePillTextActive: { color: COLORS.white },
   memberCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13 },
   avatar: { width: 44, height: 44, borderRadius: 16, overflow: "hidden", backgroundColor: "#F9E8EF", alignItems: "center", justifyContent: "center" },
   initial: { fontSize: 16, color: COLORS.primary, fontWeight: "900" },

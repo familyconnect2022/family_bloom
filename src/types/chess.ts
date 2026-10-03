@@ -1,5 +1,4 @@
 export type ChessColor = "w" | "b";
-export type ChessPieceThemeId = "classic" | "duotone" | "bloom";
 export type ChessPresenceStatus = "offline" | "online_app" | "in_lobby" | "in_game" | "busy" | "reconnecting";
 export type ChessGameStatus = "waiting" | "active" | "paused" | "finished" | "cancelled";
 export type ChessResult = "white" | "black" | "draw" | null;

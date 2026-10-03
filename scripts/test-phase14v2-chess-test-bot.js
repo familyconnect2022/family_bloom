@@ -34,13 +34,13 @@ check('new bot game treats bot as connected automation',manager.includes('new Se
 check('bot only chooses authoritative legal moves',server.includes('state.legalMoves.map')&&server.includes('chooseTestBotMove'));
 check('bot prefers captures/promotion without engine evaluation',server.includes('fenHasPieceAt(state.fen, move.to)')&&server.includes('if (move.promotion) score += 8'));
 check('bot moves through normal manager.move validation',server.includes('await manager.move(')&&server.includes('latest.revision'));
-check('bot action waits briefly instead of moving instantly',server.includes('700 + Math.floor(Math.random() * 650)'));
+check('bot action waits briefly instead of moving instantly',server.includes('250 + Math.floor(Math.random() * 200)'));
 check('bot scheduling dedupes by authoritative revision',server.includes('existing?.revision === state.revision'));
 check('bot timer clears when game not active',server.includes('state.status !== "active"')&&server.includes('clearBotTimer'));
 check('bot auto rejects draw offer for one-device testing',server.includes('await manager.rejectDraw'));
 check('bot rematch creates a new game',server.includes('if (old.testBotUid)')&&server.includes('return { waiting: false, gameId: next.gameId, state: next }'));
-check('bot rematch still obeys quiet hours',server.indexOf('isFamilyGameCreationOpen()')<server.indexOf('if (old.testBotUid)'));
-check('test bot invite still obeys quiet hours',/testBotInvite[\s\S]*assertFamilyGameCreationOpen\(\)/.test(server));
+check('bot rematch bypasses quiet hours while human rematch remains gated',server.includes('if (!old.testBotUid && !isFamilyGameCreationOpen())')&&server.indexOf('if (!old.testBotUid && !isFamilyGameCreationOpen())')<server.indexOf('if (old.testBotUid)'));
+check('test bot invite bypasses quiet hours',(()=>{const a=server.indexOf('socket.on(E.testBotInvite');const b=server.indexOf('socket.on(E.inviteCreate',a);return a>=0&&b>a&&!server.slice(a,b).includes('assertFamilyGameCreationOpen()')})());
 check('test bot invite still refuses when human already active',/testBotInvite[\s\S]*getActiveForUid\(uid\)/.test(server));
 check('delayed bot invite supports cross-tab overlay test',server.includes('asOptionalTestDelay')&&server.includes('delayMs + 45_000'));
 check('delay is bounded to ten seconds',server.includes('(value as number) > 10_000'));

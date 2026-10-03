@@ -1,8 +1,6 @@
 import { collection, doc, getDoc, getDocs, getFirestore, writeBatch, setDoc } from "@react-native-firebase/firestore";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { CreateProfileInput, MediaFile, UserProfile, type SmartReminderPreferences } from "../../types";
-import { DEFAULT_CHESS_PIECE_THEME } from "../../constants/chessThemes";
-import type { ChessPieceThemeId } from "../../types/chess";
 import { AppError } from "../../types/errors";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { normalizeUserProfile } from "../../utils/profile";
@@ -24,7 +22,6 @@ const buildProfile = (uid: string, input: CreateProfileInput, now: string): User
   currentLocation: input.currentLocation, bio: input.bio, bloodType: input.bloodType,
   interests: input.interests ?? input.hobbies ?? [], fcmTokens: input.fcmTokens ?? [],
   pushNotificationsEnabled: true,
-  chessPieceTheme: DEFAULT_CHESS_PIECE_THEME,
   createdAt: now, updatedAt: now,
 }) as Record<string, unknown>, uid);
 
@@ -100,16 +97,6 @@ export const profileService = {
     }), { merge: true });
   },
 
-
-  async updateChessPieceTheme(uid: string, theme: ChessPieceThemeId): Promise<void> {
-    const db = getFirestore();
-    const existing = await getProfile(uid);
-    if (!existing) throw new AppError("PROFILE_NOT_FOUND", "PROFILE");
-    await setDoc(doc(db, FIRESTORE_PATHS.user(uid)), safe({
-      chessPieceTheme: theme,
-      updatedAt: nowIso(),
-    }), { merge: true });
-  },
 
   async updateSmartReminderPreferences(uid: string, preferences: SmartReminderPreferences): Promise<void> {
     const db = getFirestore();
