@@ -1,0 +1,38 @@
+FAMILY BLOOM — PHASE 14V.2C CHESS FOREGROUND RESUME WATCHDOG
+Date: 2026-10-03
+
+DEVICE ISSUE ADDRESSED
+- Android background transition was detected and socket intentionally disconnected.
+- Some resume runs did not emit a reliable AppState change->active event to ChessRealtimeProvider.
+- UI readiness therefore could not be accepted as proof of a live socket without a reconnect signal.
+
+IMPLEMENTED
+- Android AppState focus fallback.
+- 2.5s foreground watchdog reading AppState.currentState and live socket.connected.
+- Live connectionRef used to repair idle/error/stale lifecycle state.
+- Resume repair always uses normal authenticated joinForeground flow.
+- Background semantics unchanged: app:leave + disconnect.
+- Added non-secret connectionSnapshot helper for diagnostics.
+- Temporary [ChessDebug] diagnostics retained.
+
+STATIC CHECKS RUN
+- Phase 14V.2C: 10/10 PASS
+- Phase 14V.2B: 18/18 PASS
+- Phase 14V.2A: 13/13 PASS
+- Phase 14V.2 bot: 40/40 PASS
+- Phase 14V.1: 33/33 PASS
+- Phase 14V: 26/26 PASS
+- Phase 14U Chess: 54/54 PASS
+- Phase 14T games: 44/44 PASS
+- Phase 14T.0A single Android identity: 21/21 PASS
+
+RUNTIME TEST STILL REQUIRED
+1. Open Chess until ready.
+2. Press Android Home for >=5 seconds; expect appState background + app:leave + socket disconnect.
+3. Return to Family Bloom.
+4. Within <=2.5s, expect one of foreground:change / foreground:focus / foreground:watchdog repair.
+5. Expect socket:connect + connect:ready + app:join ok.
+6. Confirm lobby shows Ready only after authoritative join succeeds.
+7. Repeat 10 cycles and while navigating among Family Bloom tabs.
+
+NO SERVER CONTRACT / FIRESTORE RULE / SCHEMA / NATIVE DEPENDENCY CHANGE.

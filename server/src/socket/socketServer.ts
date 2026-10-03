@@ -348,7 +348,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       await socket.join(`chess:family:${familyId}`);
       refreshPresenceSoon(familyId);
       console.info("[chess] app joined", { uid, familyId, socketId: socket.id });
-      return { ready: true };
+      return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
     }));
 
     socket.on(E.appLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {
@@ -386,7 +386,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       socket.data.lobbyFamilyId = familyId;
       await socket.join(`chess:lobby:${familyId}`);
       refreshPresenceSoon(familyId);
-      return { ready: true };
+      return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
     }));
 
     socket.on(E.lobbyLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {

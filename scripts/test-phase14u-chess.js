@@ -9,7 +9,7 @@ check('five time controls including no clock',(protocol.match(/id: "/g)||[]).len
 check('singleton socket service exists',socket.includes('export const chessSocketService = new ChessSocketService'));
 check('firebase token used in socket auth',socket.includes('getIdToken')&&socket.includes('auth: { token }'));
 check('prewake health endpoint used',socket.includes('/health'));
-check('history is bounded 20',history.includes('.limit(20)'));
+check('history is bounded 20',history.includes('limit(20)'));
 check('history is not realtime',!history.includes('onSnapshot'));
 check('lobby overlays global socket presence',lobby.includes('realtime.presence'));
 check('game foreground resync',game.includes('AppState')&&game.includes('gameResync'));

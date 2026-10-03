@@ -1,0 +1,12 @@
+PHASE 14V.2C — FILES CHANGED/ADDED
+
+CHANGED
+- src/context/ChessRealtimeContext.tsx
+- src/services/chess/chessSocketService.ts
+- package.json
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+
+ADDED
+- scripts/test-phase14v2c-chess-foreground-resume.js
+- document/BUILD_CHECK_REPORT_CHESS_PHASE_14V2C.txt
+- document/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V2C.txt

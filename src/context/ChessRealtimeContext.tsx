@@ -4,7 +4,6 @@ import { AppState } from "react-native";
 import { ChessChallengeOverlay } from "../components/chess/ChessChallengeOverlay";
 import { useBloomToast } from "../components/ui/BloomToast";
 import { chessSocketService } from "../services/chess/chessSocketService";
-import { ENV } from "../config/env";
 import {
   CHESS_ERROR_COPY,
   CHESS_EVENTS,
@@ -72,6 +71,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
   const [outgoingInvite, setOutgoingInvite] = useState<ChessInvite | null>(null);
   const [activeGameState, setActiveGameState] = useState<ChessGameState | null>(null);
   const [challengeBusy, setChallengeBusy] = useState(false);
+  const [testBotEnabled, setTestBotEnabled] = useState(false);
 
   const familyIdRef = useRef<string | null>(activeFamilyId);
   const foregroundRef = useRef(AppState.currentState === "active");
@@ -81,11 +81,13 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
   const outgoingRef = useRef<ChessInvite | null>(null);
   const membersRef = useRef(familyMembers?.memberByUid);
   const joinInFlightRef = useRef<Promise<void> | null>(null);
+  const connectionRef = useRef<ChessConnectionState>(connection);
   familyIdRef.current = activeFamilyId;
   stateRef.current = activeGameState;
   pathnameRef.current = pathname;
   outgoingRef.current = outgoingInvite;
   membersRef.current = familyMembers?.memberByUid;
+  connectionRef.current = connection;
 
   const activeGameId = activeGameState && (activeGameState.status === "active" || activeGameState.status === "paused")
     ? activeGameState.gameId
@@ -173,7 +175,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         setConnection("connecting");
         const [, connected] = await Promise.allSettled([wake, chessSocketService.connect()]);
         if (connected.status === "rejected") throw connected.reason;
-        const joined = await chessSocketService.emitAck(CHESS_EVENTS.appJoin, { familyId }, 30_000);
+        const joined = await chessSocketService.emitAck<{ ready: boolean; testBotEnabled?: boolean }>(CHESS_EVENTS.appJoin, { familyId }, 30_000);
         if (!joined.ok) {
           // A cold Render/Firestore start may outlive an ACK timeout even though the
           // Socket itself is already healthy. Do not paint a false hard error.
@@ -187,6 +189,9 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
           }
           throw new Error(joined.errorCode);
         }
+        const botEnabled = joined.data.testBotEnabled === true;
+        setTestBotEnabled(botEnabled);
+        chessDebug("server:capabilities", { testBotEnabled: botEnabled });
         setConnection("ready");
 
         const active = await chessSocketService.emitAck<{ gameId: string } | null>(CHESS_EVENTS.sessionGetActive, { familyId }, 20_000);
@@ -244,6 +249,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     setOutgoingInvite(null);
     if (!user || profileStatus !== "ready" || !activeFamilyId) {
       setConnection("idle");
+      setTestBotEnabled(false);
       chessSocketService.disconnect();
       return;
     }
@@ -255,14 +261,32 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
   }, [activeFamilyId, joinForeground, profileStatus, user]);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (next) => {
+    const resume = (source: "change" | "focus" | "watchdog") => {
+      const actualState = AppState.currentState;
+      const active = actualState === "active";
+      chessDebug(`foreground:${source}`, {
+        appState: actualState,
+        foregroundRef: foregroundRef.current,
+        socketConnected: chessSocketService.isConnected(),
+        connection: connectionRef.current,
+        pathname: pathnameRef.current,
+      });
+      if (!active) return;
+      foregroundRef.current = true;
+      if (!chessSocketService.isConnected() || connectionRef.current !== "ready") {
+        setConnection("connecting");
+        void joinForeground();
+      }
+    };
+
+    const changeSubscription = AppState.addEventListener("change", (next) => {
       const wasActive = foregroundRef.current;
       const active = next === "active";
       chessDebug("appState:change", { fromActive: wasActive, next, pathname: pathnameRef.current });
       foregroundRef.current = active;
       const familyId = familyIdRef.current;
       if (active) {
-        void joinForeground();
+        resume("change");
       } else {
         setIncomingInvite(null);
         setPresence([]);
@@ -271,7 +295,38 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         chessSocketService.disconnect();
       }
     });
-    return () => subscription.remove();
+
+    // Some Android builds/OEMs can resume JS without delivering a reliable
+    // `change -> active` transition to every listener. The Android-specific
+    // focus event gives us a second foreground signal without keeping the
+    // socket alive while the app is truly backgrounded.
+    const focusSubscription = AppState.addEventListener("focus", () => resume("focus"));
+
+    // Final safety net: when JS resumes, timers resume too. Re-read the real
+    // AppState and live Socket.IO flag instead of trusting stale UI state.
+    const watchdog = setInterval(() => {
+      const active = AppState.currentState === "active";
+      if (!active) return;
+      const socketConnected = chessSocketService.isConnected();
+      if (!foregroundRef.current || !socketConnected || connectionRef.current === "idle" || connectionRef.current === "error") {
+        chessDebug("foreground:watchdog repair", {
+          appState: AppState.currentState,
+          foregroundRef: foregroundRef.current,
+          socketConnected,
+          connection: connectionRef.current,
+          pathname: pathnameRef.current,
+        });
+        foregroundRef.current = true;
+        setConnection("connecting");
+        void joinForeground();
+      }
+    }, 2_500);
+
+    return () => {
+      changeSubscription.remove();
+      focusSubscription.remove();
+      clearInterval(watchdog);
+    };
   }, [joinForeground]);
 
   useEffect(() => () => chessSocketService.disconnect(), []);
@@ -314,11 +369,16 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
   const enterLobby = useCallback(async () => {
     const familyId = familyIdRef.current;
     if (!familyId) return { ok: false, errorCode: "CHESS_INVALID_REQUEST" } as ChessAck;
-    const response = await chessSocketService.emitAck(CHESS_EVENTS.lobbyJoin, { familyId }, 30_000);
+    const response = await chessSocketService.emitAck<{ ready: boolean; testBotEnabled?: boolean }>(CHESS_EVENTS.lobbyJoin, { familyId }, 30_000);
     // lobby:join validates both the Firebase member and family context. If it
     // succeeds, the connection is healthy even if a concurrent app:join ACK
     // was delayed during Render cold start.
-    if (response.ok && foregroundRef.current) setConnection("ready");
+    if (response.ok) {
+      const botEnabled = response.data.testBotEnabled === true;
+      setTestBotEnabled(botEnabled);
+      chessDebug("lobby:capabilities", { testBotEnabled: botEnabled });
+      if (foregroundRef.current) setConnection("ready");
+    }
     return response;
   }, []);
 
@@ -329,9 +389,10 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
 
   const requestTestBotChallenge = useCallback(async (timeControl: ChessTimeControl, delayMs = 0) => {
     const familyId = familyIdRef.current;
-    if (!familyId || !ENV.chessTestBotEnabled) return { ok: false, errorCode: "CHESS_TEST_BOT_DISABLED" } as ChessAck<ChessInvite>;
+    if (!familyId) return { ok: false, errorCode: "CHESS_INVALID_REQUEST" } as ChessAck<ChessInvite>;
+    if (!testBotEnabled) return { ok: false, errorCode: "CHESS_TEST_BOT_DISABLED" } as ChessAck<ChessInvite>;
     return chessSocketService.emitAck<ChessInvite>(CHESS_EVENTS.testBotInvite, { requestId: requestId(), familyId, timeControl, delayMs });
-  }, []);
+  }, [testBotEnabled]);
 
   const value = useMemo<ChessRealtimeValue>(() => ({
     connection,
@@ -347,11 +408,11 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     enterLobby,
     leaveLobby,
     reconnect: joinForeground,
-    testBotEnabled: ENV.chessTestBotEnabled,
+    testBotEnabled,
     requestTestBotChallenge,
   }), [
     connection, presence, incomingInvite, outgoingInvite, activeGameId, activeGameState,
-    challenge, cancelInvite, acceptInvite, rejectInvite, enterLobby, leaveLobby, joinForeground, requestTestBotChallenge,
+    challenge, cancelInvite, acceptInvite, rejectInvite, enterLobby, leaveLobby, joinForeground, testBotEnabled, requestTestBotChallenge,
   ]);
 
   const challenger = incomingInvite && !incomingInvite.isTestBot ? familyMembers?.memberByUid.get(incomingInvite.fromUid) : null;

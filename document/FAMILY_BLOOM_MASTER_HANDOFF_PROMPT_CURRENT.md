@@ -1,3 +1,14 @@
+# CHECKPOINT 2026-10-03 — PHASE 14V.2D CHESS HISTORY MODULAR API + SERVER BOT CAPABILITY — IMPLEMENTED / AWAITING DEVICE RETEST
+
+- Fixed the Android History crash caused by the only remaining legacy namespaced RNFirebase Firestore call in Chess. `chessHistoryService` now uses the project's modular v26 API (`getFirestore`, `collection`, `query`, `where`, `orderBy`, `startAfter`, `limit`, `getDocs`) and remains bounded at 20 rows/page. The History screen now catches query/index/runtime failures and shows a retry card instead of producing an unhandled red-screen promise.
+- Bloom Bot visibility no longer depends on `EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED` being correctly inlined into the Expo bundle. Render is authoritative: both `chess:app:join` and `chess:lobby:join` ACKs now return `testBotEnabled`, and the mobile provider shows/enables the bot only after the live server confirms the capability.
+- `/health` now returns `{ ok: true, chessTestBotEnabled: <bool> }`, and `[ChessDebug] prewake:response`, `server:capabilities`, and `lobby:capabilities` expose only this boolean for diagnosis. No token, private key, or credential is logged.
+- Test-bot enablement is now a single server switch: Render `CHESS_TEST_BOT_ENABLED=true`, followed by redeploy. The mobile root `.env` only needs `EXPO_PUBLIC_CHESS_SOCKET_URL`. This avoids client/server flag drift. Disable the Render flag after the one-device test window.
+- No schema/rules/index/native-dependency change. Existing Chess history composite index remains required. Render redeploy is required; mobile only needs a Metro restart/refresh for JS changes.
+- Runtime certification remains pending until device retest verifies: `/health` reports `chessTestBotEnabled:true`, Metro logs server/lobby capability true, Bloom Bot card is visible, and History opens without a red screen.
+
+---
+
 # CHECKPOINT 2026-10-03 — PHASE 14V.2B CHESS COLD-START + FALSE-DISCONNECT HOTFIX — IMPLEMENTED / AWAITING DEVICE RETEST
 
 - Device diagnostics proved the Render/Firebase/Socket path is working: the observed cold start reached `socket:connect` / `connect:ready`, `/health` returned HTTP 200 after ~22.9s, and `chess:lobby:join` returned `ok:true`. The visible “Không thể kết nối máy chủ cờ vua” banner was therefore a client-state false negative, not a failed Render connection.
@@ -22,12 +33,12 @@
 # CHECKPOINT 2026-10-03 — PHASE 14V.2 ONE-DEVICE CHESS TEST BOT — IMPLEMENTED / AWAITING DEVICE TEST
 
 - **Purpose:** provide a temporary one-device opponent so Chess can be runtime-tested before a second physical phone is available. This is a test harness, not a product AI opponent and not Stockfish.
-- **Opt-in only:** mobile requires `EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true`; Render requires `CHESS_TEST_BOT_ENABLED=true`. Both default to false in `.env.example`. Disable both after the one-device test window.
+- **Opt-in only (superseded by Phase 14V.2D):** Render `CHESS_TEST_BOT_ENABLED=true` is now the sole authoritative test-bot switch. The server reports the capability to the app during app/lobby join; no mobile test-bot env flag is required.
 - **Server-side bot identity:** every authenticated human gets a deterministic synthetic bot UID derived from a SHA-256 digest of the real UID. It is never inserted into family membership/Profile and never appears as a real member. The human must still pass normal Firebase Auth + family membership validation.
 - **Authoritative path preserved:** bot games still use the same `ChessGameManager`, `chess.js`, Firestore durable game document, active-user locks, per-game mutation queue, request/revision flow, server clock and timeout scheduler. The bot chooses only moves from the server's current authoritative legal-move list.
 - **Bot move policy:** lightweight test heuristic only — small random score, preference for captures, promotions and central squares. No engine evaluation, ranking, ELO or move-quality judgment. Bot responds after roughly 0.7–1.35 seconds to feel like a remote player without blocking UI.
 - **Recovery:** persisted bot games carry `testBotUid` / `isTestGame`. On Render restart the synthetic bot is treated as an automated connected participant, so the fairness-first `active -> paused -> resume when human reconnects` recovery still works.
-- **One-device global-overlay test:** Chess Lobby exposes a clearly labeled `Bloom Bot · Đối thủ thử nghiệm` card only when the client flag is enabled. `Test thách đấu 5s` schedules an incoming bot challenge five seconds later and automatically exits the lobby, allowing the global centered challenge overlay to be tested on another app tab with one phone. Invite TTL remains 45 seconds after delivery.
+- **One-device global-overlay test:** Chess Lobby exposes a clearly labeled `Bloom Bot · Đối thủ thử nghiệm` card only when the connected Render server reports the test bot enabled. `Test thách đấu 5s` schedules an incoming bot challenge five seconds later and automatically exits the lobby, allowing the global centered challenge overlay to be tested on another app tab with one phone. Invite TTL remains 45 seconds after delivery.
 - **Gameplay test helpers:** Accept creates a normal random-color game; bot moves automatically when it owns the turn; a human draw offer is automatically rejected after a short delay; resign/timeout/checkmate use the normal authoritative paths; `Chơi lại` against the bot creates a new test game immediately while still respecting 06:00–<22:00 quiet hours.
 - **UI labeling:** global challenge overlay shows `Bloom Bot` with a chess-knight identity and states that it is a test opponent, not ranked AI. Game screen and history label the synthetic opponent/test game so it cannot be mistaken for a family account.
 - **No new native dependency:** only TS/JS/server changes. After setting client env, Metro restart with `npx expo start --dev-client --clear` is sufficient; no new `expo run:android` is required solely for Phase 14V.2. The Render backend must be redeployed because `server/src` changed.
@@ -38,13 +49,12 @@
 ```text
 Mobile root .env:
 EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
-EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true
 
 Render Environment:
 CHESS_TEST_BOT_ENABLED=true
 
 After test:
-set both test-bot flags back to false and redeploy/restart Metro.
+set CHESS_TEST_BOT_ENABLED=false on Render and redeploy.
 ```
 
 ---
@@ -3390,3 +3400,31 @@ Device retest must start from a fully restarted app/cleared Metro session so nav
 - RELEASE build forces `APP_VARIANT=production`, clean-prebuilds native Android resources and exports `dist/android/Family_Bloom_Release_LATEST.apk`.
 - Android build helpers no longer use unsupported Expo `--output` and do not depend on `npm ci` succeeding against an older lockfile; missing/incomplete node_modules triggers `npm install --no-audit --no-fund`.
 - Clean-root packaging remains authoritative. No Firestore schema/Rules/Functions/Time Capsule data contract changes in this checkpoint.
+
+---
+
+## CHECKPOINT 2026-10-03 — Phase 14V.2C Chess Foreground Resume Watchdog
+
+Device testing on Android confirmed a real OEM/resume edge case: backgrounding Family Bloom correctly emitted `AppState=background`, sent `chess:app:leave`, and disconnected Socket.IO, but on returning to the app some runs did not deliver a reliable `change -> active` callback to the Chess provider. The UI could therefore show stale/ambiguous connection state without a corresponding reconnect diagnostic.
+
+Phase 14V.2C keeps the approved presence contract unchanged:
+
+```text
+foreground anywhere in Family Bloom = Chess online/presence eligible
+Android background/other app = Chess offline (unless active game restore on return)
+active timed game clock remains server-authoritative and continues while client is away
+```
+
+Resume is now guarded by three signals:
+
+```text
+1. React Native AppState `change`
+2. Android AppState `focus`
+3. 2.5s foreground watchdog that rereads AppState.currentState + socket.connected
+```
+
+The watchdog is a client-only safety net. It does not ping Firestore, does not keep the app alive in background, and does not write presence/timer ticks. When foreground JS resumes and sees `AppState.currentState === active` but the socket is disconnected or UI state is idle/error, it repairs the lifecycle through the normal authenticated `joinForeground()` path.
+
+Temporary diagnostics remain enabled in DEV under `[ChessDebug]`, including `foreground:focus` and `foreground:watchdog repair`. No Firebase token/private key is logged.
+
+Status: IMPLEMENTED + STATIC REGRESSION PASS; awaiting real-device background/foreground retest.

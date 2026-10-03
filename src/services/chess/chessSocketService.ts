@@ -59,9 +59,16 @@ class ChessSocketService {
     const timeout = setTimeout(() => controller.abort(), 65_000);
     try {
       const response = await fetch(url, { signal: controller.signal });
-      debug("prewake:response", { status: response.status, ok: response.ok, elapsedMs: Date.now() - startedAt });
+      let health: { ok?: boolean; chessTestBotEnabled?: boolean } | null = null;
+      try { health = await response.json() as { ok?: boolean; chessTestBotEnabled?: boolean }; } catch { health = null; }
+      debug("prewake:response", {
+        status: response.status,
+        ok: response.ok,
+        elapsedMs: Date.now() - startedAt,
+        chessTestBotEnabled: health?.chessTestBotEnabled === true,
+      });
       if (!response.ok) throw new Error(`CHESS_HEALTH_HTTP_${response.status}`);
-      return true;
+      return health ?? { ok: true };
     } catch (error) {
       debugWarn("prewake:failed", { elapsedMs: Date.now() - startedAt, error: summarizeError(error) });
       throw error;
@@ -222,6 +229,14 @@ class ChessSocketService {
 
   isConnected() {
     return !!this.socket?.connected;
+  }
+
+  connectionSnapshot() {
+    return {
+      connected: !!this.socket?.connected,
+      socketId: this.socket?.id ?? null,
+      transport: this.socket?.io.engine?.transport?.name ?? null,
+    };
   }
 
   async emitAck<T = undefined>(event: string, payload: unknown, timeoutMs = 12_000): Promise<ChessAck<T>> {

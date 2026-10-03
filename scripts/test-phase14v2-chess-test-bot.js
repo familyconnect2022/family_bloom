@@ -18,7 +18,7 @@ const rootEnv=read('.env.example');
 const pkg=JSON.parse(read('package.json'));
 const debug=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
 const release=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
-check('test bot is opt-in on client',env.includes('EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED')&&rootEnv.includes('EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=false'));
+check('test bot visibility is server-authoritative on client',ctx.includes('testBotEnabled')&&ctx.includes('data.testBotEnabled === true')&&!ctx.includes('ENV.chessTestBotEnabled'));
 check('test bot is opt-in on server',server.includes('CHESS_TEST_BOT_ENABLED')&&serverEnv.includes('CHESS_TEST_BOT_ENABLED=false')&&render.includes('key: CHESS_TEST_BOT_ENABLED'));
 check('typed protocol exposes test-bot event',protocol.includes('chess:test:bot:invite'));
 check('typed protocol marks bot invites',protocol.includes('isTestBot?: boolean')&&protocol.includes('fromDisplayName?: string'));
@@ -52,7 +52,7 @@ check('global context resolves bot name',ctx.includes('isChessTestBotUid(uid)')&
 check('rejecting bot invite stays local and gentle',ctx.includes('Bloom Bot sẽ chờ bạn'));
 check('game screen labels bot opponent',game.includes('isTestBotOpponent')&&game.includes('Bloom Bot'));
 check('history labels test games',history.includes('Thử nghiệm')&&history.includes('item.testBotUid'));
-check('client bot request hidden unless client flag enabled',ctx.includes('ENV.chessTestBotEnabled'));
+check('client bot request is gated by server-reported capability',ctx.includes('if (!testBotEnabled)')&&ctx.includes('CHESS_TEST_BOT_DISABLED'));
 check('server returns typed disabled error',protocol.includes('CHESS_TEST_BOT_DISABLED')&&server.includes('CHESS_TEST_BOT_DISABLED'));
 check('server bot move never requires a bot socket',!server.includes('socket.data.uid = testBotUid'));
 check('no Stockfish dependency added',!JSON.stringify(pkg.dependencies).toLowerCase().includes('stockfish'));

@@ -1,3 +1,5 @@
+
+NOTE — SUPERSEDED BY PHASE 14V.2D: Bloom Bot enablement is now server-authoritative. Use only Render CHESS_TEST_BOT_ENABLED=true; no EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED client flag is required.
 FAMILY BLOOM — BUILD CHECK REPORT — CHESS PHASE 14V.2 ONE-DEVICE TEST BOT
 Date: 2026-10-03
 Delivery: FULL CODE ZIP

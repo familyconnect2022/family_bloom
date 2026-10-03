@@ -1,0 +1,25 @@
+const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');let pass=0,fail=0;
+function check(name,ok){if(ok){pass++;console.log('PASS',name)}else{fail++;console.error('FAIL',name)}}
+const history=read('src/services/chess/chessHistoryService.ts');
+const historyScreen=read('src/app/chess-history.tsx');
+const ctx=read('src/context/ChessRealtimeContext.tsx');
+const server=read('server/src/socket/socketServer.ts');
+const health=read('server/src/routes/health.ts');
+const socket=read('src/services/chess/chessSocketService.ts');
+const env=read('src/config/env.ts');
+const rootEnv=read('.env.example');
+check('history uses modular Firestore getFirestore',history.includes('getFirestore')&&history.includes('getDocs')&&history.includes('query('));
+check('history no longer calls legacy firestore()',!history.includes('firestore()')&&!history.includes('import firestore from'));
+check('history keeps bounded page size 20',history.includes('limit(20)')&&history.includes('hasMore: snap.size === 20'));
+check('history pagination uses startAfter',history.includes('startAfter('));
+check('history screen catches runtime query errors',historyScreen.includes('history:load_failed')&&historyScreen.includes('Chưa tải được lịch sử'));
+check('server app join reports test-bot capability',/appJoin[\s\S]*testBotEnabled: TEST_BOT_ENABLED/.test(server));
+check('server lobby join reports test-bot capability',/lobbyJoin[\s\S]*testBotEnabled: TEST_BOT_ENABLED/.test(server));
+check('client reads app-join server capability',ctx.includes('server:capabilities')&&ctx.includes('joined.data.testBotEnabled === true'));
+check('client reads lobby-join server capability',ctx.includes('lobby:capabilities')&&ctx.includes('response.data.testBotEnabled === true'));
+check('client bot visibility is server-authoritative',ctx.includes('testBotEnabled,')&&!ctx.includes('ENV.chessTestBotEnabled'));
+check('client no longer needs test-bot public env flag',!env.includes('EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED')&&!rootEnv.includes('EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED'));
+check('health exposes server test-bot capability for diagnostics',health.includes('chessTestBotEnabled')&&health.includes('CHESS_TEST_BOT_ENABLED'));
+check('prewake logs server test-bot capability',socket.includes('chessTestBotEnabled: health?.chessTestBotEnabled === true'));
+console.log(`Phase 14V.2D Chess History + Bot Capability: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

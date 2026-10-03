@@ -12,7 +12,7 @@ check('app join gets cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.
 check('session restore gets extended ACK window',ctx.includes('CHESS_EVENTS.sessionGetActive, { familyId }, 20_000'));
 check('cold-start app join timeout is soft while socket is connected',ctx.includes('joined.errorCode === "CHESS_SERVER_RECOVERING"')&&ctx.includes('chessSocketService.isConnected()')&&ctx.includes('setConnection("connecting")'));
 check('soft app join retry is scheduled',ctx.includes('setTimeout(() =>')&&ctx.includes('void joinForeground()'));
-check('successful lobby join repairs UI connection state',ctx.includes('if (response.ok && foregroundRef.current) setConnection("ready")'));
+check('successful lobby join repairs UI connection state',/if \(response\.ok\)[\s\S]{0,320}if \(foregroundRef\.current\) setConnection\("ready"\)/.test(ctx));
 check('lobby join also uses cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.lobbyJoin, { familyId }, 30_000'));
 check('AppState transitions are diagnosed with current route',ctx.includes('appState:change')&&ctx.includes('pathname: pathnameRef.current'));
 check('background still intentionally leaves app presence',ctx.includes('CHESS_EVENTS.appLeave')&&ctx.includes('chessSocketService.disconnect()'));
