@@ -8,45 +8,37 @@ import type { ChessCaptureCounts, ChessColor, ChessGameState } from "../../types
 import { ChessClock } from "./ChessClock";
 import { ChessMaterialStrip } from "./ChessMaterialStrip";
 
-const AnimatedText = Animated.createAnimatedComponent(Text);
-
+/**
+ * Production player rail: identity + captured material + clock only.
+ * Turn is communicated by the solid active clock, so redundant copy such as
+ * "Bạn", "Đối thủ", "Quân trắng", "Quân đen" and turn-status rows are gone.
+ */
 export const ChessPlayerRail = React.memo(function ChessPlayerRail({
   state,
   color,
-  clockLabel,
   displayName,
-  colorLabel,
   avatarUrl,
   avatarFallback,
   isBot,
   activeSignal,
-  activeCopy,
-  inactiveCopy,
   captures,
   advantage,
 }: {
   state: ChessGameState;
   color: ChessColor;
-  clockLabel: string;
   displayName: string;
-  colorLabel: string;
   avatarUrl?: string | null;
   avatarFallback: string;
   isBot?: boolean;
   activeSignal: SharedValue<number>;
-  activeCopy: string;
-  inactiveCopy: string;
   captures: ChessCaptureCounts;
   advantage: number;
 }) {
-  const focus = useDerivedValue(() => withTiming(activeSignal.value, { duration: 150 }));
+  const focus = useDerivedValue(() => withTiming(activeSignal.value, { duration: 135 }));
   const railStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focus.value, [0, 1], ["#F1D9E3", "#E67FA5"]),
-    backgroundColor: interpolateColor(focus.value, [0, 1], ["#FFFBFD", "#FFF3F7"]),
-    transform: [{ scale: 1 + focus.value * 0.008 }],
+    borderColor: interpolateColor(focus.value, [0, 1], ["#F1D9E3", "#E9B2C6"]),
+    backgroundColor: interpolateColor(focus.value, [0, 1], ["#FFFBFD", "#FFF8FB"]),
   }));
-  const activeTextStyle = useAnimatedStyle(() => ({ opacity: focus.value, transform: [{ translateY: (1 - focus.value) * 2 }] }));
-  const idleTextStyle = useAnimatedStyle(() => ({ opacity: 1 - focus.value }));
 
   return (
     <Animated.View style={[styles.rail, railStyle]}>
@@ -58,22 +50,19 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
         </View>
         <View style={styles.copy}>
           <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
-          <Text style={styles.colorLabel}>{colorLabel}</Text>
-          <View style={styles.turnLine}>
-            <AnimatedText style={[styles.turnActive, activeTextStyle]}>{activeCopy}</AnimatedText>
-            <AnimatedText style={[styles.turnIdle, idleTextStyle]}>{inactiveCopy}</AnimatedText>
+          <View style={styles.materialWrap}>
+            <ChessMaterialStrip captures={captures} playerColor={color} advantage={advantage} />
           </View>
-          <ChessMaterialStrip captures={captures} playerColor={color} advantage={advantage} />
         </View>
       </View>
-      <ChessClock state={state} color={color} label={clockLabel} activeSignal={activeSignal} />
+      <ChessClock state={state} color={color} activeSignal={activeSignal} />
     </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
   rail: {
-    minHeight: 82,
+    minHeight: 90,
     borderRadius: 22,
     borderWidth: 1.2,
     paddingHorizontal: 12,
@@ -88,14 +77,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  identityWrap: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 9 },
-  avatar: { width: 40, height: 40, borderRadius: 15, overflow: "hidden", backgroundColor: "#F9E3EC", alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 14, fontWeight: "900", color: COLORS.primary },
-  botAvatarText: { fontSize: 28, lineHeight: 31 },
-  copy: { flex: 1, minWidth: 0 },
-  name: { fontSize: 15, fontWeight: "900", color: COLORS.primaryText },
-  colorLabel: { fontSize: 10, color: COLORS.secondaryText, marginTop: 1 },
-  turnLine: { height: 17, marginTop: 2, justifyContent: "center" },
-  turnActive: { position: "absolute", fontSize: 10.5, fontWeight: "900", color: COLORS.primary },
-  turnIdle: { position: "absolute", fontSize: 10, fontWeight: "700", color: "#A98A96" },
+  identityWrap: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 },
+  avatar: { width: 44, height: 44, borderRadius: 16, overflow: "hidden", backgroundColor: "#F9E3EC", alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 15, fontWeight: "900", color: COLORS.primary },
+  botAvatarText: { fontSize: 29, lineHeight: 32 },
+  copy: { flex: 1, minWidth: 0, justifyContent: "center" },
+  name: { fontSize: 16, lineHeight: 20, fontWeight: "900", color: COLORS.primaryText },
+  materialWrap: { width: "100%", minHeight: 38, marginTop: 2, justifyContent: "flex-start", overflow: "hidden" },
 });

@@ -1,6 +1,6 @@
 import { Chess, type PieceSymbol } from "chess.js";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
@@ -15,14 +15,14 @@ import type {
 } from "../../types/chess";
 import { applyChessMoveDelta } from "../../types/chess";
 import { HighlightLayer } from "./v2/HighlightLayer";
-import { HintLayer } from "./v2/HintLayer";
+import { HintLayer, type ChessHintController, type ChessHintTarget } from "./v2/HintLayer";
 import { InteractionLayer } from "./v2/InteractionLayer";
 import { PieceLayer } from "./v2/PieceLayer";
 import { SquareLayer } from "./v2/SquareLayer";
 import type { ChessPieceController, ChessPieceMotionProfile } from "./v2/ChessPiece";
 import { positionToSquare, squareToPosition, type BoardOrientation } from "./v2/coordinateMapper";
 import { buildPieceDescriptors, runtimeFromDescriptors, type PieceDescriptor, type PieceKey, type PieceRuntime } from "./v2/pieceIdentity";
-import { buildMoveMasks, squareToIndex } from "./v2/moveMask";
+import { squareToIndex } from "./v2/moveMask";
 import { useChessVisualState } from "./v2/useChessVisualState";
 import { chessDiagnostics } from "../../services/chess/chessDiagnostics";
 
@@ -34,10 +34,11 @@ function asCapturablePiece(piece: PieceSymbol | undefined): CapturablePiece | un
   return piece;
 }
 
-const MOVE_MS = 115;
-const OPPONENT_MOVE_MS = 130;
-const PREMOVE_MOVE_MS = 92;
-const ILLEGAL_RETURN_MS = 95;
+const MOVE_MS = 105;
+const OPPONENT_MOVE_MS = 110;
+const PREMOVE_MOVE_MS = 80;
+const DRAG_SETTLE_MS = 80;
+const ILLEGAL_RETURN_MS = 75;
 const canInteract = (state: ChessGameState, myColor: ChessColor) => state.status === "active" && state.turn === myColor;
 const canTouchBoard = (state: ChessGameState) => state.status === "active";
 
@@ -80,6 +81,9 @@ export const ChessBoard = React.memo(function ChessBoard({
   onMotionChange,
   onVisualRevisionChange,
   onVisualTurnChange,
+  onVisualCommit,
+  hintsEnabled = false,
+  motionFxEnabled = false,
 }: {
   state: ChessGameState;
   myColor: ChessColor;
@@ -91,6 +95,9 @@ export const ChessBoard = React.memo(function ChessBoard({
   onMotionChange?: (moving: boolean) => void;
   onVisualRevisionChange?: (revision: number) => void;
   onVisualTurnChange?: (turn: ChessColor, status: ChessGameState["status"]) => void;
+  onVisualCommit?: (previous: ChessGameState, current: ChessGameState) => void;
+  hintsEnabled?: boolean;
+  motionFxEnabled?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const squareSize = Math.floor(Math.min(width - 28, 430) / 8);
@@ -109,6 +116,7 @@ export const ChessBoard = React.memo(function ChessBoard({
   const layoutKeyRef = useRef(`${orientation}:${squareSize}`);
   const runtimeRef = useRef<Map<string, PieceRuntime>>(runtimeFromDescriptors(initialPieces));
   const controllersRef = useRef(new Map<string, ChessPieceController>());
+  const hintControllerRef = useRef<ChessHintController | null>(null);
   const pendingRef = useRef<PendingLocal | null>(null);
   const premoveRef = useRef<Premove | null>(null);
   const motionRef = useRef(false);
@@ -152,12 +160,17 @@ export const ChessBoard = React.memo(function ChessBoard({
     return null;
   }, []);
 
-  const moveController = useCallback((id: string, square: string, duration: number, profile: ChessPieceMotionProfile = "lift") => new Promise<void>((resolve) => {
+  const moveController = useCallback((id: string, square: string, duration: number, profile: ChessPieceMotionProfile = "flat") => new Promise<void>((resolve) => {
     const controller = controllersRef.current.get(id);
     if (!controller) { resolve(); return; }
     const p = squareToPosition(square, squareSize, orientation);
+    if (!motionFxEnabled) {
+      controller.setPosition(p.x, p.y);
+      resolve();
+      return;
+    }
     controller.moveTo(p.x, p.y, duration, resolve, profile);
-  }), [orientation, squareSize]);
+  }), [motionFxEnabled, orientation, squareSize]);
 
   const applyRuntimeMove = useCallback((move: ChessAppliedMove) => {
     const primary = findPieceAt(move.from, move.color, move.piece);
@@ -180,14 +193,14 @@ export const ChessBoard = React.memo(function ChessBoard({
     }
   }, [findPieceAt]);
 
-  const animateMove = useCallback(async (move: ChessAppliedMove, duration: number, profile: ChessPieceMotionProfile = "lift") => {
+  const animateMove = useCallback(async (move: ChessAppliedMove, duration: number, profile: ChessPieceMotionProfile = "flat") => {
     const primary = findPieceAt(move.from, move.color, move.piece);
     if (!primary) return;
     const tasks: Promise<void>[] = [moveController(primary.id, move.to, duration, profile)];
     const capturedAt = captureSquare(move);
     if (capturedAt) {
       const captured = findPieceAt(capturedAt, move.color === "w" ? "b" : "w");
-      if (captured && captured.id !== primary.id) controllersRef.current.get(captured.id)?.fadeTo(0, 70, 55);
+      if (captured && captured.id !== primary.id) controllersRef.current.get(captured.id)?.fadeTo(0, motionFxEnabled ? 70 : 0, motionFxEnabled ? 55 : 0);
     }
     const rookMove = castleRook(move);
     if (rookMove) {
@@ -195,13 +208,13 @@ export const ChessBoard = React.memo(function ChessBoard({
       if (rook) tasks.push(moveController(rook.id, rookMove.to, duration, profile));
     }
     await Promise.all(tasks);
-  }, [findPieceAt, moveController]);
+  }, [findPieceAt, motionFxEnabled, moveController]);
 
   const rebuildFromSnapshot = useCallback((snapshot: ChessGameState) => new Promise<void>((resolve) => {
     boardLocked.value = 1;
     setMotion(true);
-    boardOpacity.value = withTiming(0, { duration: 60 });
-    setTimeout(() => {
+
+    const commit = () => {
       const nextPieces = buildPieceDescriptors(snapshot.fen);
       controllersRef.current.clear();
       runtimeRef.current = runtimeFromDescriptors(nextPieces);
@@ -217,6 +230,21 @@ export const ChessBoard = React.memo(function ChessBoard({
       visual.setPremove(null, null);
       visual.setLastMove(snapshot.lastMove?.from, snapshot.lastMove?.to);
       visual.setCheckSquare(snapshot.checkSquare);
+    };
+
+    if (!motionFxEnabled) {
+      boardOpacity.value = 1;
+      commit();
+      boardLocked.value = canTouchBoard(snapshot) ? 0 : 1;
+      setMotion(false);
+      onVisualRevisionChange?.(snapshot.revision);
+      resolve();
+      return;
+    }
+
+    boardOpacity.value = withTiming(0, { duration: 60 });
+    setTimeout(() => {
+      commit();
       requestAnimationFrame(() => requestAnimationFrame(() => {
         boardOpacity.value = withTiming(1, { duration: 90 });
         setTimeout(() => {
@@ -227,7 +255,7 @@ export const ChessBoard = React.memo(function ChessBoard({
         }, 95);
       }));
     }, 65);
-  }), [boardLocked, boardOpacity, myColor, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
+  }), [boardLocked, boardOpacity, motionFxEnabled, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
 
   const legalMovesFor = useCallback((fen: string, from: string, allowPremove: boolean) => {
     try {
@@ -239,6 +267,7 @@ export const ChessBoard = React.memo(function ChessBoard({
   const clearSelection = useCallback(() => {
     selectedRef.current = null;
     visual.clearHints();
+    hintControllerRef.current?.clear();
   }, [visual]);
 
   const clearPremove = useCallback((detail = "clear") => {
@@ -283,23 +312,43 @@ export const ChessBoard = React.memo(function ChessBoard({
     }
 
     const moves = legalMovesFor(current.fen, square, premoveMode);
-    const masks = buildMoveMasks(moves);
     if (premoveMode && premoveRef.current) clearPremove("replace-selection");
     selectedRef.current = square;
-    visual.legalMoveLow.value = masks.legal.low;
-    visual.legalMoveHigh.value = masks.legal.high;
-    visual.captureLow.value = masks.capture.low;
-    visual.captureHigh.value = masks.capture.high;
-    visual.revealHints(square, premoveMode);
-  }, [clearPremove, clearSelection, findPieceAt, legalMovesFor, myColor, visual]);
+    visual.selectedSquareIndex.value = squareToIndex(square);
+    if (hintsEnabled) {
+      const seen = new Set<number>();
+      const targets: ChessHintTarget[] = [];
+      for (const move of moves) {
+        const index = squareToIndex(String(move.to));
+        if (index < 0 || seen.has(index)) continue;
+        seen.add(index);
+        targets.push({ index, capture: !!move.captured || String(move.flags || "").includes("e") });
+      }
+      hintControllerRef.current?.show(targets, premoveMode);
+    } else {
+      hintControllerRef.current?.clear();
+    }
+  }, [clearPremove, clearSelection, findPieceAt, hintsEnabled, legalMovesFor, myColor, visual]);
 
   const snapPieceBack = useCallback((id: string, square: string, unlock = true) => {
     const p = squareToPosition(square, squareSize, orientation);
-    controllersRef.current.get(id)?.moveTo(p.x, p.y, ILLEGAL_RETURN_MS, () => {
+    const controller = controllersRef.current.get(id);
+    if (!controller) {
+      if (unlock) boardLocked.value = canTouchBoard(interactionStateRef.current) ? 0 : 1;
+      setMotion(false);
+      return;
+    }
+    if (!motionFxEnabled) {
+      controller.setPosition(p.x, p.y);
+      if (unlock) boardLocked.value = canTouchBoard(interactionStateRef.current) ? 0 : 1;
+      setMotion(false);
+      return;
+    }
+    controller.moveTo(p.x, p.y, ILLEGAL_RETURN_MS, () => {
       if (unlock) boardLocked.value = canTouchBoard(interactionStateRef.current) ? 0 : 1;
       setMotion(false);
     }, "settle");
-  }, [boardLocked, orientation, setMotion, squareSize]);
+  }, [boardLocked, motionFxEnabled, orientation, setMotion, squareSize]);
 
   const queuePremove = useCallback(async (
     from: string,
@@ -413,8 +462,8 @@ export const ChessBoard = React.memo(function ChessBoard({
       ...(captured ? { captured } : {}),
       ...(candidate.promotion ? { promotion: candidate.promotion } : {}),
     };
-    const duration = source === "drag" ? 85 : source === "premove" ? PREMOVE_MOVE_MS : MOVE_MS;
-    const profile: ChessPieceMotionProfile = source === "drag" ? "settle" : "lift";
+    const duration = !motionFxEnabled ? 0 : source === "drag" ? DRAG_SETTLE_MS : source === "premove" ? PREMOVE_MOVE_MS : MOVE_MS;
+    const profile: ChessPieceMotionProfile = source === "drag" && motionFxEnabled ? "settle" : "flat";
     const visualPromise = animateMove(applied, duration, profile).then(() => {
       if (pendingRef.current?.clientMoveId === clientMoveId) applyRuntimeMove(applied);
       chessDiagnostics.mark({ gameId: current.gameId, stage: "optimistic_settle", clientMoveId, from, to, version: current.revision });
@@ -436,7 +485,7 @@ export const ChessBoard = React.memo(function ChessBoard({
         if (pendingRef.current?.clientMoveId === clientMoveId && stateRef.current.revision < ack.data.version) void onResync().then((snapshot) => snapshot && rebuildFromSnapshot(snapshot));
       }, 700);
     });
-  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, findPieceAt, legalMovesFor, myColor, onMove, onPromotion, onResync, rebuildFromSnapshot, setMotion, snapPieceBack, visual]);
+  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, findPieceAt, legalMovesFor, motionFxEnabled, myColor, onMove, onPromotion, onResync, rebuildFromSnapshot, setMotion, snapPieceBack, visual]);
   attemptRef.current = executeAttempt;
 
   const onTapPiece = useCallback((id: string) => {
@@ -525,6 +574,14 @@ export const ChessBoard = React.memo(function ChessBoard({
       detail: resolved.adjusted ? `raw=${resolved.raw ?? "outside"}` : resolved.raw ? "exact" : "outside",
     });
     if (!resolved.target) { clearSelection(); snapPieceBack(id, runtime.square); return; }
+    // Small finger drift can cross the Pan threshold even when the user meant
+    // to tap/select. Releasing back on the source square must keep the piece
+    // selected instead of turning that gesture into an illegal from==to move.
+    if (resolved.target === runtime.square) {
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "drag_tap_recovered", from: runtime.square, to: resolved.target, version: current.revision });
+      snapPieceBack(id, runtime.square);
+      return;
+    }
     if (current.turn === myColor) void attemptRef.current(runtime.square, resolved.target, undefined, "drag");
     else void queuePremove(runtime.square, resolved.target, undefined, "drag");
   }, [clearSelection, myColor, queuePremove, resolveDropTarget, snapPieceBack]);
@@ -536,8 +593,10 @@ export const ChessBoard = React.memo(function ChessBoard({
       await pending.visual;
       visual.setLastMove(delta.move.from, delta.move.to);
       visual.setCheckSquare(delta.checkSquare);
-      interactionStateRef.current = applyChessMoveDelta(interactionStateRef.current, delta);
+      const previousVisualState = interactionStateRef.current;
+      interactionStateRef.current = applyChessMoveDelta(previousVisualState, delta);
       onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
+      onVisualCommit?.(previousVisualState, interactionStateRef.current);
       pendingRef.current = null;
       chessDiagnostics.mark({ gameId: delta.gameId, stage: "authoritative_commit", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: "LOCAL_CONFIRM" });
       // Once our move is authoritative, the opponent turn is still touchable
@@ -550,10 +609,12 @@ export const ChessBoard = React.memo(function ChessBoard({
 
     boardLocked.value = 1;
     setMotion(true);
-    await animateMove(delta.move, OPPONENT_MOVE_MS);
+    await animateMove(delta.move, OPPONENT_MOVE_MS, "flat");
     applyRuntimeMove(delta.move);
-    interactionStateRef.current = applyChessMoveDelta(interactionStateRef.current, delta);
+    const previousVisualState = interactionStateRef.current;
+    interactionStateRef.current = applyChessMoveDelta(previousVisualState, delta);
     onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
+    onVisualCommit?.(previousVisualState, interactionStateRef.current);
     chessDiagnostics.mark({ gameId: delta.gameId, stage: "authoritative_commit", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: "REMOTE_APPLY" });
     clearSelection();
     visual.setLastMove(delta.move.from, delta.move.to);
@@ -576,7 +637,7 @@ export const ChessBoard = React.memo(function ChessBoard({
       if (delta.status !== "active") clearPremove("game-not-active");
       boardLocked.value = delta.status === "active" ? 0 : 1;
     }
-  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, myColor, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
+  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, myColor, onVisualCommit, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
 
   useEffect(() => {
     // A full snapshot scheduled in the same React batch supersedes buffered
@@ -652,38 +713,62 @@ export const ChessBoard = React.memo(function ChessBoard({
     onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
   }, [onVisualTurnChange, state.gameId]);
 
+  useEffect(() => {
+    if (!hintsEnabled) {
+      hintControllerRef.current?.clear();
+      return;
+    }
+    const selected = selectedRef.current;
+    if (!selected) return;
+    const current = interactionStateRef.current;
+    const premoveMode = current.status === "active" && current.turn !== myColor;
+    const moves = legalMovesFor(current.fen, selected, premoveMode);
+    const seen = new Set<number>();
+    const targets: ChessHintTarget[] = [];
+    for (const move of moves) {
+      const index = squareToIndex(String(move.to));
+      if (index < 0 || seen.has(index)) continue;
+      seen.add(index);
+      targets.push({ index, capture: !!move.captured || String(move.flags || "").includes("e") });
+    }
+    hintControllerRef.current?.show(targets, premoveMode);
+  }, [hintsEnabled, legalMovesFor, myColor]);
+
   useEffect(() => () => { onMotionChange?.(false); }, [onMotionChange]);
 
   return (
-    <GestureHandlerRootView style={[styles.board, { width:boardSize,height:boardSize }]}>
-      <SquareLayer squareSize={squareSize} boardSize={boardSize} orientation={orientation}/>
-      <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, fadeStyle]}>
-        <HighlightLayer
-          squareSize={squareSize}
-          orientation={orientation}
-          selectedSquareIndex={visual.selectedSquareIndex}
-          lastMoveFromIndex={visual.lastMoveFromIndex}
-          lastMoveToIndex={visual.lastMoveToIndex}
-          checkedKingIndex={visual.checkedKingIndex}
-          premoveFromIndex={visual.premoveFromIndex}
-          premoveToIndex={visual.premoveToIndex}
-        />
-        <HintLayer
-          squareSize={squareSize}
-          orientation={orientation}
-          legalMoveLow={visual.legalMoveLow}
-          legalMoveHigh={visual.legalMoveHigh}
-          captureLow={visual.captureLow}
-          captureHigh={visual.captureHigh}
-          selectedSquareIndex={visual.selectedSquareIndex}
-          hintRevealProgress={visual.hintRevealProgress}
-          hintMode={visual.hintMode}
-        />
-        <InteractionLayer squareSize={squareSize} orientation={orientation} onPressSquare={onPressSquare}/>
-        <PieceLayer key={`piece-layer-${pieceGeneration}`} pieces={pieces} squareSize={squareSize} orientation={orientation} myColor={myColor} boardLocked={boardLocked} register={register} onTapPiece={onTapPiece} onDragStart={onDragStart} onDragCancel={onDragCancel} onDrop={onDrop}/>
-      </Animated.View>
+    <GestureHandlerRootView style={[styles.boardShell, { width:boardSize,height:boardSize }]}>
+      <View collapsable={false} style={styles.boardClip}>
+        <SquareLayer squareSize={squareSize} boardSize={boardSize} orientation={orientation}/>
+        <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, fadeStyle]}>
+          <HighlightLayer
+            squareSize={squareSize}
+            orientation={orientation}
+            selectedSquareIndex={visual.selectedSquareIndex}
+            lastMoveFromIndex={visual.lastMoveFromIndex}
+            lastMoveToIndex={visual.lastMoveToIndex}
+            checkedKingIndex={visual.checkedKingIndex}
+            premoveFromIndex={visual.premoveFromIndex}
+            premoveToIndex={visual.premoveToIndex}
+          />
+          {hintsEnabled ? (
+            <HintLayer
+              ref={hintControllerRef}
+              squareSize={squareSize}
+              orientation={orientation}
+            />
+          ) : null}
+          <InteractionLayer squareSize={squareSize} orientation={orientation} onPressSquare={onPressSquare}/>
+          <PieceLayer key={`piece-layer-${pieceGeneration}`} pieces={pieces} squareSize={squareSize} orientation={orientation} myColor={myColor} boardLocked={boardLocked} motionFxEnabled={motionFxEnabled} register={register} onTapPiece={onTapPiece} onDragStart={onDragStart} onDragCancel={onDragCancel} onDrop={onDrop}/>
+        </Animated.View>
+      </View>
+      <View pointerEvents="none" style={styles.boardBorder}/>
     </GestureHandlerRootView>
   );
 });
 
-const styles=StyleSheet.create({board:{alignSelf:"center",borderRadius:18,overflow:"hidden",backgroundColor:"#C98BA7",borderWidth:1,borderColor:"#E6B3C7",elevation:3,shadowColor:"#8E4D68",shadowOpacity:.16,shadowRadius:8,shadowOffset:{width:0,height:3}}});
+const styles=StyleSheet.create({
+  boardShell:{alignSelf:"center",borderRadius:18,backgroundColor:"#C98BA7",elevation:3,shadowColor:"#8E4D68",shadowOpacity:.16,shadowRadius:8,shadowOffset:{width:0,height:3}},
+  boardClip:{...StyleSheet.absoluteFillObject,borderRadius:18,overflow:"hidden",backgroundColor:"#C98BA7"},
+  boardBorder:{...StyleSheet.absoluteFillObject,borderRadius:18,borderWidth:1,borderColor:"#E6B3C7"},
+});

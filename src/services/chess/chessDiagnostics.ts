@@ -54,7 +54,7 @@ let seq = 0;
 let events: ChessDiagnosticEvent[] = [];
 const listeners = new Set<Listener>();
 
-export const CHESS_DIAGNOSTICS_ENABLED = true;
+export const CHESS_DIAGNOSTICS_ENABLED = false;
 
 export const chessDiagnostics = {
   mark(event: Omit<ChessDiagnosticEvent, "seq" | "atMs">) {

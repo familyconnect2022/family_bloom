@@ -112,7 +112,13 @@
     "phase14v4d:check": "node scripts/test-phase14v4d-chess-diagnostic-interaction-fix.js",
     "phase14v4e:check": "node scripts/test-phase14v4e-chess-input-stabilization-bloom-polish.js",
     "phase14v4f:check": "node scripts/test-phase14v4f-chess-turn-material-rail.js",
-    "phase14v4g:check": "node scripts/test-phase14v4g-chess-premove-lift-hints.js"
+    "phase14v4g:check": "node scripts/test-phase14v4g-chess-premove-lift-hints.js",
+    "phase14v4h:check": "node scripts/test-phase14v4h-chess-input-hint-perf-clip-fix.js",
+    "phase14v4i:check": "node scripts/test-phase14v4i-chess-render-isolation-perf.js",
+    "phase14v4j:check": "node scripts/test-phase14v4j-chess-sparse-hint-visual-commit.js",
+    "phase14v4k:check": "node ./scripts/test-phase14v4k-chess-material-swing-fx.js",
+    "phase14v4l:check": "node ./scripts/test-phase14v4l-chess-production-ui-result-promotion.js",
+    "phase14v4m:check": "node ./scripts/test-phase14v4m-chess-result-overlay-fixed-bot-delay.js"
   },
   "private": true
 }

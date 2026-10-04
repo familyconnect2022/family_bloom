@@ -6,7 +6,7 @@ const piece = read('src/components/chess/v2/ChessPiece.tsx');
 const board = read('src/components/chess/ChessBoard.tsx');
 const interaction = read('src/components/chess/v2/InteractionLayer.tsx');
 const checks = [
-  ['pan activates only after drag threshold', piece.includes('.minDistance(5)') && piece.includes('.onStart(() =>')],
+  ['pan activates only after drag threshold', /\.minDistance\((?:[6-9]|[1-9]\d+)\)/.test(piece) && piece.includes('.onStart(() =>')],
   ['tap no longer enters drag on touch begin', !piece.includes('.onBegin(() =>')],
   ['drag start still reports to board', piece.includes('runOnJS(onDragStart)(id)')],
   ['drop uses final gesture translation X', piece.includes('startX.value + event.translationX')],

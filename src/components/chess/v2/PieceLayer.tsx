@@ -11,6 +11,7 @@ type Props = {
   orientation: BoardOrientation;
   myColor: "w"|"b";
   boardLocked: SharedValue<number>;
+  motionFxEnabled: boolean;
   register: (id:string,controller:ChessPieceController|null)=>void;
   onTapPiece: (id:string)=>void;
   onDragStart: (id:string)=>void;
@@ -18,7 +19,7 @@ type Props = {
   onDrop: (id:string,centerX:number,centerY:number)=>void;
 };
 
-export const PieceLayer = React.memo(function PieceLayer({ pieces, squareSize, orientation, myColor, boardLocked, register, onTapPiece, onDragStart, onDragCancel, onDrop }: Props) {
+export const PieceLayer = React.memo(function PieceLayer({ pieces, squareSize, orientation, myColor, boardLocked, motionFxEnabled, register, onTapPiece, onDragStart, onDragCancel, onDrop }: Props) {
   return (
     <View pointerEvents="box-none" collapsable={false} style={StyleSheet.absoluteFill}>
       {pieces.map((piece) => {
@@ -34,6 +35,7 @@ export const PieceLayer = React.memo(function PieceLayer({ pieces, squareSize, o
             squareSize={squareSize}
             owned={piece.pieceKey[0] === myColor}
             boardLocked={boardLocked}
+            motionFxEnabled={motionFxEnabled}
             onTapPiece={onTapPiece}
             onDragStart={onDragStart}
             onDragCancel={onDragCancel}

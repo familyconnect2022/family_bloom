@@ -1,0 +1,25 @@
+PHASE 14V4L — VALIDATION REPORT
+Date: 2026-10-04
+Base: Phase 14V4K Material Swing FX
+
+STATIC GATES
+- Phase 14V4L production UI/result/promotion: PASS 18/18
+- Phase 14V4K material swing FX regression: PASS 11/11
+- Phase 14V4J sparse hint / visual commit regression: PASS 17/17
+- Phase 14U chess core/server-authoritative gate: PASS 54/54
+- TypeScript/TSX transpile syntax scan: PASS 256/256
+
+IMPLEMENTATION NOTES
+- Hint, Motion, and FX are enabled in the production game screen; test toggles removed.
+- Player rails are simplified; clock role/color labels removed.
+- Active-turn clock uses solid Bloom fill and white numerals.
+- End result is a centered in-board toast with win celebration and Chơi ván mới / Đồng ý actions.
+- Promotion is a centered custom overlay using the same WebP chess piece art as the board; no visible text labels on piece options.
+- Final board move gets a short 180 ms landing beat before result toast enters.
+- V4J/V4K performance and FX behavior are preserved.
+
+DEVICE TEST STILL REQUIRED
+- Android real-device visual/layout check.
+- Promotion for all 4 piece choices.
+- Checkmate, timeout, resignation and draw result toast variants.
+- Rematch navigation and dismissal behavior.

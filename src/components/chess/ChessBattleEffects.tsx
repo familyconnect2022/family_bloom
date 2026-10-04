@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import { Chess } from "chess.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import type { ChessColor, ChessGameState } from "../../types/chess";
@@ -17,6 +18,51 @@ export type ChessBattleEvent = {
 };
 
 const PIECE_NAMES: Record<string, string> = { p: "Tốt", n: "Mã", b: "Tượng", r: "Xe", q: "Hậu", k: "Vua" };
+const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const CAPTURE_PIECES = ["p", "n", "b", "r", "q"] as const;
+
+function captureSummaryDelta(previous: ChessGameState, current: ChessGameState, mover: ChessColor) {
+  const before = mover === "w" ? previous.captureSummary?.byWhite : previous.captureSummary?.byBlack;
+  const after = mover === "w" ? current.captureSummary?.byWhite : current.captureSummary?.byBlack;
+  if (!before || !after) return null;
+  return CAPTURE_PIECES.find((piece) => (after[piece] || 0) > (before[piece] || 0)) || null;
+}
+
+function canImmediatelyRecapture(fen: string, square: string) {
+  try {
+    const chess = new Chess(fen);
+    return chess.moves({ verbose: true }).some((move) => move.to === square && !!move.captured);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Capture FX is intentionally conservative. A capture should feel special only when it creates a
+ * real material swing, not merely because a piece disappeared. We estimate the immediate exchange:
+ * captured value minus the capturing piece if the opponent can legally recapture on that square.
+ * This is deliberately cheaper than engine evaluation and stays off the move/input hot path.
+ */
+function materialSwingForCapture(previous: ChessGameState, current: ChessGameState) {
+  if (!current.lastMove) return null;
+  const mover: ChessColor = current.turn === "w" ? "b" : "w";
+  const capturedPiece = captureSummaryDelta(previous, current, mover)
+    || fenPieces(previous.fen).get(current.lastMove.to)
+    || null;
+  if (!capturedPiece || capturedPiece === "k") return null;
+
+  // Pawn captures are common board texture, not battle moments. Check/promotion are handled earlier.
+  if (capturedPiece === "p") return { capturedPiece, moverPiece: null, recapturable: false, netGain: 1, show: false };
+
+  const moverPiece = fenPieces(current.fen).get(current.lastMove.to) || fenPieces(previous.fen).get(current.lastMove.from) || null;
+  const recapturable = canImmediatelyRecapture(current.fen, current.lastMove.to);
+  const capturedValue = PIECE_VALUES[capturedPiece] || 0;
+  const moverValue = moverPiece ? (PIECE_VALUES[moverPiece] || 0) : 0;
+  const netGain = capturedValue - (recapturable ? moverValue : 0);
+
+  // <= +1 is normal exchange/noise. +2 or more is a meaningful tactical material gain.
+  return { capturedPiece, moverPiece, recapturable, netGain, show: netGain >= 2 };
+}
 
 function fenPieces(fen: string) {
   const out = new Map<string, string>();
@@ -88,13 +134,17 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
   }
 
   if (captured) {
-    const target = fenPieces(previous.fen).get(current.lastMove.to) || "p";
-    const major = target === "q" || target === "r";
-    const pieceName = PIECE_NAMES[target] || "quân";
+    const swing = materialSwingForCapture(previous, current);
+    if (!swing?.show) return null;
+
+    const pieceName = PIECE_NAMES[swing.capturedPiece] || "quân";
+    const gainCopy = swing.netGain >= 4 ? "Lợi thế vật chất tăng mạnh." : "Pha đổi quân nghiêng về một phía.";
     return {
-      key: `${current.gameId}:${current.revision}:capture`, revision: current.revision, mine, kind: major ? "major_capture" : "capture", intensity: major ? "active" : "subtle",
-      title: major ? "MỘT ĐÒN NẶNG!" : "ĂN QUÂN!",
-      subtitle: major ? `${pieceName} đã rời bàn. Thế cân bằng vừa rung chuyển.` : mine ? pick(["Bạn vừa giành thêm không gian trên bàn cờ.", "Thế trận bắt đầu nóng lên."], seed) : pick(["Một quân của bạn vừa rời bàn.", "Thế trận bắt đầu nóng lên."], seed),
+      key: `${current.gameId}:${current.revision}:material-swing`, revision: current.revision, mine, kind: "major_capture", intensity: swing.netGain >= 4 ? "dramatic" : "active",
+      title: "ĐỘT BIẾN!",
+      subtitle: swing.recapturable
+        ? `${pieceName} rời bàn — đổi quân có lợi khoảng +${swing.netGain}.`
+        : `${pieceName} rời bàn mà chưa có đòn bắt lại ngay. ${gainCopy}`,
     };
   }
 

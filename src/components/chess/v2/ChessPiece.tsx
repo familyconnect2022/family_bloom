@@ -7,7 +7,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import type { PieceKey } from "./pieceIdentity";
@@ -27,7 +26,7 @@ const PIECE_IMAGES: Record<PieceKey, number> = {
   bk: require("../../../../assets/images/chess/pieces-webp-default/bk.webp"),
 };
 
-export type ChessPieceMotionProfile = "lift" | "settle" | "flat";
+export type ChessPieceMotionProfile = "settle" | "flat";
 
 export type ChessPieceController = {
   moveTo: (x: number, y: number, duration?: number, done?: () => void, profile?: ChessPieceMotionProfile) => void;
@@ -44,6 +43,7 @@ type Props = {
   squareSize: number;
   owned: boolean;
   boardLocked: SharedValue<number>;
+  motionFxEnabled: boolean;
   onTapPiece: (id: string) => void;
   onDragStart: (id: string) => void;
   onDragCancel: (id: string) => void;
@@ -51,7 +51,7 @@ type Props = {
 };
 
 export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(function ChessPiece({
-  id, initialPieceKey, initialX, initialY, squareSize, owned, boardLocked, onTapPiece, onDragStart, onDragCancel, onDrop,
+  id, initialPieceKey, initialX, initialY, squareSize, owned, boardLocked, motionFxEnabled, onTapPiece, onDragStart, onDragCancel, onDrop,
 }, ref) {
   const [pieceKey, setPieceKeyState] = useState<PieceKey>(initialPieceKey);
   const x = useSharedValue(initialX);
@@ -65,21 +65,22 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
 
   useImperativeHandle(ref, () => ({
     moveTo(nextX, nextY, duration = 120, done, profile = "lift") {
-      const half = Math.max(1, Math.round(duration / 2));
       moving.value = 1;
-      if (profile === "lift") {
-        // Bloom lift: the piece rises to 1.3x during the first half of travel,
-        // then settles naturally back to 1.0 at the destination.
-        scale.value = withSequence(
-          withTiming(1.3, { duration: half }),
-          withTiming(1, { duration: Math.max(1, duration - half) }),
-        );
-      } else if (profile === "settle") {
-        // A dragged piece is already lifted at 1.3x. On release it only needs
-        // to settle while snapping to the target/origin; never lift a second time.
-        scale.value = withTiming(1, { duration });
-      } else {
+      if (!motionFxEnabled || profile === "flat") {
+        // V4J programmatic motion is translate-only. Scale is reserved for a
+        // real finger drag so move animation cannot compete for extra frames.
         scale.value = 1;
+      } else {
+        // A dragged piece is lightly lifted while under the finger; settle it
+        // back to 1.0 together with the snap.
+        scale.value = withTiming(1, { duration });
+      }
+      if (!motionFxEnabled || duration <= 0) {
+        x.value = nextX;
+        y.value = nextY;
+        moving.value = 0;
+        done?.();
+        return;
       }
       x.value = withTiming(nextX, { duration });
       y.value = withTiming(nextY, { duration }, (finished) => {
@@ -103,7 +104,7 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
         opacity.value = withDelay(20, withTiming(1, { duration: 70 }));
       });
     },
-  }), [moving, opacity, scale, x, y]);
+  }), [motionFxEnabled, moving, opacity, scale, x, y]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -113,15 +114,17 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
 
   const gesture = useMemo(() => {
     const pan = Gesture.Pan()
-      .minDistance(5)
+      .enabled(owned)
+      .minDistance(8)
       .onStart(() => {
-        if (!owned || boardLocked.value !== 0) { dragAllowed.value = 0; return; }
+        if (boardLocked.value !== 0) { dragAllowed.value = 0; return; }
         dragAllowed.value = 1;
         startX.value = x.value;
         startY.value = y.value;
-        // Finger down / real drag: lift the piece smoothly and keep it lifted
-        // until the user releases it.
-        scale.value = withTiming(1.3, { duration: 80 });
+        // Finger down / real drag: keep only a light tactile lift. Programmatic
+        // moves are translate-only in V4J, so scale never competes with board motion.
+        if (motionFxEnabled) scale.value = withTiming(1.16, { duration: 70 });
+        else scale.value = 1;
         runOnJS(onDragStart)(id);
       })
       .onUpdate((event) => {
@@ -132,7 +135,7 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
       .onEnd((event) => {
         if (!dragAllowed.value) return;
         // Do NOT scale down here. onDrop decides whether this is a legal move,
-        // premove, or illegal return and settles 1.3 -> 1 together with the snap.
+        // premove, or illegal return and settles the small drag lift with the snap.
         const finalX = startX.value + event.translationX;
         const finalY = startY.value + event.translationY;
         x.value = finalX;
@@ -145,6 +148,13 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
       .onFinalize(() => {
         if (!dragAllowed.value) return;
         dragAllowed.value = 0;
+        if (!motionFxEnabled) {
+          scale.value = 1;
+          x.value = startX.value;
+          y.value = startY.value;
+          runOnJS(onDragCancel)(id);
+          return;
+        }
         scale.value = withTiming(1, { duration: 80 });
         x.value = withTiming(startX.value, { duration: 90 });
         y.value = withTiming(startY.value, { duration: 90 }, (finished) => {
@@ -155,7 +165,7 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
       if (success && boardLocked.value === 0) runOnJS(onTapPiece)(id);
     });
     return Gesture.Race(pan, tap);
-  }, [boardLocked, dragAllowed, id, onDragCancel, onDragStart, onDrop, onTapPiece, owned, scale, squareSize, startX, startY, x, y]);
+  }, [boardLocked, dragAllowed, id, motionFxEnabled, onDragCancel, onDragStart, onDrop, onTapPiece, owned, scale, squareSize, startX, startY, x, y]);
 
   return (
     <GestureDetector gesture={gesture}>

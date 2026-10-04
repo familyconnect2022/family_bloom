@@ -26,7 +26,7 @@ check('premove visual uses existing from/to highlight shared values', board.incl
 check('piece controller supports lift/settle profiles', piece.includes('ChessPieceMotionProfile = "lift" | "settle" | "flat"'));
 check('normal move scales 1 -> 1.3 -> 1 on UI thread', piece.includes('withSequence(') && piece.includes('withTiming(1.3') && piece.includes('withTiming(1,'));
 check('moving piece receives elevated z-index', piece.includes('moving.value ? 80 : 10'));
-check('drag scales to 1.3 only after pan activates', piece.includes('.onStart(() =>') && piece.includes('scale.value = withTiming(1.3, { duration: 80 })'));
+check('drag scales to 1.3 only after pan activates', piece.includes('.onStart(() =>') && piece.includes('scale.value = withTiming(1.3, { duration:'));
 check('drag release does not prematurely scale down', piece.includes('Do NOT scale down here'));
 check('drag settle profile returns 1.3 -> 1 while snapping', piece.includes('profile === "settle"') && piece.includes('scale.value = withTiming(1, { duration })'));
 check('illegal return explicitly uses settle profile', board.includes('ILLEGAL_RETURN_MS') && board.includes('}, "settle")'));

@@ -1,8 +1,7 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle } from "react-native-reanimated";
-import { indexToSquare } from "./moveMask";
-import { squareToPosition, type BoardOrientation } from "./coordinateMapper";
+import type { BoardOrientation } from "./coordinateMapper";
 
 type VisualIndices = {
   selectedSquareIndex: SharedValue<number>;
@@ -13,54 +12,45 @@ type VisualIndices = {
   premoveToIndex: SharedValue<number>;
 };
 
-type SlotProps = VisualIndices & {
-  index: number;
+type MarkerProps = {
+  index: SharedValue<number>;
   squareSize: number;
   orientation: BoardOrientation;
+  kind: "last" | "selected" | "check" | "premove";
 };
 
-const HighlightSlot = React.memo(function HighlightSlot({
-  index,
-  squareSize,
-  orientation,
-  selectedSquareIndex,
-  lastMoveFromIndex,
-  lastMoveToIndex,
-  checkedKingIndex,
-  premoveFromIndex,
-  premoveToIndex,
-}: SlotProps) {
-  const square = indexToSquare(index)!;
-  const position = squareToPosition(square, squareSize, orientation);
-
-  const lastMoveStyle = useAnimatedStyle(() => ({
-    opacity: index === lastMoveFromIndex.value || index === lastMoveToIndex.value ? 1 : 0,
-  }));
-  const selectedStyle = useAnimatedStyle(() => ({
-    opacity: selectedSquareIndex.value === index ? 1 : 0,
-  }));
-  const checkStyle = useAnimatedStyle(() => ({
-    opacity: checkedKingIndex.value === index ? 1 : 0,
-  }));
-  const premoveStyle = useAnimatedStyle(() => ({
-    opacity: index === premoveFromIndex.value || index === premoveToIndex.value ? 1 : 0,
-  }));
-
-  const box = {
-    position: "absolute" as const,
-    left: position.x,
-    top: position.y,
-    width: squareSize,
-    height: squareSize,
-  };
+/**
+ * V4I: render only the highlights that can actually be visible.
+ * Previous renderer mounted 64 slots × 4 Animated.View = 256 animated styles.
+ * A chess position needs at most 6 highlight rectangles at once:
+ * last move 2 + selected 1 + check 1 + premove 2.
+ */
+const HighlightMarker = React.memo(function HighlightMarker({ index, squareSize, orientation, kind }: MarkerProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const current = index.value;
+    if (current < 0 || current > 63) return { opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }] };
+    let row = Math.floor(current / 8);
+    let col = current % 8;
+    if (orientation === "black") {
+      row = 7 - row;
+      col = 7 - col;
+    }
+    return {
+      opacity: 1,
+      transform: [{ translateX: col * squareSize }, { translateY: row * squareSize }],
+    };
+  }, [orientation, squareSize]);
 
   return (
-    <View pointerEvents="none" style={box}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lastMove, lastMoveStyle]} />
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.premove, premoveStyle]} />
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.selected, selectedStyle]} />
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.check, checkStyle]} />
-    </View>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.marker,
+        { width: squareSize, height: squareSize },
+        kind === "last" ? styles.lastMove : kind === "selected" ? styles.selected : kind === "check" ? styles.check : styles.premove,
+        animatedStyle,
+      ]}
+    />
   );
 });
 
@@ -75,26 +65,19 @@ export const HighlightLayer = React.memo(function HighlightLayer({
   premoveToIndex,
 }: VisualIndices & { squareSize: number; orientation: BoardOrientation }) {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {Array.from({ length: 64 }, (_, index) => (
-        <HighlightSlot
-          key={index}
-          index={index}
-          squareSize={squareSize}
-          orientation={orientation}
-          selectedSquareIndex={selectedSquareIndex}
-          lastMoveFromIndex={lastMoveFromIndex}
-          lastMoveToIndex={lastMoveToIndex}
-          checkedKingIndex={checkedKingIndex}
-          premoveFromIndex={premoveFromIndex}
-          premoveToIndex={premoveToIndex}
-        />
-      ))}
-    </View>
+    <>
+      <HighlightMarker index={lastMoveFromIndex} squareSize={squareSize} orientation={orientation} kind="last" />
+      <HighlightMarker index={lastMoveToIndex} squareSize={squareSize} orientation={orientation} kind="last" />
+      <HighlightMarker index={premoveFromIndex} squareSize={squareSize} orientation={orientation} kind="premove" />
+      <HighlightMarker index={premoveToIndex} squareSize={squareSize} orientation={orientation} kind="premove" />
+      <HighlightMarker index={selectedSquareIndex} squareSize={squareSize} orientation={orientation} kind="selected" />
+      <HighlightMarker index={checkedKingIndex} squareSize={squareSize} orientation={orientation} kind="check" />
+    </>
   );
 });
 
 const styles = StyleSheet.create({
+  marker: { position: "absolute", left: 0, top: 0 },
   lastMove: { backgroundColor: "rgba(255, 214, 112, 0.34)" },
   selected: { backgroundColor: "rgba(255,255,255,0.34)", borderWidth: 2, borderColor: "rgba(255,255,255,.88)" },
   check: { backgroundColor: "rgba(208,66,91,.36)" },

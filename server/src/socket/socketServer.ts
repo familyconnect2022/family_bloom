@@ -64,6 +64,8 @@ const SQUARE = /^[a-h][1-8]$/;
 const TEST_BOT_ENABLED = /^(1|true|yes)$/i.test(process.env.CHESS_TEST_BOT_ENABLED ?? "");
 const TEST_BOT_UID_PREFIX = "__bloom_test_bot__";
 const TEST_BOT_NAME = "Bloom Bot";
+// V4M diagnostic: fixed response delay removes random think-time as a variable.
+const TEST_BOT_MOVE_DELAY_MS = 120;
 
 function testBotUidFor(uid: string) {
   return `${TEST_BOT_UID_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0, 24)}`;
@@ -206,7 +208,9 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     const existing = botTimers.get(state.gameId);
     if (existing?.revision === state.revision) return;
     clearBotTimer(state.gameId);
-    const delay = 250 + Math.floor(Math.random() * 200);
+    // Fixed for V4M device diagnosis: every Bloom Bot action waits exactly
+    // 120 ms. If a check still pauses noticeably longer than this, the extra
+    // latency is outside the artificial bot think delay (network/client/render).
     const timer = setTimeout(() => {
       void (async () => {
         botTimers.delete(state.gameId);
@@ -234,7 +238,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           console.warn("[chess:test-bot] action skipped", { gameId: state.gameId, error: error instanceof Error ? error.message : String(error) });
         }
       })();
-    }, delay);
+    }, TEST_BOT_MOVE_DELAY_MS);
     timer.unref();
     botTimers.set(state.gameId, { revision: state.revision, timer });
   }

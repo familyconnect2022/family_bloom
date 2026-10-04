@@ -1,18 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 
 import { ChessBattleEffects, deriveChessBattleEvent, type ChessBattleEvent } from "../../components/chess/ChessBattleEffects";
 import { ChessBoard } from "../../components/chess/ChessBoard";
-import { ChessDiagnosticPanel } from "../../components/chess/ChessDiagnosticPanel";
 import { capturePoints } from "../../components/chess/ChessMaterialStrip";
 import { ChessPlayerRail } from "../../components/chess/ChessPlayerRail";
+import { ChessPromotionOverlay } from "../../components/chess/ChessPromotionOverlay";
+import { ChessResultToast, type ChessResultOutcome } from "../../components/chess/ChessResultToast";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
-import { BloomCard } from "../../components/ui/BloomPageComponents";
 import { useBloomDialog } from "../../components/ui/BloomDialogProvider";
 import { useBloomToast } from "../../components/ui/BloomToast";
 import { COLORS } from "../../constants/theme";
@@ -20,7 +20,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
 import { useChessGame } from "../../hooks/chess/useChessGame";
 import { getHomeGamePlayWindow } from "../../services/gameRoomPolicy";
-import { CHESS_ERROR_COPY, emptyChessCaptureSummary, type ChessColor, type ChessGameStatus } from "../../types/chess";
+import { CHESS_ERROR_COPY, emptyChessCaptureSummary, type ChessColor, type ChessGameState, type ChessGameStatus } from "../../types/chess";
 import { safeRouterBack } from "../../utils/safeRouterBack";
 
 const finishCopy = (reason: string | null) => ({
@@ -50,22 +50,14 @@ export default function ChessGameScreen() {
     resolve?: (piece: "q" | "r" | "b" | "n" | null) => void;
   } | null>(null);
   const [clockNow, setClockNow] = useState(Date.now());
-  const [fxEnabled, setFxEnabled] = useState(false);
   const [battleEvent, setBattleEvent] = useState<ChessBattleEvent | null>(null);
-  const [boardMoving, setBoardMovingState] = useState(false);
-  const [visualRevision, setVisualRevisionState] = useState(0);
   const [rematchLoading, setRematchLoading] = useState(false);
+  const [resultDismissed, setResultDismissed] = useState(false);
+  const [resultReady, setResultReady] = useState(false);
   const whiteTurnActive = useSharedValue(0);
   const blackTurnActive = useSharedValue(0);
 
-  const setBoardMoving = React.useCallback((moving: boolean) => {
-    if (fxEnabled) setBoardMovingState(moving);
-  }, [fxEnabled]);
-  const setVisualRevision = React.useCallback((revision: number) => {
-    if (fxEnabled) setVisualRevisionState(revision);
-  }, [fxEnabled]);
 
-  const previousStateRef = useRef<typeof game.state>(null);
   const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
   const state = game.state;
   const me = user?.uid || "";
@@ -101,25 +93,30 @@ export default function ChessGameScreen() {
     // Expo Router may reuse this screen instance when replacing only gameId.
     // Never let the previous rematch overlay leak into the new game.
     setRematchLoading(false);
+    setResultDismissed(false);
+    setResultReady(false);
+    setPromotion(null);
+    setBattleEvent(null);
   }, [gameId]);
 
   useEffect(() => {
-    if (!state || !myColor) return;
-    const previous = previousStateRef.current;
-    previousStateRef.current = state;
-    if (!fxEnabled) {
-      setBattleEvent(null);
+    if (state?.status !== "finished") {
+      setResultReady(false);
       return;
     }
-    setBattleEvent(deriveChessBattleEvent(previous, state, myColor));
-  }, [state?.revision, state?.gameId, myColor, fxEnabled]);
+    // Let the final 80–110 ms board motion visually land before the centered
+    // result toast enters. Non-move endings (timeout/resign/draw) use the same
+    // short beat so the finish never feels abrupt.
+    const timer = setTimeout(() => setResultReady(true), 180);
+    return () => clearTimeout(timer);
+  }, [state?.gameId, state?.revision, state?.status]);
 
-  const visibleBattleEvent = fxEnabled
-    && !boardMoving
-    && battleEvent
-    && battleEvent.revision <= visualRevision
-    ? battleEvent
-    : null;
+  const handleVisualCommit = React.useCallback((previous: ChessGameState, current: ChessGameState) => {
+    if (!myColor) return;
+    // V4J: derive FX from the exact position that has just become visible,
+    // not from network state that may be one animation ahead of the board.
+    setBattleEvent(deriveChessBattleEvent(previous, current, myColor));
+  }, [myColor]);
 
   useEffect(() => {
     if (state?.drawOfferByUid && state.drawOfferByUid !== me && state.status === "active") {
@@ -203,22 +200,20 @@ export default function ChessGameScreen() {
     );
   }
 
-  const resultText = state.result === "draw"
-    ? "Hòa"
-    : (state.result === "white" && myColor === "w") || (state.result === "black" && myColor === "b")
-      ? "Bạn thắng"
-      : "Người thân thắng";
-
+  const didWin = (state.result === "white" && myColor === "w") || (state.result === "black" && myColor === "b");
+  const resultOutcome: ChessResultOutcome = state.result === "draw" ? "draw" : didWin ? "win" : "loss";
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={COLORS.background}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader
           eyebrow="CỜ VUA NHÀ MÌNH"
-          title={state.status === "finished" ? resultText : state.status === "paused" ? "Đang khôi phục ván…" : "Đến lượt ai, Bloom giữ giúp"}
-          subtitle={state.status === "paused"
-            ? "Máy chủ vừa khởi động lại. Ván sẽ tiếp tục khi cả hai người quay lại."
-            : "Đồng hồ trên máy chỉ là hiển thị; máy chủ mới là thời gian thật."}
+          title={state.status === "finished" ? "Ván cờ đã khép lại" : state.status === "paused" ? "Đang khôi phục ván…" : "Đến lượt ai, Bloom giữ giúp"}
+          subtitle={state.status === "finished"
+            ? "Kết quả đã được lưu. Bạn có thể xem lại bàn cờ hoặc chơi một ván mới."
+            : state.status === "paused"
+              ? "Máy chủ vừa khởi động lại. Ván sẽ tiếp tục khi cả hai người quay lại."
+              : "Đồng hồ trên máy chỉ là hiển thị; máy chủ mới là thời gian thật."}
           variant="game"
           onBack={() => safeRouterBack(router, "/chess-lobby" as never)}
           roundedBottom
@@ -229,15 +224,11 @@ export default function ChessGameScreen() {
           <ChessPlayerRail
             state={state}
             color={myColor === "w" ? "b" : "w"}
-            clockLabel="Đối thủ"
-            displayName={`${opponentDisplayName}${isTestBotOpponent ? " · Thử nghiệm" : ""}`}
-            colorLabel={myColor === "w" ? "Quân đen" : "Quân trắng"}
+            displayName={opponentDisplayName}
             avatarUrl={opponent?.avatarUrl}
             avatarFallback={opponentDisplayName.slice(0, 1)}
             isBot={isTestBotOpponent}
             activeSignal={myColor === "w" ? blackTurnActive : whiteTurnActive}
-            activeCopy={isTestBotOpponent ? "Bloom Bot đang tính nước…" : "Đối phương đang đi"}
-            inactiveCopy="Đang chờ lượt"
             captures={myColor === "w" ? captureSummary.byBlack : captureSummary.byWhite}
             advantage={myColor === "w" ? blackAdvantage : whiteAdvantage}
           />
@@ -251,122 +242,92 @@ export default function ChessGameScreen() {
               onMove={runMove}
               onResync={game.resync}
               onPromotion={requestPromotion}
-              onMotionChange={setBoardMoving}
-              onVisualRevisionChange={setVisualRevision}
               onVisualTurnChange={handleVisualTurnChange}
+              onVisualCommit={handleVisualCommit}
+              hintsEnabled
+              motionFxEnabled
             />
-            {fxEnabled ? <ChessBattleEffects event={visibleBattleEvent} mode="full" /> : null}
+            {state.status !== "finished" ? <ChessBattleEffects event={battleEvent} mode="full" /> : null}
+            <ChessResultToast
+              visible={state.status === "finished" && resultReady && !resultDismissed}
+              outcome={resultOutcome}
+              reason={finishCopy(state.finishReason)}
+              primaryLabel={canRematchNow ? "Chơi ván mới" : "Hẹn từ 06:00"}
+              primaryDisabled={!canRematchNow}
+              primaryLoading={rematchLoading}
+              onPrimary={() => void handleRematch()}
+              onDismiss={() => setResultDismissed(true)}
+            />
           </View>
 
           <ChessPlayerRail
             state={state}
             color={myColor}
-            clockLabel="Bạn"
             displayName={myMember?.shortName || myMember?.displayName || "Bạn"}
-            colorLabel={myColor === "w" ? "Quân trắng" : "Quân đen"}
             avatarUrl={myMember?.avatarUrl}
             avatarFallback={(myMember?.shortName || myMember?.displayName || "B").slice(0, 1)}
             activeSignal={myColor === "w" ? whiteTurnActive : blackTurnActive}
-            activeCopy="Đến lượt bạn"
-            inactiveCopy={state.status === "active" ? "Đối phương đang đi" : "Ván đã dừng"}
             captures={myColor === "w" ? captureSummary.byWhite : captureSummary.byBlack}
             advantage={myColor === "w" ? whiteAdvantage : blackAdvantage}
           />
 
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: fxEnabled }}
-            style={[styles.fxChip, fxEnabled && styles.fxChipOn]}
-            onPress={() => {
-              setBattleEvent(null);
-              setFxEnabled((current) => !current);
-            }}
-          >
-            <Ionicons name={fxEnabled ? "sparkles" : "sparkles-outline"} size={15} color={fxEnabled ? COLORS.white : COLORS.primary} />
-            <Text style={[styles.fxChipText, fxEnabled && styles.fxChipTextOn]}>FX: {fxEnabled ? "BẬT" : "TẮT"} · chạm để test</Text>
-          </Pressable>
-
-          {promotion ? (
-            <BloomCard style={styles.promo}>
-              <Text style={styles.promoTitle}>Phong cấp thành</Text>
-              <View style={styles.promoRow}>
-                {([['q', 'Hậu'], ['r', 'Xe'], ['b', 'Tượng'], ['n', 'Mã']] as const).map(([piece, label]) => (
-                  <Pressable
-                    key={piece}
-                    style={styles.promoBtn}
-                    onPress={() => {
-                      const next = promotion;
-                      setPromotion(null);
-                      next.resolve?.(piece);
-                    }}
-                  >
-                    <Text style={styles.promoText}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </BloomCard>
+          {state.status !== "finished" ? (
+            <View style={styles.actions}>
+                          <Pressable
+                            style={styles.secondary}
+                            onPress={async () => {
+                              const ok = await confirm({
+                                title: "Đề nghị hòa?",
+                                message: "Người thân sẽ được quyền đồng ý hoặc tiếp tục ván.",
+                                confirmLabel: "Gửi đề nghị",
+                                cancelLabel: "Chưa gửi",
+                                icon: "hand-left-outline",
+                              });
+                              if (ok) {
+                                const response = await game.offerDraw();
+                                if (!response.ok) showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
+                              }
+                            }}
+                          >
+                            <Ionicons name="hand-left-outline" size={18} color={COLORS.primary} />
+                            <Text style={styles.secondaryText}>Xin hòa</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.secondary}
+                            onPress={async () => {
+                              const ok = await confirm({
+                                title: "Đầu hàng ván này?",
+                                message: "Kết quả sẽ được lưu vào lịch sử và không thể hoàn tác.",
+                                confirmLabel: "Đầu hàng",
+                                cancelLabel: "Chơi tiếp",
+                                destructive: true,
+                                icon: "flag-outline",
+                              });
+                              if (ok) {
+                                const response = await game.resign();
+                                if (!response.ok) showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
+                              }
+                            }}
+                          >
+                            <Ionicons name="flag-outline" size={18} color={COLORS.primary} />
+                            <Text style={styles.secondaryText}>Đầu hàng</Text>
+                          </Pressable>
+                        </View>
           ) : null}
 
-          {state.status === "finished" ? (
-            <BloomCard tone="soft" style={styles.result}>
-              <Text style={styles.resultTitle}>{resultText}</Text>
-              <Text style={styles.resultText}>{finishCopy(state.finishReason)}</Text>
-              <Pressable
-                disabled={rematchLoading}
-                style={[styles.primary, !canRematchNow && styles.primaryDisabled, rematchLoading && styles.primaryLoading]}
-                onPress={() => void handleRematch()}
-              >
-                {rematchLoading ? <ActivityIndicator size="small" color={COLORS.white} /> : null}
-                <Text style={styles.primaryText}>{rematchLoading ? "Đang chuẩn bị…" : canRematchNow ? "Chơi lại" : "Hẹn từ 06:00"}</Text>
-              </Pressable>
-            </BloomCard>
-          ) : (
-            <View style={styles.actions}>
-              <Pressable
-                style={styles.secondary}
-                onPress={async () => {
-                  const ok = await confirm({
-                    title: "Đề nghị hòa?",
-                    message: "Người thân sẽ được quyền đồng ý hoặc tiếp tục ván.",
-                    confirmLabel: "Gửi đề nghị",
-                    cancelLabel: "Chưa gửi",
-                    icon: "hand-left-outline",
-                  });
-                  if (ok) {
-                    const response = await game.offerDraw();
-                    if (!response.ok) showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
-                  }
-                }}
-              >
-                <Ionicons name="hand-left-outline" size={18} color={COLORS.primary} />
-                <Text style={styles.secondaryText}>Xin hòa</Text>
-              </Pressable>
-              <Pressable
-                style={styles.secondary}
-                onPress={async () => {
-                  const ok = await confirm({
-                    title: "Đầu hàng ván này?",
-                    message: "Kết quả sẽ được lưu vào lịch sử và không thể hoàn tác.",
-                    confirmLabel: "Đầu hàng",
-                    cancelLabel: "Chơi tiếp",
-                    destructive: true,
-                    icon: "flag-outline",
-                  });
-                  if (ok) {
-                    const response = await game.resign();
-                    if (!response.ok) showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
-                  }
-                }}
-              >
-                <Ionicons name="flag-outline" size={18} color={COLORS.primary} />
-                <Text style={styles.secondaryText}>Đầu hàng</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <ChessDiagnosticPanel gameId={state.gameId} />
         </View>
       </ScrollView>
+
+
+      <ChessPromotionOverlay
+        visible={!!promotion}
+        color={myColor}
+        onSelect={(piece) => {
+          const next = promotion;
+          setPromotion(null);
+          next?.resolve?.(piece);
+        }}
+      />
 
       {rematchLoading ? (
         <View style={styles.rematchOverlay} pointerEvents="auto">
@@ -400,40 +361,14 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+    overflow: "visible",
   },
-  fxChip: {
-    alignSelf: "center",
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: "#FFF9FC",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  fxChipOn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  fxChipText: { fontSize: 10.5, fontWeight: "900", color: COLORS.primaryText },
-  fxChipTextOn: { color: COLORS.white },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   loading: { fontSize: 14, color: COLORS.secondaryText, fontWeight: "800" },
   retry: { color: COLORS.primary, fontWeight: "900" },
   actions: { flexDirection: "row", gap: 10 },
   secondary: { flex: 1, minHeight: 46, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center" },
   secondaryText: { color: COLORS.primary, fontWeight: "900", fontSize: 12 },
-  promo: { gap: 10 },
-  promoTitle: { fontSize: 13, fontWeight: "900", color: COLORS.primaryText },
-  promoRow: { flexDirection: "row", gap: 8 },
-  promoBtn: { flex: 1, minHeight: 40, borderRadius: 14, backgroundColor: "#F9E8EF", alignItems: "center", justifyContent: "center" },
-  promoText: { fontSize: 11, fontWeight: "900", color: COLORS.primaryText },
-  result: { gap: 8, alignItems: "center" },
-  resultTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primaryText },
-  resultText: { fontSize: 12, color: COLORS.secondaryText },
-  primary: { marginTop: 4, minHeight: 46, paddingHorizontal: 24, borderRadius: 18, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
-  primaryDisabled: { opacity: 0.62 },
-  primaryLoading: { opacity: 0.9 },
-  primaryText: { color: COLORS.white, fontWeight: "900" },
   rematchOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 200,
