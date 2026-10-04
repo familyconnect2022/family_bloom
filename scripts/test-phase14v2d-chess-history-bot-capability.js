@@ -13,7 +13,7 @@ check('history uses modular Firestore getFirestore',history.includes('getFiresto
 check('history no longer calls legacy firestore()',!history.includes('firestore()')&&!history.includes('import firestore from'));
 check('history keeps bounded page size 20',history.includes('limit(20)')&&history.includes('hasMore: snap.size === 20'));
 check('history pagination uses startAfter',history.includes('startAfter('));
-check('history screen catches runtime query errors',historyScreen.includes('history:load_failed')&&historyScreen.includes('Chưa tải được lịch sử'));
+check('history screen catches runtime query errors without console spam',historyScreen.includes('catch (cause)')&&historyScreen.includes('setError(message)')&&historyScreen.includes('Chưa tải được lịch sử')&&!historyScreen.includes('[ChessDebug]'));
 check('server app join reports test-bot capability',/appJoin[\s\S]*testBotEnabled: TEST_BOT_ENABLED/.test(server));
 check('server lobby join reports test-bot capability',/lobbyJoin[\s\S]*testBotEnabled: TEST_BOT_ENABLED/.test(server));
 check('client reads app-join server capability',ctx.includes('server:capabilities')&&ctx.includes('joined.data.testBotEnabled === true'));

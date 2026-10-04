@@ -8,6 +8,8 @@ type FxIntensity = "subtle" | "active" | "dramatic" | "finale";
 
 export type ChessBattleEvent = {
   key: string;
+  revision: number;
+  mine: boolean;
   kind: "capture" | "major_capture" | "check" | "promotion" | "checkmate" | "timeout" | "resignation" | "draw";
   intensity: FxIntensity;
   title: string;
@@ -40,25 +42,25 @@ function moveActorIsMe(state: ChessGameState, myColor: ChessColor) {
 export function deriveChessBattleEvent(previous: ChessGameState | null, current: ChessGameState, myColor: ChessColor): ChessBattleEvent | null {
   if (!previous || previous.gameId !== current.gameId || current.revision <= previous.revision) return null;
   const mine = moveActorIsMe(current, myColor);
-  const moveAdvanced = current.ply > previous.ply;
+  const moveAdvanced = current.ply === previous.ply + 1;
   const seed = current.revision + current.ply;
 
   if (current.status === "finished") {
     if (current.finishReason === "checkmate") {
       return {
-        key: `${current.gameId}:${current.revision}:mate`, kind: "checkmate", intensity: "finale", title: "CHIẾU HẾT.",
+        key: `${current.gameId}:${current.revision}:mate`, revision: current.revision, mine, kind: "checkmate", intensity: "finale", title: "CHIẾU HẾT.",
         subtitle: mine ? pick(["Một đòn quyết định — bạn khép lại ván đấu.", "Vua đã hết đường lui. Ván cờ thuộc về bạn."], seed) : pick(["Một đòn quyết định vừa khép lại ván đấu.", "Vua không còn đường lui. Hẹn một ván phục thù nhé."], seed),
       };
     }
     if (current.finishReason === "timeout") {
       const won = (current.result === "white" && myColor === "w") || (current.result === "black" && myColor === "b");
-      return { key: `${current.gameId}:${current.revision}:timeout`, kind: "timeout", intensity: "finale", title: "HẾT GIỜ.", subtitle: won ? "Thời gian đã nghiêng ván đấu về phía bạn." : "Đồng hồ đã quyết định ván đấu." };
+      return { key: `${current.gameId}:${current.revision}:timeout`, revision: current.revision, mine, kind: "timeout", intensity: "finale", title: "HẾT GIỜ.", subtitle: won ? "Thời gian đã nghiêng ván đấu về phía bạn." : "Đồng hồ đã quyết định ván đấu." };
     }
     if (current.finishReason === "resignation") {
       const won = (current.result === "white" && myColor === "w") || (current.result === "black" && myColor === "b");
-      return { key: `${current.gameId}:${current.revision}:resign`, kind: "resignation", intensity: "dramatic", title: "VÁN ĐẤU KHÉP LẠI.", subtitle: won ? "Đối thủ đã dừng cuộc chiến tại đây." : "Bạn đã dừng ván cờ. Một ván khác vẫn đang chờ." };
+      return { key: `${current.gameId}:${current.revision}:resign`, revision: current.revision, mine, kind: "resignation", intensity: "dramatic", title: "VÁN ĐẤU KHÉP LẠI.", subtitle: won ? "Đối thủ đã dừng cuộc chiến tại đây." : "Bạn đã dừng ván cờ. Một ván khác vẫn đang chờ." };
     }
-    return { key: `${current.gameId}:${current.revision}:draw`, kind: "draw", intensity: "dramatic", title: "BẤT PHÂN THẮNG BẠI.", subtitle: pick(["Không ai chịu lùi bước.", "Một ván cờ cân bằng đến phút cuối."], seed) };
+    return { key: `${current.gameId}:${current.revision}:draw`, revision: current.revision, mine, kind: "draw", intensity: "dramatic", title: "BẤT PHÂN THẮNG BẠI.", subtitle: pick(["Không ai chịu lùi bước.", "Một ván cờ cân bằng đến phút cuối."], seed) };
   }
 
   if (!moveAdvanced || !current.lastMove) return null;
@@ -70,7 +72,7 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
   if (promoted) {
     const promotedPiece = current.lastMove.promotion ? PIECE_NAMES[current.lastMove.promotion] : "Hậu";
     return {
-      key: `${current.gameId}:${current.revision}:promotion`, kind: "promotion", intensity: checking ? "finale" : "dramatic",
+      key: `${current.gameId}:${current.revision}:promotion`, revision: current.revision, mine, kind: "promotion", intensity: checking ? "finale" : "dramatic",
       title: `PHONG ${promotedPiece.toUpperCase()}!`,
       subtitle: checking ? "Một quân Tốt vừa lột xác — và Vua đang chịu áp lực." : pick(["Một quân Tốt đã đi đến tận cùng.", "Thế cờ vừa đổi khác hoàn toàn."], seed),
     };
@@ -78,7 +80,7 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
 
   if (checking) {
     return {
-      key: `${current.gameId}:${current.revision}:check`, kind: "check", intensity: "dramatic", title: captured ? "ĂN QUÂN · CHIẾU!" : "CHIẾU!",
+      key: `${current.gameId}:${current.revision}:check`, revision: current.revision, mine, kind: "check", intensity: "dramatic", title: captured ? "ĂN QUÂN · CHIẾU!" : "CHIẾU!",
       subtitle: captured
         ? (mine ? "Một quân đã rời bàn — và Vua đối thủ đang chịu áp lực." : "Một quân của bạn vừa rời bàn — Vua cũng đang bị uy hiếp.")
         : mine ? pick(["Bạn vừa đặt Vua đối thủ dưới áp lực.", "Không còn chỗ cho một nước đi hời hợt."], seed) : pick(["Vua của bạn đang bị uy hiếp.", "Áp lực đang dồn về phía Vua."], seed),
@@ -90,7 +92,7 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
     const major = target === "q" || target === "r";
     const pieceName = PIECE_NAMES[target] || "quân";
     return {
-      key: `${current.gameId}:${current.revision}:capture`, kind: major ? "major_capture" : "capture", intensity: major ? "active" : "subtle",
+      key: `${current.gameId}:${current.revision}:capture`, revision: current.revision, mine, kind: major ? "major_capture" : "capture", intensity: major ? "active" : "subtle",
       title: major ? "MỘT ĐÒN NẶNG!" : "ĂN QUÂN!",
       subtitle: major ? `${pieceName} đã rời bàn. Thế cân bằng vừa rung chuyển.` : mine ? pick(["Bạn vừa giành thêm không gian trên bàn cờ.", "Thế trận bắt đầu nóng lên."], seed) : pick(["Một quân của bạn vừa rời bàn.", "Thế trận bắt đầu nóng lên."], seed),
     };
@@ -101,8 +103,7 @@ export function deriveChessBattleEvent(previous: ChessGameState | null, current:
 
 export function ChessBattleEffects({ event, mode = "full", onComplete }: { event: ChessBattleEvent | null; mode?: ChessFxMode; onComplete?: () => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.86)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
+  const translateY = useRef(new Animated.Value(6)).current;
   const glow = useRef(new Animated.Value(0)).current;
   const [visibleEvent, setVisibleEvent] = useState<ChessBattleEvent | null>(null);
 
@@ -115,53 +116,71 @@ export function ChessBattleEffects({ event, mode = "full", onComplete }: { event
   }, [visibleEvent]);
 
   useEffect(() => {
-    if (!event) { setVisibleEvent(null); return; }
-    if (mode === "off") {
-      setVisibleEvent(null);
-      const timer = setTimeout(() => onComplete?.(), 0);
-      return () => clearTimeout(timer);
-    }
-    setVisibleEvent(event);
-    opacity.stopAnimation(); scale.stopAnimation(); translateY.stopAnimation(); glow.stopAnimation();
-    opacity.setValue(0); scale.setValue(mode === "light" ? 0.96 : 0.78); translateY.setValue(mode === "light" ? 3 : 13); glow.setValue(0);
+    opacity.stopAnimation();
+    translateY.stopAnimation();
+    glow.stopAnimation();
 
-    if (mode === "full") {
+    if (!event || mode === "off") {
+      opacity.setValue(0);
+      translateY.setValue(6);
+      glow.setValue(0);
+      setVisibleEvent(null);
+      return;
+    }
+
+    setVisibleEvent(event);
+    opacity.setValue(0);
+    translateY.setValue(mode === "light" ? 2 : 6);
+    glow.setValue(0);
+
+    // Haptics are intentionally reserved for the local player's own decisive events. Opponent/bot
+    // state bursts no longer trigger repeated native feedback while the next piece is already moving.
+    if (mode === "full" && (event.mine || event.intensity === "finale")) {
       const feedback = event.intensity === "finale" ? Haptics.NotificationFeedbackType.Success : null;
       if (feedback) void Haptics.notificationAsync(feedback).catch(() => undefined);
-      else void Haptics.impactAsync(event.intensity === "dramatic" ? Haptics.ImpactFeedbackStyle.Heavy : event.intensity === "active" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-    } else {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+      else void Haptics.impactAsync(
+        event.intensity === "dramatic" ? Haptics.ImpactFeedbackStyle.Heavy
+          : event.intensity === "active" ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light,
+      ).catch(() => undefined);
     }
 
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, speed: 15, bounciness: mode === "light" ? 3 : 11, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, speed: 18, bounciness: 5, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 105, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 125, useNativeDriver: true }),
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 280, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: event.intensity === "finale" ? 1450 : event.intensity === "dramatic" ? 1000 : 760, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: mode === "light" ? 0.22 : 0.42, duration: 120, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: event.intensity === "finale" ? 560 : event.intensity === "dramatic" ? 430 : 320, useNativeDriver: true }),
       ]),
     ]).start();
 
-    const hold = event.intensity === "finale" ? 2600 : event.intensity === "dramatic" ? 1850 : event.intensity === "active" ? 1450 : 1100;
+    // Keep FX short enough to finish before a normal reply. If a new move begins sooner, the parent
+    // passes event=null and this effect is cancelled immediately instead of overlapping board motion.
+    const hold = event.intensity === "finale" ? 900 : event.intensity === "dramatic" ? 700 : event.intensity === "active" ? 590 : 480;
     const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 0.96, duration: 260, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 115, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: -2, duration: 115, useNativeDriver: true }),
       ]).start(() => {
         setVisibleEvent(null);
         onComplete?.();
       });
     }, hold);
-    return () => clearTimeout(timer);
-  }, [event?.key, glow, mode, onComplete, opacity, scale, translateY]);
+
+    return () => {
+      clearTimeout(timer);
+      opacity.stopAnimation();
+      translateY.stopAnimation();
+      glow.stopAnimation();
+    };
+  }, [event?.key, glow, mode, onComplete, opacity, translateY]);
 
   if (!visibleEvent || mode === "off") return null;
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.View style={[styles.glow, { opacity: glow, backgroundColor: palette.accent }]} />
-      <Animated.View style={[styles.banner, { backgroundColor: palette.bg, borderColor: palette.border, opacity, transform: [{ translateY }, { scale }] }]}>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} collapsable={false}>
+      <Animated.View renderToHardwareTextureAndroid style={[styles.glow, { opacity: glow, backgroundColor: palette.accent }]} />
+      <Animated.View renderToHardwareTextureAndroid style={[styles.banner, { backgroundColor: palette.bg, borderColor: palette.border, opacity, transform: [{ translateY }] }]}> 
         <Text style={[styles.title, { color: palette.accent }]}>{visibleEvent.title}</Text>
         <Text style={styles.subtitle}>{visibleEvent.subtitle}</Text>
       </Animated.View>
@@ -170,8 +189,8 @@ export function ChessBattleEffects({ event, mode = "full", onComplete }: { event
 }
 
 const styles = StyleSheet.create({
-  glow: { position: "absolute", left: "18%", right: "18%", top: "30%", height: 120, borderRadius: 60, opacity: 0.12 },
-  banner: { position: "absolute", left: 18, right: 18, top: "36%", borderRadius: 20, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 12, alignItems: "center", shadowColor: "#331B25", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 15, elevation: 8 },
+  glow: { position: "absolute", left: "22%", right: "22%", top: "31%", height: 96, borderRadius: 48, opacity: 0.1 },
+  banner: { position: "absolute", left: 18, right: 18, top: "36%", borderRadius: 20, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 12, alignItems: "center", shadowColor: "#331B25", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.1, shadowRadius: 9, elevation: 5 },
   title: { fontSize: 20, lineHeight: 24, fontWeight: "900", letterSpacing: 0.7, textAlign: "center" },
   subtitle: { marginTop: 4, color: "#6F5962", fontSize: 11.5, lineHeight: 17, fontWeight: "700", textAlign: "center" },
 });

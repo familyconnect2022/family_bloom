@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
 import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
-import { ChessDomainError, type ChessTimeControl, type PublicGameState } from "../chess/chessTypes.js";
+import { ChessDomainError, type ChessTimeControl, type ClientGameState, type PublicGameState } from "../chess/chessTypes.js";
 import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 
@@ -22,6 +22,7 @@ const E = {
   gameJoin: "chess:game:join",
   gameState: "chess:game:state",
   gameMove: "chess:game:move",
+  gameMoveApplied: "chess:game:moveApplied",
   gameResign: "chess:game:resign",
   drawOffer: "chess:draw:offer",
   drawAccept: "chess:draw:accept",
@@ -31,6 +32,11 @@ const E = {
   sessionGetActive: "chess:session:getActive",
   testBotInvite: "chess:test:bot:invite",
 } as const;
+
+function toClientGameState(state: PublicGameState): ClientGameState {
+  const { pgn: _pgn, legalMoves: _legalMoves, ...client } = state;
+  return client;
+}
 
 type Ack = (response: unknown) => void;
 type SocketData = { uid: string; appFamilyId?: string; lobbyFamilyId?: string; gameId?: string; gameFamilyId?: string };
@@ -160,10 +166,11 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
   const botTimers = new Map<string, { revision: number; timer: NodeJS.Timeout }>();
   const manager = new ChessGameManager(
     persistence,
-    (gameId, state) => {
-      io.to(`chess:game:${gameId}`).emit(E.gameState, state);
-      scheduleTestBotAction(state);
-      if (state.status === "finished") void emitPresence(state.familyId);
+    (event) => {
+      if (event.kind === "move") io.to(`chess:game:${event.state.gameId}`).emit(E.gameMoveApplied, event.delta);
+      else io.to(`chess:game:${event.state.gameId}`).emit(E.gameState, toClientGameState(event.state));
+      scheduleTestBotAction(event.state);
+      if (event.state.status === "finished") void emitPresence(event.state.familyId);
     },
   );
 
@@ -510,7 +517,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           const stored = await persistence.load(active.familyId, active.gameId);
           if (stored?.recentRequestIds.includes(requestId)) {
             const state = await manager.join(active.familyId, active.gameId, uid);
-            return { gameId: state.gameId, state };
+            return { gameId: state.gameId, state: toClientGameState(state) };
           }
         }
         throw new ChessDomainError("CHESS_INVITE_EXPIRED");
@@ -535,12 +542,12 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           playerSocket.data.gameId = state.gameId;
           playerSocket.data.gameFamilyId = invite.familyId;
           await playerSocket.join(`chess:game:${state.gameId}`);
-          playerSocket.emit(E.gameState, state);
+          playerSocket.emit(E.gameState, toClientGameState(state));
         }
       }
       scheduleTestBotAction(state);
       await emitPresence(invite.familyId);
-      return { gameId: state.gameId, state };
+      return { gameId: state.gameId, state: toClientGameState(state) };
     }));
 
     socket.on(E.sessionGetActive, (raw: unknown, ack: Ack) => safe(ack, async () => {
@@ -565,26 +572,26 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       await socket.join(`chess:game:${gameId}`);
       scheduleTestBotAction(state);
       await emitPresence(familyId);
-      return state;
+      return toClientGameState(state);
     }));
 
     socket.on(E.gameResync, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`resync:${uid}`, 12, 10_000);
       const gameId = asId(asRecord(raw).gameId, "gameId");
-      return requireGameMembership(gameId);
+      return toClientGameState(await requireGameMembership(gameId));
     }));
 
     socket.on(E.gameMove, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`move:${uid}`, 20, 5_000);
       const payload = asRecord(raw);
-      const requestId = asRequestId(payload.requestId);
+      const clientMoveId = asRequestId(payload.clientMoveId);
       const gameId = asId(payload.gameId, "gameId");
-      const expectedRevision = asRevision(payload.expectedRevision);
+      const expectedVersion = asRevision(payload.expectedVersion);
       const from = asSquare(payload.from, "from");
       const to = asSquare(payload.to, "to");
       const promotion = asPromotion(payload.promotion);
       await requireGameMembership(gameId);
-      return manager.move(gameId, uid, requestId, expectedRevision, from, to, promotion);
+      return manager.move(gameId, uid, clientMoveId, expectedVersion, from, to, promotion);
     }));
 
     socket.on(E.gameResign, (raw: unknown, ack: Ack) => safe(ack, async () => {
@@ -631,11 +638,11 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           playerSocket.data.gameId = next.gameId;
           playerSocket.data.gameFamilyId = old.familyId;
           await playerSocket.join(`chess:game:${next.gameId}`);
-          playerSocket.emit(E.gameState, next);
+          playerSocket.emit(E.gameState, toClientGameState(next));
         }
         scheduleTestBotAction(next);
         await emitPresence(old.familyId);
-        return { waiting: false, gameId: next.gameId, state: next };
+        return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
       }
       const votes = rematchVotes.get(gameId) ?? new Set<string>();
       votes.add(uid);
@@ -650,11 +657,11 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           playerSocket.data.gameId = next.gameId;
           playerSocket.data.gameFamilyId = old.familyId;
           await playerSocket.join(`chess:game:${next.gameId}`);
-          playerSocket.emit(E.gameState, next);
+          playerSocket.emit(E.gameState, toClientGameState(next));
         }
       }
       await emitPresence(old.familyId);
-      return { waiting: false, gameId: next.gameId, state: next };
+      return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
     }));
 
     socket.on("disconnect", () => {

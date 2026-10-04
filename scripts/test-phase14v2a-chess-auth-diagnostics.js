@@ -9,7 +9,7 @@ const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.ba
 const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
 check('Chess client uses RNFirebase modular getAuth API',socket.includes('import { getAuth } from "@react-native-firebase/auth"')&&socket.includes('getAuth().currentUser'));
 check('legacy callable auth API removed from Chess socket service',!socket.includes('import auth from "@react-native-firebase/auth"')&&!socket.includes('auth().currentUser'));
-check('prewake diagnostics logs URL health status and elapsed time',socket.includes('[ChessDebug]')&&socket.includes('prewake:response')&&socket.includes('response.status')&&socket.includes('elapsedMs'));
+check('prewake diagnostics retain URL health status and elapsed metadata without console output',socket.includes('prewake:response')&&socket.includes('response.status')&&socket.includes('elapsedMs')&&!socket.includes('console.log("[ChessDebug]"'));
 check('prewake fails explicitly on non-2xx health response',socket.includes('if (!response.ok) throw new Error(`CHESS_HEALTH_HTTP_${response.status}`)'));
 check('connect diagnostics record Firebase user presence without printing token',socket.includes('connect:auth')&&socket.includes('hasFirebaseUser')&&socket.includes('tokenPresent'));
 check('socket connect_error and disconnect are diagnosed',socket.includes('socket:connect_error')&&socket.includes('socket:disconnect'));

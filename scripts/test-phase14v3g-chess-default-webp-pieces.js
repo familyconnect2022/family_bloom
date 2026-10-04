@@ -22,8 +22,8 @@ check('challenge overlay no longer exposes piece theme selection', !overlay.incl
 check('game route no longer carries pieceTheme', !game.includes('pieceTheme') && !game.includes('ChessPreGameThemeModal'));
 check('realtime accept invite no longer carries theme', !context.includes('incomingPieceTheme') && !context.includes('pieceTheme?:') && context.includes('acceptInvite: (inviteId: string)'));
 check('profile domain no longer writes chess theme preference', !user.includes('chessPieceTheme') && !profile.includes('updateChessPieceTheme') && !normalize.includes('chessPieceTheme'));
-check('smooth optimistic ChessBoard remains enabled', board.includes('Animated.timing(progress') && board.includes('optimistic: true') && board.includes('rollbackVisualMove'));
-check('reconcile/FX gate remains in app flow', game.includes('battleQueue') && game.includes('delayMs=moveAdvanced?280:140'));
+check('smooth ChessBoard motion remains enabled', board.includes('Animated.timing(progress') && board.includes('useNativeDriver: true') && (board.includes('optimistic: true') || board.includes('moveRequestRef')));
+check('reconcile/FX gate remains in app flow', (game.includes('visibleBattleEvent=!boardMoving') || game.includes('visibleBattleEvent=fxEnabled&&!boardMoving')) && game.includes('battleEvent.revision<=visualRevision'));
 check('old theme selector component removed', !fs.existsSync(path.join(root,'src/components/chess/ChessPreGameThemeModal.tsx')));
 check('old theme constants removed', !fs.existsSync(path.join(root,'src/constants/chessThemes.ts')));
 console.log(`Phase 14V.3G Default WebP Pieces: ${pass} PASS / ${fail} FAIL`);

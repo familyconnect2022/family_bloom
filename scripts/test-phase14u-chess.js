@@ -16,13 +16,13 @@ check('game foreground resync',game.includes('AppState')&&game.includes('gameRes
 check('socket exposes reconnect signal',socket.includes('listeners.connected')&&socket.includes('socket.on("connect"'));
 check('global chess provider rejoins app after reconnect',realtime.includes('CHESS_EVENTS.appJoin')&&realtime.includes('stopConnected')&&realtime.includes('joinForeground'));
 check('game rejoins room after reconnect',game.includes('stopConnected')&&game.includes('gameJoin'));
-check('client sends expected revision',/expectedRevision\s*:\s*(?:state|current)\.revision/.test(game));
-check('board uses authoritative legalMoves',board.includes('state.legalMoves'));
+check('client sends expected authoritative version',/expectedVersion\s*:\s*(?:state|current)\.revision/.test(game));
+check('client derives visual legal moves locally while server still validates',board.includes('new Chess(')&&board.includes('chess.moves')&&manager.includes('r.chess.move'));
 check('clock uses monotonic performance now',clock.includes('performance?.now'));
 check('server uses chess.js',manager.includes('from "chess.js"'));
 check('server mutation queue per game',manager.includes('this.queues')&&manager.includes('enqueue<T>'));
 check('server monotonic clock',manager.includes('performance.now()'));
-check('accepted move persists before state broadcast',manager.indexOf('await this.persistence.save(r.game)') < manager.indexOf('this.broadcast(gameId, state)'));
+check('accepted moves checkpoint periodically and terminal state persists',manager.includes('CHECKPOINT_EVERY_PLY')&&manager.includes('history().length % CHECKPOINT_EVERY_PLY === 0')&&manager.includes('await this.persistence.finish(r.game)'));
 check('server rollback snapshot on persistence failure',manager.includes('restoreSnapshot'));
 check('request ids persisted durably',manager.includes('recentRequestIds')&&manager.includes('remember(r.game, requestId)'));
 check('timeout scheduler shared 300ms',manager.includes('setInterval')&&manager.includes('300'));
@@ -53,7 +53,7 @@ check('DEBUG build runs Phase 14U gate',debugBat.includes('npm run phase14u:chec
 check('RELEASE build runs Phase 14U gate',releaseBat.includes('npm run phase14u:check'));
 check('socket payloads are runtime validated',socketServer.includes('asTimeControl')&&socketServer.includes('asRevision')&&socketServer.includes('asSquare'));
 check('timeout rechecks after game queue',manager.includes('Re-check after entering the per-game queue')&&manager.includes('clockExpired(r)'));
-check('mutation ACK updates client authoritative state',game.includes('applyStateMutation')&&game.includes('commitState(response.data, \"ack\")'));
+check('non-move mutation ACK updates client authoritative snapshot',game.includes('applyStateMutation')&&game.includes('commitSnapshot(response.data, \"ack\")'));
 check('outgoing invite can be cancelled from lobby',lobby.includes('outgoingInvite')&&realtime.includes('CHESS_EVENTS.inviteCancel')&&realtime.includes('cancelInvite'));
 check('history list rule is bounded',rules.includes('request.query.limit <= 20'));
 console.log(`Phase 14U Chess static: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

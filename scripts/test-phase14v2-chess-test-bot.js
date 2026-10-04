@@ -38,7 +38,7 @@ check('bot action waits briefly instead of moving instantly',server.includes('25
 check('bot scheduling dedupes by authoritative revision',server.includes('existing?.revision === state.revision'));
 check('bot timer clears when game not active',server.includes('state.status !== "active"')&&server.includes('clearBotTimer'));
 check('bot auto rejects draw offer for one-device testing',server.includes('await manager.rejectDraw'));
-check('bot rematch creates a new game',server.includes('if (old.testBotUid)')&&server.includes('return { waiting: false, gameId: next.gameId, state: next }'));
+check('bot rematch creates a new game',server.includes('if (old.testBotUid)')&&server.includes('return { waiting: false, gameId: next.gameId, state: toClientGameState(next) }'));
 check('bot rematch bypasses quiet hours while human rematch remains gated',server.includes('if (!old.testBotUid && !isFamilyGameCreationOpen())')&&server.indexOf('if (!old.testBotUid && !isFamilyGameCreationOpen())')<server.indexOf('if (old.testBotUid)'));
 check('test bot invite bypasses quiet hours',(()=>{const a=server.indexOf('socket.on(E.testBotInvite');const b=server.indexOf('socket.on(E.inviteCreate',a);return a>=0&&b>a&&!server.slice(a,b).includes('assertFamilyGameCreationOpen()')})());
 check('test bot invite still refuses when human already active',/testBotInvite[\s\S]*getActiveForUid\(uid\)/.test(server));

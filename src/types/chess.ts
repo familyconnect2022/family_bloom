@@ -10,9 +10,15 @@ export type ChessTimeControl =
   | { kind: "clocked"; initialMs: number; incrementMs: number }
   | { kind: "unlimited"; initialMs: null; incrementMs: 0 };
 
-export type ChessMoveHint = { from: string; to: string; promotion?: "q" | "r" | "b" | "n" };
+export type ChessPromotionPiece = "q" | "r" | "b" | "n";
+export type ChessMoveHint = { from: string; to: string; promotion?: ChessPromotionPiece };
 export type ChessLastMove = ChessMoveHint & { san: string };
 
+/**
+ * Full authoritative snapshot used only for join / reconnect / resync / rare
+ * non-move mutations. Hot-path move packets intentionally do not carry PGN or
+ * the full legal-move list; the client derives UI legality with local chess.js.
+ */
 export type ChessGameState = {
   gameId: string;
   familyId: string;
@@ -20,7 +26,6 @@ export type ChessGameState = {
   blackUid: string;
   status: ChessGameStatus;
   fen: string;
-  pgn: string;
   turn: ChessColor;
   revision: number;
   ply: number;
@@ -30,7 +35,6 @@ export type ChessGameState = {
   result: ChessResult;
   finishReason: ChessFinishReason;
   lastMove: ChessLastMove | null;
-  legalMoves: ChessMoveHint[];
   checkSquare: string | null;
   drawOfferByUid: string | null;
   serverNowMs: number;
@@ -40,6 +44,70 @@ export type ChessGameState = {
   testBotUid?: string | null;
   isTestGame?: boolean;
 };
+
+export type ChessAppliedMove = {
+  from: string;
+  to: string;
+  san: string;
+  color: ChessColor;
+  piece: "p" | "n" | "b" | "r" | "q" | "k";
+  flags: string;
+  captured?: "p" | "n" | "b" | "r" | "q";
+  promotion?: ChessPromotionPiece;
+};
+
+/** Tiny authoritative delta broadcast once per accepted move. */
+export type ChessMoveDelta = {
+  gameId: string;
+  clientMoveId: string;
+  version: number;
+  ply: number;
+  move: ChessAppliedMove;
+  fen: string;
+  turn: ChessColor;
+  whiteRemainingMs: number | null;
+  blackRemainingMs: number | null;
+  checkSquare: string | null;
+  status: ChessGameStatus;
+  result: ChessResult;
+  finishReason: ChessFinishReason;
+  drawOfferByUid: string | null;
+  serverNowMs: number;
+  endedAt: string | null;
+};
+
+/** Small ACK for a move command. Board truth arrives through gameMoveApplied. */
+export type ChessMoveCommandAck = {
+  clientMoveId: string;
+  version: number;
+  duplicate?: boolean;
+};
+
+export function applyChessMoveDelta(current: ChessGameState, delta: ChessMoveDelta): ChessGameState {
+  if (current.gameId !== delta.gameId || delta.version < current.revision) return current;
+  return {
+    ...current,
+    status: delta.status,
+    fen: delta.fen,
+    turn: delta.turn,
+    revision: delta.version,
+    ply: delta.ply,
+    whiteRemainingMs: delta.whiteRemainingMs,
+    blackRemainingMs: delta.blackRemainingMs,
+    result: delta.result,
+    finishReason: delta.finishReason,
+    lastMove: {
+      from: delta.move.from,
+      to: delta.move.to,
+      san: delta.move.san,
+      ...(delta.move.promotion ? { promotion: delta.move.promotion } : {}),
+    },
+    checkSquare: delta.checkSquare,
+    drawOfferByUid: delta.drawOfferByUid,
+    serverNowMs: delta.serverNowMs,
+    endedAt: delta.endedAt,
+  };
+}
 
 export type ChessPresence = { uid: string; status: ChessPresenceStatus };
 export type ChessInviteRejected = { inviteId: string; byUid: string };
@@ -109,6 +177,7 @@ export const CHESS_EVENTS = {
   gameJoin: "chess:game:join",
   gameState: "chess:game:state",
   gameMove: "chess:game:move",
+  gameMoveApplied: "chess:game:moveApplied",
   gameResign: "chess:game:resign",
   drawOffer: "chess:draw:offer",
   drawAccept: "chess:draw:accept",

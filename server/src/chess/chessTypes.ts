@@ -18,6 +18,17 @@ export type PersistedGame = {
 export type PublicGameState = Omit<PersistedGame, "id" | "playerUids" | "recentRequestIds" | "updatedAt"> & {
   gameId: string; ply: number; legalMoves: MoveHint[]; checkSquare: string | null; serverNowMs: number;
 };
+export type ClientGameState = Omit<PublicGameState, "pgn" | "legalMoves">;
+export type AppliedMove = {
+  from: string; to: string; san: string; color: ChessColor; piece: "p"|"n"|"b"|"r"|"q"|"k"; flags: string;
+  captured?: "p"|"n"|"b"|"r"|"q"; promotion?: "q"|"r"|"b"|"n";
+};
+export type MoveDelta = {
+  gameId: string; clientMoveId: string; version: number; ply: number; move: AppliedMove; fen: string; turn: ChessColor;
+  whiteRemainingMs: number | null; blackRemainingMs: number | null; checkSquare: string | null; status: GameStatus;
+  result: GameResult; finishReason: FinishReason; drawOfferByUid: string | null; serverNowMs: number; endedAt: string | null;
+};
+export type MoveCommandAck = { clientMoveId: string; version: number; duplicate?: boolean };
 export type ChessErrorCode = "CHESS_UNAUTHORIZED" | "CHESS_NOT_FAMILY_MEMBER" | "CHESS_GAME_NOT_FOUND" |
   "CHESS_NOT_PLAYER" | "CHESS_NOT_YOUR_TURN" | "CHESS_ILLEGAL_MOVE" | "CHESS_GAME_FINISHED" |
   "CHESS_ALREADY_IN_GAME" | "CHESS_INVITE_EXPIRED" | "CHESS_PLAYER_OFFLINE" | "CHESS_INVALID_PROMOTION" |

@@ -41,7 +41,7 @@ check('battle FX derives checkmate',fx.includes('CHIẾU HẾT.'));
 check('battle FX derives timeout resignation draw',fx.includes('HẾT GIỜ.')&&fx.includes('VÁN ĐẤU KHÉP LẠI.')&&fx.includes('BẤT PHÂN THẮNG BẠI.'));
 check('battle FX uses haptic intensity',fx.includes('Haptics.ImpactFeedbackStyle.Heavy')&&fx.includes('NotificationFeedbackType.Success'));
 check('battle FX never blocks board input',fx.includes('pointerEvents="none"'));
-check('game screen supports full light off FX',gameScreen.includes('Hiệu ứng:')&&gameScreen.includes('"full"?"light"'));
+check('battle FX engine retains full light off modes and screen exposes binary A/B switch',fx.includes('export type ChessFxMode = "full" | "light" | "off"')&&gameScreen.includes('FX: {fxEnabled?"BẬT":"TẮT"}'));
 check('battle FX only reacts to newer authoritative revision',fx.includes('current.revision <= previous.revision'));
 check('socket service listens reject and disconnect events',socket.includes('inviteRejected')&&socket.includes('disconnected'));
 check('socket disconnect is centrally owned',socket.includes('Phase 14V.1: the authenticated foreground app owns Chess socket lifecycle'));

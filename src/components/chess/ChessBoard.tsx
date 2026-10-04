@@ -1,474 +1,469 @@
-import { Image } from "expo-image";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Chess } from "chess.js";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, useWindowDimensions } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
-import type { ChessColor, ChessGameState } from "../../types/chess";
+import type {
+  ChessAck,
+  ChessAppliedMove,
+  ChessColor,
+  ChessGameState,
+  ChessMoveCommandAck,
+  ChessMoveDelta,
+  ChessPromotionPiece,
+} from "../../types/chess";
+import { HighlightLayer } from "./v2/HighlightLayer";
+import { HintLayer } from "./v2/HintLayer";
+import { PieceLayer } from "./v2/PieceLayer";
+import { SquareLayer } from "./v2/SquareLayer";
+import type { ChessPieceController } from "./v2/ChessPiece";
+import { positionToSquare, squareToPosition, type BoardOrientation } from "./v2/coordinateMapper";
+import { buildPieceDescriptors, runtimeFromDescriptors, type PieceDescriptor, type PieceKey, type PieceRuntime } from "./v2/pieceIdentity";
+import { buildMoveMasks, squareToIndex } from "./v2/moveMask";
+import { useChessVisualState } from "./v2/useChessVisualState";
 
-const PIECE_IMAGES: Record<string, number> = {
-  wp: require("../../../assets/images/chess/pieces-webp-default/wp.webp"),
-  wn: require("../../../assets/images/chess/pieces-webp-default/wn.webp"),
-  wb: require("../../../assets/images/chess/pieces-webp-default/wb.webp"),
-  wr: require("../../../assets/images/chess/pieces-webp-default/wr.webp"),
-  wq: require("../../../assets/images/chess/pieces-webp-default/wq.webp"),
-  wk: require("../../../assets/images/chess/pieces-webp-default/wk.webp"),
-  bp: require("../../../assets/images/chess/pieces-webp-default/bp.webp"),
-  bn: require("../../../assets/images/chess/pieces-webp-default/bn.webp"),
-  bb: require("../../../assets/images/chess/pieces-webp-default/bb.webp"),
-  br: require("../../../assets/images/chess/pieces-webp-default/br.webp"),
-  bq: require("../../../assets/images/chess/pieces-webp-default/bq.webp"),
-  bk: require("../../../assets/images/chess/pieces-webp-default/bk.webp"),
-};
+const MOVE_MS = 115;
+const OPPONENT_MOVE_MS = 130;
+const ILLEGAL_RETURN_MS = 95;
 
-const BOARD_FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
-const BOARD_RANKS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-const MOVE_ANIMATION_MS = 145;
-const ROLLBACK_ANIMATION_MS = 110;
-
-type VisualMove = {
-  id: number;
+type PendingLocal = {
+  clientMoveId: string;
   from: string;
   to: string;
-  piece: string;
-  baseRevision: number;
-  basePly: number;
-  optimistic: boolean;
-  animationFinished: boolean;
-  confirmedState: ChessGameState | null;
+  promotion?: ChessPromotionPiece;
+  visual: Promise<void>;
 };
 
-function parseFen(fen: string) {
-  const out = new Map<string, string>();
-  const ranks = fen.split(" ")[0].split("/");
-  ranks.forEach((row, rowIndex) => {
-    let file = 0;
-    for (const token of row) {
-      if (/\d/.test(token)) {
-        file += Number(token);
-        continue;
-      }
-      const color = token === token.toUpperCase() ? "w" : "b";
-      out.set(`${BOARD_FILES[file]}${8 - rowIndex}`, `${color}${token.toLowerCase()}`);
-      file += 1;
-    }
-  });
-  return out;
+type Premove = { from: string; to: string; promotion?: ChessPromotionPiece };
+
+function forcedTurnFen(fen: string, color: ChessColor) {
+  const fields = fen.split(" ");
+  fields[1] = color;
+  return fields.join(" ");
 }
 
-function isLightSquare(square: string) {
-  const file = BOARD_FILES.indexOf(square[0] as (typeof BOARD_FILES)[number]);
-  const rank = Number(square[1]);
-  return (file + rank) % 2 === 1;
+function captureSquare(move: ChessAppliedMove) {
+  if (!move.captured) return null;
+  if (move.flags.includes("e")) return `${move.to[0]}${move.from[1]}`;
+  return move.to;
 }
 
-function moveMatchesState(move: VisualMove, next: ChessGameState) {
-  const lastMove = next.lastMove;
-  return (
-    next.revision > move.baseRevision
-    && next.ply > move.basePly
-    && !!lastMove
-    && lastMove.from === move.from
-    && lastMove.to === move.to
-  );
+function castleRook(move: ChessAppliedMove) {
+  if (!move.flags.includes("k") && !move.flags.includes("q")) return null;
+  const rank = move.color === "w" ? "1" : "8";
+  return move.flags.includes("k") ? { from: `h${rank}`, to: `f${rank}` } : { from: `a${rank}`, to: `d${rank}` };
 }
 
-export function ChessBoard({
+export const ChessBoard = React.memo(function ChessBoard({
   state,
   myColor,
+  moveDeltas,
+  snapshotEpoch,
   onMove,
+  onResync,
   onPromotion,
+  onMotionChange,
+  onVisualRevisionChange,
 }: {
   state: ChessGameState;
   myColor: ChessColor;
-  onMove: (from: string, to: string) => Promise<ChessGameState | null>;
-  onPromotion: (from: string, to: string) => void;
+  moveDeltas: ChessMoveDelta[];
+  snapshotEpoch: number;
+  onMove: (from: string, to: string, promotion: ChessPromotionPiece | undefined, clientMoveId: string) => Promise<ChessAck<ChessMoveCommandAck>>;
+  onResync: () => Promise<ChessGameState | null>;
+  onPromotion: (from: string, to: string) => Promise<ChessPromotionPiece | null>;
+  onMotionChange?: (moving: boolean) => void;
+  onVisualRevisionChange?: (revision: number) => void;
 }) {
   const { width } = useWindowDimensions();
-  const size = Math.min(width - 28, 430);
-  const cell = Math.floor(size / 8);
-  const boardSize = cell * 8;
-  const ranks = myColor === "w" ? [...BOARD_RANKS].reverse() : [...BOARD_RANKS];
-  const files = myColor === "w" ? [...BOARD_FILES] : [...BOARD_FILES].reverse();
+  const squareSize = Math.floor(Math.min(width - 28, 430) / 8);
+  const boardSize = squareSize * 8;
+  const orientation: BoardOrientation = myColor === "w" ? "white" : "black";
 
-  const [selected, setSelected] = useState<string | null>(null);
-  const [displayFen, setDisplayFen] = useState(state.fen);
-  const [displayMarkers, setDisplayMarkers] = useState(() => ({ lastMove: state.lastMove, checkSquare: state.checkSquare }));
-  const [visualMove, setVisualMove] = useState<VisualMove | null>(null);
-  const visualMoveRef = useRef<VisualMove | null>(null);
-  const latestStateRef = useRef(state);
-  const displayFenRef = useRef(state.fen);
-  const displayRevisionRef = useRef(state.revision);
-  const queuedStateRef = useRef<ChessGameState | null>(null);
-  const moveIdRef = useRef(0);
-  const mountedRef = useRef(true);
-  const progress = useRef(new Animated.Value(0)).current;
+  const initialPieces = useMemo(() => buildPieceDescriptors(state.fen), [state.gameId]);
+  const [pieces, setPieces] = useState<PieceDescriptor[]>(initialPieces);
+  const [pieceGeneration, setPieceGeneration] = useState(0);
 
-  latestStateRef.current = state;
+  const stateRef = useRef(state);
+  const selectedRef = useRef<string | null>(null);
+  const layoutKeyRef = useRef(`${orientation}:${squareSize}`);
+  const runtimeRef = useRef<Map<string, PieceRuntime>>(runtimeFromDescriptors(initialPieces));
+  const controllersRef = useRef(new Map<string, ChessPieceController>());
+  const pendingRef = useRef<PendingLocal | null>(null);
+  const premoveRef = useRef<Premove | null>(null);
+  const motionRef = useRef(false);
+  const lastQueuedVersionRef = useRef(state.revision);
+  const lastSnapshotEpochRef = useRef(snapshotEpoch);
+  const animationQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const attemptRef = useRef<(from:string,to:string,promotion?:ChessPromotionPiece,source?:"tap"|"drag"|"premove")=>void>(()=>undefined);
+  const sessionPrefixRef = useRef(`fbv2-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`);
+  const moveCounterRef = useRef(0);
 
-  const board = useMemo(() => parseFen(displayFen), [displayFen]);
-  const authoritativeBoard = useMemo(() => parseFen(state.fen), [state.fen]);
-  const legal = selected ? state.legalMoves.filter((move) => move.from === selected) : [];
+  const boardLocked = useSharedValue(state.status === "active" ? 0 : 1);
+  const boardOpacity = useSharedValue(1);
+  const visual = useChessVisualState({
+    lastMove: state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null,
+    checkSquare: state.checkSquare,
+  });
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: boardOpacity.value }));
+  stateRef.current = state;
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    progress.stopAnimation();
-  }, [progress]);
+  const setMotion = useCallback((moving: boolean) => {
+    if (motionRef.current === moving) return;
+    motionRef.current = moving;
+    onMotionChange?.(moving);
+  }, [onMotionChange]);
 
-  const squarePoint = (square: string) => {
-    const fileIndex = files.indexOf(square[0] as (typeof BOARD_FILES)[number]);
-    const rankIndex = ranks.indexOf(Number(square[1]) as (typeof BOARD_RANKS)[number]);
-    return { x: fileIndex * cell, y: rankIndex * cell };
-  };
+  const register = useCallback((id: string, controller: ChessPieceController | null) => {
+    if (controller) controllersRef.current.set(id, controller);
+    else controllersRef.current.delete(id);
+  }, []);
 
-  const commitDisplayState = (next: ChessGameState) => {
-    if (next.revision < displayRevisionRef.current) return;
-    displayRevisionRef.current = next.revision;
-    setDisplayMarkers({ lastMove: next.lastMove, checkSquare: next.checkSquare });
-    if (displayFenRef.current !== next.fen) {
-      displayFenRef.current = next.fen;
-      setDisplayFen(next.fen);
+  const findPieceAt = useCallback((square: string, color?: ChessColor, type?: string) => {
+    for (const [id, piece] of runtimeRef.current) {
+      if (!piece.alive || piece.square !== square) continue;
+      if (color && piece.pieceKey[0] !== color) continue;
+      if (type && piece.pieceKey[1] !== type) continue;
+      return { id, piece };
     }
-  };
+    return null;
+  }, []);
 
-  const queueAuthoritativeState = (next: ChessGameState) => {
-    if (next.gameId !== latestStateRef.current.gameId) return;
-    const queued = queuedStateRef.current;
-    if (!queued || next.revision > queued.revision || (next.revision === queued.revision && next.serverNowMs > queued.serverNowMs)) {
-      queuedStateRef.current = next;
-    }
-  };
+  const moveController = useCallback((id: string, square: string, duration: number) => new Promise<void>((resolve) => {
+    const controller = controllersRef.current.get(id);
+    if (!controller) { resolve(); return; }
+    const p = squareToPosition(square, squareSize, orientation);
+    controller.moveTo(p.x, p.y, duration, resolve);
+  }), [orientation, squareSize]);
 
-  function drainAuthoritativeQueue() {
-    if (!mountedRef.current || visualMoveRef.current) return;
-
-    const latest = latestStateRef.current;
-    const queued = queuedStateRef.current;
-    const candidate = !queued || latest.revision > queued.revision ? latest : queued;
-    queuedStateRef.current = null;
-
-    if (candidate.gameId !== latest.gameId) return;
-    if (candidate.revision < displayRevisionRef.current) return;
-
-    if (candidate.fen === displayFenRef.current) {
-      displayRevisionRef.current = Math.max(displayRevisionRef.current, candidate.revision);
-      return;
-    }
-
-    const lastMove = candidate.lastMove;
-    const oldBoard = parseFen(displayFenRef.current);
-    const piece = lastMove ? oldBoard.get(lastMove.from) : undefined;
-    if (!lastMove || !piece) {
-      // A large reconnect jump can legitimately skip more than one ply. In that case a clean
-      // authoritative snap is safer than inventing an animation from a square that is no longer valid.
-      commitDisplayState(candidate);
-      return;
-    }
-
-    startSlide({
-      id: ++moveIdRef.current,
-      from: lastMove.from,
-      to: lastMove.to,
-      piece,
-      baseRevision: displayRevisionRef.current,
-      basePly: Math.max(0, candidate.ply - 1),
-      optimistic: false,
-      animationFinished: false,
-      confirmedState: candidate,
-    });
-  }
-
-  const scheduleQueueDrain = () => {
-    requestAnimationFrame(() => {
-      if (mountedRef.current) drainAuthoritativeQueue();
-    });
-  };
-
-  const settleVisualMove = (move: VisualMove, confirmedState: ChessGameState) => {
-    const current = visualMoveRef.current;
-    if (!current || current.id !== move.id) return;
-
-    // Critical anti-jitter ordering: first put the authoritative destination FEN underneath the
-    // overlay, then remove the moving overlay. React batches these updates into the same commit,
-    // so there is never a frame where the old source square can flash back on screen.
-    commitDisplayState(confirmedState);
-    visualMoveRef.current = null;
-    setVisualMove(null);
-    progress.setValue(0);
-
-    const latest = latestStateRef.current;
-    if (latest.revision > confirmedState.revision || latest.fen !== confirmedState.fen) {
-      queueAuthoritativeState(latest);
-    }
-    scheduleQueueDrain();
-  };
-
-  const confirmVisualMove = (moveId: number, confirmedState: ChessGameState) => {
-    const current = visualMoveRef.current;
-    if (!current || current.id !== moveId) return false;
-    if (current.optimistic && !moveMatchesState(current, confirmedState)) return false;
-
-    const updated: VisualMove = { ...current, confirmedState };
-    visualMoveRef.current = updated;
-    setVisualMove(updated);
-
-    if (updated.animationFinished) settleVisualMove(updated, confirmedState);
-    return true;
-  };
-
-  function startSlide(nextMove: VisualMove) {
-    progress.stopAnimation();
-    progress.setValue(0);
-    visualMoveRef.current = nextMove;
-    setVisualMove(nextMove);
-
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: MOVE_ANIMATION_MS,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished || !mountedRef.current) return;
-      const current = visualMoveRef.current;
-      if (!current || current.id !== nextMove.id) return;
-
-      const updated: VisualMove = { ...current, animationFinished: true };
-      visualMoveRef.current = updated;
-      setVisualMove(updated);
-
-      if (updated.confirmedState) {
-        settleVisualMove(updated, updated.confirmedState);
+  const applyRuntimeMove = useCallback((move: ChessAppliedMove) => {
+    const primary = findPieceAt(move.from, move.color, move.piece);
+    if (primary) {
+      primary.piece.square = move.to;
+      if (move.promotion) {
+        primary.piece.pieceKey = `${move.color}${move.promotion}` as PieceKey;
+        controllersRef.current.get(primary.id)?.setPieceKey(primary.piece.pieceKey);
       }
+    }
+    const capturedAt = captureSquare(move);
+    if (capturedAt) {
+      const captured = findPieceAt(capturedAt, move.color === "w" ? "b" : "w");
+      if (captured && captured.id !== primary?.id) captured.piece.alive = false;
+    }
+    const rookMove = castleRook(move);
+    if (rookMove) {
+      const rook = findPieceAt(rookMove.from, move.color, "r");
+      if (rook) rook.piece.square = rookMove.to;
+    }
+  }, [findPieceAt]);
+
+  const animateMove = useCallback(async (move: ChessAppliedMove, duration: number) => {
+    const primary = findPieceAt(move.from, move.color, move.piece);
+    if (!primary) return;
+    const tasks: Promise<void>[] = [moveController(primary.id, move.to, duration)];
+    const capturedAt = captureSquare(move);
+    if (capturedAt) {
+      const captured = findPieceAt(capturedAt, move.color === "w" ? "b" : "w");
+      if (captured && captured.id !== primary.id) controllersRef.current.get(captured.id)?.fadeTo(0, 70, 55);
+    }
+    const rookMove = castleRook(move);
+    if (rookMove) {
+      const rook = findPieceAt(rookMove.from, move.color, "r");
+      if (rook) tasks.push(moveController(rook.id, rookMove.to, duration));
+    }
+    await Promise.all(tasks);
+  }, [findPieceAt, moveController]);
+
+  const rebuildFromSnapshot = useCallback((snapshot: ChessGameState) => new Promise<void>((resolve) => {
+    boardLocked.value = 1;
+    setMotion(true);
+    boardOpacity.value = withTiming(0, { duration: 60 });
+    setTimeout(() => {
+      const nextPieces = buildPieceDescriptors(snapshot.fen);
+      controllersRef.current.clear();
+      runtimeRef.current = runtimeFromDescriptors(nextPieces);
+      lastQueuedVersionRef.current = snapshot.revision;
+      setPieces(nextPieces);
+      setPieceGeneration((value) => value + 1);
+      selectedRef.current = null;
+      visual.clearHints();
+      pendingRef.current = null;
+      premoveRef.current = null;
+      visual.setPremove(null, null);
+      visual.setLastMove(snapshot.lastMove?.from, snapshot.lastMove?.to);
+      visual.setCheckSquare(snapshot.checkSquare);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        boardOpacity.value = withTiming(1, { duration: 90 });
+        setTimeout(() => {
+          boardLocked.value = snapshot.status === "active" ? 0 : 1;
+          setMotion(false);
+          onVisualRevisionChange?.(snapshot.revision);
+          resolve();
+        }, 95);
+      }));
+    }, 65);
+  }), [boardLocked, boardOpacity, onVisualRevisionChange, setMotion, visual]);
+
+  const legalMovesFor = useCallback((fen: string, from: string, allowPremove: boolean) => {
+    try {
+      const chess = new Chess(allowPremove ? forcedTurnFen(fen, myColor) : fen);
+      return chess.moves({ square: from as never, verbose: true }) as Array<any>;
+    } catch { return [] as Array<any>; }
+  }, [myColor]);
+
+  const clearSelection = useCallback(() => {
+    selectedRef.current = null;
+    visual.clearHints();
+  }, [visual]);
+
+  const selectSquare = useCallback((square: string) => {
+    const current = stateRef.current;
+    const piece = findPieceAt(square);
+    if (!piece || piece.piece.pieceKey[0] !== myColor || current.status !== "active" || pendingRef.current) {
+      clearSelection();
+      return;
+    }
+    const allowPremove = current.turn !== myColor;
+    const moves = legalMovesFor(current.fen, square, allowPremove);
+    const masks = buildMoveMasks(moves);
+    selectedRef.current = square;
+    visual.selectedSquareIndex.value = squareToIndex(square);
+    visual.legalMoveLow.value = masks.legal.low;
+    visual.legalMoveHigh.value = masks.legal.high;
+    visual.captureLow.value = masks.capture.low;
+    visual.captureHigh.value = masks.capture.high;
+  }, [clearSelection, findPieceAt, legalMovesFor, myColor, visual]);
+
+  const snapPieceBack = useCallback((id: string, square: string, unlock = true) => {
+    const p = squareToPosition(square, squareSize, orientation);
+    controllersRef.current.get(id)?.moveTo(p.x, p.y, ILLEGAL_RETURN_MS, () => {
+      if (unlock) boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
+      setMotion(false);
     });
-  }
+  }, [boardLocked, orientation, setMotion, squareSize]);
 
-  const rollbackVisualMove = (move: VisualMove) => {
-    const current = visualMoveRef.current;
-    if (!current || current.id !== move.id) return;
-
-    Animated.timing(progress, {
-      toValue: 0,
-      duration: ROLLBACK_ANIMATION_MS,
-      useNativeDriver: true,
-    }).start(() => {
-      if (!mountedRef.current) return;
-      const latestMove = visualMoveRef.current;
-      if (!latestMove || latestMove.id !== move.id) return;
-      visualMoveRef.current = null;
-      setVisualMove(null);
-      progress.setValue(0);
-
-      const latest = latestStateRef.current;
-      if (latest.revision > displayRevisionRef.current || latest.fen !== displayFenRef.current) {
-        queueAuthoritativeState(latest);
-      }
-      scheduleQueueDrain();
-    });
-  };
-
-  useEffect(() => {
-    const pending = visualMoveRef.current;
-    if (pending) {
-      if (pending.optimistic && moveMatchesState(pending, state)) {
-        confirmVisualMove(pending.id, state);
-      } else if (state.revision > displayRevisionRef.current || state.fen !== displayFenRef.current) {
-        // Do not let a fast bot/opponent state replace the board underneath an active move.
-        // Keep only the newest authoritative state and play it after the current overlay settles.
-        queueAuthoritativeState(state);
-      }
+  const executeAttempt = useCallback(async (from: string, to: string, promotion: ChessPromotionPiece | undefined, source: "tap"|"drag"|"premove" = "tap") => {
+    const current = stateRef.current;
+    const movingPiece = findPieceAt(from);
+    if (!movingPiece || movingPiece.piece.pieceKey[0] !== myColor || current.status !== "active" || pendingRef.current) {
+      if (source === "drag" && movingPiece) snapPieceBack(movingPiece.id, from);
       return;
     }
 
-    if (state.fen === displayFenRef.current) {
-      displayRevisionRef.current = Math.max(displayRevisionRef.current, state.revision);
+    const isPremove = current.turn !== myColor;
+    const candidates = legalMovesFor(current.fen, from, isPremove).filter((move) => move.to === to);
+    if (!candidates.length) {
+      clearSelection();
+      if (source === "drag") snapPieceBack(movingPiece.id, from);
+      else { setMotion(false); boardLocked.value = 0; }
       return;
     }
 
-    queueAuthoritativeState(state);
-    drainAuthoritativeQueue();
-    // state.revision/fen are the authoritative visual transition key. Clock-only packets do not
-    // need to restart board reconciliation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.revision, state.fen]);
-
-  const submitNormalMove = async (from: string, to: string) => {
-    if (visualMoveRef.current || queuedStateRef.current) return;
-    const piece = authoritativeBoard.get(from);
-    if (!piece) return;
-
-    const nextMove: VisualMove = {
-      id: ++moveIdRef.current,
-      from,
-      to,
-      piece,
-      baseRevision: state.revision,
-      basePly: state.ply,
-      optimistic: true,
-      animationFinished: false,
-      confirmedState: null,
-    };
-    startSlide(nextMove);
-
-    const confirmedState = await onMove(from, to);
-    const latest = visualMoveRef.current;
-    if (!latest || latest.id !== nextMove.id) return;
-
-    if (!confirmedState) {
-      rollbackVisualMove(latest);
-      return;
-    }
-
-    // ACK acceptance alone never removes the overlay. We latch the exact authoritative FEN returned
-    // by the server and wait until BOTH that state and the native animation are ready.
-    if (!confirmVisualMove(nextMove.id, confirmedState)) {
-      if (__DEV__) {
-        console.warn("[ChessPerf] visual:ack-move-mismatch", {
-          from,
-          to,
-          baseRevision: nextMove.baseRevision,
-          confirmedRevision: confirmedState.revision,
-          confirmedLastMove: confirmedState.lastMove,
-        });
-      }
-      rollbackVisualMove(latest);
-    }
-  };
-
-  const tap = (square: string) => {
-    if (visualMoveRef.current || queuedStateRef.current) return;
-    const piece = authoritativeBoard.get(square);
-    if (selected) {
-      const candidates = legal.filter((move) => move.to === square);
-      if (candidates.length) {
-        const from = selected;
-        setSelected(null);
-        if (candidates.some((move) => move.promotion)) onPromotion(from, square);
-        else void submitNormalMove(from, square);
+    let chosenPromotion = promotion;
+    const promotionCandidates = candidates.filter((move) => !!move.promotion);
+    if (promotionCandidates.length && !chosenPromotion) {
+      chosenPromotion = await onPromotion(from, to) ?? undefined;
+      if (!chosenPromotion) {
+        clearSelection();
+        if (source === "drag") snapPieceBack(movingPiece.id, from);
         return;
       }
     }
-    if (piece?.startsWith(myColor) && state.turn === myColor && state.status === "active") {
-      setSelected(square);
+    const candidate = candidates.find((move) => !move.promotion || move.promotion === chosenPromotion) ?? candidates[0];
+
+    clearSelection();
+    if (isPremove) {
+      const queued = { from, to, ...(chosenPromotion ? { promotion: chosenPromotion } : {}) };
+      premoveRef.current = queued;
+      visual.setPremove(from, to);
+      if (source === "drag") snapPieceBack(movingPiece.id, from);
+      else { boardLocked.value = 0; setMotion(false); }
       return;
     }
-    setSelected(null);
-  };
 
-  const hiddenSquares = visualMove ? new Set([visualMove.from, visualMove.to]) : null;
-  const fromPoint = visualMove ? squarePoint(visualMove.from) : { x: 0, y: 0 };
-  const toPoint = visualMove ? squarePoint(visualMove.to) : { x: 0, y: 0 };
-  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [0, toPoint.x - fromPoint.x] });
-  const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [0, toPoint.y - fromPoint.y] });
+    premoveRef.current = null;
+    visual.setPremove(null, null);
+    boardLocked.value = 1;
+    setMotion(true);
+    const clientMoveId = `${sessionPrefixRef.current}-${++moveCounterRef.current}`;
+    const applied: ChessAppliedMove = {
+      from, to, san: candidate.san, color: candidate.color, piece: candidate.piece, flags: candidate.flags,
+      ...(candidate.captured ? { captured: candidate.captured } : {}),
+      ...(candidate.promotion ? { promotion: candidate.promotion } : {}),
+    };
+    const visualPromise = animateMove(applied, source === "drag" ? 85 : MOVE_MS).then(() => {
+      if (pendingRef.current?.clientMoveId === clientMoveId) applyRuntimeMove(applied);
+      setMotion(false);
+    });
+    pendingRef.current = { clientMoveId, from, to, promotion: chosenPromotion, visual: visualPromise };
+
+    void onMove(from, to, chosenPromotion, clientMoveId).then(async (ack) => {
+      if (!ack.ok) {
+        if (pendingRef.current?.clientMoveId !== clientMoveId) return;
+        pendingRef.current = null;
+        const snapshot = await onResync();
+        if (snapshot) await rebuildFromSnapshot(snapshot);
+        else { boardLocked.value = 0; setMotion(false); }
+        return;
+      }
+      setTimeout(() => {
+        if (pendingRef.current?.clientMoveId === clientMoveId && stateRef.current.revision < ack.data.version) void onResync().then((snapshot) => snapshot && rebuildFromSnapshot(snapshot));
+      }, 700);
+    });
+  }, [animateMove, applyRuntimeMove, boardLocked, clearSelection, findPieceAt, legalMovesFor, myColor, onMove, onPromotion, onResync, rebuildFromSnapshot, setMotion, snapPieceBack, visual]);
+  attemptRef.current = executeAttempt;
+
+  const onTapPiece = useCallback((id: string) => {
+    const runtime = runtimeRef.current.get(id);
+    if (!runtime?.alive) return;
+    const selectedNow = selectedRef.current;
+    if (selectedNow && runtime.pieceKey[0] !== myColor) { void attemptRef.current(selectedNow, runtime.square, undefined, "tap"); return; }
+    selectSquare(runtime.square);
+  }, [myColor, selectSquare]);
+
+  const onPressSquare = useCallback((square: string) => {
+    if (motionRef.current || pendingRef.current) return;
+    const selectedNow = selectedRef.current;
+    if (selectedNow) { void attemptRef.current(selectedNow, square, undefined, "tap"); return; }
+    selectSquare(square);
+  }, [selectSquare]);
+
+  const onDragStart = useCallback((id: string) => {
+    const runtime = runtimeRef.current.get(id);
+    if (!runtime?.alive) return;
+    // Selection/hints are SharedValue-only. Starting a drag does not call a
+    // React state setter or notify the parent screen.
+    selectSquare(runtime.square);
+    boardLocked.value = 1;
+  }, [boardLocked, selectSquare]);
+
+  const onDragCancel = useCallback((_id: string) => {
+    clearSelection();
+    boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
+  }, [boardLocked, clearSelection]);
+
+  const onDrop = useCallback((id: string, centerX: number, centerY: number) => {
+    const runtime = runtimeRef.current.get(id);
+    if (!runtime?.alive) return;
+    const target = positionToSquare(centerX, centerY, squareSize, orientation);
+    if (!target) { clearSelection(); snapPieceBack(id, runtime.square); return; }
+    void attemptRef.current(runtime.square, target, undefined, "drag");
+  }, [clearSelection, orientation, snapPieceBack, squareSize]);
+
+  const processDelta = useCallback(async (delta: ChessMoveDelta) => {
+    const pending = pendingRef.current;
+    if (pending && delta.clientMoveId === pending.clientMoveId) {
+      await pending.visual;
+      visual.setLastMove(delta.move.from, delta.move.to);
+      visual.setCheckSquare(delta.checkSquare);
+      pendingRef.current = null;
+      boardLocked.value = delta.status === "active" ? 0 : 1;
+      onVisualRevisionChange?.(delta.version);
+      return;
+    }
+
+    boardLocked.value = 1;
+    setMotion(true);
+    await animateMove(delta.move, OPPONENT_MOVE_MS);
+    applyRuntimeMove(delta.move);
+    clearSelection();
+    visual.setLastMove(delta.move.from, delta.move.to);
+    visual.setCheckSquare(delta.checkSquare);
+    setMotion(false);
+    boardLocked.value = delta.status === "active" ? 0 : 1;
+    onVisualRevisionChange?.(delta.version);
+
+    const queued = premoveRef.current;
+    if (queued && delta.turn === myColor && delta.status === "active") {
+      premoveRef.current = null;
+      visual.setPremove(null, null);
+      requestAnimationFrame(() => void attemptRef.current(queued.from, queued.to, queued.promotion, "premove"));
+    }
+  }, [animateMove, applyRuntimeMove, boardLocked, clearSelection, myColor, onVisualRevisionChange, setMotion, visual]);
+
+  useEffect(() => {
+    // A full snapshot scheduled in the same React batch supersedes buffered
+    // deltas. Rebuild the latest authoritative position instead of animating
+    // against a stale visual base.
+    if (lastSnapshotEpochRef.current !== snapshotEpoch) return;
+    const pending = moveDeltas
+      .filter((delta) => delta.gameId === state.gameId && delta.version > lastQueuedVersionRef.current)
+      .sort((a, b) => a.version - b.version);
+    if (!pending.length) return;
+
+    for (const delta of pending) {
+      const expected = lastQueuedVersionRef.current + 1;
+      if (delta.version !== expected) {
+        // Missing/out-of-order visual history: authoritative snapshot wins.
+        lastQueuedVersionRef.current = state.revision;
+        animationQueueRef.current = animationQueueRef.current.then(async () => {
+          const snapshot = await onResync();
+          if (snapshot) await rebuildFromSnapshot(snapshot);
+        });
+        return;
+      }
+      lastQueuedVersionRef.current = delta.version;
+      animationQueueRef.current = animationQueueRef.current.then(() => processDelta(delta)).catch(async () => {
+        const snapshot = await onResync();
+        if (snapshot) await rebuildFromSnapshot(snapshot);
+      });
+    }
+  }, [moveDeltas, onResync, processDelta, rebuildFromSnapshot, snapshotEpoch, state.gameId, state.revision]);
+
+  useEffect(() => {
+    if (lastSnapshotEpochRef.current === snapshotEpoch) return;
+    lastSnapshotEpochRef.current = snapshotEpoch;
+    animationQueueRef.current = animationQueueRef.current.then(() => rebuildFromSnapshot(state));
+  }, [rebuildFromSnapshot, snapshotEpoch, state]);
+
+  useEffect(() => {
+    const key = `${orientation}:${squareSize}`;
+    if (layoutKeyRef.current === key) return;
+    layoutKeyRef.current = key;
+    boardLocked.value = 1;
+    // Resize/flip is visual only. Preserve piece identity and logical squares;
+    // derive fresh pixels and move the existing native nodes directly.
+    for (const [id, runtime] of runtimeRef.current) {
+      if (!runtime.alive) continue;
+      const point = squareToPosition(runtime.square, squareSize, orientation);
+      controllersRef.current.get(id)?.setPosition(point.x, point.y);
+    }
+    boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
+  }, [boardLocked, orientation, squareSize]);
+
+  useEffect(() => {
+    if (state.status !== "active") boardLocked.value = 1;
+  }, [boardLocked, state.status]);
+
+  useEffect(() => () => { onMotionChange?.(false); }, [onMotionChange]);
 
   return (
-    <View style={styles.frame}>
-      <View style={[styles.board, { width: boardSize, height: boardSize }]}> 
-        {ranks.map((rank, rankIndex) => (
-          <View key={`rank-${rank}`} style={styles.row}>
-            {files.map((file, fileIndex) => {
-              const square = `${file}${rank}`;
-              const piece = hiddenSquares?.has(square) ? undefined : board.get(square);
-              const target = !visualMove && legal.some((move) => move.to === square);
-              const lastMove = !!displayMarkers.lastMove && (displayMarkers.lastMove.from === square || displayMarkers.lastMove.to === square);
-              const check = displayMarkers.checkSquare === square;
-              const light = isLightSquare(square);
-              const showRankLabel = fileIndex === 0;
-              const showFileLabel = rankIndex === ranks.length - 1;
-              return (
-                <Pressable
-                  key={square}
-                  onPress={() => tap(square)}
-                  style={[
-                    styles.square,
-                    { width: cell, height: cell },
-                    light ? styles.light : styles.dark,
-                    selected === square && styles.selected,
-                    lastMove && styles.lastMove,
-                    check && styles.check,
-                  ]}
-                >
-                  {showRankLabel ? <Text style={[styles.rankLabel, light ? styles.labelOnLight : styles.labelOnDark]}>{rank}</Text> : null}
-                  {showFileLabel ? <Text style={[styles.fileLabel, light ? styles.labelOnLight : styles.labelOnDark]}>{file}</Text> : null}
-                  {piece ? (
-                    <Image source={PIECE_IMAGES[piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
-                  ) : null}
-                  {target ? <View style={styles.targetDot} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
-        {visualMove ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.movingPiece,
-              {
-                width: cell,
-                height: cell,
-                transform: [{ translateX: fromPoint.x }, { translateY: fromPoint.y }, { translateX }, { translateY }],
-              },
-            ]}
-          >
-            <Image source={PIECE_IMAGES[visualMove.piece]} style={{ width: cell * 0.8, height: cell * 0.8 }} contentFit="contain" />
-          </Animated.View>
-        ) : null}
-      </View>
-    </View>
+    <GestureHandlerRootView style={[styles.board, { width:boardSize,height:boardSize }]}>
+      <SquareLayer squareSize={squareSize} boardSize={boardSize} orientation={orientation} onPressSquare={onPressSquare}/>
+      <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, fadeStyle]}>
+        <HighlightLayer
+          squareSize={squareSize}
+          orientation={orientation}
+          selectedSquareIndex={visual.selectedSquareIndex}
+          lastMoveFromIndex={visual.lastMoveFromIndex}
+          lastMoveToIndex={visual.lastMoveToIndex}
+          checkedKingIndex={visual.checkedKingIndex}
+          premoveFromIndex={visual.premoveFromIndex}
+          premoveToIndex={visual.premoveToIndex}
+        />
+        <HintLayer
+          squareSize={squareSize}
+          orientation={orientation}
+          legalMoveLow={visual.legalMoveLow}
+          legalMoveHigh={visual.legalMoveHigh}
+          captureLow={visual.captureLow}
+          captureHigh={visual.captureHigh}
+        />
+        <PieceLayer key={`piece-layer-${pieceGeneration}`} pieces={pieces} squareSize={squareSize} orientation={orientation} myColor={myColor} boardLocked={boardLocked} register={register} onTapPiece={onTapPiece} onDragStart={onDragStart} onDragCancel={onDragCancel} onDrop={onDrop}/>
+      </Animated.View>
+    </GestureHandlerRootView>
   );
-}
-
-const styles = StyleSheet.create({
-  frame: {
-    alignSelf: "center",
-    borderRadius: 20,
-    padding: 8,
-    backgroundColor: "#FFF9FC",
-    borderWidth: 1,
-    borderColor: "#DFA7BE",
-    shadowColor: "#6F2749",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
-  },
-  board: {
-    overflow: "hidden",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#C98DA8",
-  },
-  row: { flexDirection: "row" },
-  square: { alignItems: "center", justifyContent: "center" },
-  light: { backgroundColor: "#F7EAF1" },
-  dark: { backgroundColor: "#C98AA7" },
-  selected: { backgroundColor: "#F1C9D8" },
-  lastMove: { backgroundColor: "#F6D86C88" },
-  check: { backgroundColor: "#F4A2A2" },
-  rankLabel: {
-    position: "absolute",
-    top: 3,
-    left: 4,
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  fileLabel: {
-    position: "absolute",
-    right: 4,
-    bottom: 3,
-    fontSize: 9,
-    fontWeight: "800",
-    textTransform: "lowercase",
-  },
-  labelOnLight: { color: "#995073" },
-  labelOnDark: { color: "#FFF5FA" },
-  targetDot: {
-    position: "absolute",
-    width: 12,
-    height: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(111,39,73,0.26)",
-  },
-  movingPiece: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });
+
+const styles=StyleSheet.create({board:{alignSelf:"center",borderRadius:12,overflow:"hidden",backgroundColor:"#B77A68"}});

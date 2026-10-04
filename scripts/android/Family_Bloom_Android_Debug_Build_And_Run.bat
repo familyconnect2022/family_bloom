@@ -154,9 +154,11 @@ call npm run phase14v2a:check
 if errorlevel 1 goto :fail
 call npm run phase14v2b:check
 if errorlevel 1 goto :fail
-call npm run phase14v3h:check
-if errorlevel 1 goto :fail
+rem Phase 14V.4 Renderer V2 supersedes the old 14V.3H/J/K/L/M/N/N1 motion gates.
+rem Keep Bot Anytime regression, then validate the V2 renderer/transport contract.
 call npm run phase14v3i:check
+if errorlevel 1 goto :fail
+call npm run phase14v4:check
 if errorlevel 1 goto :fail
 
 echo [4/7] Regenerating Android native project with the single app identity...

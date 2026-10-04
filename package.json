@@ -40,7 +40,8 @@
     "react-native-worklets": "0.10.1",
     "expo-notifications": "~57.0.21",
     "expo-application": "~57.0.3",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "chess.js": "^1.4.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -97,7 +98,14 @@
     "phase14v3c:check": "node ./scripts/test-phase14v3c-chess-smooth-motion.js",
     "phase14v3g:check": "node ./scripts/test-phase14v3g-chess-default-webp-pieces.js",
     "phase14v3h:check": "node ./scripts/test-phase14v3h-chess-visual-state-lock.js",
-    "phase14v3i:check": "node ./scripts/test-phase14v3i-chess-bot-anytime.js"
+    "phase14v3i:check": "node ./scripts/test-phase14v3i-chess-bot-anytime.js",
+    "phase14v3j:check": "node ./scripts/test-phase14v3j-chess-server-first-motion.js",
+    "phase14v3k:check": "node ./scripts/test-phase14v3k-chess-hybrid-instant-motion.js",
+    "phase14v3l:check": "node ./scripts/test-phase14v3l-chess-fx-frame-pacing.js",
+    "phase14v3m:check": "node ./scripts/test-phase14v3m-chess-fx-ab-switch.js",
+    "phase14v3n:check": "node ./scripts/test-phase14v3n-chess-persistent-piece-layer.js",
+    "phase14v3n1:check": "node ./scripts/test-phase14v3n1-chess-piece-visibility-hotfix.js",
+    "phase14v4:check": "node ./scripts/test-phase14v4-chess-renderer-v2.js"
   },
   "private": true
 }

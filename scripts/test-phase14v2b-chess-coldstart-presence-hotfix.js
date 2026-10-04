@@ -21,7 +21,7 @@ check('server presence refresh is detached from lifecycle ACK',server.includes('
 check('app join refreshes presence asynchronously',server.includes('refreshPresenceSoon(familyId);\n      console.info("[chess] app joined"'));
 check('lobby join refreshes presence asynchronously',server.includes('await socket.join(`chess:lobby:${familyId}`);\n      refreshPresenceSoon(familyId);'));
 check('membership first-read is deduped across concurrent joins',server.includes('const memberInFlight = new Map<string, Promise<boolean>>()')&&server.includes('if (pending) return pending'));
-check('existing temporary Chess diagnostics remain enabled in dev',socket.includes('[ChessDebug]')&&ctx.includes('[ChessDebug]'));
+check('Chess diagnostic labels remain but hot-path console output is disabled',socket.includes('socket:connect_error')&&ctx.includes('appState:change')&&!socket.includes('console.log("[ChessDebug]"')&&!ctx.includes('console.log("[ChessDebug]"'));
 check('Phase 14V.2B gate is registered',pkg.scripts['phase14v2b:check']&&pkg.scripts['phase14v2b:check'].includes('test-phase14v2b-chess-coldstart-presence-hotfix.js'));
 check('DEBUG helper runs Phase 14V.2B gate',debugBat.includes('phase14v2b:check'));
 check('RELEASE helper runs Phase 14V.2B gate',releaseBat.includes('phase14v2b:check'));

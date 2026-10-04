@@ -7,6 +7,7 @@ import { chessSocketService } from "../services/chess/chessSocketService";
 import {
   CHESS_ERROR_COPY,
   CHESS_EVENTS,
+  applyChessMoveDelta,
   type ChessAck,
   type ChessGameState,
   type ChessInvite,
@@ -40,17 +41,10 @@ type ChessRealtimeValue = {
 const ChessRealtimeContext = createContext<ChessRealtimeValue | null>(null);
 const requestId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
-const chessDebugError = (label: string, error: unknown) => {
-  if (!__DEV__) return;
-  const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
-  console.warn("[ChessDebug]", label, { message });
-};
-
-const chessDebug = (label: string, payload?: unknown) => {
-  if (!__DEV__) return;
-  if (payload === undefined) console.log("[ChessDebug]", label);
-  else console.log("[ChessDebug]", label, payload);
-};
+// Keep the foreground socket lifecycle silent on-device. Errors are surfaced through connection/UI
+// state instead of console serialization on the realtime render path.
+const chessDebugError = (_label: string, _error: unknown) => {};
+const chessDebug = (_label: string, _payload?: unknown) => {};
 
 export function useChessRealtime() {
   const value = useContext(ChessRealtimeContext);
@@ -142,6 +136,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
 
   const handleState = useCallback((next: ChessGameState) => {
     const previous = stateRef.current?.gameId === next.gameId ? stateRef.current : null;
+    stateRef.current = next;
     setActiveGameState(next);
     setIncomingInvite((current) => current && (next.whiteUid === current.fromUid || next.blackUid === current.fromUid) ? null : current);
     showGameStateToast(next, previous);
@@ -160,6 +155,12 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       }
     }
   }, [isOnGameScreen, memberName, router, showGameStateToast, showToast]);
+
+  const handleMoveDelta = useCallback((delta: import("../types/chess").ChessMoveDelta) => {
+    const current = stateRef.current;
+    if (!current || current.gameId !== delta.gameId || delta.version <= current.revision) return;
+    handleState(applyChessMoveDelta(current, delta));
+  }, [handleState]);
 
   const joinForeground = useCallback(async () => {
     if (joinInFlightRef.current) return joinInFlightRef.current;
@@ -212,6 +213,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     const stopState = chessSocketService.on("state", handleState);
+    const stopMove = chessSocketService.on("move", handleMoveDelta);
     const stopInvite = chessSocketService.on("invite", (invite) => {
       if (invite.familyId !== familyIdRef.current || !foregroundRef.current) return;
       setIncomingInvite(invite);
@@ -239,9 +241,9 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       if (foregroundRef.current) setConnection("connecting");
     });
     return () => {
-      stopState(); stopInvite(); stopPresence(); stopExpired(); stopRejected(); stopConnected(); stopDisconnected();
+      stopState(); stopMove(); stopInvite(); stopPresence(); stopExpired(); stopRejected(); stopConnected(); stopDisconnected();
     };
-  }, [handleState, joinForeground, memberName, showToast]);
+  }, [handleMoveDelta, handleState, joinForeground, memberName, showToast]);
 
   useEffect(() => {
     setPresence([]);

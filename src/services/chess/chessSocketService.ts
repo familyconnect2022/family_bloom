@@ -1,10 +1,11 @@
 import { getAuth } from "@react-native-firebase/auth";
 import { io, Socket } from "socket.io-client";
 import { ENV } from "../../config/env";
-import { CHESS_EVENTS, type ChessAck, type ChessGameState, type ChessInvite, type ChessInviteRejected, type ChessPresence } from "../../types/chess";
+import { CHESS_EVENTS, type ChessAck, type ChessGameState, type ChessInvite, type ChessInviteRejected, type ChessMoveDelta, type ChessPresence } from "../../types/chess";
 
 type ListenerMap = {
   state: (state: ChessGameState) => void;
+  move: (delta: ChessMoveDelta) => void;
   invite: (invite: ChessInvite) => void;
   presence: (items: ChessPresence[]) => void;
   inviteExpired: (payload: { inviteId: string }) => void;
@@ -21,13 +22,10 @@ type ErrorSummary = {
   context?: string;
 };
 
-const debug = (...args: unknown[]) => {
-  if (__DEV__) console.log("[ChessDebug]", ...args);
-};
-
-const debugWarn = (...args: unknown[]) => {
-  if (__DEV__) console.warn("[ChessDebug]", ...args);
-};
+// Realtime chess runs on a hot path. Debug console output is intentionally disabled here because
+// serializing every state/ACK into Metro/Logcat can steal frames in Android debug builds.
+const debug = (..._args: unknown[]) => {};
+const debugWarn = (..._args: unknown[]) => {};
 
 const summarizeError = (error: unknown): ErrorSummary => {
   if (!error || typeof error !== "object") return { message: String(error ?? "Unknown error") };
@@ -44,7 +42,7 @@ const summarizeError = (error: unknown): ErrorSummary => {
 class ChessSocketService {
   private socket: Socket | null = null;
   private listeners: { [K in keyof ListenerMap]: Set<ListenerMap[K]> } = {
-    state: new Set(), invite: new Set(), presence: new Set(), inviteExpired: new Set(), inviteRejected: new Set(), connected: new Set(), disconnected: new Set(),
+    state: new Set(), move: new Set(), invite: new Set(), presence: new Set(), inviteExpired: new Set(), inviteRejected: new Set(), connected: new Set(), disconnected: new Set(),
   };
 
   async prewake() {
@@ -194,6 +192,9 @@ class ChessSocketService {
     socket.on(CHESS_EVENTS.gameState, (state: ChessGameState) => {
       debug("event:gameState", { gameId: state.gameId, revision: state.revision, status: state.status, turn: state.turn });
       this.listeners.state.forEach((fn) => fn(state));
+    });
+    socket.on(CHESS_EVENTS.gameMoveApplied, (delta: ChessMoveDelta) => {
+      this.listeners.move.forEach((fn) => fn(delta));
     });
     socket.on(CHESS_EVENTS.inviteReceived, (invite: ChessInvite) => {
       debug("event:inviteReceived", { inviteId: invite.inviteId, familyId: invite.familyId, isTestBot: !!invite.isTestBot });

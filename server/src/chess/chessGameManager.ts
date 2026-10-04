@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { Chess, type Color, type PieceSymbol } from "chess.js";
-import { ChessDomainError, type ChessColor, type ChessTimeControl, type FinishReason, type LastMove, type MoveHint, type PersistedGame, type PublicGameState } from "./chessTypes.js";
+import { ChessDomainError, type AppliedMove, type ChessColor, type ChessTimeControl, type FinishReason, type MoveDelta, type MoveCommandAck, type PersistedGame, type PublicGameState } from "./chessTypes.js";
 import { ChessPersistenceService } from "./chessPersistenceService.js";
 
 type Runtime = { game: PersistedGame; chess: Chess; turnStartedMono: number | null; connectedUids: Set<string> };
-type Broadcast = (gameId: string, state: PublicGameState) => void;
+type Broadcast = (event: { kind: "state"; state: PublicGameState } | { kind: "move"; state: PublicGameState; delta: MoveDelta }) => void;
 const iso = () => new Date().toISOString();
 const otherColor = (c: ChessColor): ChessColor => c === "w" ? "b" : "w";
+const CHECKPOINT_EVERY_PLY = 4;
 
 export class ChessGameManager {
   private games = new Map<string, Runtime>();
@@ -61,52 +62,73 @@ export class ChessGameManager {
   async join(familyId: string, gameId: string, uid: string) {
     return this.enqueue(gameId, async () => {
       const r = await this.restore(familyId, gameId); this.assertPlayer(r, uid); r.connectedUids.add(uid);
+      let resumed = false;
       if (r.game.status === "paused" && r.connectedUids.has(r.game.whiteUid) && r.connectedUids.has(r.game.blackUid)) {
         const before = this.snapshot(r);
         try {
           r.game.status = "active"; r.game.revision += 1; r.game.updatedAt = iso();
           r.turnStartedMono = r.game.timeControl.kind === "clocked" ? performance.now() : null;
           await this.persistence.save(r.game);
+          resumed = true;
         } catch (e) { this.restoreSnapshot(r, before); throw e; }
       }
-      const state = this.publicState(r); this.broadcast(gameId, state); return state;
+      const state = this.publicState(r);
+      if (resumed) this.broadcast({ kind: "state", state });
+      return state;
     });
   }
 
   disconnect(gameId: string, uid: string) { const r = this.games.get(gameId); if (r) r.connectedUids.delete(uid); }
 
-  async move(gameId: string, uid: string, requestId: string, expectedRevision: number, from: string, to: string, promotion?: string | null) {
+  async move(gameId: string, uid: string, clientMoveId: string, expectedRevision: number, from: string, to: string, promotion?: string | null): Promise<MoveCommandAck> {
     return this.enqueue(gameId, async () => {
       const r = this.games.get(gameId); if (!r) throw new ChessDomainError("CHESS_GAME_NOT_FOUND");
       this.assertPlayer(r, uid); this.assertActive(r);
-      if (r.game.recentRequestIds.includes(requestId)) return this.publicState(r);
+      if (r.game.recentRequestIds.includes(clientMoveId)) {
+        return { clientMoveId, version: r.game.revision, duplicate: true };
+      }
       if (expectedRevision !== r.game.revision) throw new ChessDomainError("CHESS_STATE_CONFLICT");
       const color = r.game.whiteUid === uid ? "w" : "b"; if (r.chess.turn() !== color) throw new ChessDomainError("CHESS_NOT_YOUR_TURN");
       if (promotion && !["q","r","b","n"].includes(promotion)) throw new ChessDomainError("CHESS_INVALID_PROMOTION");
       if (this.clockExpired(r)) {
         await this.finishByTimeout(r);
         const timedOutState = this.publicState(r);
-        this.broadcast(gameId, timedOutState);
+        this.broadcast({ kind: "state", state: timedOutState });
         throw new ChessDomainError("CHESS_GAME_FINISHED");
       }
       const before = this.snapshot(r);
+      let appliedMove: AppliedMove | null = null;
       try {
         this.consumeClock(r, color);
         let moved; try { moved = r.chess.move({ from, to, promotion: (promotion ?? undefined) as PieceSymbol | undefined }); }
         catch { throw new ChessDomainError("CHESS_ILLEGAL_MOVE"); }
         if (!moved) throw new ChessDomainError("CHESS_ILLEGAL_MOVE");
+        appliedMove = {
+          from, to, san: moved.san, color: moved.color as ChessColor, piece: moved.piece, flags: moved.flags,
+          ...(moved.captured ? { captured: moved.captured } : {}),
+          ...(moved.promotion ? { promotion: moved.promotion as "q"|"r"|"b"|"n" } : {}),
+        };
         if (r.game.timeControl.kind === "clocked") {
           if (color === "w") r.game.whiteRemainingMs = (r.game.whiteRemainingMs ?? 0) + r.game.timeControl.incrementMs;
           else r.game.blackRemainingMs = (r.game.blackRemainingMs ?? 0) + r.game.timeControl.incrementMs;
         }
         r.game.fen = r.chess.fen(); r.game.pgn = r.chess.pgn(); r.game.turn = r.chess.turn();
-        r.game.lastMove = { from, to, san: moved.san, ...(promotion ? { promotion: promotion as "q"|"r"|"b"|"n" } : {}) };
-        r.game.drawOfferByUid = null; r.game.revision += 1; r.game.updatedAt = iso(); this.remember(r.game, requestId);
+        r.game.lastMove = { from, to, san: moved.san, ...(moved.promotion ? { promotion: moved.promotion as "q"|"r"|"b"|"n" } : {}) };
+        r.game.drawOfferByUid = null; r.game.revision += 1; r.game.updatedAt = iso(); this.remember(r.game, clientMoveId);
         r.turnStartedMono = r.game.timeControl.kind === "clocked" ? performance.now() : null;
         const terminal = this.detectTerminal(r.chess); if (terminal) this.applyTerminal(r, terminal);
-        if (r.game.status === "finished") await this.persistence.finish(r.game); else await this.persistence.save(r.game);
+        if (r.game.status === "finished") await this.persistence.finish(r.game);
+        else if (r.chess.history().length % CHECKPOINT_EVERY_PLY === 0) await this.persistence.save(r.game);
       } catch (e) { this.restoreSnapshot(r, before); throw e; }
-      const state = this.publicState(r); this.broadcast(gameId, state); return state;
+      const state = this.publicState(r);
+      const delta: MoveDelta = {
+        gameId, clientMoveId, version: state.revision, ply: state.ply, move: appliedMove!, fen: state.fen, turn: state.turn,
+        whiteRemainingMs: state.whiteRemainingMs, blackRemainingMs: state.blackRemainingMs, checkSquare: state.checkSquare,
+        status: state.status, result: state.result, finishReason: state.finishReason, drawOfferByUid: state.drawOfferByUid,
+        serverNowMs: state.serverNowMs, endedAt: state.endedAt,
+      };
+      this.broadcast({ kind: "move", state, delta });
+      return { clientMoveId, version: state.revision };
     });
   }
 
@@ -130,7 +152,7 @@ export class ChessGameManager {
       try { mutate(r); r.game.revision += 1; r.game.updatedAt = iso(); this.remember(r.game, requestId);
         if (r.game.status === "finished") await this.persistence.finish(r.game); else await this.persistence.save(r.game);
       } catch (e) { this.restoreSnapshot(r, before); throw e; }
-      const state = this.publicState(r); this.broadcast(gameId, state); return state;
+      const state = this.publicState(r); this.broadcast({ kind: "state", state }); return state;
     });
   }
 
@@ -152,7 +174,7 @@ export class ChessGameManager {
         // turn/deadline while this timeout task was waiting behind that move.
         if (!this.clockExpired(r)) return;
         await this.finishByTimeout(r);
-        this.broadcast(gameId, this.publicState(r));
+        this.broadcast({ kind: "state", state: this.publicState(r) });
       });
     }
   }
@@ -213,7 +235,12 @@ export class ChessGameManager {
       if (r.chess.turn() === "w" && white != null) white = Math.max(0, white - elapsed);
       if (r.chess.turn() === "b" && black != null) black = Math.max(0, black - elapsed);
     }
-    const legalMoves = r.game.status === "active" ? (r.chess.moves({ verbose: true }) as Array<{from:string;to:string;promotion?:string}>).map((m) => ({ from:m.from, to:m.to, ...(m.promotion ? {promotion:m.promotion as "q"|"r"|"b"|"n"}: {}) })) : [];
+    // Clients calculate selection hints locally. Only the built-in test bot
+    // needs a complete move list from PublicGameState, so human-v-human games
+    // avoid enumerating every legal move on the server hot path.
+    const legalMoves = r.game.status === "active" && !!r.game.testBotUid
+      ? (r.chess.moves({ verbose: true }) as Array<{from:string;to:string;promotion?:string}>).map((m) => ({ from:m.from, to:m.to, ...(m.promotion ? {promotion:m.promotion as "q"|"r"|"b"|"n"}: {}) }))
+      : [];
     const checkSquare = r.chess.isCheck() ? this.findKingSquare(r.chess, r.chess.turn()) : null;
     const { id, playerUids, recentRequestIds, updatedAt, ...rest } = r.game;
     return { ...rest, gameId:id, ply:r.chess.history().length, whiteRemainingMs:white, blackRemainingMs:black, legalMoves, checkSquare, serverNowMs:Date.now() };

@@ -49,7 +49,6 @@ export default function ChessHistoryScreen() {
       setHasMore(page.hasMore);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause ?? "Unknown error");
-      if (__DEV__) console.warn("[ChessDebug] history:load_failed", { message });
       setError(message);
     } finally {
       setLoading(false);
