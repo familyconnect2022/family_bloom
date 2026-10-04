@@ -9,6 +9,9 @@ type MaskProps = {
   legalMoveHigh: SharedValue<number>;
   captureLow: SharedValue<number>;
   captureHigh: SharedValue<number>;
+  selectedSquareIndex: SharedValue<number>;
+  hintRevealProgress: SharedValue<number>;
+  hintMode: SharedValue<number>;
 };
 
 type SlotProps = MaskProps & {
@@ -16,6 +19,22 @@ type SlotProps = MaskProps & {
   squareSize: number;
   orientation: BoardOrientation;
 };
+
+function revealFor(index: number, originIndex: number, progress: number) {
+  "worklet";
+  if (originIndex < 0 || originIndex > 63) return 1;
+  const row = Math.floor(index / 8);
+  const col = index % 8;
+  const originRow = Math.floor(originIndex / 8);
+  const originCol = originIndex % 8;
+  // Sliding pieces now reveal nearest squares first on every ray. Different
+  // rays share the same distance, so bishop/rook/queen hints fan out instead
+  // of waiting for one long serial list.
+  const distance = Math.max(Math.abs(row - originRow), Math.abs(col - originCol));
+  const threshold = Math.min(0.84, Math.max(0, (distance - 1) * 0.14));
+  const local = (progress - threshold) / 0.24;
+  return Math.max(0, Math.min(1, local));
+}
 
 const HintSlot = React.memo(function HintSlot({
   index,
@@ -25,6 +44,9 @@ const HintSlot = React.memo(function HintSlot({
   legalMoveHigh,
   captureLow,
   captureHigh,
+  selectedSquareIndex,
+  hintRevealProgress,
+  hintMode,
 }: SlotProps) {
   const square = indexToSquare(index)!;
   const position = squareToPosition(square, squareSize, orientation);
@@ -32,12 +54,24 @@ const HintSlot = React.memo(function HintSlot({
   const ringInset = squareSize * 0.075;
   const ringWidth = Math.max(2, squareSize * 0.065);
 
-  const moveStyle = useAnimatedStyle(() => ({
-    opacity: hasBit(legalMoveLow.value, legalMoveHigh.value, index) ? 1 : 0,
-  }));
-  const captureStyle = useAnimatedStyle(() => ({
-    opacity: hasBit(captureLow.value, captureHigh.value, index) ? 1 : 0,
-  }));
+  const moveStyle = useAnimatedStyle(() => {
+    const visible = hasBit(legalMoveLow.value, legalMoveHigh.value, index);
+    const reveal = visible ? revealFor(index, selectedSquareIndex.value, hintRevealProgress.value) : 0;
+    return {
+      opacity: reveal,
+      backgroundColor: hintMode.value === 1 ? "rgba(119, 104, 190, 0.52)" : "rgba(123, 66, 90, 0.40)",
+      transform: [{ scale: 0.78 + reveal * 0.22 }],
+    };
+  });
+  const captureStyle = useAnimatedStyle(() => {
+    const visible = hasBit(captureLow.value, captureHigh.value, index);
+    const reveal = visible ? revealFor(index, selectedSquareIndex.value, hintRevealProgress.value) : 0;
+    return {
+      opacity: reveal,
+      borderColor: hintMode.value === 1 ? "rgba(111, 96, 188, 0.72)" : "rgba(128, 68, 93, 0.44)",
+      transform: [{ scale: 0.88 + reveal * 0.12 }],
+    };
+  });
 
   return (
     <View
@@ -90,6 +124,9 @@ export const HintLayer = React.memo(function HintLayer({
   legalMoveHigh,
   captureLow,
   captureHigh,
+  selectedSquareIndex,
+  hintRevealProgress,
+  hintMode,
 }: MaskProps & { squareSize: number; orientation: BoardOrientation }) {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -103,6 +140,9 @@ export const HintLayer = React.memo(function HintLayer({
           legalMoveHigh={legalMoveHigh}
           captureLow={captureLow}
           captureHigh={captureHigh}
+          selectedSquareIndex={selectedSquareIndex}
+          hintRevealProgress={hintRevealProgress}
+          hintMode={hintMode}
         />
       ))}
     </View>
@@ -110,12 +150,6 @@ export const HintLayer = React.memo(function HintLayer({
 });
 
 const styles = StyleSheet.create({
-  dot: {
-    position: "absolute",
-    backgroundColor: "rgba(72, 45, 54, 0.38)",
-  },
-  capture: {
-    position: "absolute",
-    borderColor: "rgba(91, 53, 66, 0.40)",
-  },
+  dot: { position: "absolute" },
+  capture: { position: "absolute" },
 });

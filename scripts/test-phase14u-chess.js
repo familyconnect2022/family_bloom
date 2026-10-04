@@ -16,7 +16,7 @@ check('game foreground resync',game.includes('AppState')&&game.includes('gameRes
 check('socket exposes reconnect signal',socket.includes('listeners.connected')&&socket.includes('socket.on("connect"'));
 check('global chess provider rejoins app after reconnect',realtime.includes('CHESS_EVENTS.appJoin')&&realtime.includes('stopConnected')&&realtime.includes('joinForeground'));
 check('game rejoins room after reconnect',game.includes('stopConnected')&&game.includes('gameJoin'));
-check('client sends expected authoritative version',/expectedVersion\s*:\s*(?:state|current)\.revision/.test(game));
+check('client sends expected authoritative version',/expectedVersion\s*:\s*(?:(?:state|current)\.revision|commandVersion)/.test(game));
 check('client derives visual legal moves locally while server still validates',board.includes('new Chess(')&&board.includes('chess.moves')&&manager.includes('r.chess.move'));
 check('clock uses monotonic performance now',clock.includes('performance?.now'));
 check('server uses chess.js',manager.includes('from "chess.js"'));

@@ -13,8 +13,8 @@ function check(name, ok) {
   else { fail++; console.error('FAIL', name); }
 }
 
-check('server wire type never allows captured king', /captured\?:\s*"p"\|"n"\|"b"\|"r"\|"q"/.test(serverTypes) && !/captured\?:[^;]*"k"/.test(serverTypes));
-check('client wire type never allows captured king', /captured\?:\s*"p"\s*\|\s*"n"\s*\|\s*"b"\s*\|\s*"r"\s*\|\s*"q"/.test(clientTypes) && !/captured\?:[^;]*"k"/.test(clientTypes));
+check('server wire type never allows captured king', /type CapturedPiece = "p"\|"n"\|"b"\|"r"\|"q"/.test(serverTypes) && /captured\?: CapturedPiece/.test(serverTypes) && !/type CapturedPiece =[^;]*"k"/.test(serverTypes));
+check('client wire type never allows captured king', /type ChessCapturedPiece = "p" \| "n" \| "b" \| "r" \| "q"/.test(clientTypes) && /captured\?: ChessCapturedPiece/.test(clientTypes) && !/type ChessCapturedPiece =[^;]*"k"/.test(clientTypes));
 check('server narrows chess.js PieceSymbol before AppliedMove', manager.includes('asCapturablePiece(moved.captured)') && manager.includes('if (piece === "k") throw new Error("CHESS_INVARIANT_CAPTURED_KING")'));
 check('server no longer assigns broad moved.captured directly', !manager.includes('{ captured: moved.captured }'));
 check('client narrows chess.js PieceSymbol before optimistic move', board.includes('asCapturablePiece(candidate.captured)') && board.includes('CHESS_INVARIANT_CAPTURED_KING'));

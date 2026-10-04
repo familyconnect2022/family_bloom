@@ -10,6 +10,7 @@ import {
   type ChessMoveDelta,
   type ChessPromotionPiece,
 } from "../../types/chess";
+import { chessDiagnostics } from "../../services/chess/chessDiagnostics";
 
 const commandId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
@@ -28,6 +29,7 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
 
   const commitSnapshot = useCallback((next: ChessGameState, _source: StateSource) => {
     const current = stateRef.current;
+    chessDiagnostics.mark({ gameId: next.gameId, stage: "snapshot_commit", version: next.revision, detail: _source });
     if (current && current.gameId === next.gameId) {
       if (next.revision < current.revision) return false;
       if (next.revision === current.revision) {
@@ -44,28 +46,41 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
 
   const commitMoveDelta = useCallback((delta: ChessMoveDelta): "applied" | "stale" | "gap" => {
     const current = stateRef.current;
-    if (!current || current.gameId !== delta.gameId) return "stale";
+    if (!current || current.gameId !== delta.gameId) {
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "delta_commit_stale", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: "NO_CURRENT_STATE" });
+      return "stale";
+    }
     const key = `${delta.gameId}:${delta.version}:${delta.clientMoveId}`;
-    if (lastDeltaKeyRef.current === key || delta.version <= current.revision) return "stale";
+    if (lastDeltaKeyRef.current === key || delta.version <= current.revision) {
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "delta_commit_stale", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: `current=${current.revision}` });
+      return "stale";
+    }
     // Do not apply a packet across a missing version. A full server snapshot is
     // safer than inventing one or more visual moves from incomplete history.
-    if (delta.version !== current.revision + 1) return "gap";
+    if (delta.version !== current.revision + 1) {
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "delta_commit_gap", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: `expected=${current.revision + 1}` });
+      return "gap";
+    }
     lastDeltaKeyRef.current = key;
     const next = applyChessMoveDelta(current, delta);
     stateRef.current = next;
     setState(next);
     setMoveDeltas((items) => [...items, delta].slice(-16));
+    chessDiagnostics.mark({ gameId: delta.gameId, stage: "delta_commit_applied", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version });
     return "applied";
   }, []);
 
   const resync = useCallback(async (): Promise<ChessGameState | null> => {
     if (!gameId) return null;
+    chessDiagnostics.mark({ gameId, stage: "resync_start" });
     const response = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameResync, { gameId });
     if (response.ok) {
       commitSnapshot(response.data, "resync");
+      chessDiagnostics.mark({ gameId, stage: "resync_ok", version: response.data.revision });
       setError(null);
       return response.data;
     }
+    chessDiagnostics.mark({ gameId, stage: "resync_fail", detail: response.errorCode });
     setError(response.errorCode);
     return null;
   }, [commitSnapshot, gameId]);
@@ -83,6 +98,7 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
     });
     const stopMove = chessSocketService.on("move", (delta) => {
       if (live && delta.gameId === gameId) {
+        chessDiagnostics.mark({ gameId: delta.gameId, stage: "move_applied_received", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version });
         const result = commitMoveDelta(delta);
         if (result === "gap") void resync();
         if (result === "applied") setError(null);
@@ -150,17 +166,22 @@ export function useChessGame(familyId: string | null, gameId: string | null) {
     to: string,
     promotion?: ChessPromotionPiece,
     clientMoveId = commandId(),
+    expectedVersion?: number,
   ): Promise<ChessAck<ChessMoveCommandAck>> => {
     const current = stateRef.current;
     if (!current) return { ok: false, errorCode: "CHESS_GAME_NOT_FOUND" };
-    return chessSocketService.emitAck<ChessMoveCommandAck>(CHESS_EVENTS.gameMove, {
+    const commandVersion = expectedVersion ?? current.revision;
+    chessDiagnostics.mark({ gameId: current.gameId, stage: "socket_emit", clientMoveId, from, to, version: commandVersion });
+    const response = await chessSocketService.emitAck<ChessMoveCommandAck>(CHESS_EVENTS.gameMove, {
       clientMoveId,
       gameId: current.gameId,
-      expectedVersion: current.revision,
+      expectedVersion: commandVersion,
       from,
       to,
       promotion,
     });
+    chessDiagnostics.mark({ gameId: current.gameId, stage: response.ok ? "socket_ack_ok" : "socket_ack_fail", clientMoveId, from, to, version: response.ok ? response.data.version : current.revision, detail: response.ok ? undefined : response.errorCode });
+    return response;
   }, []);
 
   const resign = useCallback(() => gameId

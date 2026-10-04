@@ -1,15 +1,34 @@
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { Chess, type Color, type PieceSymbol } from "chess.js";
-import { ChessDomainError, type AppliedMove, type ChessColor, type ChessTimeControl, type FinishReason, type MoveDelta, type MoveCommandAck, type PersistedGame, type PublicGameState } from "./chessTypes.js";
+import { ChessDomainError, type AppliedMove, type CaptureSummary, type CapturedPiece, type ChessColor, type ChessTimeControl, type FinishReason, type MoveDelta, type MoveCommandAck, type PersistedGame, type PublicGameState } from "./chessTypes.js";
 import { ChessPersistenceService } from "./chessPersistenceService.js";
 
-type Runtime = { game: PersistedGame; chess: Chess; turnStartedMono: number | null; connectedUids: Set<string> };
+type Runtime = { game: PersistedGame; chess: Chess; turnStartedMono: number | null; connectedUids: Set<string>; captures: CaptureSummary };
 type Broadcast = (event: { kind: "state"; state: PublicGameState } | { kind: "move"; state: PublicGameState; delta: MoveDelta }) => void;
 const iso = () => new Date().toISOString();
 const otherColor = (c: ChessColor): ChessColor => c === "w" ? "b" : "w";
 const CHECKPOINT_EVERY_PLY = 4;
 type CapturablePiece = NonNullable<AppliedMove["captured"]>;
+const emptyCaptureSummary = (): CaptureSummary => ({
+  byWhite: { p: 0, n: 0, b: 0, r: 0, q: 0 },
+  byBlack: { p: 0, n: 0, b: 0, r: 0, q: 0 },
+});
+const cloneCaptureSummary = (summary: CaptureSummary): CaptureSummary => ({
+  byWhite: { ...summary.byWhite },
+  byBlack: { ...summary.byBlack },
+});
+const deriveCaptureSummary = (chess: Chess): CaptureSummary => {
+  const summary = emptyCaptureSummary();
+  const history = chess.history({ verbose: true }) as Array<{ color: ChessColor; captured?: PieceSymbol }>;
+  for (const move of history) {
+    if (!move.captured || move.captured === "k") continue;
+    const piece = move.captured as CapturedPiece;
+    const bucket = move.color === "w" ? summary.byWhite : summary.byBlack;
+    bucket[piece] += 1;
+  }
+  return summary;
+};
 const asCapturablePiece = (piece: PieceSymbol | undefined): CapturablePiece | undefined => {
   if (!piece) return undefined;
   // chess.js exposes `captured` as PieceSymbol (which includes king) at the type level,
@@ -48,7 +67,7 @@ export class ChessGameManager {
       recentRequestIds: createRequestId ? [createRequestId] : [], testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: now, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
-    const runtime: Runtime = { game, chess, turnStartedMono: timeControl.kind === "clocked" ? performance.now() : null, connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []) };
+    const runtime: Runtime = { game, chess, turnStartedMono: timeControl.kind === "clocked" ? performance.now() : null, connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []), captures: emptyCaptureSummary() };
     this.games.set(gameId, runtime);
     return this.publicState(runtime);
   }
@@ -63,7 +82,7 @@ export class ChessGameManager {
       stored.status = "paused"; stored.revision += 1; stored.updatedAt = iso();
       await this.persistence.save(stored);
     }
-    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []) };
+    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), captures: deriveCaptureSummary(chess) };
     this.games.set(gameId, runtime); return runtime;
   }
 
@@ -117,6 +136,10 @@ export class ChessGameManager {
           ...(captured ? { captured } : {}),
           ...(moved.promotion ? { promotion: moved.promotion as "q"|"r"|"b"|"n" } : {}),
         };
+        if (captured) {
+          const bucket = moved.color === "w" ? r.captures.byWhite : r.captures.byBlack;
+          bucket[captured] += 1;
+        }
         if (r.game.timeControl.kind === "clocked") {
           if (color === "w") r.game.whiteRemainingMs = (r.game.whiteRemainingMs ?? 0) + r.game.timeControl.incrementMs;
           else r.game.blackRemainingMs = (r.game.blackRemainingMs ?? 0) + r.game.timeControl.incrementMs;
@@ -234,8 +257,8 @@ export class ChessGameManager {
   private assertPlayer(r: Runtime, uid: string) { if (uid !== r.game.whiteUid && uid !== r.game.blackUid) throw new ChessDomainError("CHESS_NOT_PLAYER"); }
   private assertActive(r: Runtime) { if (r.game.status === "finished") throw new ChessDomainError("CHESS_GAME_FINISHED"); if (r.game.status !== "active") throw new ChessDomainError("CHESS_SERVER_RECOVERING"); }
   private remember(g: PersistedGame, id: string) { g.recentRequestIds = [...g.recentRequestIds.filter((v) => v !== id), id].slice(-24); }
-  private snapshot(r: Runtime) { return { game: structuredClone(r.game), pgn: r.chess.pgn(), turnStartedMono: r.turnStartedMono }; }
-  private restoreSnapshot(r: Runtime, s: {game:PersistedGame;pgn:string;turnStartedMono:number|null}) { r.game=s.game; const c=new Chess(); if(s.pgn)c.loadPgn(s.pgn); r.chess=c; r.turnStartedMono=s.turnStartedMono; }
+  private snapshot(r: Runtime) { return { game: structuredClone(r.game), pgn: r.chess.pgn(), turnStartedMono: r.turnStartedMono, captures: cloneCaptureSummary(r.captures) }; }
+  private restoreSnapshot(r: Runtime, s: {game:PersistedGame;pgn:string;turnStartedMono:number|null;captures:CaptureSummary}) { r.game=s.game; const c=new Chess(); if(s.pgn)c.loadPgn(s.pgn); r.chess=c; r.turnStartedMono=s.turnStartedMono; r.captures=cloneCaptureSummary(s.captures); }
 
   private publicState(r: Runtime): PublicGameState {
     let white = r.game.whiteRemainingMs, black = r.game.blackRemainingMs;
@@ -252,7 +275,7 @@ export class ChessGameManager {
       : [];
     const checkSquare = r.chess.isCheck() ? this.findKingSquare(r.chess, r.chess.turn()) : null;
     const { id, playerUids, recentRequestIds, updatedAt, ...rest } = r.game;
-    return { ...rest, gameId:id, ply:r.chess.history().length, whiteRemainingMs:white, blackRemainingMs:black, legalMoves, checkSquare, serverNowMs:Date.now() };
+    return { ...rest, gameId:id, ply:r.chess.history().length, whiteRemainingMs:white, blackRemainingMs:black, legalMoves, checkSquare, captureSummary: cloneCaptureSummary(r.captures), serverNowMs:Date.now() };
   }
   private findKingSquare(chess: Chess, color: Color): string | null { const board=chess.board(); for(let row=0;row<board.length;row++) for(let file=0;file<board[row].length;file++){ const p=board[row][file]; if(p?.type==="k"&&p.color===color) return `${"abcdefgh"[file]}${8-row}`; } return null; }
 }

@@ -1,5 +1,5 @@
 import { Chess, type PieceSymbol } from "chess.js";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -13,15 +13,18 @@ import type {
   ChessMoveDelta,
   ChessPromotionPiece,
 } from "../../types/chess";
+import { applyChessMoveDelta } from "../../types/chess";
 import { HighlightLayer } from "./v2/HighlightLayer";
 import { HintLayer } from "./v2/HintLayer";
+import { InteractionLayer } from "./v2/InteractionLayer";
 import { PieceLayer } from "./v2/PieceLayer";
 import { SquareLayer } from "./v2/SquareLayer";
-import type { ChessPieceController } from "./v2/ChessPiece";
+import type { ChessPieceController, ChessPieceMotionProfile } from "./v2/ChessPiece";
 import { positionToSquare, squareToPosition, type BoardOrientation } from "./v2/coordinateMapper";
 import { buildPieceDescriptors, runtimeFromDescriptors, type PieceDescriptor, type PieceKey, type PieceRuntime } from "./v2/pieceIdentity";
 import { buildMoveMasks, squareToIndex } from "./v2/moveMask";
 import { useChessVisualState } from "./v2/useChessVisualState";
+import { chessDiagnostics } from "../../services/chess/chessDiagnostics";
 
 type CapturablePiece = NonNullable<ChessAppliedMove["captured"]>;
 function asCapturablePiece(piece: PieceSymbol | undefined): CapturablePiece | undefined {
@@ -33,7 +36,10 @@ function asCapturablePiece(piece: PieceSymbol | undefined): CapturablePiece | un
 
 const MOVE_MS = 115;
 const OPPONENT_MOVE_MS = 130;
+const PREMOVE_MOVE_MS = 92;
 const ILLEGAL_RETURN_MS = 95;
+const canInteract = (state: ChessGameState, myColor: ChessColor) => state.status === "active" && state.turn === myColor;
+const canTouchBoard = (state: ChessGameState) => state.status === "active";
 
 type PendingLocal = {
   clientMoveId: string;
@@ -73,16 +79,18 @@ export const ChessBoard = React.memo(function ChessBoard({
   onPromotion,
   onMotionChange,
   onVisualRevisionChange,
+  onVisualTurnChange,
 }: {
   state: ChessGameState;
   myColor: ChessColor;
   moveDeltas: ChessMoveDelta[];
   snapshotEpoch: number;
-  onMove: (from: string, to: string, promotion: ChessPromotionPiece | undefined, clientMoveId: string) => Promise<ChessAck<ChessMoveCommandAck>>;
+  onMove: (from: string, to: string, promotion: ChessPromotionPiece | undefined, clientMoveId: string, expectedVersion: number) => Promise<ChessAck<ChessMoveCommandAck>>;
   onResync: () => Promise<ChessGameState | null>;
   onPromotion: (from: string, to: string) => Promise<ChessPromotionPiece | null>;
   onMotionChange?: (moving: boolean) => void;
   onVisualRevisionChange?: (revision: number) => void;
+  onVisualTurnChange?: (turn: ChessColor, status: ChessGameState["status"]) => void;
 }) {
   const { width } = useWindowDimensions();
   const squareSize = Math.floor(Math.min(width - 28, 430) / 8);
@@ -94,6 +102,9 @@ export const ChessBoard = React.memo(function ChessBoard({
   const [pieceGeneration, setPieceGeneration] = useState(0);
 
   const stateRef = useRef(state);
+  // Interaction truth follows the position that is already visible on screen.
+  // Network state may advance before the visual animation queue catches up.
+  const interactionStateRef = useRef(state);
   const selectedRef = useRef<string | null>(null);
   const layoutKeyRef = useRef(`${orientation}:${squareSize}`);
   const runtimeRef = useRef<Map<string, PieceRuntime>>(runtimeFromDescriptors(initialPieces));
@@ -108,7 +119,10 @@ export const ChessBoard = React.memo(function ChessBoard({
   const sessionPrefixRef = useRef(`fbv2-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`);
   const moveCounterRef = useRef(0);
 
-  const boardLocked = useSharedValue(state.status === "active" ? 0 : 1);
+  // V4G: opponent turn is still touchable for ONE local premove. Server truth
+  // remains authoritative; boardLocked now means visual/input transaction lock,
+  // not simply "not my turn".
+  const boardLocked = useSharedValue(canTouchBoard(state) ? 0 : 1);
   const boardOpacity = useSharedValue(1);
   const visual = useChessVisualState({
     lastMove: state.lastMove ? { from: state.lastMove.from, to: state.lastMove.to } : null,
@@ -138,11 +152,11 @@ export const ChessBoard = React.memo(function ChessBoard({
     return null;
   }, []);
 
-  const moveController = useCallback((id: string, square: string, duration: number) => new Promise<void>((resolve) => {
+  const moveController = useCallback((id: string, square: string, duration: number, profile: ChessPieceMotionProfile = "lift") => new Promise<void>((resolve) => {
     const controller = controllersRef.current.get(id);
     if (!controller) { resolve(); return; }
     const p = squareToPosition(square, squareSize, orientation);
-    controller.moveTo(p.x, p.y, duration, resolve);
+    controller.moveTo(p.x, p.y, duration, resolve, profile);
   }), [orientation, squareSize]);
 
   const applyRuntimeMove = useCallback((move: ChessAppliedMove) => {
@@ -166,10 +180,10 @@ export const ChessBoard = React.memo(function ChessBoard({
     }
   }, [findPieceAt]);
 
-  const animateMove = useCallback(async (move: ChessAppliedMove, duration: number) => {
+  const animateMove = useCallback(async (move: ChessAppliedMove, duration: number, profile: ChessPieceMotionProfile = "lift") => {
     const primary = findPieceAt(move.from, move.color, move.piece);
     if (!primary) return;
-    const tasks: Promise<void>[] = [moveController(primary.id, move.to, duration)];
+    const tasks: Promise<void>[] = [moveController(primary.id, move.to, duration, profile)];
     const capturedAt = captureSquare(move);
     if (capturedAt) {
       const captured = findPieceAt(capturedAt, move.color === "w" ? "b" : "w");
@@ -178,7 +192,7 @@ export const ChessBoard = React.memo(function ChessBoard({
     const rookMove = castleRook(move);
     if (rookMove) {
       const rook = findPieceAt(rookMove.from, move.color, "r");
-      if (rook) tasks.push(moveController(rook.id, rookMove.to, duration));
+      if (rook) tasks.push(moveController(rook.id, rookMove.to, duration, profile));
     }
     await Promise.all(tasks);
   }, [findPieceAt, moveController]);
@@ -191,6 +205,8 @@ export const ChessBoard = React.memo(function ChessBoard({
       const nextPieces = buildPieceDescriptors(snapshot.fen);
       controllersRef.current.clear();
       runtimeRef.current = runtimeFromDescriptors(nextPieces);
+      interactionStateRef.current = snapshot;
+      onVisualTurnChange?.(snapshot.turn, snapshot.status);
       lastQueuedVersionRef.current = snapshot.revision;
       setPieces(nextPieces);
       setPieceGeneration((value) => value + 1);
@@ -204,14 +220,14 @@ export const ChessBoard = React.memo(function ChessBoard({
       requestAnimationFrame(() => requestAnimationFrame(() => {
         boardOpacity.value = withTiming(1, { duration: 90 });
         setTimeout(() => {
-          boardLocked.value = snapshot.status === "active" ? 0 : 1;
+          boardLocked.value = canTouchBoard(snapshot) ? 0 : 1;
           setMotion(false);
           onVisualRevisionChange?.(snapshot.revision);
           resolve();
         }, 95);
       }));
     }, 65);
-  }), [boardLocked, boardOpacity, onVisualRevisionChange, setMotion, visual]);
+  }), [boardLocked, boardOpacity, myColor, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
 
   const legalMovesFor = useCallback((fen: string, from: string, allowPremove: boolean) => {
     try {
@@ -225,48 +241,153 @@ export const ChessBoard = React.memo(function ChessBoard({
     visual.clearHints();
   }, [visual]);
 
+  const clearPremove = useCallback((detail = "clear") => {
+    const queued = premoveRef.current;
+    if (queued) {
+      chessDiagnostics.mark({ gameId: interactionStateRef.current.gameId, stage: "premove_clear", from: queued.from, to: queued.to, version: interactionStateRef.current.revision, detail });
+    }
+    premoveRef.current = null;
+    visual.setPremove(null, null);
+  }, [visual]);
+
   const selectSquare = useCallback((square: string) => {
-    const current = stateRef.current;
+    const current = interactionStateRef.current;
+    const premoveMode = current.status === "active" && current.turn !== myColor;
+    chessDiagnostics.mark({
+      gameId: current.gameId,
+      stage: "selection",
+      from: square,
+      version: current.revision,
+      detail: `${premoveMode ? "premove" : "move"}:visual-v${current.revision}`,
+    });
+
     const piece = findPieceAt(square);
     if (!piece || piece.piece.pieceKey[0] !== myColor || current.status !== "active" || pendingRef.current) {
+      const reason = pendingRef.current
+        ? "PENDING_MOVE"
+        : current.status !== "active"
+          ? `STATUS_${current.status}`
+          : !piece
+            ? "NO_PIECE"
+            : "WRONG_COLOR";
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "input_blocked", from: square, version: current.revision, detail: reason });
       clearSelection();
       return;
     }
-    const allowPremove = current.turn !== myColor;
-    const moves = legalMovesFor(current.fen, square, allowPremove);
+
+    // Tapping the queued source again is a quick premove cancel gesture.
+    if (premoveMode && premoveRef.current?.from === square && !selectedRef.current) {
+      clearPremove("tap-source-toggle");
+      clearSelection();
+      return;
+    }
+
+    const moves = legalMovesFor(current.fen, square, premoveMode);
     const masks = buildMoveMasks(moves);
+    if (premoveMode && premoveRef.current) clearPremove("replace-selection");
     selectedRef.current = square;
-    visual.selectedSquareIndex.value = squareToIndex(square);
     visual.legalMoveLow.value = masks.legal.low;
     visual.legalMoveHigh.value = masks.legal.high;
     visual.captureLow.value = masks.capture.low;
     visual.captureHigh.value = masks.capture.high;
-  }, [clearSelection, findPieceAt, legalMovesFor, myColor, visual]);
+    visual.revealHints(square, premoveMode);
+  }, [clearPremove, clearSelection, findPieceAt, legalMovesFor, myColor, visual]);
 
   const snapPieceBack = useCallback((id: string, square: string, unlock = true) => {
     const p = squareToPosition(square, squareSize, orientation);
     controllersRef.current.get(id)?.moveTo(p.x, p.y, ILLEGAL_RETURN_MS, () => {
-      if (unlock) boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
+      if (unlock) boardLocked.value = canTouchBoard(interactionStateRef.current) ? 0 : 1;
       setMotion(false);
-    });
+    }, "settle");
   }, [boardLocked, orientation, setMotion, squareSize]);
 
-  const executeAttempt = useCallback(async (from: string, to: string, promotion: ChessPromotionPiece | undefined, source: "tap"|"drag"|"premove" = "tap") => {
-    const current = stateRef.current;
+  const queuePremove = useCallback(async (
+    from: string,
+    to: string,
+    promotion: ChessPromotionPiece | undefined,
+    source: "tap" | "drag" = "tap",
+  ) => {
+    const current = interactionStateRef.current;
     const movingPiece = findPieceAt(from);
-    if (!movingPiece || movingPiece.piece.pieceKey[0] !== myColor || current.status !== "active" || pendingRef.current) {
+    if (!movingPiece || movingPiece.piece.pieceKey[0] !== myColor || current.status !== "active" || current.turn === myColor || pendingRef.current) {
+      const reason = current.turn === myColor ? "TURN_ALREADY_MINE" : pendingRef.current ? "PENDING_MOVE" : !movingPiece ? "NO_PIECE" : current.status !== "active" ? `STATUS_${current.status}` : "WRONG_COLOR";
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "premove_blocked", from, to, version: current.revision, detail: reason });
+      clearSelection();
       if (source === "drag" && movingPiece) snapPieceBack(movingPiece.id, from);
+      else boardLocked.value = canTouchBoard(current) ? 0 : 1;
       return;
     }
 
-    const isPremove = current.turn !== myColor;
-    const candidates = legalMovesFor(current.fen, from, isPremove).filter((move) => move.to === to);
+    // A premove is only an intent cache. For UI guidance we use chess.js with
+    // the turn forced locally, but the move is validated again on the NEW
+    // authoritative FEN after the opponent actually moves.
+    const candidates = legalMovesFor(current.fen, from, true).filter((move) => move.to === to);
     if (!candidates.length) {
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "premove_invalid", from, to, version: current.revision, detail: source });
       clearSelection();
       if (source === "drag") snapPieceBack(movingPiece.id, from);
-      else { setMotion(false); boardLocked.value = 0; }
+      else boardLocked.value = 0;
       return;
     }
+
+    let chosenPromotion = promotion;
+    const promotionCandidates = candidates.filter((move) => !!move.promotion);
+    if (promotionCandidates.length && !chosenPromotion) {
+      chosenPromotion = await onPromotion(from, to) ?? undefined;
+      if (!chosenPromotion) {
+        clearSelection();
+        if (source === "drag") snapPieceBack(movingPiece.id, from);
+        else boardLocked.value = 0;
+        return;
+      }
+    }
+
+    const replacing = !!premoveRef.current;
+    premoveRef.current = { from, to, promotion: chosenPromotion };
+    visual.setPremove(from, to);
+    clearSelection();
+    chessDiagnostics.mark({
+      gameId: current.gameId,
+      stage: replacing ? "premove_replace" : "premove_set",
+      from,
+      to,
+      version: current.revision,
+      detail: source,
+    });
+
+    // The real piece never leaves the authoritative source square while a
+    // premove is queued. A dragged piece settles back; the lavender from/to
+    // overlay communicates the queued intent without lying about game truth.
+    if (source === "drag") snapPieceBack(movingPiece.id, from);
+    else boardLocked.value = 0;
+  }, [boardLocked, clearSelection, findPieceAt, legalMovesFor, myColor, onPromotion, snapPieceBack, visual]);
+
+  const executeAttempt = useCallback(async (from: string, to: string, promotion: ChessPromotionPiece | undefined, source: "tap"|"drag"|"premove" = "tap") => {
+    const current = interactionStateRef.current;
+    chessDiagnostics.mark({ gameId: current.gameId, stage: "attempt_start", from, to, version: current.revision, detail: `${source}:visual-v${current.revision}` });
+    const movingPiece = findPieceAt(from);
+    if (!movingPiece || movingPiece.piece.pieceKey[0] !== myColor || current.status !== "active" || current.turn !== myColor || pendingRef.current) {
+      const reason = current.turn !== myColor ? "NOT_MY_TURN" : !movingPiece ? "NO_PIECE" : pendingRef.current ? "PENDING_MOVE" : current.status !== "active" ? `STATUS_${current.status}` : "WRONG_COLOR";
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "attempt_blocked", from, to, version: current.revision, detail: reason });
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "input_blocked", from, to, version: current.revision, detail: reason });
+      if (source === "drag" && movingPiece) snapPieceBack(movingPiece.id, from);
+      else if (source === "premove") {
+        clearPremove("execute-blocked");
+        boardLocked.value = canTouchBoard(current) ? 0 : 1;
+      }
+      return;
+    }
+
+    const candidates = legalMovesFor(current.fen, from, false).filter((move) => move.to === to);
+    if (!candidates.length) {
+      chessDiagnostics.mark({ gameId: current.gameId, stage: source === "premove" ? "premove_revalidate_fail" : "local_validate_illegal", from, to, version: current.revision, detail: source });
+      clearSelection();
+      clearPremove("revalidate-fail");
+      if (source === "drag") snapPieceBack(movingPiece.id, from);
+      else { setMotion(false); boardLocked.value = canTouchBoard(current) ? 0 : 1; }
+      return;
+    }
+    chessDiagnostics.mark({ gameId: current.gameId, stage: source === "premove" ? "premove_revalidate_ok" : "local_validate_ok", from, to, version: current.revision, detail: `${source}:${candidates.length}` });
 
     let chosenPromotion = promotion;
     const promotionCandidates = candidates.filter((move) => !!move.promotion);
@@ -281,94 +402,149 @@ export const ChessBoard = React.memo(function ChessBoard({
     const candidate = candidates.find((move) => !move.promotion || move.promotion === chosenPromotion) ?? candidates[0];
 
     clearSelection();
-    if (isPremove) {
-      const queued = { from, to, ...(chosenPromotion ? { promotion: chosenPromotion } : {}) };
-      premoveRef.current = queued;
-      visual.setPremove(from, to);
-      if (source === "drag") snapPieceBack(movingPiece.id, from);
-      else { boardLocked.value = 0; setMotion(false); }
-      return;
-    }
-
-    premoveRef.current = null;
-    visual.setPremove(null, null);
+    clearPremove(source === "premove" ? "execute" : "normal-move");
     boardLocked.value = 1;
     setMotion(true);
     const clientMoveId = `${sessionPrefixRef.current}-${++moveCounterRef.current}`;
+    chessDiagnostics.mark({ gameId: current.gameId, stage: "optimistic_start", clientMoveId, from, to, version: current.revision, detail: source });
     const captured = asCapturablePiece(candidate.captured);
     const applied: ChessAppliedMove = {
       from, to, san: candidate.san, color: candidate.color, piece: candidate.piece, flags: candidate.flags,
       ...(captured ? { captured } : {}),
       ...(candidate.promotion ? { promotion: candidate.promotion } : {}),
     };
-    const visualPromise = animateMove(applied, source === "drag" ? 85 : MOVE_MS).then(() => {
+    const duration = source === "drag" ? 85 : source === "premove" ? PREMOVE_MOVE_MS : MOVE_MS;
+    const profile: ChessPieceMotionProfile = source === "drag" ? "settle" : "lift";
+    const visualPromise = animateMove(applied, duration, profile).then(() => {
       if (pendingRef.current?.clientMoveId === clientMoveId) applyRuntimeMove(applied);
+      chessDiagnostics.mark({ gameId: current.gameId, stage: "optimistic_settle", clientMoveId, from, to, version: current.revision });
       setMotion(false);
     });
     pendingRef.current = { clientMoveId, from, to, promotion: chosenPromotion, visual: visualPromise };
 
-    void onMove(from, to, chosenPromotion, clientMoveId).then(async (ack) => {
+    void onMove(from, to, chosenPromotion, clientMoveId, current.revision).then(async (ack) => {
+      chessDiagnostics.mark({ gameId: current.gameId, stage: ack.ok ? "socket_ack_ok" : "socket_ack_fail", clientMoveId, from, to, version: ack.ok ? ack.data.version : current.revision, detail: ack.ok ? undefined : ack.errorCode });
       if (!ack.ok) {
         if (pendingRef.current?.clientMoveId !== clientMoveId) return;
         pendingRef.current = null;
         const snapshot = await onResync();
         if (snapshot) await rebuildFromSnapshot(snapshot);
-        else { boardLocked.value = 0; setMotion(false); }
+        else { boardLocked.value = canTouchBoard(current) ? 0 : 1; setMotion(false); }
         return;
       }
       setTimeout(() => {
         if (pendingRef.current?.clientMoveId === clientMoveId && stateRef.current.revision < ack.data.version) void onResync().then((snapshot) => snapshot && rebuildFromSnapshot(snapshot));
       }, 700);
     });
-  }, [animateMove, applyRuntimeMove, boardLocked, clearSelection, findPieceAt, legalMovesFor, myColor, onMove, onPromotion, onResync, rebuildFromSnapshot, setMotion, snapPieceBack, visual]);
+  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, findPieceAt, legalMovesFor, myColor, onMove, onPromotion, onResync, rebuildFromSnapshot, setMotion, snapPieceBack, visual]);
   attemptRef.current = executeAttempt;
 
   const onTapPiece = useCallback((id: string) => {
+    const current = interactionStateRef.current;
     const runtime = runtimeRef.current.get(id);
+    chessDiagnostics.mark({ gameId: current.gameId, stage: "piece_hit", from: runtime?.square, version: current.revision, detail: id });
     if (!runtime?.alive) return;
     const selectedNow = selectedRef.current;
-    if (selectedNow && runtime.pieceKey[0] !== myColor) { void attemptRef.current(selectedNow, runtime.square, undefined, "tap"); return; }
+    if (selectedNow && runtime.pieceKey[0] !== myColor) {
+      if (current.turn === myColor) void attemptRef.current(selectedNow, runtime.square, undefined, "tap");
+      else void queuePremove(selectedNow, runtime.square, undefined, "tap");
+      return;
+    }
+    if (!selectedNow && premoveRef.current && (runtime.square === premoveRef.current.from || runtime.square === premoveRef.current.to)) {
+      clearPremove("tap-highlight");
+      return;
+    }
     selectSquare(runtime.square);
-  }, [myColor, selectSquare]);
+  }, [clearPremove, myColor, queuePremove, selectSquare]);
 
   const onPressSquare = useCallback((square: string) => {
-    if (motionRef.current || pendingRef.current) return;
+    const visible = interactionStateRef.current;
+    const networkAhead = stateRef.current.gameId === visible.gameId && stateRef.current.revision > visible.revision;
+    const lockReason = networkAhead ? "VISUAL_CATCHUP_LOCK" : motionRef.current ? "MOTION_LOCK" : pendingRef.current ? "PENDING_LOCK" : undefined;
+    chessDiagnostics.mark({ gameId: visible.gameId, stage: "square_hit", to: square, version: visible.revision, detail: lockReason });
+    if (lockReason) {
+      chessDiagnostics.mark({ gameId: visible.gameId, stage: "input_blocked", to: square, version: visible.revision, detail: lockReason });
+      return;
+    }
     const selectedNow = selectedRef.current;
-    if (selectedNow) { void attemptRef.current(selectedNow, square, undefined, "tap"); return; }
+    if (selectedNow) {
+      if (visible.turn === myColor) void attemptRef.current(selectedNow, square, undefined, "tap");
+      else void queuePremove(selectedNow, square, undefined, "tap");
+      return;
+    }
+    if (premoveRef.current && (square === premoveRef.current.from || square === premoveRef.current.to)) {
+      clearPremove("tap-highlight");
+      return;
+    }
     selectSquare(square);
-  }, [selectSquare]);
+  }, [clearPremove, myColor, queuePremove, selectSquare]);
 
   const onDragStart = useCallback((id: string) => {
     const runtime = runtimeRef.current.get(id);
     if (!runtime?.alive) return;
-    // Selection/hints are SharedValue-only. Starting a drag does not call a
-    // React state setter or notify the parent screen.
     selectSquare(runtime.square);
     boardLocked.value = 1;
   }, [boardLocked, selectSquare]);
 
   const onDragCancel = useCallback((_id: string) => {
     clearSelection();
-    boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
+    boardLocked.value = canTouchBoard(interactionStateRef.current) ? 0 : 1;
   }, [boardLocked, clearSelection]);
+
+  const resolveDropTarget = useCallback((from: string, centerX: number, centerY: number) => {
+    const current = interactionStateRef.current;
+    const raw = positionToSquare(centerX, centerY, squareSize, orientation);
+    const allowPremove = current.status === "active" && current.turn !== myColor;
+    const moves = current.status === "active" ? legalMovesFor(current.fen, from, allowPremove) : [];
+    const legalTargets = Array.from(new Set(moves.map((move) => String(move.to))));
+    if (raw && legalTargets.includes(raw)) return { target: raw, raw, adjusted: false };
+
+    const maxDistance = squareSize * 0.56;
+    let best: { square: string; distance: number } | null = null;
+    for (const square of legalTargets) {
+      const p = squareToPosition(square, squareSize, orientation);
+      const dx = centerX - (p.x + squareSize / 2);
+      const dy = centerY - (p.y + squareSize / 2);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= maxDistance && (!best || distance < best.distance)) best = { square, distance };
+    }
+    return { target: best?.square ?? raw, raw, adjusted: !!best && best.square !== raw };
+  }, [legalMovesFor, myColor, orientation, squareSize]);
 
   const onDrop = useCallback((id: string, centerX: number, centerY: number) => {
     const runtime = runtimeRef.current.get(id);
     if (!runtime?.alive) return;
-    const target = positionToSquare(centerX, centerY, squareSize, orientation);
-    if (!target) { clearSelection(); snapPieceBack(id, runtime.square); return; }
-    void attemptRef.current(runtime.square, target, undefined, "drag");
-  }, [clearSelection, orientation, snapPieceBack, squareSize]);
+    const current = interactionStateRef.current;
+    const resolved = resolveDropTarget(runtime.square, centerX, centerY);
+    chessDiagnostics.mark({
+      gameId: current.gameId,
+      stage: resolved.adjusted ? "drop_target_adjusted" : "drop_target",
+      from: runtime.square,
+      to: resolved.target ?? resolved.raw ?? undefined,
+      version: current.revision,
+      detail: resolved.adjusted ? `raw=${resolved.raw ?? "outside"}` : resolved.raw ? "exact" : "outside",
+    });
+    if (!resolved.target) { clearSelection(); snapPieceBack(id, runtime.square); return; }
+    if (current.turn === myColor) void attemptRef.current(runtime.square, resolved.target, undefined, "drag");
+    else void queuePremove(runtime.square, resolved.target, undefined, "drag");
+  }, [clearSelection, myColor, queuePremove, resolveDropTarget, snapPieceBack]);
 
   const processDelta = useCallback(async (delta: ChessMoveDelta) => {
+    chessDiagnostics.mark({ gameId: delta.gameId, stage: "board_delta_start", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version });
     const pending = pendingRef.current;
     if (pending && delta.clientMoveId === pending.clientMoveId) {
       await pending.visual;
       visual.setLastMove(delta.move.from, delta.move.to);
       visual.setCheckSquare(delta.checkSquare);
+      interactionStateRef.current = applyChessMoveDelta(interactionStateRef.current, delta);
+      onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
       pendingRef.current = null;
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "authoritative_commit", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: "LOCAL_CONFIRM" });
+      // Once our move is authoritative, the opponent turn is still touchable
+      // so the player can queue exactly one premove.
       boardLocked.value = delta.status === "active" ? 0 : 1;
       onVisualRevisionChange?.(delta.version);
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "visual_settle", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version });
       return;
     }
 
@@ -376,20 +552,31 @@ export const ChessBoard = React.memo(function ChessBoard({
     setMotion(true);
     await animateMove(delta.move, OPPONENT_MOVE_MS);
     applyRuntimeMove(delta.move);
+    interactionStateRef.current = applyChessMoveDelta(interactionStateRef.current, delta);
+    onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
+    chessDiagnostics.mark({ gameId: delta.gameId, stage: "authoritative_commit", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version, detail: "REMOTE_APPLY" });
     clearSelection();
     visual.setLastMove(delta.move.from, delta.move.to);
     visual.setCheckSquare(delta.checkSquare);
     setMotion(false);
-    boardLocked.value = delta.status === "active" ? 0 : 1;
     onVisualRevisionChange?.(delta.version);
+    chessDiagnostics.mark({ gameId: delta.gameId, stage: "visual_settle", clientMoveId: delta.clientMoveId, from: delta.move.from, to: delta.move.to, version: delta.version });
 
     const queued = premoveRef.current;
-    if (queued && delta.turn === myColor && delta.status === "active") {
+    if (delta.status === "active" && delta.turn === myColor && queued) {
+      // The premove only becomes a real command AFTER the opponent move is
+      // visually committed. Revalidate on the new authoritative FEN/version,
+      // then animate+emit just like a normal local move.
+      boardLocked.value = 1;
       premoveRef.current = null;
       visual.setPremove(null, null);
+      chessDiagnostics.mark({ gameId: delta.gameId, stage: "premove_fire", from: queued.from, to: queued.to, version: delta.version });
       requestAnimationFrame(() => void attemptRef.current(queued.from, queued.to, queued.promotion, "premove"));
+    } else {
+      if (delta.status !== "active") clearPremove("game-not-active");
+      boardLocked.value = delta.status === "active" ? 0 : 1;
     }
-  }, [animateMove, applyRuntimeMove, boardLocked, clearSelection, myColor, onVisualRevisionChange, setMotion, visual]);
+  }, [animateMove, applyRuntimeMove, boardLocked, clearPremove, clearSelection, myColor, onVisualRevisionChange, onVisualTurnChange, setMotion, visual]);
 
   useEffect(() => {
     // A full snapshot scheduled in the same React batch supersedes buffered
@@ -438,18 +625,38 @@ export const ChessBoard = React.memo(function ChessBoard({
       const point = squareToPosition(runtime.square, squareSize, orientation);
       controllersRef.current.get(id)?.setPosition(point.x, point.y);
     }
-    boardLocked.value = stateRef.current.status === "active" ? 0 : 1;
-  }, [boardLocked, orientation, squareSize]);
+    boardLocked.value = canTouchBoard(stateRef.current) ? 0 : 1;
+  }, [boardLocked, myColor, orientation, squareSize]);
+
+  useLayoutEffect(() => {
+    const visible = interactionStateRef.current;
+    if (state.gameId === visible.gameId && state.revision > visible.revision) {
+      // Network truth has advanced but the user is still looking at the prior
+      // visual position. Block new gestures until the queued animation commits.
+      boardLocked.value = 1;
+    }
+  }, [boardLocked, state.gameId, state.revision]);
 
   useEffect(() => {
-    if (state.status !== "active") boardLocked.value = 1;
-  }, [boardLocked, state.status]);
+    // Opponent turn remains interactive for one local premove. Only terminal /
+    // paused states hard-lock the board. Visual turn changes are committed by
+    // processDelta/rebuildFromSnapshot, not by network state racing ahead.
+    if (state.status !== "active") {
+      boardLocked.value = 1;
+      clearSelection();
+      clearPremove("status-lock");
+    }
+  }, [boardLocked, clearPremove, clearSelection, state.status]);
+
+  useEffect(() => {
+    onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status);
+  }, [onVisualTurnChange, state.gameId]);
 
   useEffect(() => () => { onMotionChange?.(false); }, [onMotionChange]);
 
   return (
     <GestureHandlerRootView style={[styles.board, { width:boardSize,height:boardSize }]}>
-      <SquareLayer squareSize={squareSize} boardSize={boardSize} orientation={orientation} onPressSquare={onPressSquare}/>
+      <SquareLayer squareSize={squareSize} boardSize={boardSize} orientation={orientation}/>
       <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, fadeStyle]}>
         <HighlightLayer
           squareSize={squareSize}
@@ -468,11 +675,15 @@ export const ChessBoard = React.memo(function ChessBoard({
           legalMoveHigh={visual.legalMoveHigh}
           captureLow={visual.captureLow}
           captureHigh={visual.captureHigh}
+          selectedSquareIndex={visual.selectedSquareIndex}
+          hintRevealProgress={visual.hintRevealProgress}
+          hintMode={visual.hintMode}
         />
+        <InteractionLayer squareSize={squareSize} orientation={orientation} onPressSquare={onPressSquare}/>
         <PieceLayer key={`piece-layer-${pieceGeneration}`} pieces={pieces} squareSize={squareSize} orientation={orientation} myColor={myColor} boardLocked={boardLocked} register={register} onTapPiece={onTapPiece} onDragStart={onDragStart} onDragCancel={onDragCancel} onDrop={onDrop}/>
       </Animated.View>
     </GestureHandlerRootView>
   );
 });
 
-const styles=StyleSheet.create({board:{alignSelf:"center",borderRadius:12,overflow:"hidden",backgroundColor:"#B77A68"}});
+const styles=StyleSheet.create({board:{alignSelf:"center",borderRadius:18,overflow:"hidden",backgroundColor:"#C98BA7",borderWidth:1,borderColor:"#E6B3C7",elevation:3,shadowColor:"#8E4D68",shadowOpacity:.16,shadowRadius:8,shadowOffset:{width:0,height:3}}});

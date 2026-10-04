@@ -95,8 +95,8 @@ export const HighlightLayer = React.memo(function HighlightLayer({
 });
 
 const styles = StyleSheet.create({
-  lastMove: { backgroundColor: "rgba(255, 215, 94, 0.30)" },
-  selected: { backgroundColor: "rgba(255,255,255,0.30)", borderWidth: 2, borderColor: "rgba(255,255,255,.82)" },
-  check: { backgroundColor: "rgba(205,65,65,.34)" },
-  premove: { backgroundColor: "rgba(114,156,221,.30)", borderWidth: 1.5, borderColor: "rgba(87,130,199,.75)" },
+  lastMove: { backgroundColor: "rgba(255, 214, 112, 0.34)" },
+  selected: { backgroundColor: "rgba(255,255,255,0.34)", borderWidth: 2, borderColor: "rgba(255,255,255,.88)" },
+  check: { backgroundColor: "rgba(208,66,91,.36)" },
+  premove: { backgroundColor: "rgba(132,146,215,.28)", borderWidth: 1.5, borderColor: "rgba(111,123,198,.72)" },
 });

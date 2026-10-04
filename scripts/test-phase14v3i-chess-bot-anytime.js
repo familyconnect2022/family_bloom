@@ -25,9 +25,9 @@ check('lobby bot request has no client play-window early return',(()=>{const a=l
 check('lobby bot button ignores quiet hours',lobby.includes('disabled={lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite}')&&!lobby.includes('disabled={!playWindow.canCreate || lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite}'));
 check('human challenge remains client gated',(()=>{const a=lobby.indexOf('const sendChallenge');const b=lobby.indexOf('const summonTestBot',a);const x=lobby.slice(a,b);return x.includes('getHomeGamePlayWindow()')&&x.includes('!latest.canCreate')})());
 check('night copy explicitly says bot remains available',lobby.includes('Bloom Bot vẫn có thể chơi bất kỳ lúc nào'));
-check('bot finished game enables rematch anytime',game.includes('const canRematchNow=isTestBotOpponent||playWindow.canCreate'));
-check('bot rematch skips client quiet-hour rejection',game.includes('if(!isTestBotOpponent){const latest=getHomeGamePlayWindow();if(!latest.canCreate)'));
-check('human finished game retains 06:00 label',game.includes('canRematchNow?"Chơi lại":"Hẹn từ 06:00"'));
+check('bot finished game enables rematch anytime',(/const canRematchNow\s*=\s*isTestBotOpponent\s*\|\|\s*playWindow\.canCreate/.test(game)));
+check('bot rematch skips client quiet-hour rejection',(/if\s*\(!isTestBotOpponent\)[\s\S]{0,300}getHomeGamePlayWindow\(\)[\s\S]{0,200}!latest\.canCreate/.test(game)));
+check('human finished game retains 06:00 label',(/canRematchNow\s*\?\s*"Chơi lại"\s*:\s*"Hẹn từ 06:00"/.test(game)));
 check('phase14v3i script wired',pkg.scripts['phase14v3i:check']==='node ./scripts/test-phase14v3i-chess-bot-anytime.js');
 check('DEBUG build runs bot-anytime regression gate',debug.includes('phase14v3i:check'));
 check('RELEASE build runs bot-anytime regression gate',release.includes('phase14v3i:check'));

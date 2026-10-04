@@ -13,6 +13,15 @@ export type ChessTimeControl =
 export type ChessPromotionPiece = "q" | "r" | "b" | "n";
 export type ChessMoveHint = { from: string; to: string; promotion?: ChessPromotionPiece };
 export type ChessLastMove = ChessMoveHint & { san: string };
+export type ChessCapturedPiece = "p" | "n" | "b" | "r" | "q";
+export type ChessCaptureCounts = Record<ChessCapturedPiece, number>;
+export type ChessCaptureSummary = { byWhite: ChessCaptureCounts; byBlack: ChessCaptureCounts };
+
+export const EMPTY_CHESS_CAPTURE_COUNTS: ChessCaptureCounts = { p: 0, n: 0, b: 0, r: 0, q: 0 };
+export const emptyChessCaptureSummary = (): ChessCaptureSummary => ({
+  byWhite: { ...EMPTY_CHESS_CAPTURE_COUNTS },
+  byBlack: { ...EMPTY_CHESS_CAPTURE_COUNTS },
+});
 
 /**
  * Full authoritative snapshot used only for join / reconnect / resync / rare
@@ -36,6 +45,7 @@ export type ChessGameState = {
   finishReason: ChessFinishReason;
   lastMove: ChessLastMove | null;
   checkSquare: string | null;
+  captureSummary: ChessCaptureSummary;
   drawOfferByUid: string | null;
   serverNowMs: number;
   createdAt: string;
@@ -52,7 +62,7 @@ export type ChessAppliedMove = {
   color: ChessColor;
   piece: "p" | "n" | "b" | "r" | "q" | "k";
   flags: string;
-  captured?: "p" | "n" | "b" | "r" | "q";
+  captured?: ChessCapturedPiece;
   promotion?: ChessPromotionPiece;
 };
 
@@ -85,6 +95,7 @@ export type ChessMoveCommandAck = {
 
 export function applyChessMoveDelta(current: ChessGameState, delta: ChessMoveDelta): ChessGameState {
   if (current.gameId !== delta.gameId || delta.version < current.revision) return current;
+  const captureSummary = current.captureSummary ?? emptyChessCaptureSummary();
   return {
     ...current,
     status: delta.status,
@@ -103,6 +114,16 @@ export function applyChessMoveDelta(current: ChessGameState, delta: ChessMoveDel
       ...(delta.move.promotion ? { promotion: delta.move.promotion } : {}),
     },
     checkSquare: delta.checkSquare,
+    captureSummary: delta.move.captured
+      ? {
+          byWhite: delta.move.color === "w"
+            ? { ...captureSummary.byWhite, [delta.move.captured]: captureSummary.byWhite[delta.move.captured] + 1 }
+            : captureSummary.byWhite,
+          byBlack: delta.move.color === "b"
+            ? { ...captureSummary.byBlack, [delta.move.captured]: captureSummary.byBlack[delta.move.captured] + 1 }
+            : captureSummary.byBlack,
+        }
+      : captureSummary,
     drawOfferByUid: delta.drawOfferByUid,
     serverNowMs: delta.serverNowMs,
     endedAt: delta.endedAt,

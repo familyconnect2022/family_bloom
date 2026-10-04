@@ -1,0 +1,41 @@
+PHASE 14V4E - CHESS INPUT STABILIZATION + BLOOM POLISH
+Date: 2026-10-04
+Base: Phase 14V4D
+
+Static / regression gates:
+- Phase 14V4 Renderer V2: 37/37 PASS
+- Phase 14V4A server capture type: 9/9 PASS
+- Phase 14V4B interaction hit layer: 15/15 PASS
+- Phase 14V4C RAM diagnostics: 24/24 PASS
+- Phase 14V4D diagnostic interaction fix: 16/16 PASS
+- Phase 14V4E input stabilization + Bloom polish: 27/27 PASS
+- Phase 14U core chess: 54/54 PASS
+- Phase 14V1 presence/FX: 33/33 PASS
+- Phase 14V2 test bot: 40/40 PASS
+- Phase 14V2A auth diagnostics: 13/13 PASS
+- Phase 14V2B cold-start/presence: 18/18 PASS
+- Phase 14V2C foreground resume: 10/10 PASS
+- Phase 14V2D history/bot capability: 13/13 PASS
+- Phase 14V3I bot anytime: 15/15 PASS
+
+Syntax transpile PASS:
+- src/components/chess/ChessBoard.tsx
+- src/components/chess/v2/ChessPiece.tsx
+- src/components/chess/v2/SquareLayer.tsx
+- src/components/chess/v2/HighlightLayer.tsx
+- src/components/chess/v2/HintLayer.tsx
+- src/components/chess/ChessDiagnosticPanel.tsx
+- src/app/chess-game/[gameId].tsx
+- src/services/chess/chessDiagnostics.ts
+
+Key runtime intent:
+1. Local input validates against visual-authoritative state, not a future network FEN; expectedVersion uses the same visible revision and VISUAL_CATCHUP_LOCK blocks network-ahead races.
+2. Drag release may only magnetically resolve to a chess.js-legal target near the border (0.56 * squareSize).
+3. Larger piece art does not change square hitbox or coordinate truth.
+4. Rematch shows immediate Bloom loading feedback.
+5. Diagnostics remain RAM-only and surface input_blocked/drop_target_adjusted.
+
+Not certified in this container:
+- Full Expo/Android native build (project node_modules are not present here).
+- Device FPS / touch latency. Requires real-device test.
+- No server code/protocol change in 14V4E; existing 14V4A+ Render server remains compatible.

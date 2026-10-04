@@ -8,6 +8,9 @@ export type FinishReason = "checkmate" | "resignation" | "timeout" | "stalemate"
   "insufficient_material" | "threefold_repetition" | "fifty_move_rule" | "abandoned" | null;
 export type MoveHint = { from: string; to: string; promotion?: "q" | "r" | "b" | "n" };
 export type LastMove = MoveHint & { san: string };
+export type CapturedPiece = "p"|"n"|"b"|"r"|"q";
+export type CaptureCounts = Record<CapturedPiece, number>;
+export type CaptureSummary = { byWhite: CaptureCounts; byBlack: CaptureCounts };
 export type PersistedGame = {
   id: string; familyId: string; whiteUid: string; blackUid: string; playerUids: string[];
   status: GameStatus; fen: string; pgn: string; turn: ChessColor; revision: number;
@@ -16,12 +19,12 @@ export type PersistedGame = {
   recentRequestIds: string[]; testBotUid?: string | null; isTestGame?: boolean; createdAt: string; startedAt: string | null; endedAt: string | null; updatedAt: string;
 };
 export type PublicGameState = Omit<PersistedGame, "id" | "playerUids" | "recentRequestIds" | "updatedAt"> & {
-  gameId: string; ply: number; legalMoves: MoveHint[]; checkSquare: string | null; serverNowMs: number;
+  gameId: string; ply: number; legalMoves: MoveHint[]; checkSquare: string | null; captureSummary: CaptureSummary; serverNowMs: number;
 };
 export type ClientGameState = Omit<PublicGameState, "pgn" | "legalMoves">;
 export type AppliedMove = {
   from: string; to: string; san: string; color: ChessColor; piece: "p"|"n"|"b"|"r"|"q"|"k"; flags: string;
-  captured?: "p"|"n"|"b"|"r"|"q"; promotion?: "q"|"r"|"b"|"n";
+  captured?: CapturedPiece; promotion?: "q"|"r"|"b"|"n";
 };
 export type MoveDelta = {
   gameId: string; clientMoveId: string; version: number; ply: number; move: AppliedMove; fen: string; turn: ChessColor;

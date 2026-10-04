@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useSharedValue } from "react-native-reanimated";
+import { useSharedValue, withTiming } from "react-native-reanimated";
 import { squareToIndex } from "./moveMask";
 
 type InitialVisualState = {
@@ -13,6 +13,8 @@ export function useChessVisualState(initial: InitialVisualState = {}) {
   const legalMoveHigh = useSharedValue(0);
   const captureLow = useSharedValue(0);
   const captureHigh = useSharedValue(0);
+  const hintRevealProgress = useSharedValue(0);
+  const hintMode = useSharedValue(0); // 0 = normal move, 1 = premove
   const lastMoveFromIndex = useSharedValue(initial.lastMove ? squareToIndex(initial.lastMove.from) : -1);
   const lastMoveToIndex = useSharedValue(initial.lastMove ? squareToIndex(initial.lastMove.to) : -1);
   const checkedKingIndex = useSharedValue(initial.checkSquare ? squareToIndex(initial.checkSquare) : -1);
@@ -25,7 +27,16 @@ export function useChessVisualState(initial: InitialVisualState = {}) {
     legalMoveHigh.value = 0;
     captureLow.value = 0;
     captureHigh.value = 0;
-  }, [captureHigh, captureLow, legalMoveHigh, legalMoveLow, selectedSquareIndex]);
+    hintRevealProgress.value = 0;
+    hintMode.value = 0;
+  }, [captureHigh, captureLow, hintMode, hintRevealProgress, legalMoveHigh, legalMoveLow, selectedSquareIndex]);
+
+  const revealHints = useCallback((originSquare: string, premove: boolean) => {
+    selectedSquareIndex.value = squareToIndex(originSquare);
+    hintMode.value = premove ? 1 : 0;
+    hintRevealProgress.value = 0;
+    hintRevealProgress.value = withTiming(1, { duration: 110 });
+  }, [hintMode, hintRevealProgress, selectedSquareIndex]);
 
   const setLastMove = useCallback((from: string | null | undefined, to: string | null | undefined) => {
     lastMoveFromIndex.value = from ? squareToIndex(from) : -1;
@@ -47,19 +58,22 @@ export function useChessVisualState(initial: InitialVisualState = {}) {
     legalMoveHigh,
     captureLow,
     captureHigh,
+    hintRevealProgress,
+    hintMode,
     lastMoveFromIndex,
     lastMoveToIndex,
     checkedKingIndex,
     premoveFromIndex,
     premoveToIndex,
     clearHints,
+    revealHints,
     setLastMove,
     setCheckSquare,
     setPremove,
   }), [
-    captureHigh, captureLow, checkedKingIndex, clearHints, legalMoveHigh, legalMoveLow,
-    lastMoveFromIndex, lastMoveToIndex, premoveFromIndex, premoveToIndex,
-    selectedSquareIndex, setCheckSquare, setLastMove, setPremove,
+    captureHigh, captureLow, checkedKingIndex, clearHints, hintMode, hintRevealProgress,
+    legalMoveHigh, legalMoveLow, lastMoveFromIndex, lastMoveToIndex, premoveFromIndex,
+    premoveToIndex, revealHints, selectedSquareIndex, setCheckSquare, setLastMove, setPremove,
   ]);
 }
 

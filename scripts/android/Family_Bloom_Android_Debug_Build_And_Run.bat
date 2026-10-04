@@ -161,6 +161,12 @@ if errorlevel 1 goto :fail
 call npm run phase14v4:check
 call npm run phase14v4a:check
 if errorlevel 1 goto :fail
+call npm run phase14v4e:check
+if errorlevel 1 goto :fail
+call npm run phase14v4f:check
+if errorlevel 1 goto :fail
+call npm run phase14v4g:check
+if errorlevel 1 goto :fail
 
 echo [4/7] Regenerating Android native project with the single app identity...
 call npx expo prebuild --platform android --clean

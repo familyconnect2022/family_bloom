@@ -106,7 +106,13 @@
     "phase14v3n:check": "node ./scripts/test-phase14v3n-chess-persistent-piece-layer.js",
     "phase14v3n1:check": "node ./scripts/test-phase14v3n1-chess-piece-visibility-hotfix.js",
     "phase14v4:check": "node ./scripts/test-phase14v4-chess-renderer-v2.js",
-    "phase14v4a:check": "node ./scripts/test-phase14v4a-chess-server-capture-type-hotfix.js"
+    "phase14v4a:check": "node ./scripts/test-phase14v4a-chess-server-capture-type-hotfix.js",
+    "phase14v4b:check": "node ./scripts/test-phase14v4b-chess-interaction-hit-layer.js",
+    "phase14v4c:check": "node scripts/test-phase14v4c-chess-diagnostic-build.js",
+    "phase14v4d:check": "node scripts/test-phase14v4d-chess-diagnostic-interaction-fix.js",
+    "phase14v4e:check": "node scripts/test-phase14v4e-chess-input-stabilization-bloom-polish.js",
+    "phase14v4f:check": "node scripts/test-phase14v4f-chess-turn-material-rail.js",
+    "phase14v4g:check": "node scripts/test-phase14v4g-chess-premove-lift-hints.js"
   },
   "private": true
 }

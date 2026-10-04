@@ -1,0 +1,33 @@
+PHASE 14V4E DEVICE CHECKLIST
+
+A. INPUT RACE
+1. Keep Diagnostics expanded.
+2. Play quickly after Bloom Bot finishes a move.
+3. Try a clearly legal move 10-20 times.
+4. Expected: no local_validate_illegal caused by a future FEN; trace should use visual-vN matching the position on screen.
+
+B. DRAG TARGET
+1. Drag to center of a legal square -> exact target.
+2. Drag near the border of a legal square -> may show drop_target_adjusted and still play the intended legal move.
+3. Drop clearly inside an illegal/source square -> must NOT be magnetically converted; piece returns to origin.
+
+C. PIECE / BLOOM VISUAL
+1. Piece artwork appears about 1.2x larger without overlapping interaction mapping.
+2. Pink/cream Bloom board remains readable for black and white pieces.
+3. White and Black orientation coordinates remain correct.
+
+D. REMATCH
+1. Finish a bot game.
+2. Tap Chơi lại once.
+3. Expected immediately: button says Đang chuẩn bị… and Bloom loading card appears.
+4. New game appears; loading overlay disappears automatically.
+5. Rapid repeat taps must not create duplicate rematches.
+
+E. IF A MOVE IS STILL BLOCKED
+Capture the Diagnostics panel. Look for:
+- input_blocked / MOTION_LOCK
+- input_blocked / PENDING_LOCK
+- local_validate_illegal
+- socket_ack_fail
+- delta_commit_gap
+- resync_* stages
