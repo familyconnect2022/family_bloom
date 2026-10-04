@@ -105,7 +105,8 @@
     "phase14v3m:check": "node ./scripts/test-phase14v3m-chess-fx-ab-switch.js",
     "phase14v3n:check": "node ./scripts/test-phase14v3n-chess-persistent-piece-layer.js",
     "phase14v3n1:check": "node ./scripts/test-phase14v3n1-chess-piece-visibility-hotfix.js",
-    "phase14v4:check": "node ./scripts/test-phase14v4-chess-renderer-v2.js"
+    "phase14v4:check": "node ./scripts/test-phase14v4-chess-renderer-v2.js",
+    "phase14v4a:check": "node ./scripts/test-phase14v4a-chess-server-capture-type-hotfix.js"
   },
   "private": true
 }

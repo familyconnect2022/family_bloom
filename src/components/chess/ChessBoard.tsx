@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type PieceSymbol } from "chess.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -22,6 +22,14 @@ import { positionToSquare, squareToPosition, type BoardOrientation } from "./v2/
 import { buildPieceDescriptors, runtimeFromDescriptors, type PieceDescriptor, type PieceKey, type PieceRuntime } from "./v2/pieceIdentity";
 import { buildMoveMasks, squareToIndex } from "./v2/moveMask";
 import { useChessVisualState } from "./v2/useChessVisualState";
+
+type CapturablePiece = NonNullable<ChessAppliedMove["captured"]>;
+function asCapturablePiece(piece: PieceSymbol | undefined): CapturablePiece | undefined {
+  if (!piece) return undefined;
+  // Legal chess never captures a king; chess.js includes `k` only in the broad PieceSymbol type.
+  if (piece === "k") throw new Error("CHESS_INVARIANT_CAPTURED_KING");
+  return piece;
+}
 
 const MOVE_MS = 115;
 const OPPONENT_MOVE_MS = 130;
@@ -287,9 +295,10 @@ export const ChessBoard = React.memo(function ChessBoard({
     boardLocked.value = 1;
     setMotion(true);
     const clientMoveId = `${sessionPrefixRef.current}-${++moveCounterRef.current}`;
+    const captured = asCapturablePiece(candidate.captured);
     const applied: ChessAppliedMove = {
       from, to, san: candidate.san, color: candidate.color, piece: candidate.piece, flags: candidate.flags,
-      ...(candidate.captured ? { captured: candidate.captured } : {}),
+      ...(captured ? { captured } : {}),
       ...(candidate.promotion ? { promotion: candidate.promotion } : {}),
     };
     const visualPromise = animateMove(applied, source === "drag" ? 85 : MOVE_MS).then(() => {

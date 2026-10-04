@@ -159,6 +159,7 @@ rem Keep Bot Anytime regression, then validate the V2 renderer/transport contrac
 call npm run phase14v3i:check
 if errorlevel 1 goto :fail
 call npm run phase14v4:check
+call npm run phase14v4a:check
 if errorlevel 1 goto :fail
 
 echo [4/7] Regenerating Android native project with the single app identity...

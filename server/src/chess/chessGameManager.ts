@@ -9,6 +9,14 @@ type Broadcast = (event: { kind: "state"; state: PublicGameState } | { kind: "mo
 const iso = () => new Date().toISOString();
 const otherColor = (c: ChessColor): ChessColor => c === "w" ? "b" : "w";
 const CHECKPOINT_EVERY_PLY = 4;
+type CapturablePiece = NonNullable<AppliedMove["captured"]>;
+const asCapturablePiece = (piece: PieceSymbol | undefined): CapturablePiece | undefined => {
+  if (!piece) return undefined;
+  // chess.js exposes `captured` as PieceSymbol (which includes king) at the type level,
+  // but a legal chess move can never capture the king. Keep our wire protocol semantically strict.
+  if (piece === "k") throw new Error("CHESS_INVARIANT_CAPTURED_KING");
+  return piece;
+};
 
 export class ChessGameManager {
   private games = new Map<string, Runtime>();
@@ -103,9 +111,10 @@ export class ChessGameManager {
         let moved; try { moved = r.chess.move({ from, to, promotion: (promotion ?? undefined) as PieceSymbol | undefined }); }
         catch { throw new ChessDomainError("CHESS_ILLEGAL_MOVE"); }
         if (!moved) throw new ChessDomainError("CHESS_ILLEGAL_MOVE");
+        const captured = asCapturablePiece(moved.captured);
         appliedMove = {
           from, to, san: moved.san, color: moved.color as ChessColor, piece: moved.piece, flags: moved.flags,
-          ...(moved.captured ? { captured: moved.captured } : {}),
+          ...(captured ? { captured } : {}),
           ...(moved.promotion ? { promotion: moved.promotion as "q"|"r"|"b"|"n" } : {}),
         };
         if (r.game.timeControl.kind === "clocked") {
