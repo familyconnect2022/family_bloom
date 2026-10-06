@@ -1,0 +1,25 @@
+Family Bloom Phase 14H validation — 2026-09-30
+
+Base: Phase 14G TRUE FOCUS OVERLAY FULL.
+
+Phase14H Focus Overlay Visibility: 16 PASS / 0 FAIL
+- Android hardware blur/hardware texture removed.
+- Light frosted shield present.
+- Focus root/card explicit zIndex/elevation.
+- Visible “Trở lại” button + X + outside tap + Android hardware Back.
+- 3/5/all disabled during Focus.
+- Canvas touch disabled during Focus.
+- Canvas camera/mode untouched on open.
+- Focus remains 80% Canvas View.
+- Gradual source-node zoom animation preserved.
+- Loading state preserved.
+- TS/TSX syntax: 198/198 PASS.
+
+Regression:
+- Phase14G: 30/30 PASS.
+- Phase14F: 21/21 PASS.
+- Phase14E: 24/24 PASS.
+- Phase14D: 47/47 PASS.
+- Phase14C: 44/44 PASS.
+
+Not claimed: native Android runtime/device visual PASS. Device verification required.

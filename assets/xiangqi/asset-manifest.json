@@ -1,0 +1,184 @@
+{
+  "red_general": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 67,
+      "right": 67,
+      "top": 53,
+      "bottom": 61
+    },
+    "sha256": "9f218896cbbd8c1a6ce0ebc01d8f06031be42c31e8d57324aae4061c439ea486"
+  },
+  "red_advisor": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 69,
+      "top": 54,
+      "bottom": 63
+    },
+    "sha256": "5b0db7d3017bf95fd4d2a01fa2387ccd2ee5e9196a986b294bce55ad6260524c"
+  },
+  "red_elephant": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 70,
+      "right": 70,
+      "top": 53,
+      "bottom": 62
+    },
+    "sha256": "30e66fc5b37da8ca0cb88734c4096b93abedf76300110a518756c85ee4938b80"
+  },
+  "red_chariot": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 70,
+      "top": 53,
+      "bottom": 62
+    },
+    "sha256": "ace036af10383d3d6596f39252f229f692941fd4f3dfa19e5137b4d4b78284a2"
+  },
+  "red_horse": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 69,
+      "top": 53,
+      "bottom": 62
+    },
+    "sha256": "76820cfe954283c8806dff02d0e448d1f9d058e2897f33cb4f62a6f5fe76e105"
+  },
+  "red_cannon": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 69,
+      "top": 54,
+      "bottom": 62
+    },
+    "sha256": "f294233f849d248a9bb3488d5e6d24e91c893f7b788a0e8346d0929859db8a78"
+  },
+  "red_soldier": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 65,
+      "right": 66,
+      "top": 53,
+      "bottom": 62
+    },
+    "sha256": "a112d193c9525094f104be25979e4522b47958f013aa1b66242f5062a897b1cb"
+  },
+  "black_general": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 67,
+      "right": 68,
+      "top": 55,
+      "bottom": 64
+    },
+    "sha256": "2f871d6603cf92d861827ce28c58d473cee15d2181dddde2ca158d976b01b487"
+  },
+  "black_advisor": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 70,
+      "top": 57,
+      "bottom": 65
+    },
+    "sha256": "a73272a2a061842a45d0c2d2615ec5f97026ed9c9dbc18cfacb5e2d0059488d9"
+  },
+  "black_elephant": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 70,
+      "top": 56,
+      "bottom": 65
+    },
+    "sha256": "8bd4d3e3639dba1f756f0dba73e3e2607b8f930f4d30d41733399102d4bece47"
+  },
+  "black_chariot": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 70,
+      "right": 70,
+      "top": 56,
+      "bottom": 64
+    },
+    "sha256": "77db6bb166ee5acbab7e4f5ca2d2d2e3b03bbe838f54f0b9ecad5812e25a46b0"
+  },
+  "black_horse": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 69,
+      "top": 56,
+      "bottom": 64
+    },
+    "sha256": "2d5c9a932ecd8d734cef43d8ab866be9ec354133a46c31c4504951801d33abf5"
+  },
+  "black_cannon": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 69,
+      "right": 69,
+      "top": 55,
+      "bottom": 64
+    },
+    "sha256": "1b4f04100f34d8235442d1ecf99da491be72eff2a5a2aa01aaa20147c1f2055d"
+  },
+  "black_soldier": {
+    "size": [
+      384,
+      384
+    ],
+    "margins": {
+      "left": 66,
+      "right": 66,
+      "top": 55,
+      "bottom": 63
+    },
+    "sha256": "9bb6cd52c50f39744942520add02888b3784418b05f972ab4dda2b49012d7b8a"
+  }
+}

@@ -1,0 +1,13 @@
+PHASE 14V4I DEVICE CHECKLIST
+
+1. Start Bloom Bot 10+0 game.
+2. Confirm initial controls show Motion TẮT, Hint TẮT, FX TẮT.
+3. Tap-select and tap-target 10 legal moves. Note missed taps / delay.
+4. Drag 10 legal moves. Note finger-follow smoothness and drop acceptance.
+5. Observe clock while dragging: only active clock changes once per displayed second.
+6. Turn Motion BẬT only. Repeat 5 tap moves + 5 drags.
+7. Return Motion TẮT; turn Hint BẬT only. Repeat.
+8. Return Hint TẮT; turn FX BẬT only. Repeat.
+9. Report which configuration first introduces visible lag.
+
+Expected baseline A: immediate snap after a legal tap/drop; no scale 1.3; no hint dots/rings; no battle effects.

@@ -1,0 +1,147 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 14U CHESS REALTIME MVP
+Date: 2026-10-03
+Base: Family_Bloom_Phase_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP_FULL_2026-10-02.zip
+Status: IMPLEMENTED / STATIC-VALIDATED / AWAITING REAL RENDER + FIREBASE + 2-DEVICE RUNTIME TEST
+
+1) SCOPE IMPLEMENTED
+- Additive realtime 1v1 Chess domain only.
+- Mobile: Chess Lobby, member presence overlay, challenge/cancel/accept/reject, realtime board, legal hints, promotion, clocks, draw/resign/rematch, reconnect/resync, bounded history.
+- Backend: Node.js + Express + Socket.IO + chess.js + Firebase Admin SDK.
+- Firebase remains Spark. Firestore is durable persistence/history only, never Socket transport/timer heartbeat.
+- Existing Auth/Profile/Family membership/Family Graph/Moments/Events/Calendar/media/notifications and six Nhà Mình games are not migrated.
+
+2) AUTHORITY / SECURITY
+- Firebase ID token is taken from the authenticated mobile user and sent in Socket.IO auth handshake.
+- Render verifies token using Firebase Admin verifyIdToken().
+- Server never trusts client UID, role, color, turn, winner, FEN, PGN, remaining time or game-over claims.
+- Server validates family membership on lobby/game entry and re-validates membership for gameplay mutations using a 10-second bounded cache.
+- Runtime Socket payloads validate family/game/invite IDs, requestId, revision, chess squares, promotion and the exact supported time-control set.
+- Game room join is accepted only for one of the game players.
+- Client write to chessGames and chessActiveUsers is denied by Firestore Rules.
+- Firebase Admin credentials are environment-only; no secret is committed.
+
+3) SERVER-AUTHORITATIVE CLOCK / RECOVERY
+- Runtime elapsed time uses performance.now() (monotonic).
+- One shared 300ms timeout scheduler covers active games; no setInterval per game and no 1-second Firestore write.
+- Timeout eligibility is re-checked after entering the per-game mutation queue, preventing a stale deadline task from flagging the wrong player after a move changed the turn.
+- A move received after the authoritative deadline first persists/broadcasts the timeout result; the late move is not applied.
+- Player-only disconnect does not pause a timed game.
+- Process/server restore of persisted active state changes game to paused first; persisted remaining times are preserved so unprovable infrastructure downtime is not charged.
+- Both players must reconnect before a recovered game resumes.
+- Client countdown is display only and uses performance.now() from the latest authoritative state receipt.
+
+4) DURABILITY / IDEMPOTENCY
+- Per-game mutation queue serializes authoritative game mutations.
+- Accepted move updates RAM, persists one chess game document, then broadcasts/ACKs authoritative state.
+- If persistence fails, runtime game/chess.js state is rolled back from the pre-mutation snapshot.
+- recentRequestIds is persisted (bounded to 24) for duplicate command protection across restart.
+- revision is monotonic and client move commands include expectedRevision.
+- Client applies successful mutation ACK state, so a lost broadcast does not leave the local revision stale.
+- Invite acceptance stores its requestId in the created game, allowing the same accept retry to resolve the already-created game after a lost ACK.
+- Active-user locks for both players are created atomically with game creation and removed when the game finishes.
+- Active locks are not refreshed on every move.
+
+5) FIRESTORE IMPACT
+New collection:
+- families/{familyId}/chessGames/{gameId}
+  Durable game metadata, FEN, PGN, clocks snapshot, result, history, revision and request IDs.
+New server-only root collection:
+- chessActiveUsers/{uid}
+  { uid, familyId, gameId, createdAt }
+Rules:
+- family member + player may get own game rows.
+- history list also requires request.query.limit <= 20.
+- mobile create/update/delete chessGames: DENIED.
+- mobile read/write chessActiveUsers: DENIED.
+Index:
+- chessGames: playerUids ARRAY_CONTAINS + status ASC + endedAt DESC.
+No data migration/backfill.
+
+6) FIRESTORE COST DISCIPLINE
+- No Firestore timer ticks.
+- No Firestore heartbeat/presence.
+- No Firestore Socket transport.
+- Accepted normal move: one chessGames document persistence operation.
+- Game creation additionally creates two server-only active UID lock documents transactionally.
+- Finish writes final game state and deletes the two active UID locks in one batch.
+- History is one-shot, latest 20, load-more pagination; no onSnapshot history listener.
+- Chess Lobby reuses existing FamilyRealtimeContext family.members cache; no extra family member listener.
+
+7) PRESENCE / FAMILY ISOLATION
+- Presence is Socket RAM only.
+- Same-family game sockets remain visible as in_game after leaving the lobby.
+- If a UID has an active game in another family, a different-family lobby does not expose that game as in_game; the user is not challenge-ready.
+- Invite delivery/join uses sockets already scoped to the matching family/game context, avoiding stale automatic joins across family switches.
+
+8) CLIENT DEPENDENCY ADDED
+- socket.io-client ^4.8.1
+No chess.js dependency added to mobile; rules engine remains server-only.
+
+9) SERVER DEPENDENCIES
+- express ^5.1.0
+- socket.io ^4.8.1
+- chess.js ^1.4.0
+- firebase-admin ^13.4.0
+- cors ^2.8.5
+- TypeScript/dev typings as declared in server/package.json.
+
+10) ENVIRONMENT VARIABLES
+Mobile:
+- EXPO_PUBLIC_CHESS_SOCKET_URL=https://<render-service>.onrender.com
+Server/Render:
+- PORT (provided by Render; fallback 10000 locally)
+- NODE_ENV
+- FIREBASE_PROJECT_ID=family-connect-4184f
+- FIREBASE_CLIENT_EMAIL
+- FIREBASE_PRIVATE_KEY
+Do not commit service-account JSON/private keys.
+
+11) RENDER DEPLOYMENT
+- server/render.yaml: region singapore, plan free, rootDir server.
+- Current Render build command (hotfix applied): npm install --include=dev --no-audit --no-fund && npm run build
+- Start: npm start
+- Bind: 0.0.0.0 + process.env.PORT
+- Health: GET /health => {"ok":true}; endpoint performs no heavy Firestore query.
+
+12) STATIC / REGRESSION CHECKS ACTUALLY RUN
+PASS — TS/TSX syntax/transpile: 233 files, 0 diagnostics errors.
+PASS — Phase 14U Chess static contract: 54/54.
+PASS — Phase 14T Home Games: 44/44.
+PASS — Phase 14T.0A single Android identity cleanup: 21/21.
+PASS — Phase 13 release readiness: 11/11.
+PASS — Phase 14R.5A Whisper app-entry: 30/30.
+PASS — Phase 14S Family Fund: 35/35.
+PASS — Phase 14S.1 Fund Stewardship & Analytics: 51/51.
+PASS — Phase 14S.1A Fund Form UX: 25/25.
+PASS — Backend strict TypeScript internal gate using external declaration stubs after the final server refactor.
+PASS — firestore.indexes.json parses as JSON.
+
+13) CHECK THAT DID NOT COMPLETE
+NOT CERTIFIED — server npm install timed out in the current execution environment.
+Therefore dependency-resolved `cd server && npm install && npm run typecheck && npm run build` must be run on the connected development machine/Render.
+Do not interpret the stubbed compiler gate as proof that installed third-party type definitions/build environment are runtime-perfect.
+
+14) RUNTIME TESTS STILL REQUIRED
+- Render service cold start and /health.
+- Firebase Admin token verification against real Family Bloom Firebase project.
+- Same-family lobby presence with two accounts/two devices.
+- Different-family isolation and multi-family user behavior.
+- Invite accept/reject/cancel/expiry/duplicate/spam.
+- Legal/illegal/wrong-turn moves; castling; en passant; promotion; check/checkmate/stalemate/draw conditions.
+- 3+2, 5+0, 10+5; increment; timeout; device clock change.
+- Background/foreground, temporary network loss, reconnect room rejoin, duplicate packet.
+- Player-only disconnect: clock continues.
+- Forced Render/process restart: game restores paused, both reconnect, resume from durable state.
+- 10+ simultaneous games and room leak check.
+- Firestore history pagination and Rules privacy after deployment.
+- Full Family Bloom regression on real Android.
+
+15) DEPLOY COMMANDS
+- Root app dependency: npm install
+- Server local validation: cd server && npm install && npm run typecheck && npm run build
+- Firestore Rules: scripts/firebase/Family_Bloom_Deploy_Firestore_Rules.bat
+- Firestore indexes: scripts/firebase/Family_Bloom_Deploy_Firestore_Indexes.bat
+- Render: create/deploy service using server/render.yaml or equivalent settings; configure secret environment values.
+
+16) RUNTIME PASS CLAIM
+NO. This patch is implemented and statically validated only. Runtime PASS requires deployed Rules/index + real Render + real Firebase Admin credentials + two-device testing.

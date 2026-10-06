@@ -1,0 +1,44 @@
+FAMILY BLOOM — CLEAN ROOT REPACK REPORT
+Date: 2026-10-01
+Base: Phase 14Q V2.2 BUILD READY OUTPUT HOTFIX FULL
+
+PURPOSE
+Repack the FULL source so project root is readable and future helper/report files are grouped by purpose.
+No Firestore schema, permissions, user data, or feature behavior was changed by this repack.
+
+ROOT CLEANUP
+Before: 95 root entries.
+After : 21 root entries.
+
+Moved groups
+- Android BAT helpers -> scripts/android/
+- Firebase deploy BAT helpers -> scripts/firebase/
+- Music/maintenance helpers -> scripts/maintenance/
+- Legacy setup helper -> scripts/setup/
+- Device checklists -> reports/device/
+- Validation/static reports -> reports/validation/
+- Historical patch notes -> document/history/patches/
+- Phase notes -> document/history/phase-notes/
+- Build/structure guides -> document/guides/
+
+BAT COMPATIBILITY
+All moved BAT helpers now resolve the project root from their own nested folder before running.
+Release APK output changed from root/build-output to:
+  dist/android/Family_Bloom_Release_Test_LATEST.apk
+
+STATIC REGRESSION
+PASS Phase 13 release readiness: 11/11
+PASS Phase 14C functional V1: 44/44
+PASS Phase 14J full-screen focus: 18/18
+PASS Phase 14N focus/catalog: 13/13
+PASS Phase 14Q V2.2 reveal themes: 34/34
+PASS TS/TSX syntax observed by Phase 14C/14J: 206/206
+
+INHERITED TEST NOTE
+Phase 14L legacy check remains 22 PASS / 2 FAIL on BOTH the untouched input FULL and this clean-root repack:
+- catalog-cycle-bumped-vi2
+- ui-keeps-catalog-implementation-private
+Therefore those two assertions were not introduced by root cleanup.
+
+ROOT STANDARD
+See: document/guides/PROJECT_ROOT_STRUCTURE_STANDARD.txt

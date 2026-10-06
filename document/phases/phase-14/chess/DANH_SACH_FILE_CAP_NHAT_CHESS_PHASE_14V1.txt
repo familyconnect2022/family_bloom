@@ -1,0 +1,30 @@
+FAMILY BLOOM — PHASE 14V.1 FILES ADDED / CHANGED
+
+ADDED
+- src/context/ChessRealtimeContext.tsx
+- src/components/chess/ChessChallengeOverlay.tsx
+- src/components/chess/ChessBattleEffects.tsx
+- scripts/test-phase14v1-global-chess-presence-fx.js
+- document/phases/phase-14/chess/BUILD_CHECK_REPORT_CHESS_PHASE_14V1.txt
+- document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V1.txt
+- reports/device/PHASE_14V1_MORNING_RUNTIME_CHECKLIST.txt
+
+CHANGED
+- src/app/_layout.tsx
+- src/app/(chess)/chess-lobby.tsx
+- src/app/(chess)/chess-game/[gameId].tsx
+- src/hooks/chess/useChessLobby.ts
+- src/services/chess/chessSocketService.ts
+- src/types/chess.ts
+- server/src/socket/socketServer.ts
+- server/src/chess/chessGameManager.ts
+- server/src/chess/chessTypes.ts
+- scripts/test-phase14u-chess.js
+- scripts/test-phase14v-family-game-policy.js
+- scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+- scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+- package.json
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+
+NO NEW FIRESTORE SCHEMA / INDEX / RULE REQUIRED BY PHASE 14V.1.
+NO NEW NATIVE OR NPM DEPENDENCY REQUIRED BY PHASE 14V.1.

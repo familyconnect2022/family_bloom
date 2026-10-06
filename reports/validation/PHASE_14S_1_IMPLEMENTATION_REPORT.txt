@@ -1,0 +1,35 @@
+FAMILY BLOOM — PHASE 14S.1
+Fund Stewardship, Audit & Analytics
+
+Scope
+- Owner/Admin chính là thủ quỹ bootstrap.
+- Bàn giao chỉ có hiệu lực khi người được chọn xác nhận Đồng ý.
+- Từ chối giữ nguyên người đang chịu trách nhiệm; với lần bàn giao ban đầu quyền vẫn ở Admin.
+- Sau khi bàn giao thành công, Admin cũ không có quyền Thu/Chi trừ khi thủ quỹ mới mời lại vào nhóm quỹ.
+- Thủ quỹ chính được chọn tối đa 2 helper, mỗi helper bắt buộc có mô tả nhiệm vụ.
+- Chỉ primary + helper được tạo Thu/Chi.
+- Primary được sửa/xóa mọi khoản trong cửa sổ 3 ngày; helper chỉ sửa/xóa khoản do chính mình tạo.
+- Sau 3 ngày giao dịch khóa ở cả client và Firestore Rules.
+- Mọi thao tác tài chính và quản trị ghi immutable audit trail; sửa/xóa lưu Trước/Sau.
+- Thống kê: 7 ngày / 6 tháng / 5 năm, query bounded 1000 usable rows.
+- Biểu đồ Thu/Chi dùng View của React Native, không thêm chart dependency.
+- DEV có dữ liệu mô phỏng deterministic RAM-only; không ghi Firestore.
+- Reuses FamilyRealtimeContext members; không thêm listener family-members mới.
+
+Data
+- families/{familyId}/homeFundMeta/control
+- families/{familyId}/homeFundMeta/summary
+- families/{familyId}/homeFundTransactions/{transactionId}
+- families/{familyId}/homeFundAudit/{auditId}
+
+Version
+- app 1.2.0
+- Android versionCode 142000
+- iOS buildNumber 8
+
+Required deployment
+- Firestore Rules: YES before device testing.
+- Cloud Functions: NO for core Fund V1.1.
+
+Design recommendation carried forward
+- Locked (>3 days) records should never be unlocked silently. Corrections should be a new compensating/adjustment entry in a later polish instead of rewriting history.

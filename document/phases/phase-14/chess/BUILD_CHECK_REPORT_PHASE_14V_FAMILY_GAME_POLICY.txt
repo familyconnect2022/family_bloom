@@ -1,0 +1,42 @@
+FAMILY BLOOM — PHASE 14V FAMILY GAME POLICY + QUIET HOURS
+Date: 2026-10-03
+
+IMPLEMENTED
+- Whole game room new-activity window: 06:00 <= local time < 22:00, V1 timezone Asia/Ho_Chi_Minh.
+- Existing realtime Chess games may finish after 22:00; challenge/accept/rematch are blocked.
+- Six async family games use all real family membership users automatically; participant picker removed.
+- Fair daily Family Rotation for subject-based games; fresh cycle prefers non-creator when possible.
+- Round duration: max 4 hours, additionally capped by 22:00 same local day.
+- Max 4 concurrent active rounds per family + game type using deterministic transactional slot docs.
+- Timed sessions auto-open results by deadline; legacy untimed sessions retain manual reveal compatibility.
+- Firestore request.time enforces create/response deadlines and post-deadline hidden-data reads.
+- Chess lobby explicitly leaves/disconnects on app background so background lobby users are not challengeable.
+
+ADDITIVE FIRESTORE DATA
+families/{familyId}/homeGameActiveSlots/{gameType}_{slotId}
+families/{familyId}/homeGameRotations/{gameType}
+Existing homeGameSessions gain new fields on newly-created sessions only:
+- endsAtMs
+- playDateKey
+- slotId
+No migration of old sessions.
+No new Firestore index.
+
+VALIDATION RUN
+- phase14v:check = 26 PASS / 0 FAIL
+- phase14t:check = 44 PASS / 0 FAIL
+- phase14u:check = 54 PASS / 0 FAIL
+- phase14t0a:check = 21 PASS / 0 FAIL
+- TS/TSX syntax transpile = 236 files / 0 errors
+- server/src/chess/gameHours.ts + chessTypes.ts strict tsc = PASS
+
+LIMITATION
+- Full server npm install / dependency-resolved typecheck was attempted in the packaging environment but timed out.
+- Do not mark runtime PASS until Firestore Rules and Render are redeployed and Android is retested.
+
+DEPLOY
+1. Merge patch over current Phase 14U source.
+2. Deploy firestore.rules (and firestore.cloud.rules only if that is part of the project's normal deploy workflow).
+3. Push server changes and redeploy family-bloom-chess on Render.
+4. Restart Metro with --clear; JS-only mobile changes do not require a native rebuild by themselves.
+5. Test 2 accounts / 2 devices.

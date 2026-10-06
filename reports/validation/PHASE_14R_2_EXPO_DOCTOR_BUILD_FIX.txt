@@ -1,0 +1,16 @@
+FAMILY BLOOM PHASE 14R.2 — EXPO DOCTOR / DUAL ANDROID BUILD FIX
+Date: 2026-10-01
+Base: Phase 14R.1 Dual Android Variants Clean Root FULL
+
+Scope
+- Dynamic Expo config now inherits the app.json config through ({ config }).
+- Aligned Expo SDK 57 package patch targets shown by Expo Doctor on the user's machine.
+- Added expo-application as an explicit dependency because the notification stack/build gate requires it.
+- expo-notifications target aligned to ~57.0.21.
+- Old stale package-lock is not shipped; npm install generates a fresh matching lock on the user's online machine.
+- RELEASE and DEV build scripts detect stale/missing SDK packages, run npm install when needed, and run expo-doctor before prebuild.
+- RELEASE/DEV package IDs and branding remain unchanged.
+
+Runtime note
+- The packaging environment has no npm registry DNS access, so it cannot regenerate the final npm lock or execute Expo Doctor against installed node_modules here.
+- Source/static validation is performed locally in this package; the first online npm install on Windows generates the authoritative package-lock and Expo Doctor is then enforced by the BAT files.

@@ -1,0 +1,14 @@
+PHASE 14V.2A — CHESS AUTH + DIAGNOSTICS HOTFIX
+
+Changed/new files:
+- src/services/chess/chessSocketService.ts
+- src/context/ChessRealtimeContext.tsx
+- server/src/socket/socketServer.ts
+- scripts/test-phase14v2a-chess-auth-diagnostics.js
+- scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+- scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+- package.json
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+- document/phases/phase-14/chess/BUILD_CHECK_REPORT_CHESS_PHASE_14V2A.txt
+- document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V2A.txt
+- reports/device/PHASE_14V2A_CHESS_CONNECTION_DIAGNOSTIC_CHECKLIST.txt

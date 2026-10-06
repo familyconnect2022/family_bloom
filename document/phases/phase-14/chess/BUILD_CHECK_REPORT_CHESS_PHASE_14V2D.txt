@@ -1,0 +1,46 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 14V.2D
+Date: 2026-10-03
+
+SCOPE
+- Fix Chess History Android crash from legacy namespaced RNFirebase Firestore API.
+- Make Bloom Bot availability server-authoritative instead of relying on Expo client env flag.
+- Keep temporary Chess diagnostics until runtime is stable.
+
+FILES / BEHAVIOR
+- src/services/chess/chessHistoryService.ts
+  Modular RNFirebase Firestore API; bounded history 20/page; startAfter pagination.
+- src/app/(chess)/chess-history.tsx
+  Catches history query/runtime failures and displays retry UI instead of unhandled promise red screen.
+- server/src/socket/socketServer.ts
+  appJoin/lobbyJoin ACKs include testBotEnabled.
+- server/src/routes/health.ts
+  /health includes chessTestBotEnabled diagnostic boolean.
+- src/context/ChessRealtimeContext.tsx
+  Stores bot capability returned by Render and uses it for lobby visibility/request gating.
+- src/services/chess/chessSocketService.ts
+  /health diagnostic logs testBotEnabled boolean only.
+- src/config/env.ts / .env.example
+  Client-side test-bot flag removed; EXPO_PUBLIC_CHESS_SOCKET_URL remains.
+
+DEPLOY IMPACT
+- Render redeploy REQUIRED because server ACK/health payload changed.
+- Set Render Environment: CHESS_TEST_BOT_ENABLED=true for one-device testing.
+- Mobile root .env only needs EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+- Restart Metro with: npx expo start --dev-client --clear
+- No expo run:android required solely for this phase.
+- No Firestore Rules or index change in this phase; the existing Chess history index must already be deployed.
+
+RUNTIME RETEST EXPECTATION
+1. Open https://family-bloom-chess.onrender.com/health
+   Expect: {"ok":true,"chessTestBotEnabled":true}
+2. Metro should log:
+   [ChessDebug] prewake:response ... chessTestBotEnabled: true
+   [ChessDebug] server:capabilities { testBotEnabled: true }
+   and/or [ChessDebug] lobby:capabilities { testBotEnabled: true }
+3. Chess Lobby should show Bloom Bot · Đối thủ thử nghiệm.
+4. Chess History should open without the legacy firestore() TypeError.
+5. If History query/index fails, UI should show retry state and Metro logs [ChessDebug] history:load_failed.
+
+STATUS
+- Static/source validation only until device + Render retest.
+- Do not call runtime PASS yet.

@@ -1,0 +1,32 @@
+PHASE 14V — FAMILY GAME POLICY + QUIET HOURS
+Changed/new files relative to Phase 14U + Render devDependencies hotfix baseline:
+
+1. document/phases/phase-14/chess/BUILD_CHECK_REPORT_PHASE_14V_FAMILY_GAME_POLICY.txt
+2. document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+3. document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_PHASE_14V.txt
+4. firestore.cloud.rules
+5. firestore.rules
+6. package.json
+7. scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+8. scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+9. scripts/test-phase14t-home-games.js
+10. scripts/test-phase14v-family-game-policy.js
+11. server/src/chess/chessTypes.ts
+12. server/src/chess/gameHours.ts
+13. server/src/socket/socketServer.ts
+14. src/app/(chess)/chess-game/[gameId].tsx
+15. src/app/(chess)/chess-lobby.tsx
+16. src/app/(home)/(games)/home-game-create.tsx
+17. src/app/(home)/(games)/home-game/[sessionId].tsx
+18. src/app/(home)/(games)/home-games.tsx
+19. src/hooks/chess/useChessLobby.ts
+20. src/services/games/gameRoomPolicy.ts
+21. src/services/home/homeGamePolicy.ts
+22. src/services/home/homeGameService.ts
+23. src/types/chess.ts
+24. src/types/homeLiving.ts
+
+No native dependency added.
+No Firestore index added.
+No migration of existing homeGameSessions.
+New additive Firestore collections: homeGameActiveSlots, homeGameRotations.

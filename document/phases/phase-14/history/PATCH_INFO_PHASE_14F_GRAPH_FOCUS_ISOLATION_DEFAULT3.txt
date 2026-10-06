@@ -1,0 +1,42 @@
+Family Bloom — Phase 14F Graph Focus Isolation + Default 3 Generations
+Date: 2026-09-29
+Base: Family_Bloom_Phase_14E_MUSIC_CARD_GRAPH_FOCUS_OVERLAY_FULL_2026-09-29
+
+Scope
+1) Background genealogy canvas is immutable while Focus View is open
+- Removed legacy in-canvas branch fallback and branch-dimming machinery.
+- Opening a branch only builds/opens the Focus View overlay.
+- Background viewAnchor, selection, connectors, pan and zoom are not changed by branch open/close.
+- Focus View interaction shield still blocks pan/pinch from reaching the background.
+- A -> B inside Focus View reuses the same overlay.
+
+2) Default graph entry behavior
+- Normal graph always opens in 3-generation mode.
+- The linked current user's Person is used only as initial view anchor/camera target.
+- The current user's node is highlighted, but no default branch-focus state, relation badges, connector dimming or "Nhánh đang xem" banner is applied.
+- Initial selection is empty; the user node is simply centered and highlighted.
+
+3) Focus performance
+- Bounded branch visual data still comes from the already-loaded in-memory query engine snapshot.
+- Branch visual layouts are cached per {mode}:{personId} for the current query-engine snapshot.
+- A real graph snapshot change automatically creates a fresh cache.
+- No Firestore listener/query is added for Focus View.
+
+4) Music
+- Phase 14E music behavior is unchanged in this patch.
+- A preparation note is included for the next curated music-assignment step; no curated track IDs are activated yet.
+
+Deploy impact
+- No new Firestore Rules, indexes, Functions or native dependency.
+- No native rebuild required solely for Phase 14F when upgrading from Phase 14E.
+
+Validation
+- Phase 14F static/syntax: 21/21 PASS; TS/TSX 198/198.
+- Phase 14E: 24/24 PASS.
+- Phase 14D: 47/47 PASS.
+- Phase 14C: 44/44 PASS.
+- Phase 13 release readiness: 11/11 PASS.
+- Family Graph Query/Kinship/Focus, dense layout, Phase 6.4 viewport/progressive, Phase 6.5 integration and Phase 8.2C tab regression: PASS.
+
+Still required
+- Real Android device validation of Focus View opening from 3 / 5 / Toàn phả hệ and exact background-camera preservation.

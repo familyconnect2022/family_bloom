@@ -1,0 +1,46 @@
+FAMILY BLOOM — CHESS PHASE 14V.3C SMOOTH MOTION
+Date: 2026-10-03
+
+Goal
+- Remove perceived move lag seen in one-device runtime video.
+- Preserve server-authoritative move validation, clock, persistence and revision contract.
+
+Implemented
+1. Optimistic visual move layer on client.
+   - Piece begins sliding immediately after the user selects a legal destination.
+   - Animation duration: 145ms, native driver.
+   - Input is locked while a visual move is pending.
+   - Server remains authoritative; client does not commit FEN/result/clock.
+2. Rollback on rejected move.
+   - 110ms reverse animation restores the piece if server rejects.
+3. Incoming authoritative moves animate instead of teleporting.
+4. Static piece PNG assets remain local and cached by bundle.
+5. Bloom Bot test think delay reduced from 700–1350ms to 250–450ms.
+6. Minor/active Battle FX hold times shortened so the board is not visually obstructed for too long.
+7. Temporary [ChessPerf] move:roundtrip log records real Socket/Render/Firestore ACK latency in development.
+
+Architecture safety
+- expectedRevision is still sent with each move.
+- chess.js remains server-side authority.
+- accepted moves are still persisted before broadcast/ACK state is used by clients.
+- Optimistic layer is presentation-only and reconciles to server FEN.
+
+Checks run
+- Phase 14V.3C Smooth Motion: 16/16 PASS
+- Phase 14U Chess: 54/54 PASS
+- Phase 14V.1 Global Presence/FX: 33/33 PASS
+- Phase 14V.2D History/Bot Capability: 13/13 PASS
+- Phase 14T.0A Single Android Identity: 21/21 PASS
+- TypeScript transpile syntax: 240 files / 0 errors
+- Generated JS under src + server/src: 0
+
+Runtime tests still required
+- Real Android feel test for normal moves and captures.
+- Verify rejected/illegal move visibly rolls back.
+- Castling/en-passant/promotion should be checked separately because they have extra-piece semantics.
+- Check [ChessPerf] move:roundtrip values over Wi-Fi/5G.
+- Compare Battle FX Full/Light/Off while moving quickly.
+
+Deployment
+- Mobile: restart Metro with --clear; no native dependency added.
+- Render: redeploy required only because Bloom Bot delay changed on server.

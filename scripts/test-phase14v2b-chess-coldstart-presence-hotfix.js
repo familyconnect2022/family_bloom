@@ -1,0 +1,28 @@
+const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');let pass=0,fail=0;
+function check(name,ok){if(ok){pass++;console.log('PASS',name)}else{fail++;console.error('FAIL',name)}}
+const socket=read('src/services/chess/chessSocketService.ts');
+const ctx=read('src/context/ChessRealtimeContext.tsx');
+const server=read('server/src/socket/socketServer.ts');
+const pkg=JSON.parse(read('package.json'));
+const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+check('socket ACK API supports longer lifecycle timeout',socket.includes('timeoutMs = 12_000')&&socket.includes('socket.timeout(timeoutMs)'));
+check('app join gets cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.appJoin, { familyId }, 30_000'));
+check('session restore gets extended ACK window',ctx.includes('CHESS_EVENTS.sessionGetActive, { familyId }, 20_000'));
+check('cold-start app join timeout is soft while socket is connected',ctx.includes('joined.errorCode === "CHESS_SERVER_RECOVERING"')&&ctx.includes('chessSocketService.isConnected()')&&ctx.includes('updateConnection("ready")'));
+check('soft app join retry is scheduled',ctx.includes('setTimeout(() =>')&&ctx.includes('void joinForeground()'));
+check('successful lobby join repairs UI connection state',/if \(response\.ok\)[\s\S]{0,420}updateConnection\("ready"\)/.test(ctx)&&ctx.includes('connectionRef.current = "ready"'));
+check('lobby join also uses cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.lobbyJoin, { familyId }, 30_000'));
+check('AppState transitions are diagnosed with current route',ctx.includes('appState:change')&&ctx.includes('pathname: pathnameRef.current'));
+check('background still intentionally leaves app presence',ctx.includes('CHESS_EVENTS.appLeave')&&ctx.includes('chessSocketService.disconnect()'));
+check('leaving lobby alone does not disconnect global socket',ctx.includes('CHESS_EVENTS.lobbyLeave')&&!ctx.match(/leaveLobby[\s\S]{0,220}disconnect\(/));
+check('server presence refresh is detached from lifecycle ACK',server.includes('function refreshPresenceSoon')&&server.includes('void emitPresence(familyId).catch'));
+check('app join refreshes presence asynchronously',server.includes('refreshPresenceSoon(familyId);\n      console.info("[chess] app joined"'));
+check('lobby join refreshes presence asynchronously',server.includes('await socket.join(`chess:lobby:${familyId}`);\n      refreshPresenceSoon(familyId);'));
+check('membership first-read is deduped across concurrent joins',server.includes('const memberInFlight = new Map<string, Promise<boolean>>()')&&server.includes('if (pending) return pending'));
+check('Chess diagnostic labels remain but hot-path console output is disabled',socket.includes('socket:connect_error')&&ctx.includes('appState:change')&&!socket.includes('console.log("[ChessDebug]"')&&!ctx.includes('console.log("[ChessDebug]"'));
+check('Phase 14V.2B gate is registered',pkg.scripts['phase14v2b:check']&&pkg.scripts['phase14v2b:check'].includes('test-phase14v2b-chess-coldstart-presence-hotfix.js'));
+check('DEBUG helper runs Phase 14V.2B gate',(debugBat.includes('phase14v2b:check')||debugBat.includes('chess:current-check')));
+check('RELEASE helper runs Phase 14V.2B gate',(releaseBat.includes('phase14v2b:check')||releaseBat.includes('chess:current-check')));
+console.log(`Phase 14V.2B Chess Cold-start + Presence Hotfix: ${pass} PASS / ${fail} FAIL`);if(fail)process.exit(1);

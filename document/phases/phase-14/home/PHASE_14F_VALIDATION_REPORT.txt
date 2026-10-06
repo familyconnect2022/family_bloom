@@ -1,0 +1,27 @@
+Family Bloom Phase 14F validation — 2026-09-29
+
+PASS Phase14F Graph Focus Isolation + Default 3 Gen: 21/21
+PASS TS/TSX syntax: 198/198
+PASS Phase14E Music Card + Graph Focus Overlay: 24/24
+PASS Phase14D Nhà Mình Music+TODO: 47/47
+PASS Phase14C Functional V1: 44/44
+PASS Phase13 release readiness: 11/11
+PASS Family Graph Query + Kinship + Focus Subgraph
+PASS Family Graph dense layout
+PASS Phase 6.4 viewport/progressive
+PASS Phase 6.5 Person Experience / Integration contracts
+PASS Phase 8.2C tab-regression contracts
+
+Static invariants checked:
+- standard graph defaults to 3 generations;
+- current-account Person starts centered/highlighted but not selected/focused as a branch;
+- background connectors/nodes never dim for branch opening;
+- no legacy BranchPreparing/in-canvas branch fallback remains;
+- handleOpenBranch never mutates base anchor/selection/camera;
+- Focus View keeps shield, independent pan/pinch, 80% overlay and same-overlay A->B transition;
+- bounded branch layouts are cached per mode/person for the current query snapshot.
+
+Not claimed:
+- native Android runtime PASS;
+- device FPS PASS;
+- visual confirmation on the user's 50-Person family graph.

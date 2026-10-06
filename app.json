@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Family Bloom",
+    "slug": "family-bloom",
+    "version": "1.3.1",
+    "orientation": "portrait",
+    "icon": "./assets/branding/release/icon.png",
+    "scheme": "familybloom",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.family.ios",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "buildNumber": "11"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FDFAF4",
+        "foregroundImage": "./assets/branding/release/android-icon-foreground.png",
+        "backgroundImage": "./assets/branding/release/android-icon-background.png",
+        "monochromeImage": "./assets/branding/release/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.familybloom.android",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
+      "versionCode": 143010
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FDECF3",
+          "image": "./assets/images/login-family-icon.png",
+          "imageWidth": 180
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      "expo-dev-client",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/branding/release/notification-icon.png",
+          "color": "#E98AA6",
+          "defaultChannel": "bloom_normal",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "googleWebClientId": "132197806809-pf190ie4kv1r0r0spt7a0dl0ifiujh1t.apps.googleusercontent.com",
+      "cloudinary": {
+        "cloudName": "g7fnsxw5",
+        "uploadPresets": {
+          "image": "family_bloom_image",
+          "video": "family_bloom_video"
+        }
+      }
+    }
+  }
+}

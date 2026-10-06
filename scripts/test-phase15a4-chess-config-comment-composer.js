@@ -1,0 +1,25 @@
+const fs = require("fs");
+const path = require("path");
+const ROOT = path.join(__dirname, "..");
+const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+let pass = 0, fail = 0;
+const check = (name, ok) => { if (ok) { pass++; console.log("PASS", name); } else { fail++; console.log("FAIL", name); } };
+const appConfig = read("app.config.js");
+const env = read("src/config/env.ts");
+const input = read("src/components/ui/BloomInputComponents/BloomTextInput.tsx");
+const moment = read("src/components/moments/MomentCard.tsx");
+check("public Chess Render fallback exists in app config", appConfig.includes("https://family-bloom-chess.onrender.com") && appConfig.includes("chessSocketUrl"));
+check("runtime env keeps Chess fallback", env.includes("DEFAULT_CHESS_SOCKET_URL") && env.includes("EXPO_PUBLIC_CHESS_SOCKET_URL?.trim() || extra.chessSocketUrl?.trim() || DEFAULT_CHESS_SOCKET_URL"));
+check("BloomTextInput exposes embedded variant", input.includes('variant?: "default" | "embedded"') && input.includes('variant === "embedded"'));
+check("embedded Bloom input removes nested chrome", input.includes("embeddedContainer") && input.includes("borderWidth: 0") && input.includes('backgroundColor: "transparent"'));
+check("Moment comment composer uses embedded Bloom input", moment.includes('variant="embedded"'));
+check("Moment comment composer uses one Bloom Supper surface", moment.includes("BLOOM_SUPPER.surface.soft") && moment.includes("BLOOM_SUPPER.border.card"));
+check("Moment comment send control is compact round action", moment.includes('name="arrow-up"') && moment.includes("width: 42") && moment.includes("height: 42"));
+check("Moment comment copy stays warm", moment.includes("Viết một lời thật thương…"));
+
+const debugBuild = read("scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat");
+const releaseBuild = read("scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat");
+check("Debug build runs Phase 15A.4 gate", debugBuild.includes("npm run phase15a4:check"));
+check("Release build runs Phase 15A.4 gate", releaseBuild.includes("npm run phase15a4:check"));
+console.log(`Phase 15A.4 Chess config + comment composer: ${pass} PASS / ${fail} FAIL`);
+process.exit(fail ? 1 : 0);

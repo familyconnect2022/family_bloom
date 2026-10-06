@@ -1,0 +1,14 @@
+PHASE 14V.2B — CHESS COLD-START / FALSE-DISCONNECT HOTFIX
+
+Changed/new files:
+- src/services/chess/chessSocketService.ts
+- src/context/ChessRealtimeContext.tsx
+- server/src/socket/socketServer.ts
+- scripts/test-phase14v2b-chess-coldstart-presence-hotfix.js
+- scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+- scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+- package.json
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+- document/phases/phase-14/chess/BUILD_CHECK_REPORT_CHESS_PHASE_14V2B.txt
+- document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V2B.txt
+- reports/device/PHASE_14V2B_CHESS_CONNECTION_RETEST.txt

@@ -1,0 +1,63 @@
+
+NOTE — SUPERSEDED BY PHASE 14V.2D: Bloom Bot enablement is now server-authoritative. Use only Render CHESS_TEST_BOT_ENABLED=true; no EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED client flag is required.
+FAMILY BLOOM — BUILD CHECK REPORT — CHESS PHASE 14V.2 ONE-DEVICE TEST BOT
+Date: 2026-10-03
+Delivery: FULL CODE ZIP
+Runtime certification: NOT YET — device + Render retest required
+
+IMPLEMENTED
+- Opt-in server-side Bloom Bot test opponent.
+- No Stockfish / no engine evaluation / no ELO / no product AI opponent.
+- Deterministic synthetic bot UID per real authenticated user; no Profile/Member duplication.
+- Test bot invite Socket event with optional bounded delay (0..10s).
+- Lobby "Test thách đấu 5s" path exits Lobby before delayed invite to verify global challenge overlay on another tab with one phone.
+- Bot games use normal ChessGameManager, chess.js legality, server clock, per-game queue, Firestore persistence, active locks and recovery.
+- Bot automatic legal move scheduler ~700–1350ms with capture/promotion/center preference only.
+- Bot draw-offer auto-reject for one-device testing.
+- Bot rematch creates a new game and keeps quiet-hours enforcement.
+- UI labels Bloom Bot and marks history as test.
+- Test-bot flags default OFF in client/server env examples.
+
+ENV IMPACT
+Mobile:
+  EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true (test only)
+Render:
+  CHESS_TEST_BOT_ENABLED=true (test only)
+After testing, set both false.
+
+DEPENDENCIES
+- No new mobile native dependency.
+- No new npm dependency.
+- Existing socket.io-client / socket.io / chess.js remain.
+
+FIRESTORE IMPACT
+- No new collection.
+- No new Firestore Rules requirement.
+- No new index.
+- Existing chessGames documents may contain additive optional fields:
+    testBotUid
+    isTestGame
+- Existing chessActiveUsers locks also temporarily include the unique synthetic bot UID during an active test game.
+- Locks are removed on normal game finish by the existing finish path.
+
+VALIDATION RUN
+- Phase 14V.2 Chess Test Bot: 40/40 PASS.
+- Phase 14U Chess: 54/54 PASS.
+- Phase 14V Family Game Policy: 26/26 PASS.
+- Phase 14V.1 Global Chess Presence + Battle FX: 33/33 PASS.
+- Phase 14T Home Games: 44/44 PASS.
+- Phase 14T.0A Single Android Identity: 21/21 PASS.
+- Phase 13 Release Readiness: 11/11 PASS.
+- Phase 14R.5A Whisper catch-up: 30/30 PASS.
+- Phase 14S.1A Fund Form UX: 25/25 PASS.
+- 239 TS/TSX files: 0 syntax diagnostics via TypeScript transpile gate.
+- Server strict internal typecheck with external dependency declaration stubs: PASS.
+
+NOT VERIFIED IN THIS ENVIRONMENT
+- Dependency-resolved server npm install/typecheck/build against real node_modules.
+- Render runtime after Phase 14V.2 redeploy.
+- Actual one-device Socket flow against Render.
+- Battle FX feel/performance on user's physical Android phone.
+
+REQUIRED USER RUNTIME CHECK
+See reports/device/PHASE_14V2_CHESS_TEST_BOT_ONE_DEVICE_CHECKLIST.txt

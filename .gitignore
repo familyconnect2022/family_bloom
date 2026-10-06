@@ -1,0 +1,196 @@
+# ============================================================
+# Family Bloom - .gitignore
+# Expo Router + React Native + RNFirebase + Firebase Functions
+# + Node/Socket.IO Chess server (Render)
+# ============================================================
+
+# ------------------------------------------------------------
+# 1) Dependencies / package manager caches
+# ------------------------------------------------------------
+node_modules/
+**/node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Lockfiles are intentionally NOT ignored.
+# Commit package-lock.json when npm creates/updates it.
+!package-lock.json
+!server/package-lock.json
+!functions/package-lock.json
+
+# ------------------------------------------------------------
+# 2) Environment files / credentials / secrets
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Private keys / signing / Firebase Admin credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+
+serviceAccount*.json
+service-account*.json
+**/serviceAccount*.json
+**/service-account*.json
+firebase-admin*.json
+**/firebase-admin*.json
+credentials*.json
+**/credentials*.json
+
+secrets/
+.secrets/
+
+# IMPORTANT for Family Bloom:
+# google-services.json and GoogleService-Info.plist are intentionally
+# NOT ignored because the current build/config expects them in source.
+
+# ------------------------------------------------------------
+# 3) Expo / Metro / React Native caches and generated output
+# ------------------------------------------------------------
+.expo/
+.expo-shared/
+.metro-cache/
+.metro-health-check*
+
+web-build/
+dist/
+expo-env.d.ts
+
+.cache/
+.tmp/
+tmp/
+temp/
+
+*.tsbuildinfo
+
+# ------------------------------------------------------------
+# 4) Expo Continuous Native Generation
+# ------------------------------------------------------------
+# Family Bloom currently generates native projects via expo run:android /
+# prebuild and keeps native customization in app.config.js + plugins/.
+# If native Android/iOS code becomes manually maintained in Git later,
+# remove the corresponding android/ or ios/ rule below.
+/android/
+/ios/
+
+# Native build remnants in case native folders are temporarily unignored
+**/.gradle/
+**/.cxx/
+**/build/
+**/DerivedData/
+**/Pods/
+**/xcuserdata/
+local.properties
+**/local.properties
+
+*.apk
+*.aab
+*.apks
+*.idsig
+*.ipa
+
+# ------------------------------------------------------------
+# 5) Server / Firebase generated output
+# ------------------------------------------------------------
+server/dist/
+server/coverage/
+functions/lib/
+functions/coverage/
+
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+functions/.runtimeconfig.json
+
+# ------------------------------------------------------------
+# 6) Family Bloom generated JS shadows
+# ------------------------------------------------------------
+# src/ and server/src/ are TypeScript/TSX source trees.
+# Ignore accidental JS output beside TS/TSX files. Do NOT apply this to
+# functions/ or scripts/, where .js files are real source files.
+src/**/*.js
+src/**/*.js.map
+server/src/**/*.js
+server/src/**/*.js.map
+
+# ------------------------------------------------------------
+# 7) Test / coverage / profiling artifacts
+# ------------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+
+*.cpuprofile
+*.heapsnapshot
+*.hprof
+*.perfetto-trace
+*.trace
+
+# ------------------------------------------------------------
+# 8) Temporary/editor/OS files
+# ------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Thumbs.db:encryptable
+desktop.ini
+
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# ------------------------------------------------------------
+# 9) Local build/package artifacts
+# ------------------------------------------------------------
+# Full/Patch ZIPs are release artifacts, not project source.
+FAMILY_BLOOM_PHASE_*_COPY_OVER_FULL_*.zip
+FAMILY_BLOOM_PHASE_*_PATCH_*.zip
+Family_Bloom_Phase_*_FULL_*.zip
+Family_Bloom_Phase_*_PATCH_*.zip
+
+# ------------------------------------------------------------
+# INTENTIONALLY TRACKED (do not add ignore rules for these)
+# ------------------------------------------------------------
+# assets/**
+# document/**
+# reports/**
+# scripts/**
+# functions/*.js
+# plugins/**
+# firestore.rules
+# firestore.cloud.rules
+# firestore.indexes.json
+# firebase.json
+# google-services.json
+# GoogleService-Info.plist
+# app.json / app.config.js
+# .env.example / server/.env.example

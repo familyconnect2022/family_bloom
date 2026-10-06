@@ -1,0 +1,229 @@
+Family Bloom Phase 14I validation — 2026-09-30
+
+Phase14I Native Focus Portal: 22 PASS / 0 FAIL
+PASS focus-rendered-in-native-modal-portal
+PASS graph-host-measured-in-window
+PASS portal-host-is-captured-per-open
+PASS focus-card-never-fully-transparent
+PASS zoom-still-gradual-from-node
+PASS focus-target-remains-80-percent
+PASS light-separation-veil-only
+PASS back-and-close-controls-visible
+PASS hardware-back-closes-focus
+PASS outside-tap-closes-focus
+PASS 3-5-all-disabled-while-focus-open
+PASS background-canvas-touch-disabled
+PASS background-lines-never-enter-focus-mode
+PASS legacy-branch-banner-absent
+PASS focus-loading-shell-present
+PASS full-branch-still-independent-of-canvas-mode
+PASS single-overlay-a-to-b-preserved
+PASS top-wrench-remains-removed
+PASS lower-add-person-remains
+PASS no-new-native-dependency
+PASS phase14i-script-registered
+PASS ts-tsx-syntax — 198/198
+Phase14H Focus Overlay Visibility: 16 PASS / 0 FAIL
+PASS android-hardware-blur-layer-removed
+PASS light-frosted-shield-used
+PASS overlay-root-forced-above-frozen-canvas
+PASS visible-back-button-present
+PASS android-hardware-back-closes-focus
+PASS outside-shield-can-close-focus
+PASS header-close-remains
+PASS mode-buttons-still-disabled
+PASS canvas-touch-still-disabled
+PASS canvas-camera-not-mutated-by-open
+PASS focus-target-remains-80-percent
+PASS focus-animation-remains-gradual
+PASS focus-loading-state-remains
+PASS phase14h-script-registered
+PASS no-new-blur-dependency
+PASS ts-tsx-syntax — 198/198
+Phase14G True Focus Overlay: 30 PASS / 0 FAIL
+PASS default-canvas-opens-three-generations
+PASS linked-user-is-highlight-not-selected-focus
+PASS linked-user-centered-on-initial-camera
+PASS canvas-lines-never-enter-focus-mode
+PASS canvas-active-branch-is-whole-rendered-tree
+PASS legacy-branch-banner-gone
+PASS open-focus-does-not-change-background-view-mode
+PASS open-focus-does-not-change-background-anchor
+PASS open-focus-does-not-change-background-camera
+PASS open-focus-does-not-change-background-selection
+PASS focus-target-is-80-percent-of-canvas-viewport
+PASS focus-animation-starts-from-tapped-node
+PASS focus-animation-distance-normalized
+PASS focus-close-animates-back-to-source
+PASS focus-opens-before-branch-layout
+PASS focus-loading-copy
+PASS focus-uses-full-family-snapshot-not-canvas-mode
+PASS focus-full-branch-independent-of-3-5-all
+PASS mode-buttons-explicitly-disabled-during-focus
+PASS background-touch-is-disabled-during-focus
+PASS background-has-focus-separation-layer
+PASS overlay-shield-blocks-canvas-gestures
+PASS focus-has-own-pan-pinch
+PASS focus-a-to-b-reuses-single-overlay
+PASS top-hero-wrench-removed
+PASS lower-add-person-action-preserved
+PASS no-new-native-dependency
+PASS music-assignment-prep-preserved
+PASS phase14g-script-registered
+PASS ts-tsx-syntax — 198/198
+Phase14F Graph Focus Isolation + Default 3 Gen: 21 PASS / 0 FAIL
+PASS default-standard-mode-is-3
+PASS default-user-not-selected
+PASS default-user-highlighted-only
+PASS initial-camera-centers-linked-user
+PASS background-active-set-is-whole-tree
+PASS background-connectors-never-focus-dim
+PASS standard-nodes-no-relationship-focus-badges
+PASS legacy-focus-banner-removed
+PASS branch-open-mounts-overlay-before-visual
+PASS branch-open-has-no-in-canvas-anchor-fallback
+PASS branch-open-has-no-selection-mutation
+PASS branch-open-has-no-camera-mutation
+PASS legacy-in-canvas-branch-machinery-removed
+PASS focus-overlay-still-shields-background
+PASS focus-overlay-still-pan-zoom
+PASS focus-overlay-same-instance-navigation
+PASS focus-overlay-available-from-3-5-all
+PASS screen-wires-in-memory-branch-visual
+PASS focus-branch-layout-cache
+PASS phase14f-script-registered
+PASS ts-tsx-syntax — 198/198
+Phase14E Music Card + Graph Focus Overlay: 24 PASS / 0 FAIL
+PASS music-one-bloom-card
+PASS music-search-inside-card
+PASS music-three-horizontal-tabs
+PASS music-fixed-scroll-window
+PASS music-bounded-page-20
+PASS music-friendly-permission-error
+PASS music-performance-search
+PASS music-no-extra-section-header
+PASS graph-focus-visual-from-loaded-snapshot
+PASS graph-focus-overlay-80-percent
+PASS graph-focus-overlay-shield
+PASS graph-focus-frost-performance-first
+PASS graph-focus-open-animation
+PASS graph-background-mode-independent
+PASS graph-base-camera-preserved
+PASS graph-focus-pan-pinch-reused
+PASS graph-single-overlay-navigation
+PASS graph-no-overlay-stacking
+PASS graph-focus-auto-fit
+PASS graph-focus-child-hides-heavy-controls
+PASS graph-focus-prop-wired
+PASS no-new-native-dependency
+PASS phase14e-script-registered
+PASS ts-tsx-syntax — 198/198
+Phase14D Nhà Mình Music+TODO: 47 PASS / 0 FAIL
+PASS required:src/components/ui/BloomNoteCallout.tsx
+PASS required:src/context/HomeMusicPlayerContext.tsx
+PASS required:src/features/home/music/HomeMusicPanel.tsx
+PASS required:src/services/home/music/musicProvider.ts
+PASS required:src/services/home/music/audiusMusicProvider.ts
+PASS required:src/services/home/music/homeMusicService.ts
+PASS music-bloom-supper-hero
+PASS music-three-tabs
+PASS music-search-actions
+PASS music-search-debounce
+PASS music-bounded-render
+PASS music-lightweight-control-context
+PASS music-cycle-3-days
+PASS music-20-tracks
+PASS music-mix-approved
+PASS music-anti-repeat
+PASS music-search-cache
+PASS music-frozen-family-cycle
+PASS music-provider-abstraction
+PASS audius-search-trending-recent-stream
+PASS audius-skip-gated-tracks
+PASS music-singleton-provider
+PASS music-background-playback
+PASS music-family-switch-clears-player
+PASS music-controls-split-from-progress
+PASS music-inline-in-nha-minh
+PASS music-no-separate-card-link
+PASS legacy-music-redirect
+PASS kitchen-shared-default-seed
+PASS kitchen-personalize-only-on-filters
+PASS kitchen-daily-rotation
+PASS kitchen-copy-shared-family
+PASS kitchen-swap-only-personalized
+PASS WhisperFeaturePanel.tsx-no-native-alert
+PASS WhisperFeaturePanel.tsx-bloom-confirm
+PASS WhisperFeaturePanel.tsx-keyboard-focus
+PASS WhisperFeaturePanel.tsx-bloom-note
+PASS PollFeaturePanel.tsx-no-native-alert
+PASS PollFeaturePanel.tsx-bloom-confirm
+PASS PollFeaturePanel.tsx-keyboard-focus
+PASS PollFeaturePanel.tsx-bloom-note
+PASS firestore.rules-music-rules
+PASS firestore.cloud.rules-music-rules
+PASS app-video-background-plugin
+PASS android-keyboard-resize
+PASS ios-bundle-id
+PASS ts-tsx-syntax — 198/198
+Phase14C functional V1: 44 PASS / 0 FAIL
+PASS | exists:src/app/(home)/(whispers)/home-whispers.tsx
+PASS | exists:src/app/(home)/(polls)/home-polls.tsx
+PASS | exists:src/app/(home)/(kitchen)/home-kitchen/index.tsx
+PASS | exists:src/app/(home)/(kitchen)/home-kitchen/[recipeId].tsx
+PASS | exists:src/features/home/whispers/WhisperFeaturePanel.tsx
+PASS | exists:src/features/home/polls/PollFeaturePanel.tsx
+PASS | exists:src/features/home/kitchen/KitchenFeaturePanel.tsx
+PASS | exists:src/services/home/homeWhisperService.ts
+PASS | exists:src/services/home/homePollService.ts
+PASS | exists:src/services/home/homeKitchenService.ts
+PASS | exists:src/components/family/FamilyMemberPicker.tsx
+PASS | exists:src/types/homeLiving.ts
+PASS | exists:src/data/kitchen/bloomRecipesV1.ts
+PASS | exists:firestore.rules
+PASS | exists:firestore.cloud.rules
+PASS | exists:firestore.indexes.json
+PASS | exists:Family_Bloom_Deploy_Firestore_Indexes.bat
+PASS | whisper pagination 20
+PASS | whisper retention 60d
+PASS | saved whisper snapshot
+PASS | direct recipient inbox
+PASS | whisper family/direct UX
+PASS | whisper 10 emotions
+PASS | whisper compact filter UX
+PASS | membership picker reused by whispers/polls
+PASS | member picker scalable search + virtualization
+PASS | missing-index fallback
+PASS | poll retention 30d
+PASS | poll frozen denominator + ballots
+PASS | poll group min 3
+PASS | poll anonymous UX
+PASS | poll expiry choices
+PASS | poll result buckets
+PASS | kitchen 100 recipes
+PASS | kitchen daily rotation
+PASS | kitchen membership-user preferences
+PASS | rules user private data
+PASS | rules polls/kitchen
+PASS | rules legacy whisper compatibility
+PASS | rules legacy poll compatibility
+PASS | push deep link source
+PASS | future Cloud push direct-only
+PASS | 7 Firestore indexes
+PASS | all TS/TSX syntax 198/198
+FAMILY BLOOM PHASE 13 RELEASE READINESS
+PASS | Internal tools are __DEV__ gated | No hard-coded developer account gate in release policy.
+PASS | E2E harness is internal-only | E2E controls are disabled in release.
+PASS | Push token registry wired | Native token registration + private Firestore schema in direct/cloud rule sets.
+PASS | Logout disables device token | Signed-out account must not retain an enabled device token.
+PASS | Diagnostics schema is privacy bounded | No raw stack/form/family content is uploaded.
+PASS | Media lifecycle fields are immutable | Media record cannot be retargeted to another family/entity.
+PASS | Client family deletion is blocked | Avoid orphaned family subcollections.
+PASS | Bloom Supper rounded hero contract | Calendar/Moments can share the Tree lower silhouette.
+PASS | Cloud Functions remains Spark-safe | Blaze-dependent live validation remains deferred.
+PASS | Android release versionCode exists | Required for repeatable Android RC builds.
+PASS | iOS buildNumber prepared | Source readiness only; device validation deferred.
+Overall: PASS (11/11)
+
+
+Device runtime is not declared PASS until tested on the target Android device.

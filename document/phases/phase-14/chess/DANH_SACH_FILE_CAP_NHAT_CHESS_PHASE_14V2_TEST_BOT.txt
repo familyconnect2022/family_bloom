@@ -1,0 +1,40 @@
+FAMILY BLOOM — DANH SÁCH FILE CẬP NHẬT — CHESS PHASE 14V.2 TEST BOT
+Date: 2026-10-03
+Base: FAMILY_BLOOM_PHASE_14V1_GLOBAL_CHESS_BATTLE_FX_FULL_2026-10-03.zip
+Delivery: FULL CODE ZIP
+
+NEW FILES
+- .env.example
+- document/phases/phase-14/chess/BUILD_CHECK_REPORT_CHESS_PHASE_14V2_TEST_BOT.txt
+- document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V2_TEST_BOT.txt
+- reports/device/PHASE_14V2_CHESS_TEST_BOT_ONE_DEVICE_CHECKLIST.txt
+- scripts/test-phase14v2-chess-test-bot.js
+
+UPDATED FILES
+- document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+- package.json
+- scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
+- scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat
+- scripts/test-phase14u-chess.js
+- server/.env.example
+- server/render.yaml
+- server/src/chess/chessGameManager.ts
+- server/src/chess/chessTypes.ts
+- server/src/socket/socketServer.ts
+- src/app/(chess)/chess-game/[gameId].tsx
+- src/app/(chess)/chess-history.tsx
+- src/app/(chess)/chess-lobby.tsx
+- src/components/chess/ChessChallengeOverlay.tsx
+- src/config/env.ts
+- src/context/ChessRealtimeContext.tsx
+- src/hooks/chess/useChessLobby.ts
+- src/services/chess/chessHistoryService.ts
+- src/types/chess.ts
+
+NO CHANGES REQUIRED
+- Firestore Rules
+- Firestore indexes
+- Firebase Functions
+- Android native dependencies
+- iOS native dependencies
+- Family/Profile/Graph/Moments/Events schemas

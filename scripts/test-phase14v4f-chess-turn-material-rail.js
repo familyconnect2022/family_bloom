@@ -1,0 +1,50 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+
+const board = read('src/components/chess/ChessBoard.tsx');
+const screen = read('src/app/(chess)/chess-game/[gameId].tsx');
+const rail = read('src/components/chess/ChessPlayerRail.tsx');
+const clock = read('src/components/chess/ChessClock.tsx');
+const material = read('src/components/chess/ChessMaterialStrip.tsx');
+const clientTypes = read('src/types/chess.ts');
+const serverTypes = read('server/src/chess/chessTypes.ts');
+const manager = read('server/src/chess/chessGameManager.ts');
+const socket = read('server/src/socket/socketServer.ts');
+const panel = read('src/components/chess/ChessDiagnosticPanel.tsx');
+
+let pass = 0, fail = 0;
+const check = (name, ok) => { if (ok) { pass++; console.log('PASS', name); } else { fail++; console.error('FAIL', name); } };
+
+check('board interaction is turn-gated', board.includes('const canInteract = (state: ChessGameState, myColor: ChessColor) => state.status === "active" && state.turn === myColor'));
+check('selection rejects opponent turn', /current\.turn !== myColor/.test(board) && board.includes('detail: reason'));
+check('attemptMove rejects opponent turn before local chess move', /current\.turn !== myColor/.test(board) && board.includes('stage: "attempt_blocked"'));
+check('turn block is diagnostic-visible', board.includes('"NOT_MY_TURN"') && board.includes('stage: "input_blocked"'));
+check('board native gesture lock is transaction-based so opponent-turn premove stays touchable', board.includes('useSharedValue(canTouchBoard(state) ? 0 : 1)'));
+check('premove only fires after opponent visual commit in V4G', board.includes('stage: "premove_fire"') && board.includes('requestAnimationFrame(() => void attemptRef.current(queued.from'));
+check('visual turn is emitted only from visible board commits', board.includes('onVisualTurnChange?.(interactionStateRef.current.turn, interactionStateRef.current.status)'));
+check('screen stores visual turn focus in Reanimated shared values', screen.includes('const whiteTurnActive = useSharedValue(0)') && screen.includes('const blackTurnActive = useSharedValue(0)'));
+check('screen does not add React state for active turn', !screen.includes('setIsMyTurn') && !screen.includes('useState<ChessColor'));
+check('player rail consumes SharedValue focus', rail.includes('activeSignal: SharedValue<number>') && rail.includes('useDerivedValue'));
+check('clock focus consumes same SharedValue', clock.includes('activeSignal?: SharedValue<number>') && clock.includes('interpolateColor'));
+check('player rail shows explicit active-turn copy', rail.includes('activeCopy') && screen.includes('Đến lượt bạn') && screen.includes('Đối phương đang đi'));
+check('player rails sit directly around board', screen.indexOf('<ChessPlayerRail') < screen.indexOf('<View style={styles.boardStage}>') && screen.lastIndexOf('<ChessPlayerRail') > screen.indexOf('</View>', screen.indexOf('<View style={styles.boardStage}>')));
+check('diagnostics moved below player controls', screen.lastIndexOf('<ChessDiagnosticPanel') > screen.lastIndexOf('<ChessPlayerRail'));
+check('diagnostics default collapsed', panel.includes('const [expanded, setExpanded] = useState(false)'));
+check('material strip is isolated with React.memo', material.includes('export const ChessMaterialStrip = React.memo') && material.includes('sameCounts'));
+check('material strip has standard piece values', material.includes('{ p: 1, n: 3, b: 3, r: 5, q: 9 }'));
+check('material strip renders captured local piece assets', material.includes('pieces-webp-default') && material.includes('capturedColor'));
+check('material advantage is only displayed for leading side', material.includes('advantage > 0') && material.includes('Lợi thế +'));
+check('client snapshot type carries compact capture summary', clientTypes.includes('export type ChessCaptureSummary') && clientTypes.includes('captureSummary: ChessCaptureSummary'));
+check('move delta increments capture summary locally without adding summary to hot packet', clientTypes.includes('delta.move.captured') && !/export type ChessMoveDelta[\s\S]*captureSummary/.test(clientTypes.match(/export type ChessMoveDelta[\s\S]*?\n};/)?.[0] || ''));
+check('server runtime keeps capture summary in RAM', manager.includes('captures: CaptureSummary') && manager.includes('emptyCaptureSummary()'));
+check('server restore rebuilds capture summary from PGN history', manager.includes('deriveCaptureSummary(chess)') && manager.includes('chess.history({ verbose: true })'));
+check('server accepted capture updates only mover capture bucket', manager.includes('moved.color === "w" ? r.captures.byWhite : r.captures.byBlack'));
+check('server rollback snapshot includes capture summary', manager.includes('captures: cloneCaptureSummary(r.captures)') && manager.includes('r.captures=cloneCaptureSummary(s.captures)'));
+check('full client snapshot includes capture summary but strips PGN/legal moves', serverTypes.includes('captureSummary: CaptureSummary') && socket.includes('const { pgn: _pgn, legalMoves: _legalMoves, ...client } = state'));
+check('hot-path move delta remains capture-summary free', !/export type MoveDelta[\s\S]*captureSummary/.test(serverTypes.match(/export type MoveDelta[\s\S]*?\n};/)?.[0] || ''));
+check('capture rows do not alter ChessBoard props', !board.includes('captureSummary') && !board.includes('advantage'));
+
+console.log(`\nPhase 14V4F Turn Focus + Material Rail: ${pass}/${pass + fail} PASS`);
+if (fail) process.exit(1);

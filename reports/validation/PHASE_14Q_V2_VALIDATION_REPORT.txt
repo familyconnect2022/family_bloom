@@ -1,0 +1,42 @@
+Family Bloom Phase 14Q V2 — Bloom Time Reveal redesign
+Validation date: 2026-10-01
+Base: Family_Bloom_Phase_14Q_TIME_CAPSULE_REVEAL_PROTOTYPE_FULL_2026-10-01.zip
+
+SCOPE
+- Visual/motion redesign only.
+- No Time Capsule persistence/scheduling/audience implementation added.
+- No Firestore rules/index/functions changes.
+- No dependency added.
+
+V2 VALIDATION
+PASS Phase 14Q V2 dedicated checks: 21 PASS / 0 FAIL
+PASS source TypeScript/TSX transpile syntax: 206/206
+PASS Phase 14N regression: 13 PASS / 0 FAIL
+PASS Phase 14J Graph focus regression: 18 PASS / 0 FAIL
+PASS Phase 14C Nhà Mình functional regression: 44 PASS / 0 FAIL
+PASS Firestore rules SHA-256 unchanged from 14Q baseline
+PASS Firestore indexes SHA-256 unchanged from 14Q baseline
+PASS no rotateX/perspective path in V2 reveal
+PASS particle count bounded to 12
+PASS reveal component has no shadowRadius/elevation animation path
+PASS haptic timer cleanup on reset/unmount
+
+MOTION/PERFORMANCE INTENT
+- One monotonic Reanimated shared progress value, 2550ms master timeline.
+- Visible choreography uses transform + opacity.
+- Layered glow is built from lightweight Views instead of blur.
+- Lid animation uses 2D lift/drift instead of the old 3D flip.
+- Letter rises from behind the box and settles after the glow peak.
+
+CHANGED / ADDED FILES VS 14Q BASELINE
+- src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx
+- scripts/test-phase14q-time-capsule-reveal.js
+- document/phases/phase-14/time-capsule/PHASE_14Q_V2_BLOOM_TIME_REVEAL_REDESIGN.md
+- PHASE_14Q_V2_DEVICE_CHECKLIST.txt
+- PHASE_14Q_V2_VALIDATION_REPORT.txt
+- PATCH_INFO_PHASE_14Q_V2_BLOOM_TIME_REVEAL.txt
+
+DEVICE STATUS
+- Static/source validation: PASS.
+- Real Android FPS/visual quality: NOT claimed yet; user device test remains the final gate.
+- No Firebase deploy is required for this V2 visual prototype.

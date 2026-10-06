@@ -1,0 +1,24 @@
+FAMILY BLOOM — PHASE 8.2B UPDATED FILES
+Date: 2026-09-25
+
+SOURCE
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/components/familyGraph/familyGraphConnectorRouting.ts
+src/services/performance/performanceTestService.ts
+src/app/(tabs)/moments.tsx
+src/app/(tabs)/planner.tsx
+
+TEST
+scripts/test-phase82b-first-frame.js
+
+DOCUMENT
+PATCH_INFO.txt
+document/phases/phase-08/PHASE_8_2B_FIRST_FRAME_JS_YIELD.md
+document/phases/phase-08/BUILD_CHECK_REPORT_PHASE_8_2B.txt
+document/phases/phase-08/DANH_SACH_FILE_CAP_NHAT_PHASE_8_2B.txt
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+
+NOTE
+- All Phase 8.1 Performance Lab files are intentionally preserved.
+- Phase 8.3–8.5 source remains part of the FULL build.
+- No Rules/Functions/native dependency file changed in this pass.

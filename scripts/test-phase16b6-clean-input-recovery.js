@@ -1,0 +1,23 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+let pass = 0, fail = 0;
+function check(name, ok) { if (ok) { console.log('PASS', name); pass++; } else { console.error('FAIL', name); fail++; } }
+const piece = fs.readFileSync(path.join(root,'src/components/chess/v2/ChessPiece.tsx'),'utf8');
+const board = fs.readFileSync(path.join(root,'src/components/chess/ChessBoard.tsx'),'utf8');
+const cleanup = fs.readFileSync(path.join(root,'Family_Bloom_CLEAN_APPLY_FULL.bat'),'utf8');
+const cleanupNode = fs.readFileSync(path.join(root,'scripts/setup/cleanup-overlay-routes.js'),'utf8');
+check('piece tap always forwards to JS', /if \(success\) runOnJS\(onTapPiece\)\(id\)/.test(piece));
+check('piece tap no longer gates on boardLocked', !/success\s*&&\s*boardLocked\.value\s*===\s*0/.test(piece));
+check('piece JS handler restores V4P selection path', /const onTapPiece[\s\S]*selectSquare\(runtime\.square\)/.test(board));
+const tapBlock = board.split('const onTapPiece = useCallback')[1]?.split('const onPressSquare = useCallback')[0] || '';
+check('piece JS handler no longer early-blocks visual catchup', !tapBlock.includes('VISUAL_CATCHUP_LOCK') && !tapBlock.includes('MOTION_LOCK') && !tapBlock.includes('PENDING_LOCK'));
+check('same-position lifecycle can adopt a newer non-move revision', board.includes('state.fen !== visible.fen') && board.includes('state.revision < visible.revision') && board.includes('lastQueuedVersionRef.current = Math.max'));
+check('clean script removes legacy chess route', cleanup.includes('cleanup-overlay-routes.js') && cleanupNode.includes('src/app/chess-game'));
+check('clean script removes legacy performance route', cleanupNode.includes('src/app/performance-test.tsx'));
+check('new grouped chess route exists', fs.existsSync(path.join(root,'src/app/(chess)/chess-game/[gameId].tsx')));
+check('new grouped performance route exists', fs.existsSync(path.join(root,'src/app/(internal)/performance-test.tsx')));
+check('FULL tree itself has no legacy chess route', !fs.existsSync(path.join(root,'src/app/chess-game/[gameId].tsx')));
+check('FULL tree itself has no legacy performance route', !fs.existsSync(path.join(root,'src/app/performance-test.tsx')));
+console.log(`\nPhase 16B.6: ${pass} PASS / ${fail} FAIL`);
+process.exitCode = fail ? 1 : 0;

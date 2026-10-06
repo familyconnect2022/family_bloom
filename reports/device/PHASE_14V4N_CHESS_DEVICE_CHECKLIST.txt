@@ -1,0 +1,11 @@
+PHASE 14V4N — CHESS VIEWPORT RESULT OVERLAY DEVICE CHECKLIST
+Date: 2026-10-04
+
+1. Finish a game against Bloom Bot.
+2. Confirm the result toast appears centered on the PHONE VIEWPORT, not attached below/inside the board.
+3. Confirm the board and both player rails do not move when the toast appears.
+4. Scroll position must not change the toast center.
+5. Tap “Đồng ý”: toast disappears and final board remains visible.
+6. Finish another game and tap “Chơi ván mới”: result toast disappears before the rematch loading overlay.
+7. Confirm promotion chooser still appears centered with image-only Q/R/B/N choices.
+8. Bloom Bot timing test remains fixed at 120 ms on the V4M/V4N server build.

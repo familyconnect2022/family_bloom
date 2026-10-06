@@ -1,0 +1,19 @@
+PHASE 8.2 — FILES UPDATED
+
+Runtime:
+src/components/familyGraph/familyGraphLiveAdapter.ts
+src/components/familyGraph/familyGraphConnectorRouting.ts
+src/components/familyGraph/FamilyGraphPrototype.tsx
+src/constants/appConfiguration.ts
+
+Performance test (kept in project):
+src/app/(internal)/performance-graph-test.tsx
+
+Documentation / handoff:
+PATCH_INFO.txt
+document/phases/phase-08/PHASE_8_2_GRAPH_PERFORMANCE_OPTIMIZATION.md
+document/phases/phase-08/PHASE_8_TODO_POLISH_RELIABILITY.md
+document/phases/phase-08/BUILD_CHECK_REPORT_PHASE_8_2.txt
+document/phases/phase-08/DANH_SACH_FILE_CAP_NHAT_PHASE_8_2.txt
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/phases/phase-08/PHASE_8_1_AUTOMATED_PERFORMANCE_TEST_BUILD.md

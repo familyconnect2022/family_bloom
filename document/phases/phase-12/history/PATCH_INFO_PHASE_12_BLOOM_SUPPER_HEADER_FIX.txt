@@ -1,0 +1,19 @@
+Family Bloom Phase 12 — Bloom Supper Header Fix
+Date: 2026-09-28
+Base: Phase 12 Bloom Supper Reliability COLORS Hotfix
+
+Fixes:
+- Removes screenshot-derived hero artwork from live headers to stop embedded text from overlapping native titles.
+- Uses clean purpose-aware native Bloom Supper illustrations for Event, Moment, Family and Tree headers.
+- Adds full-bleed Bloom Supper heroes to Moments, Planner/Lịch and Góc chơi main tabs.
+- Family tab uses one page title (Phả hệ gia đình) and a distinct section title (Khám phá cây nhà).
+- Family Graph keeps the compact tree hero and adds side breathing room around the graph viewport.
+- Keeps Phase 11 performance architecture and Phase 12 reliability behavior unchanged.
+
+Validation:
+- Phase 12 Bloom Supper tab header contract: PASS 8/8
+- Phase 12 Bloom Supper + Reliability: PASS 15/15
+- Phase 12 Visual System: PASS 8/8
+- Phase 12 Full-screen UI: PASS 25/25
+- Phase 11 Final Performance Gate contract: PASS
+- TS/TSX syntax transpile: PASS for all modified source files

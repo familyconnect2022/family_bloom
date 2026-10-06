@@ -1,0 +1,15 @@
+PHASE 14V4O CHESS — DEVICE CHECKLIST
+
+1. Finish a game while the page is scrolled near the top.
+   PASS: result toast is centered in the visible phone screen.
+2. Finish a game while the page is scrolled lower.
+   PASS: result toast is still centered in the visible phone screen and does not move with ScrollView content.
+3. Lose to Bloom Bot.
+   PASS: toast says “Bạn thua” plus the finish reason; no win petals/trophy celebration.
+4. Draw a game.
+   PASS: toast says “Ván hòa”.
+5. Reach pawn promotion with the board at different scroll positions.
+   PASS: chooser is centered over the chessboard itself, never at the top/root of the phone.
+6. Promotion choices show image-only Q/R/B/N for the moving color.
+7. Captured-piece row can become long without covering “Lợi thế +X”.
+8. Bloom Bot build deployed from this package: bot move delay remains fixed at 120 ms.

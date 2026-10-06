@@ -1,0 +1,30 @@
+FAMILY BLOOM — PHASE 14R.4E DEVICE CHECKLIST
+
+A. SERVER/RULES
+[ ] Run Family_Bloom_Deploy_Firestore_Rules.bat.
+[ ] If remote OS push while killed is required, deploy existing Functions push transport.
+
+B. SIDE-BY-SIDE INSTALL
+[ ] Build/install RELEASE with scripts\android\Family_Bloom_Android_Test_App_RELEASE.bat.
+[ ] Build/install DEV with scripts\android\Family_Bloom_Android_DEV_Build_And_Run.bat.
+[ ] DEV script prints: Side-by-side verification PASS: RELEASE + DEV are both installed.
+[ ] Phone shows both Family Bloom and Family Bloom Dev.
+
+C. HUB HIGHLIGHT
+[ ] Recipient receives a Báo trước capsule: Nhà Mình card shows HỘP ĐANG CHỜ before opening feature.
+[ ] At reveal time: Nhà Mình card changes to MỞ NGAY without manual refresh.
+[ ] Hidden future capsule is NOT exposed early.
+
+D. TWO-WAY LIVE STATE
+[ ] Sender and recipient are signed into separate apps/devices.
+[ ] Recipient opens due capsule and completes first-open ceremony.
+[ ] Sender horizontal box animates from closed to ajar/open without manual refresh.
+[ ] Multi-recipient sender card shows correct x/y opened count.
+[ ] Opened boxes never shake.
+
+E. NOTIFICATIONS
+[ ] Báo trước creation creates recipient Chuyện trong nhà item/badge.
+[ ] Recipient gets exact reveal-time local notification after device has synced capsule metadata.
+[ ] First recipient open creates sender Chuyện trong nhà item/badge.
+[ ] Foreground sender sees open-state Bloom toast.
+[ ] If Functions are deployed: verify remote OS push while target app is killed.

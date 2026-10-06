@@ -1,0 +1,28 @@
+FAMILY BLOOM — PHASE 14R HỘP THỜI GIAN FUNCTIONAL V1 PATCH
+Date: 2026-10-01
+Applies to: Family_Bloom_Phase_14Q_V2_2_BUILD_READY_CLEAN_ROOT_FULL_2026-10-01.zip
+
+SCOPE
+- Real Time Capsule Firestore service + routes + membership audience.
+- Separate locked content/main and per-recipient opens receipt.
+- Hidden / Locked preview modes.
+- Persisted Warm / Formal / Festive reveal theme.
+- First-open ceremony, replay, Reduce Motion fallback.
+- Local exact-open notification + exact deep link.
+- Firestore Rules for metadata/content/open receipt.
+- Android build BAT fixes: no Expo --output; Gradle release export; APK-only; stale npm-lock repair.
+- Phase 14R docs, regression gate and device checklist.
+
+FIREBASE
+- Deploy firestore.rules before multi-account device test.
+- No Functions deploy required.
+- No new composite index required for Time Capsule V1.
+
+BUILD
+- Normal device build: scripts\android\Family_Bloom_Android_Test_App_RELEASE.bat
+- APK only: scripts\android\Family_Bloom_Android_Build_APK_ONLY.bat
+- APK output: dist\android\Family_Bloom_Release_Test_LATEST.apk
+- Manual dependency sync if wanted: scripts\setup\Family_Bloom_Sync_Dependencies.bat
+
+IMPORTANT LOCAL-FIRST LIMITATION
+Recipient devices schedule the Time Capsule notification after they have synced capsule metadata by opening/resuming the app. Edits/deletes also require the recipient device to sync again to replace/cancel an already-scheduled local notification.

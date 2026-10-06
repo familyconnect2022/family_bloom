@@ -1,0 +1,20 @@
+FAMILY BLOOM — PHASE 11.2B E2E + PERFORMANCE FOUNDATION
+Base: Phase 11.2A Notification Scheduling Hotfix (CLOSED/PASS)
+
+Added:
+- Internal E2E safety configuration, DEV-only.
+- E2E run IDs + deterministic [BLOOM-E2E] test document naming.
+- Hard guard that blocks Firebase E2E targeting any family whose name does not start with "Bloom E2E".
+- No auth bypass, no Firestore Rules bypass, no hidden admin credential.
+- Automated regression evaluator for tabs.navigator singleton, duplicate realtime listeners, JS-stall p95/max and UI press→frame.
+- Contract check: npm run phase11.2b:check.
+
+Important:
+Firebase-writing E2E steps remain deliberately BLOCKED until dedicated Test Family/test accounts are created/configured. This prevents accidental writes to real family data. The next 11.2B patch wires Event/Moment create→receive→Activity→deep-link→cleanup after that isolated target exists.
+
+CONTINUATION — AUTOMATED REGRESSION REPORT
+- Performance Lab now evaluates PASS/WARNING/FAIL automatically.
+- Coverage tracks Graph 50/100/200/300/500, stress targets, and 60s interaction probe.
+- Graph first-paint/full-mount/layout receive dataset-scaled regression guards.
+- Copy Report now includes automated regression verdict + raw metrics/traces.
+- No Firebase writes were enabled; E2E real-family safety gate remains closed.

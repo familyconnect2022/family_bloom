@@ -1,0 +1,51 @@
+
+NOTE — SUPERSEDED BY PHASE 14V.2D: Bloom Bot enablement is now server-authoritative. Use only Render CHESS_TEST_BOT_ENABLED=true; no EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED client flag is required.
+FAMILY BLOOM — PHASE 14V.2A CHESS AUTH + DIAGNOSTICS HOTFIX
+Date: 2026-10-03
+Status: IMPLEMENTED / STATIC PASS / AWAITING DEVICE + RENDER RUNTIME RETEST
+
+ROOT CAUSE FIXED
+- src/services/chess/chessSocketService.ts used legacy callable RNFirebase Auth API: auth().currentUser.
+- Family Bloom uses RNFirebase v26 modular API throughout the codebase.
+- Chess now uses getAuth().currentUser consistently, including reconnect and forced token refresh paths.
+
+TEMPORARY SAFE DIAGNOSTICS ADDED
+Client Metro prefix: [ChessDebug]
+- prewake:start / prewake:response / prewake:failed
+- connect:auth / connect:idToken ready / connect:create socket / connect:ready / connect:timeout
+- socket:connect / socket:connect_error / socket:disconnect / reconnect errors
+- emitAck:start / emitAck:response / emitAck:timeout/error
+- global joinForeground failure
+
+Render log additions:
+- [chess][auth] missing token
+- [chess][auth] verify failed
+- [chess] authenticated
+- [chess] app joined
+- existing [chess] command failed / disconnected logs remain
+
+SECURITY
+- Firebase ID tokens are never printed.
+- Firebase Admin private key is never printed.
+- Logs contain only connection stage/status plus normal uid/family/socket identifiers already used for server diagnostics.
+- Client detailed diagnostics are guarded by __DEV__.
+
+VALIDATION RUN
+- Phase 14V.2A Auth + Diagnostics: 13/13 PASS
+- Phase 14U Chess: 54/54 PASS
+- Phase 14V Family Game Policy: 26/26 PASS
+- Phase 14V.1 Global Presence + Battle FX: 33/33 PASS
+- Phase 14V.2 One-Device Test Bot: 40/40 PASS
+- Phase 14T.0A Single Android Identity: 21/21 PASS
+- TS/TSX syntax/transpile: 239 files, 0 error diagnostics
+
+RUNTIME RETEST
+1. Keep root .env with EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+2. If testing Bloom Bot, keep EXPO_PUBLIC_CHESS_TEST_BOT_ENABLED=true and Render CHESS_TEST_BOT_ENABLED=true.
+3. Redeploy Render because server diagnostics changed.
+4. Restart Metro with: npx expo start --dev-client --clear
+5. Open Family Bloom and watch Metro for [ChessDebug].
+6. Open Render Logs and watch for [chess].
+7. If connection fails, capture the full sequence from prewake:start through connect_error or emitAck failure, plus matching Render logs.
+
+Do not call runtime PASS until the app reaches connection=ready and appJoin succeeds on a real device.

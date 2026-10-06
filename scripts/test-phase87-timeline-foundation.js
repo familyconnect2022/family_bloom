@@ -1,0 +1,18 @@
+const fs = require('fs');
+const assert = require('assert');
+const read = (p) => fs.readFileSync(p, 'utf8');
+const types = read('src/types/moments.ts');
+const service = read('src/services/moments/momentsService.ts');
+const composer = read('src/app/(tabs)/moments.tsx');
+const sheet = read('src/components/familyGraph/FamilyGraphPersonSheet.tsx');
+const family = read('src/app/(tabs)/family.tsx');
+assert(types.includes('MomentTimelineAudience = "self" | "family" | "persons"'));
+assert(service.includes('subscribeFamilyTimeline'));
+assert(service.includes('subscribeAuthoredTimeline'));
+assert(composer.includes('KỶ NIỆM NÀY THUỘC VỀ'));
+assert(composer.includes('additionalFamilyIds: []'));
+assert(sheet.includes('timelineMediaOverlap: { marginLeft: -20 }'));
+assert(sheet.includes('person.birthDate ?? null'));
+assert(sheet.includes('person.deathDate ?? null'));
+assert(family.includes('Dòng thời gian gia đình'));
+console.log('Phase 8.7A timeline foundation contracts PASS');

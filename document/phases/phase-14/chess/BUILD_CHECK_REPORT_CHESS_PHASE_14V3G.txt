@@ -1,0 +1,36 @@
+FAMILY BLOOM — CHESS PHASE 14V.3G BUILD CHECK REPORT
+Date: 2026-10-03
+
+SCOPE
+- Replace all selectable chess piece themes with one default user-provided WebP set.
+- Preserve Phase 14V.3F monotonic reconcile gate and queued/delayed Battle FX.
+- Preserve server-authoritative chess rules, clock, persistence and Socket.IO protocol.
+
+ASSETS
+- 12 WebP files: wk,wq,wr,wb,wn,wp,bk,bq,br,bb,bn,bp.
+- Input: 1920x1920 RGBA WebP.
+- App output: 384x384 lossless RGBA WebP.
+- Transparency verified: alpha extrema 0..255 on all 12 files.
+- Total optimized asset size: 92,352 bytes.
+
+CODE / DATA IMPACT
+- No server protocol changes.
+- No Render redeploy required.
+- No Firestore Rules/index changes.
+- No native dependency added.
+- Old stored users/{uid}.chessPieceTheme values may remain in existing docs but are ignored by current code; no migration is performed.
+
+STATIC CHECKS
+- Phase 14U Chess static: 54/54 PASS (legacy assertion updated to understand commitState ACK reconcile path).
+- Phase 14V.1 Global Presence + Battle FX: 33/33 PASS.
+- Phase 14V.2D History + Bot Capability: 13/13 PASS.
+- Phase 14V.3F Reconcile + FX Timing: 12/12 PASS.
+- Phase 14V.3G Default WebP Pieces: 12/12 PASS.
+- 240 TS/TSX files: 0 syntax diagnostics via TypeScript transpile check.
+- Generated .js in src/: 0.
+- Generated .js in server/src/: 0.
+
+RUNTIME STILL REQUIRED
+- Real Android/iOS visual sharpness of all 12 pieces.
+- Ordinary move smoothness with optimistic animation + authoritative reconcile.
+- Capture, check, promotion, castling, en-passant and game-over FX sequencing.

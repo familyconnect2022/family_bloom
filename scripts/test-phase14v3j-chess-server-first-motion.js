@@ -1,0 +1,32 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const read = p => fs.readFileSync(path.join(root, p), 'utf8');
+const checks=[]; const check=(name,ok)=>{checks.push([name,!!ok]); console.log(`${ok?'PASS':'FAIL'} ${name}`)};
+const board=read('src/components/chess/ChessBoard.tsx');
+const game=read('src/app/(chess)/chess-game/[gameId].tsx');
+const hook=read('src/hooks/chess/useChessGame.ts');
+const pkg=JSON.parse(read('package.json'));
+const debug=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const release=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+
+check('legacy rollback animation constant stays removed', !board.includes('ROLLBACK_ANIMATION_MS'));
+check('legacy rollbackVisualMove path stays removed', !board.includes('rollbackVisualMove'));
+check('local command is explicitly tracked while awaiting authority', board.includes('moveRequestRef') && board.includes('PendingMoveRequest'));
+check('server rejection cannot run reverse piece motion', board.includes('resyncWithoutReverseMotion') && !board.includes('toValue: 0,') && !board.includes('toValue: 0\n'));
+check('accepted state is validated against revision ply and exact squares', board.includes('stateConfirmsRequest') && board.includes('baseRevision') && board.includes('basePly'));
+check('authoritative states are queued by revision rather than newest-only overwrite', board.includes('queuedStatesRef') && board.includes('queue.sort((a, b) => a.revision - b.revision'));
+check('duplicate ACK/socket revision is de-duplicated', board.includes('const sameRevision = queue.findIndex') && board.includes('previous.fen !== next.fen'));
+check('visual queue is bounded for reconnect bursts', board.includes('if (queue.length > 8)'));
+check('coalesced multi-ply state snaps instead of animating against wrong board', board.includes('const plyDelta = candidate.ply - displayPlyRef.current') && board.includes('if (plyDelta !== 1 || !lastMove || !piece)'));
+check('authoritative destination FEN commits before overlay removal', board.indexOf('commitDisplayState(confirmedState);') >= 0 && board.indexOf('commitDisplayState(confirmedState);') < board.indexOf('visualMoveRef.current = null;', board.indexOf('commitDisplayState(confirmedState);')));
+check('piece animation remains native-driver and never reverses', board.includes('Animated.timing(progress') && board.includes('toValue: 1') && board.includes('useNativeDriver: true') && !board.includes('toValue: 0,') && !board.includes('toValue: 0\n'));
+check('game callback still returns exact server ACK state', game.includes('return r.data;') && board.includes('Promise<ChessGameState | null>'));
+check('hook keeps expectedRevision server-authoritative protocol', hook.includes('expectedRevision: current.revision'));
+check('phase14v3j script wired', pkg.scripts['phase14v3j:check']==='node ./scripts/test-phase14v3j-chess-server-first-motion.js');
+check('DEBUG build keeps legacy no-rollback regression gate', debug.includes('phase14v3j:check'));
+check('RELEASE build keeps legacy no-rollback regression gate', release.includes('phase14v3j:check'));
+
+const fail=checks.filter(([,ok])=>!ok).length;
+console.log(`Phase 14V.3J Chess No-Rollback Compatibility: ${checks.length-fail} PASS / ${fail} FAIL`);
+process.exit(fail?1:0);

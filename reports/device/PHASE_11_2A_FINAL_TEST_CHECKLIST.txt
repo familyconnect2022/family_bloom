@@ -1,0 +1,21 @@
+Family Bloom Phase 11.2A - Final notification test checklist
+Date: 2026-09-27
+
+1. Sign in with developer account whose email contains: huynh235
+2. Open: Chuyện trong nhà
+3. Tap: Gửi 9 thông báo test
+4. Immediately put Family Bloom in background / lock the phone.
+5. In ~72 seconds Bloom schedules 9 notifications, one every 8 seconds:
+   1-3  Kỷ niệm: Bình thường / Đáng chú ý / Quan trọng
+   4-6  Lịch nhà: Bình thường / Đáng chú ý / Quan trọng
+   7-9  Phả hệ: Bình thường / Đáng chú ý / Quan trọng
+6. Expected behavior:
+   - Bình thường uses bloom_normal: may be silent and may only appear in notification shade.
+   - Đáng chú ý uses bloom_notable.
+   - Quan trọng uses bloom_important and should be the most prominent.
+   - Tap generic Kỷ niệm test -> Moments tab.
+   - Tap generic Lịch nhà test -> Planner tab.
+   - Tap generic Phả hệ test -> Family Graph.
+7. The test button is developer-only UI gating and is not a security rule.
+8. No Cloud Functions / Blaze / remote FCM is required.
+9. BloomTimePicker no longer uses FlatList/VirtualizedList; minutes are 5-minute steps to avoid the previous large-list warning.

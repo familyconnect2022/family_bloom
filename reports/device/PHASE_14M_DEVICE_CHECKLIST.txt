@@ -1,0 +1,8 @@
+Phase 14M device checks
+[ ] Playlist never remains on an endless spinner; slow/unreachable source exits loading in about 16 seconds.
+[ ] Music card shows no NCT, Zing, Audius, provider, catalog-count, or pool wording.
+[ ] “Thử lại” works and does not stack duplicate same-cycle builds.
+[ ] Existing saved 3-day playlist opens immediately.
+[ ] Focus header shows “Trở về” as the only visible exit; no X button.
+[ ] Focus is a native Modal sized from the full screen and has the Locate action.
+[ ] 3/5/all base canvas stays unchanged while Focus is open.

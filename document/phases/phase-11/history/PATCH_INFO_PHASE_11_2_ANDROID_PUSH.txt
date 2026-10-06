@@ -1,0 +1,13 @@
+Family Bloom Phase 11.2 — Android FCM Push + Bloom Time Picker
+Base: Family_Bloom_Phase_11_1_SMART_FAMILY_REMINDERS_FULL_2026-09-26.zip
+
+Highlights:
+- RNFirebase Messaging Android transport + per-device token lifecycle.
+- Foreground Bloom notification toast, background/killed FCM, deep-link family switch.
+- Semantic Android channels: normal/notable/important.
+- Trusted Cloud Functions fan-out for Activity Center notifications plus admin-only join/proposal review alerts.
+- Scheduled Smart Reminder push jobs for birthday/memorial/events.
+- Existing Smart Reminder preferences and new master push toggle are enforced server-side.
+- Custom Bloom time picker replaces Android system clock picker in Planner.
+- No new Firestore realtime listener.
+- iOS bundle id remains com.family.ios; iOS remote push intentionally deferred until APNs setup.

@@ -1,0 +1,33 @@
+FAMILY BLOOM PHASE 14Q V2.2 — THREE REVEAL THEMES VALIDATION
+Date: 2026-10-01
+Base: Phase 14Q V2.1 Letter Front Reveal Hotfix
+
+Static/regression checks
+PASS Phase 14Q V2.2 theme/reveal contract: 34 PASS / 0 FAIL.
+PASS Phase 14N current regression: 13 PASS / 0 FAIL.
+PASS Phase 14J current regression: 18 PASS / 0 FAIL.
+PASS TS/TSX syntax observed by Phase 14J: 206 / 206.
+PASS Phase 14C functional V1 regression: 44 PASS / 0 FAIL.
+PASS Phase 13 release readiness: 11 PASS / 0 FAIL.
+
+Theme guards
+PASS exactly three approved labels are present: Ấm áp / Trang trọng / Rộn ràng.
+PASS Ấm áp remains the default and keeps warm pink/gold direction.
+PASS Trang trọng is blue-led, has restrained spark particles, slower deliberate timing and no letter overshoot.
+PASS Rộn ràng is pale-yellow + pink, uses confetti/petal/spark language and stronger/faster pop motion.
+PASS theme switching is blocked during active reveal.
+PASS all particle sets are bounded: Warm 12 / Formal 8 / Festive 14.
+PASS all themes preserve letter-front contract: lid first, then scale 0 + opacity 0 toward full reveal above box.
+PASS no rotateX/perspective animation path restored.
+PASS no new animation/native dependency introduced.
+PASS prototype does not import Firestore.
+
+Deploy/data impact
+Firestore schema: unchanged.
+Firestore Rules: unchanged.
+Functions: unchanged.
+Permissions/data semantics: unchanged.
+Firebase deploy: not required.
+
+Device validation still required
+No claim of real Android visual/smoothness PASS is made by static validation. Compare all three themes on the same phone and confirm they are visually distinguishable before reading labels, while lid/glow/letter motion stays smooth.

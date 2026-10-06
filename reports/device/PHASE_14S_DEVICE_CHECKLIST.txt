@@ -1,0 +1,45 @@
+FAMILY BLOOM — PHASE 14S DEVICE CHECKLIST — QUỸ GIA ĐÌNH V1
+
+PREP
+[ ] Deploy Firestore Rules with Family_Bloom_Deploy_Firestore_Rules.bat
+[ ] Build/install Family Bloom DEBUG trên máy test hoặc máy thứ hai; DEBUG và RELEASE dùng cùng package com.familybloom.android
+[ ] Use two real family accounts if possible: one Member and one Owner/Admin
+
+A. EMPTY + CREATE
+[ ] Open Nhà Mình > Quỹ gia đình: zero balance and empty state render cleanly
+[ ] Tap “Ghi khoản thu · chi”: full-screen Bloom flow opens with Back button
+[ ] Keyboard does not cover amount/note input
+[ ] Date picker is Bloom custom UI, not Android native dialog
+[ ] Add +500,000 ₫ “Đóng góp”; balance becomes +500,000 ₫
+[ ] Second logged-in family account sees the new balance/row without reopening the screen
+
+B. EXPENSE + ARITHMETIC
+[ ] Add −120,000 ₫ expense; balance becomes 380,000 ₫
+[ ] Current-month Thu/Chi totals are correct
+[ ] Change the expense to 150,000 ₫; balance becomes 350,000 ₫
+[ ] Change transaction type income <-> expense once and verify balance recalculates correctly
+[ ] Delete the entry; balance and month total recalculate immediately
+
+C. ROLES
+[ ] Normal member can create a new entry
+[ ] Normal member can edit/delete their own entry
+[ ] Normal member cannot edit/delete another member's entry
+[ ] Owner/Admin can edit/delete another member's entry
+
+D. HISTORY + PERFORMANCE
+[ ] History is ordered by transaction date newest first
+[ ] Tất cả / Khoản thu / Khoản chi filters work
+[ ] If >30 rows exist, “Xem thêm 30 khoản” loads older rows without duplicates
+[ ] Scrolling remains smooth with 100/200/500 synthetic/real-like rows
+[ ] Leaving Quỹ gia đình releases its screen-local realtime listeners
+
+E. REGRESSION
+[ ] Direct Lời thì thầm still notifies recipient on app entry
+[ ] Hộp thời gian realtime/open state remains correct
+[ ] Không còn yêu cầu Release + Dev cài song song; kiểm tra app duy nhất com.familybloom.android chạy đúng trên thiết bị test
+[ ] Release upgrade installs over the existing Release without uninstalling or clearing data
+
+EXPECTED V1 BOUNDARY
+- This is an internal shared ledger only.
+- No bank account/card/payment data is requested or stored.
+- No real money transfer is performed.
