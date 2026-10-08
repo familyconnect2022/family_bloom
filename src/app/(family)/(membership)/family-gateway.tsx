@@ -20,7 +20,6 @@ import { COLORS } from "../../../constants/theme";
 import { useAuth } from "../../../context/AuthContext";
 import { familyJoinService } from "../../../services/family/familyJoinService";
 import { familyService } from "../../../services/family/familyService";
-import { appWidePerformanceService } from "../../../services/performance/appWidePerformanceService";
 import type { FamilyJoinRequest } from "../../../types";
 
 export default function FamilyGatewayScreen() {
@@ -54,7 +53,6 @@ export default function FamilyGatewayScreen() {
           // Approval creates membership; only the applicant updates their profile.
           // Refresh state để Root Navigator tự đưa user vào Tabs ngay, không chặn UI bằng loader.
           try {
-            if (appWidePerformanceService.isNoWriteMode()) return;
             await familyService.switchActiveFamily(user.uid, request.familyId);
             await refreshProfile();
           } catch (error) {

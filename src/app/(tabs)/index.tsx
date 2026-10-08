@@ -1,7 +1,7 @@
 import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,6 +23,7 @@ import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { DATA_LIMITS } from "../../constants/dataLimits";
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
+import { useTabLiveEffect, useTabRuntime } from "../../context/TabRuntimeContext";
 import { useFamilyDashboard } from "../../hooks/family/useFamilyDashboard";
 import { useOnThisDayMemories } from "../../hooks/moments/useOnThisDayMemories";
 import { activityService } from "../../services/activity/activityService";
@@ -139,6 +140,7 @@ function DashboardMomentCard({ post, onPress }: { post: MomentPost; onPress: () 
 
 export default function HomeScreen() {
   useTabStartupTask("home");
+  useTabRuntime("home");
   const router = useRouter();
   const [familySwitcherVisible, setFamilySwitcherVisible] = useState(false);
   const [activityBadgeCount, setActivityBadgeCount] = useState(0);
@@ -190,7 +192,7 @@ export default function HomeScreen() {
     }
   }, [families, user?.uid, userProfile?.smartReminderPreferences]);
 
-  useFocusEffect(useCallback(() => {
+  useTabLiveEffect("home", () => {
     homeFocusedRef.current = true;
     void refreshActivityBadge(false);
     return () => {
@@ -201,7 +203,7 @@ export default function HomeScreen() {
         badgeRefreshTimerRef.current = null;
       }
     };
-  }, [refreshActivityBadge]));
+  }, [refreshActivityBadge]);
 
   // Reuse the already-live Moment/Event heads only as an invalidation signal.
   // A single debounced refresh replaces the old 850ms + 2800ms double-query cycle.
@@ -270,7 +272,7 @@ export default function HomeScreen() {
                 source={avatarSource}
                 text={userProfile?.displayName || displayName}
                 size={44}
-                onPress={() => router.push("/profile")}
+                onPress={() => router.push("/settings" as never)}
                 customStyle={styles.avatar}
               />
             </View>

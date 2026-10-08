@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useChessRealtime } from "../../context/ChessRealtimeContext";
+import { prepareChessSurface } from "../../services/chess/chessSurfaceStore";
 import type { ChessAck, ChessGameState, ChessInvite, ChessTimeControl } from "../../types/chess";
 
 export function useChessLobby(familyId: string | null) {
@@ -15,11 +16,17 @@ export function useChessLobby(familyId: string | null) {
     return () => realtime.leaveLobby();
   }, [familyId, realtime.enterLobby, realtime.leaveLobby]);
 
-  const challenge = useCallback((toUid: string, timeControl: ChessTimeControl) => realtime.challenge(toUid, timeControl), [realtime.challenge]);
+  const challenge = useCallback((toUid: string, timeControl: ChessTimeControl) => {
+    prepareChessSurface("outgoing_challenge");
+    return realtime.challenge(toUid, timeControl);
+  }, [realtime.challenge]);
   const cancel = useCallback((inviteId: string) => realtime.cancelInvite(inviteId), [realtime.cancelInvite]);
   const accept = useCallback((inviteId: string): Promise<ChessAck<{ gameId: string; state: ChessGameState }>> => realtime.acceptInvite(inviteId), [realtime.acceptInvite]);
   const reject = useCallback((inviteId: string): Promise<ChessAck> => realtime.rejectInvite(inviteId), [realtime.rejectInvite]);
-  const requestTestBotChallenge = useCallback((timeControl: ChessTimeControl, delayMs = 0) => realtime.requestTestBotChallenge(timeControl, delayMs), [realtime.requestTestBotChallenge]);
+  const requestTestBotChallenge = useCallback((timeControl: ChessTimeControl, delayMs = 0) => {
+    prepareChessSurface("outgoing_challenge");
+    return realtime.requestTestBotChallenge(timeControl, delayMs);
+  }, [realtime.requestTestBotChallenge]);
 
   return {
     connection: realtime.connection,
@@ -27,7 +34,7 @@ export function useChessLobby(familyId: string | null) {
     invite: realtime.incomingInvite,
     outgoingInvite: realtime.outgoingInvite as ChessInvite | null,
     activeGameId: realtime.activeGameId,
-    pendingAwayResultGameId: realtime.pendingAwayResultGameId,
+    pendingResultGameId: realtime.pendingResultGameId,
     challenge,
     cancel,
     accept,

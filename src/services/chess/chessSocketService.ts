@@ -41,6 +41,7 @@ const summarizeError = (error: unknown): ErrorSummary => {
 
 class ChessSocketService {
   private socket: Socket | null = null;
+  private connectPromise: Promise<Socket> | null = null;
   private listeners: { [K in keyof ListenerMap]: Set<ListenerMap[K]> } = {
     state: new Set(), move: new Set(), invite: new Set(), presence: new Set(), inviteExpired: new Set(), inviteRejected: new Set(), connected: new Set(), disconnected: new Set(),
   };
@@ -76,13 +77,25 @@ class ChessSocketService {
   }
 
   async connect() {
-    if (!ENV.chessSocketUrl) {
-      debugWarn("connect blocked: EXPO_PUBLIC_CHESS_SOCKET_URL is empty");
-      throw new Error("CHESS_SOCKET_URL_MISSING");
-    }
     if (this.socket?.connected) {
       debug("connect:reuse", { socketId: this.socket.id });
       return this.socket;
+    }
+    if (this.connectPromise) return this.connectPromise;
+
+    const task = this.connectInternal();
+    this.connectPromise = task;
+    try {
+      return await task;
+    } finally {
+      if (this.connectPromise === task) this.connectPromise = null;
+    }
+  }
+
+  private async connectInternal(): Promise<Socket> {
+    if (!ENV.chessSocketUrl) {
+      debugWarn("connect blocked: EXPO_PUBLIC_CHESS_SOCKET_URL is empty");
+      throw new Error("CHESS_SOCKET_URL_MISSING");
     }
 
     const currentUser = getAuth().currentUser;
@@ -147,28 +160,37 @@ class ChessSocketService {
       debug("connect:updated auth on existing socket");
     }
 
-    if (!this.socket.connected) {
-      debug("connect:socket.connect()");
-      this.socket.connect();
-    }
+    const socket = this.socket;
+    if (socket.connected) return socket;
+    debug("connect:socket.connect()");
+    socket.connect();
 
     const startedAt = Date.now();
     await new Promise<void>((resolve, reject) => {
-      if (this.socket?.connected) return resolve();
+      if (socket.connected) { resolve(); return; }
+      let settled = false;
+      const onConnect = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        socket.off("connect", onConnect);
+        debug("connect:ready", { socketId: socket.id, elapsedMs: Date.now() - startedAt });
+        resolve();
+      };
       const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        socket.off("connect", onConnect);
         debugWarn("connect:timeout", { elapsedMs: Date.now() - startedAt });
         reject(new Error("CHESS_CONNECT_TIMEOUT"));
       }, 70_000);
-      this.socket?.once("connect", () => {
-        clearTimeout(timer);
-        debug("connect:ready", { socketId: this.socket?.id, elapsedMs: Date.now() - startedAt });
-        resolve();
-      });
+      socket.once("connect", onConnect);
     });
-    return this.socket;
+    return socket;
   }
 
   disconnect() {
+    this.connectPromise = null;
     if (!this.socket) return;
     debug("disconnect", { socketId: this.socket.id, connected: this.socket.connected });
     this.socket.disconnect();
@@ -258,8 +280,14 @@ class ChessSocketService {
         resolve(response);
       }));
     } catch (error) {
-      debugWarn("emitAck:connect failed", { event, error: summarizeError(error) });
-      throw error;
+      const summary = summarizeError(error);
+      debugWarn("emitAck:connect failed", { event, error: summary });
+      const errorCode = summary.message.includes("CHESS_UNAUTHORIZED")
+        ? "CHESS_UNAUTHORIZED"
+        : summary.message.includes("CHESS_SOCKET_URL_MISSING")
+          ? "CHESS_SOCKET_URL_MISSING"
+          : "CHESS_SERVER_RECOVERING";
+      return { ok: false, errorCode, message: summary.message } as ChessAck<T>;
     }
   }
 }

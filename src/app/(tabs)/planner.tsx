@@ -1,16 +1,17 @@
 import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Animated, { Easing, type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import {
   ActivityIndicator,
-  AppState,
   FlatList,
   Modal,
   Pressable,
   SectionList,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { BloomKeyboardScreen } from "../../components/layout/BloomKeyboardScreen";
@@ -30,9 +31,8 @@ import { useBloomDialog } from "../../components/ui/BloomDialogProvider";
 import { useBloomTaskToast } from "../../hooks/ui/useBloomTaskToast";
 import { parseAppError } from "../../constants/errorConstants";
 import { COLORS } from "../../constants/theme";
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
-import { performanceTestService } from "../../services/performance/performanceTestService";
 import { useAuth } from "../../context/AuthContext";
+import { useTabLiveEffect, useTabRuntime } from "../../context/TabRuntimeContext";
 import { useFamilyEvents } from "../../hooks/family/useFamilyEvents";
 import { useFamilyMembers } from "../../hooks/family/useFamilyMembers";
 import { useFamilyPersonDirectory } from "../../hooks/family/useFamilyPersonDirectory";
@@ -42,7 +42,7 @@ import { smartReminderService } from "../../services/activity/smartReminderServi
 import { eventService } from "../../services/event/eventService";
 import { localNotificationService } from "../../services/push/localNotificationService";
 import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
-import type { CreateEventInput, EventNotificationLevel, EventParticipantsMode, EventType, FamilyEvent } from "../../types";
+import type { CreateEventInput, EventNotificationLevel, EventParticipantsMode, EventType, FamilyEvent, FamilyMember } from "../../types";
 import { eventDateParts, isDateBeforeToday } from "../../utils/event";
 
 const WEEK_DAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -104,7 +104,355 @@ const defaultEventTimeForDate = (date: Date) => {
   return new Date(2026, 0, 1, clock.getHours(), clock.getMinutes(), 0, 0);
 };
 
+
+type CalendarMonthGridProps = {
+  monthIndex: number;
+  year: number;
+  leadingSlots: number;
+  daysInMonth: number;
+  selectedDay: number;
+  eventDays: Set<number>;
+  todayYear: number;
+  todayMonth: number;
+  todayDay: number;
+  onSelectDay: (day: number) => void;
+  onMoveMonth: (offset: number) => void;
+};
+
+const CalendarMonthGrid = memo(function CalendarMonthGrid({
+  monthIndex,
+  year,
+  leadingSlots,
+  daysInMonth,
+  selectedDay,
+  eventDays,
+  todayYear,
+  todayMonth,
+  todayDay,
+  onSelectDay,
+  onMoveMonth,
+}: CalendarMonthGridProps) {
+  return (
+    <BloomCard style={styles.calendarCard}>
+      <View style={styles.calendarHeader}>
+        <Pressable onPress={() => onMoveMonth(-1)} hitSlop={10} style={styles.monthButton}><Ionicons name="chevron-back" size={20} color={COLORS.primaryText} /></Pressable>
+        <View style={styles.monthCopy}><Text style={styles.monthTitle}>{MONTHS[monthIndex]}</Text><Text style={styles.yearText}>{year}</Text></View>
+        <Pressable onPress={() => onMoveMonth(1)} hitSlop={10} style={styles.monthButton}><Ionicons name="chevron-forward" size={20} color={COLORS.primaryText} /></Pressable>
+      </View>
+      <View style={styles.weekRow}>{WEEK_DAYS.map((day) => <Text key={day} style={styles.weekLabel}>{day}</Text>)}</View>
+      <View style={styles.daysGrid}>
+        {Array.from({ length: leadingSlots }).map((_, index) => <View key={`blank-${index}`} style={styles.daySlot} />)}
+        {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
+          const selected = selectedDay === day;
+          const hasEvent = eventDays.has(day);
+          const isToday = year === todayYear && monthIndex === todayMonth && day === todayDay;
+          return (
+            <Pressable key={day} onPress={() => onSelectDay(day)} style={styles.daySlot}>
+              <View style={[styles.dayCircle, selected && styles.daySelected, isToday && !selected && styles.dayToday]}><Text style={[styles.dayText, selected && styles.daySelectedText]}>{day}</Text></View>
+              {hasEvent && <View style={[styles.eventDot, selected && styles.eventDotSelected]} />}
+            </Pressable>
+          );
+        })}
+      </View>
+    </BloomCard>
+  );
+});
+
+type PlannerEventSection = {
+  key: "upcoming" | "past";
+  title: string;
+  subtitle: string;
+  data: FamilyEvent[];
+};
+
+type PlannerShellProps = {
+  mode: PlannerMode;
+  modeProgress: SharedValue<number>;
+  canModerate: boolean;
+  hiddenCount: number;
+  onCreate: () => void;
+  onModerate: () => void;
+  onPreviewMode: (mode: PlannerMode) => void;
+  onChangeMode: (mode: PlannerMode) => void;
+};
+
+const PlannerShell = memo(function PlannerShell({
+  mode,
+  modeProgress,
+  canModerate,
+  hiddenCount,
+  onCreate,
+  onModerate,
+  onPreviewMode,
+  onChangeMode,
+}: PlannerShellProps) {
+  const segmentWidth = useSharedValue(0);
+  const segmentIndicatorStyle = useAnimatedStyle(() => {
+    const innerWidth = Math.max(0, segmentWidth.value - 10);
+    const gap = 8;
+    const itemWidth = Math.max(0, (innerWidth - gap) / 2);
+    return {
+      width: itemWidth,
+      transform: [{ translateX: 5 + modeProgress.value * (itemWidth + gap) }],
+    };
+  });
+
+  return (
+    <>
+      <BloomHeroHeader
+        eyebrow="LỊCH NHÀ"
+        title="Những ngày mình mong chờ"
+        subtitle="Giữ ngày quan trọng, hẹn nhau một dịp và để Bloom nhắc cả nhà đúng lúc."
+        variant="event"
+        compact
+        roundedBottom
+        right={(
+          <Pressable onPress={onCreate} accessibilityRole="button" accessibilityLabel="Tạo sự kiện mới" style={({ pressed }) => [styles.heroAddButton, pressed && styles.pressed]}>
+            <Ionicons name="add" size={25} color={COLORS.primaryText} />
+          </Pressable>
+        )}
+      />
+
+      <View style={styles.topInset}>
+        {canModerate && (
+          <Pressable onPress={onModerate} style={({ pressed }) => [styles.moderationButton, pressed && styles.pressed]}>
+            <View style={styles.moderationIcon}><Ionicons name="shield-checkmark-outline" size={18} color={COLORS.primary} /></View>
+            <View style={styles.moderationCopy}>
+              <Text style={styles.moderationTitle}>Kiểm duyệt sự kiện</Text>
+              <Text style={styles.moderationHint}>Người giữ nhà chỉ giúp ẩn hoặc đưa ngày này trở lại · nội dung vẫn thuộc người tạo</Text>
+            </View>
+            <View style={styles.hiddenCount}><Text style={styles.hiddenCountText}>{hiddenCount}</Text></View>
+          </Pressable>
+        )}
+
+        <View
+          style={styles.segment}
+          onLayout={(event) => { segmentWidth.value = event.nativeEvent.layout.width; }}
+        >
+          <Animated.View pointerEvents="none" style={[styles.segmentIndicator, segmentIndicatorStyle]} />
+          <Pressable
+            onPressIn={() => onPreviewMode("calendar")}
+            onPress={() => onChangeMode("calendar")}
+            style={styles.segmentItem}
+          >
+            <Ionicons name="calendar-outline" size={16} color={mode === "calendar" ? COLORS.white : COLORS.primaryText} />
+            <Text style={[styles.segmentText, mode === "calendar" && styles.segmentTextActive]}>Lịch</Text>
+          </Pressable>
+          <Pressable
+            onPressIn={() => onPreviewMode("list")}
+            onPress={() => onChangeMode("list")}
+            style={styles.segmentItem}
+          >
+            <Ionicons name="list-outline" size={16} color={mode === "list" ? COLORS.white : COLORS.primaryText} />
+            <Text style={[styles.segmentText, mode === "list" && styles.segmentTextActive]}>Sự kiện</Text>
+          </Pressable>
+        </View>
+      </View>
+    </>
+  );
+});
+
+type PlannerEventRowProps = {
+  event: FamilyEvent;
+  memberByUid: Map<string, FamilyMember>;
+  pending?: boolean;
+  onOpenEvent: (event: FamilyEvent) => void;
+};
+
+const PlannerEventRow = memo(function PlannerEventRow({ event, memberByUid, pending = false, onOpenEvent }: PlannerEventRowProps) {
+  const handlePress = useCallback(() => onOpenEvent(event), [event, onOpenEvent]);
+  return (
+    <View style={styles.eventItemInset}>
+      <EventCard event={event} memberByUid={memberByUid} pending={pending} onPress={handlePress} />
+    </View>
+  );
+});
+
+const PlannerItemGap = () => <View style={styles.itemGap} />;
+const PlannerSectionGap = () => <View style={styles.sectionGap} />;
+
+type CalendarPanelProps = {
+  active: boolean;
+  monthIndex: number;
+  year: number;
+  month: number;
+  leadingSlots: number;
+  daysInMonth: number;
+  selectedDay: number;
+  eventDays: Set<number>;
+  todayYear: number;
+  todayMonth: number;
+  todayDay: number;
+  selectedEvents: FamilyEvent[];
+  loadingMonth: boolean;
+  memberByUid: Map<string, FamilyMember>;
+  onSelectDay: (day: number) => void;
+  onMoveMonth: (offset: number) => void;
+  onCreate: () => void;
+  onOpenEvent: (event: FamilyEvent) => void;
+};
+
+const CalendarPanel = memo(function CalendarPanel({
+  active,
+  monthIndex,
+  year,
+  month,
+  leadingSlots,
+  daysInMonth,
+  selectedDay,
+  eventDays,
+  todayYear,
+  todayMonth,
+  todayDay,
+  selectedEvents,
+  loadingMonth,
+  memberByUid,
+  onSelectDay,
+  onMoveMonth,
+  onCreate,
+  onOpenEvent,
+}: CalendarPanelProps) {
+  const header = useMemo(() => (
+    <View style={styles.calendarInset}>
+      <CalendarMonthGrid
+        monthIndex={monthIndex}
+        year={year}
+        leadingSlots={leadingSlots}
+        daysInMonth={daysInMonth}
+        selectedDay={selectedDay}
+        eventDays={eventDays}
+        todayYear={todayYear}
+        todayMonth={todayMonth}
+        todayDay={todayDay}
+        onSelectDay={onSelectDay}
+        onMoveMonth={onMoveMonth}
+      />
+      <View style={styles.sectionHeaderWrap}>
+        <BloomSectionHeader
+          title={`Ngày ${selectedDay}/${month}`}
+          subtitle={selectedEvents.length ? `${selectedEvents.length} sự kiện trong ngày` : "Một ngày đang thật nhẹ nhàng"}
+          actionLabel="Thêm sự kiện"
+          onAction={onCreate}
+        />
+      </View>
+    </View>
+  ), [daysInMonth, eventDays, leadingSlots, month, monthIndex, onCreate, onMoveMonth, onSelectDay, selectedDay, selectedEvents.length, todayDay, todayMonth, todayYear, year]);
+
+  const empty = loadingMonth ? (
+    <View style={styles.loading}><ActivityIndicator color={COLORS.primary} /><Text style={styles.loadingText}>Bloom đang xem lịch nhà…</Text></View>
+  ) : (
+    <BloomEmptyState icon="sunny-outline" title="Chưa có lịch cho ngày này" description="Chọn một ngày khác hoặc gieo một sự kiện mới cho cả nhà." />
+  );
+
+  const renderEvent = useCallback(({ item }: { item: FamilyEvent }) => (
+    <PlannerEventRow
+      event={item}
+      memberByUid={memberByUid}
+      pending={item.id.startsWith("pending-")}
+      onOpenEvent={onOpenEvent}
+    />
+  ), [memberByUid, onOpenEvent]);
+
+  return (
+    <FlatList
+      style={styles.panelList}
+      data={selectedEvents}
+      keyExtractor={(item) => item.id}
+      renderItem={renderEvent}
+      ListHeaderComponent={header}
+      ListEmptyComponent={<View style={styles.emptyInset}>{empty}</View>}
+      ItemSeparatorComponent={PlannerItemGap}
+      contentContainerStyle={styles.panelContent}
+      showsVerticalScrollIndicator={false}
+      scrollEnabled={active}
+      removeClippedSubviews={false}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      updateCellsBatchingPeriod={48}
+      windowSize={5}
+    />
+  );
+});
+
+type EventsPanelProps = {
+  active: boolean;
+  sections: PlannerEventSection[];
+  loadingList: boolean;
+  loadingMoreUpcoming: boolean;
+  loadingMorePast: boolean;
+  hasMoreUpcoming: boolean;
+  hasMorePast: boolean;
+  memberByUid: Map<string, FamilyMember>;
+  onLoadMoreUpcoming: () => void;
+  onLoadMorePast: () => void;
+  onOpenEvent: (event: FamilyEvent) => void;
+};
+
+const EventsPanel = memo(function EventsPanel({
+  active,
+  sections,
+  loadingList,
+  loadingMoreUpcoming,
+  loadingMorePast,
+  hasMoreUpcoming,
+  hasMorePast,
+  memberByUid,
+  onLoadMoreUpcoming,
+  onLoadMorePast,
+  onOpenEvent,
+}: EventsPanelProps) {
+  const renderEvent = useCallback(({ item }: { item: FamilyEvent }) => (
+    <PlannerEventRow event={item} memberByUid={memberByUid} onOpenEvent={onOpenEvent} />
+  ), [memberByUid, onOpenEvent]);
+
+  const renderSectionHeader = useCallback(({ section }: { section: PlannerEventSection }) => (
+    <View style={styles.sectionHeaderList}>
+      <BloomSectionHeader title={section.title} subtitle={section.subtitle} />
+    </View>
+  ), []);
+
+  const renderSectionFooter = useCallback(({ section }: { section: PlannerEventSection }) => {
+    const upcoming = section.key === "upcoming";
+    const hasMore = upcoming ? hasMoreUpcoming : hasMorePast;
+    const busy = upcoming ? loadingMoreUpcoming : loadingMorePast;
+    if (!hasMore) return null;
+    return (
+      <BloomButton
+        title={busy ? "Đang mở thêm…" : upcoming ? "Xem thêm sự kiện sắp tới" : "Xem thêm kỷ niệm đã qua"}
+        variant="transparent"
+        isLoading={busy}
+        onPress={upcoming ? onLoadMoreUpcoming : onLoadMorePast}
+        customStyle={styles.moreButton}
+      />
+    );
+  }, [hasMorePast, hasMoreUpcoming, loadingMorePast, loadingMoreUpcoming, onLoadMorePast, onLoadMoreUpcoming]);
+
+  return (
+    <SectionList
+      style={styles.panelList}
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      renderItem={renderEvent}
+      ItemSeparatorComponent={PlannerItemGap}
+      SectionSeparatorComponent={PlannerSectionGap}
+      renderSectionHeader={renderSectionHeader}
+      renderSectionFooter={renderSectionFooter}
+      ListEmptyComponent={<View style={styles.emptyInset}>{loadingList ? <View style={styles.loading}><ActivityIndicator color={COLORS.primary} /><Text style={styles.loadingText}>Bloom đang xếp lịch…</Text></View> : <BloomEmptyState icon="calendar-clear-outline" title="Chưa có sự kiện nào" description="Khi cả nhà tạo sự kiện, danh sách sẽ tự cập nhật ở đây." />}</View>}
+      contentContainerStyle={styles.panelContent}
+      showsVerticalScrollIndicator={false}
+      stickySectionHeadersEnabled={false}
+      scrollEnabled={active}
+      removeClippedSubviews={false}
+      initialNumToRender={5}
+      maxToRenderPerBatch={5}
+      updateCellsBatchingPeriod={52}
+      windowSize={5}
+    />
+  );
+});
+
 export default function PlannerScreen() {
+  useTabRuntime("planner");
   const router = useRouter();
   const params = useLocalSearchParams<{ personId?: string }>();
   const { activeFamilyId, user, userProfile, families } = useAuth();
@@ -112,7 +460,23 @@ export default function PlannerScreen() {
   const { confirm } = useBloomDialog();
   const { startTask, finishTask, failTask } = useBloomTaskToast();
   const today = useMemo(() => new Date(), []);
+  const { width: windowWidth } = useWindowDimensions();
   const [mode, setMode] = useState<PlannerMode>("calendar");
+  // The Events panel is mounted from the first paint but its heavier realtime
+  // list is primed only after the user opens it once. From then on both inner
+  // Planner panels stay warm, so Calendar <-> Events switches never tear down
+  // and recreate their virtualized lists or scroll state.
+  const [listPrimed, setListPrimed] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(() => Math.max(1, Math.round(windowWidth)));
+  // Navigation chrome is deliberately UI-thread owned. React controls which
+  // panel is interactive; Reanimated owns the visual transition so a heavy
+  // render cannot stall the segment pill or persistent panel track.
+  const plannerModeProgress = useSharedValue(0);
+  const plannerOptimisticModeRef = useRef<PlannerMode>("calendar");
+  const panelWidthValue = useSharedValue(Math.max(1, Math.round(windowWidth)));
+  const panelTrackStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -plannerModeProgress.value * panelWidthValue.value }],
+  }));
   const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [pendingEvents, setPendingEvents] = useState<FamilyEvent[]>([]);
@@ -131,28 +495,11 @@ export default function PlannerScreen() {
   const [participantsMode, setParticipantsMode] = useState<EventParticipantsMode>("all");
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [personIds, setPersonIds] = useState<string[]>([]);
-  const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const [hiddenEvents, setHiddenEvents] = useState<FamilyEvent[]>([]);
   const [moderationVisible, setModerationVisible] = useState(false);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
   const membership = families.find((item) => item.familyId === activeFamilyId);
   const canModerate = membership?.role === "owner" || membership?.role === "admin";
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => setAppActive(state === "active"));
-    return () => subscription.remove();
-  }, []);
-
-  // Phase 8.2C correction: Planner bounded listeners remain stable for the
-  // active family. Focus tracing stays in place, but tab navigation no longer
-  // toggles Firestore subscriptions on every press.
-  useFocusEffect(useCallback(() => {
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.markTabPhase("planner", "screen_focus");
-    const frame = requestAnimationFrame(() => {
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.markTabPhase("planner", "focus_frame_yielded");
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []));
 
   const year = viewDate.getFullYear();
   const monthIndex = viewDate.getMonth();
@@ -175,29 +522,43 @@ export default function PlannerScreen() {
   } = useFamilyEvents({
     familyId: activeFamilyId,
     viewDate,
-    // Keep one bounded local Planner query stable for the active family. The
-    // provider already owns upcoming/yearly heads; this local listener is only
-    // the visible month (or past-list page in list mode), avoiding tab churn.
-    calendarEnabled: appActive && mode === "calendar",
-    listEnabled: appActive && mode === "list",
+    // Calendar stays warm for the lifetime of the Planner tab. The Events data
+    // starts on first visit and remains warm afterwards. Inner mode changes no
+    // longer own listener lifecycle, which prevents a burst of unsubscribe /
+    // subscribe / snapshot state work on every Calendar <-> Events tap.
+    calendarEnabled: true,
+    listEnabled: listPrimed,
+    runtimeTabId: "planner",
   });
   const { members, memberByUid } = useFamilyMembers(activeFamilyId);
-  const plannerReady = !loadingMonth && !loadingList;
+  // Only the visible inner panel participates in startup readiness. The other
+  // panel can stay mounted/warm without delaying the visible paint.
+  const plannerReady = mode === "calendar" ? !loadingMonth : !loadingList;
   useTabStartupTask("planner", plannerReady);
   const { persons: familyPersons } = useFamilyPersonDirectory(activeFamilyId, composerVisible || !!params.personId);
 
   useEffect(() => {
     setHiddenEvents([]);
     setModerationVisible(false);
-    if (!activeFamilyId || !canModerate || !appActive) return;
+  }, [activeFamilyId, canModerate]);
+
+  useTabLiveEffect("planner", (scope) => {
+    if (!activeFamilyId || !canModerate || !moderationVisible) return;
     return subscribeSharedRealtime<FamilyEvent[]>({
       key: `planner.moderation_hidden:${activeFamilyId}`,
       listenerName: "planner.moderation_hidden",
       start: (onData, onError) => eventService.subscribeHiddenForModeration(activeFamilyId, onData, onError),
-      onData: setHiddenEvents,
-      onError: () => setHiddenEvents([]),
+      onData: (items) => {
+        if (!scope.isCurrent()) return;
+        setHiddenEvents((current) => {
+          const unchanged = current.length === items.length
+            && current.every((event, index) => event.id === items[index]?.id && event.updatedAt === items[index]?.updatedAt);
+          return unchanged ? current : items;
+        });
+      },
+      onError: () => { if (scope.isCurrent()) setHiddenEvents((current) => current.length ? [] : current); },
     });
-  }, [activeFamilyId, appActive, canModerate]);
+  }, [activeFamilyId, canModerate, moderationVisible]);
 
   const restoreHiddenEvent = useCallback(async (eventId: string) => {
     if (!activeFamilyId || !canModerate || moderationBusyId) return;
@@ -222,15 +583,40 @@ export default function PlannerScreen() {
     () => visibleMonthEvents.filter((event) => event.day === selectedDay),
     [selectedDay, visibleMonthEvents],
   );
+  const eventDays = useMemo(
+    () => new Set(visibleMonthEvents.map((event) => event.day)),
+    [visibleMonthEvents],
+  );
 
-  const moveMonth = (offset: number) => {
+  const moveMonth = useCallback((offset: number) => {
     const next = new Date(year, monthIndex + offset, 1);
     setViewDate(next);
     const currentMonth = next.getFullYear() === today.getFullYear() && next.getMonth() === today.getMonth();
     setSelectedDay(currentMonth ? today.getDate() : 1);
-  };
+  }, [monthIndex, today, year]);
+  const selectDay = useCallback((day: number) => setSelectedDay(day), []);
+  const previewMode = useCallback((nextMode: PlannerMode) => {
+    plannerOptimisticModeRef.current = nextMode;
+    plannerModeProgress.value = withTiming(nextMode === "list" ? 1 : 0, {
+      duration: 170,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [plannerModeProgress]);
+  const changeMode = useCallback((nextMode: PlannerMode) => {
+    // Press-in normally already launched the UI-thread motion. Do not restart
+    // the timing on the later JS press commit; only start it here for a
+    // programmatic/direct commit that had no optimistic preview.
+    if (plannerOptimisticModeRef.current !== nextMode) previewMode(nextMode);
+    if (nextMode === "list") setListPrimed(true);
+    setMode((current) => current === nextMode ? current : nextMode);
+  }, [previewMode]);
+  const capturePanelWidth = useCallback((nextWidth: number) => {
+    const rounded = Math.max(1, Math.round(nextWidth));
+    panelWidthValue.value = rounded;
+    setPanelWidth((current) => current === rounded ? current : rounded);
+  }, [panelWidthValue]);
 
-  const openComposer = () => {
+  const openComposer = useCallback(() => {
     const selected = new Date(year, monthIndex, selectedDay, 12, 0, 0, 0);
     const initialDate = isDateBeforeToday(selected, today) ? today : selected;
     setEventDate(new Date(initialDate));
@@ -248,7 +634,7 @@ export default function PlannerScreen() {
     setShowTimePicker(false);
     setComposerDirty(false);
     setComposerVisible(true);
-  };
+  }, [monthIndex, selectedDay, today, year]);
 
   const closeComposerNow = useCallback(() => {
     setShowTimePicker(false);
@@ -295,10 +681,10 @@ export default function PlannerScreen() {
     router.setParams({ personId: undefined } as never);
   }, [activeFamilyId, monthIndex, params.personId, router, selectedDay, today, year]);
 
-  const openEvent = (event: FamilyEvent) => {
+  const openEvent = useCallback((event: FamilyEvent) => {
     if (event.id.startsWith("pending-")) return;
     router.push(`/event/${event.id}` as never);
-  };
+  }, [router]);
 
   const publishEvent = () => {
     if (!activeFamilyId || !user) return;
@@ -372,7 +758,7 @@ export default function PlannerScreen() {
     setPendingEvents((current) => [optimisticEvent, ...current]);
     setComposerVisible(false);
     setComposerDirty(false);
-    setMode("calendar");
+    changeMode("calendar");
     startTask({ title: "Bloom đang gieo sự kiện…", message: title });
 
     void calendarService.createEvent(activeFamilyId, input)
@@ -410,140 +796,93 @@ export default function PlannerScreen() {
       });
   };
 
-  const renderTop = () => (
-    <>
-      <BloomHeroHeader
-        eyebrow="LỊCH NHÀ"
-        title="Những ngày mình mong chờ"
-        subtitle="Giữ ngày quan trọng, hẹn nhau một dịp và để Bloom nhắc cả nhà đúng lúc."
-        variant="event"
-        compact
-        roundedBottom
-        right={(
-          <Pressable onPress={openComposer} accessibilityRole="button" accessibilityLabel="Tạo sự kiện mới" style={({ pressed }) => [styles.heroAddButton, pressed && styles.pressed]}>
-            <Ionicons name="add" size={25} color={COLORS.primaryText} />
-          </Pressable>
-        )}
-      />
-
-      <View style={styles.topInset}>
-        {canModerate && (
-          <Pressable onPress={() => setModerationVisible(true)} style={({ pressed }) => [styles.moderationButton, pressed && styles.pressed]}>
-            <View style={styles.moderationIcon}><Ionicons name="shield-checkmark-outline" size={18} color={COLORS.primary} /></View>
-            <View style={styles.moderationCopy}>
-              <Text style={styles.moderationTitle}>Kiểm duyệt sự kiện</Text>
-              <Text style={styles.moderationHint}>Người giữ nhà chỉ giúp ẩn hoặc đưa ngày này trở lại · nội dung vẫn thuộc người tạo</Text>
-            </View>
-            <View style={styles.hiddenCount}><Text style={styles.hiddenCountText}>{hiddenEvents.length}</Text></View>
-          </Pressable>
-        )}
-
-        <View style={styles.segment}>
-          <Pressable onPress={() => setMode("calendar")} style={[styles.segmentItem, mode === "calendar" && styles.segmentActive]}>
-            <Ionicons name="calendar-outline" size={16} color={mode === "calendar" ? COLORS.white : COLORS.primaryText} />
-            <Text style={[styles.segmentText, mode === "calendar" && styles.segmentTextActive]}>Lịch</Text>
-          </Pressable>
-          <Pressable onPress={() => setMode("list")} style={[styles.segmentItem, mode === "list" && styles.segmentActive]}>
-            <Ionicons name="list-outline" size={16} color={mode === "list" ? COLORS.white : COLORS.primaryText} />
-            <Text style={[styles.segmentText, mode === "list" && styles.segmentTextActive]}>Sự kiện</Text>
-          </Pressable>
-        </View>
-      </View>
-    </>
-  );
-
-  const calendarHeader = () => (
-    <>
-      {renderTop()}
-      <View style={styles.calendarInset}>
-        <BloomCard style={styles.calendarCard}>
-          <View style={styles.calendarHeader}>
-            <Pressable onPress={() => moveMonth(-1)} hitSlop={10} style={styles.monthButton}><Ionicons name="chevron-back" size={20} color={COLORS.primaryText} /></Pressable>
-            <View style={styles.monthCopy}><Text style={styles.monthTitle}>{MONTHS[monthIndex]}</Text><Text style={styles.yearText}>{year}</Text></View>
-            <Pressable onPress={() => moveMonth(1)} hitSlop={10} style={styles.monthButton}><Ionicons name="chevron-forward" size={20} color={COLORS.primaryText} /></Pressable>
-          </View>
-          <View style={styles.weekRow}>{WEEK_DAYS.map((day) => <Text key={day} style={styles.weekLabel}>{day}</Text>)}</View>
-          <View style={styles.daysGrid}>
-            {Array.from({ length: leadingSlots }).map((_, index) => <View key={`blank-${index}`} style={styles.daySlot} />)}
-            {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
-              const selected = selectedDay === day;
-              const hasEvent = visibleMonthEvents.some((event) => event.day === day);
-              const isToday = year === today.getFullYear() && monthIndex === today.getMonth() && day === today.getDate();
-              return (
-                <Pressable key={day} onPress={() => setSelectedDay(day)} style={styles.daySlot}>
-                  <View style={[styles.dayCircle, selected && styles.daySelected, isToday && !selected && styles.dayToday]}><Text style={[styles.dayText, selected && styles.daySelectedText]}>{day}</Text></View>
-                  {hasEvent && <View style={[styles.eventDot, selected && styles.eventDotSelected]} />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </BloomCard>
-        <View style={styles.sectionHeaderWrap}>
-          <BloomSectionHeader title={`Ngày ${selectedDay}/${month}`} subtitle={selectedEvents.length ? `${selectedEvents.length} sự kiện trong ngày` : "Một ngày đang thật nhẹ nhàng"} actionLabel="Thêm sự kiện" onAction={openComposer} />
-        </View>
-      </View>
-    </>
-  );
-
-  const calendarEmpty = loadingMonth ? (
-    <View style={styles.loading}><ActivityIndicator color={COLORS.primary} /><Text style={styles.loadingText}>Bloom đang xem lịch nhà…</Text></View>
-  ) : (
-    <BloomEmptyState icon="sunny-outline" title="Chưa có lịch cho ngày này" description="Chọn một ngày khác hoặc gieo một sự kiện mới cho cả nhà." />
-  );
-
-  const listSections = [
+  const listSections = useMemo<PlannerEventSection[]>(() => [
     { key: "upcoming", title: "Sắp tới", subtitle: "Những điều cả nhà đang mong chờ", data: upcomingEvents },
     { key: "past", title: "Đã qua", subtitle: "Những ngày đã trở thành kỷ niệm", data: pastEvents },
-  ];
+  ], [pastEvents, upcomingEvents]);
+
+  const openModeration = useCallback(() => setModerationVisible(true), []);
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={COLORS.background}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
-      {mode === "calendar" ? (
-        <FlatList
-          data={selectedEvents}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <View style={styles.eventItemInset}><EventCard event={item} memberByUid={memberByUid} pending={item.id.startsWith("pending-")} onPress={() => openEvent(item)} /></View>}
-          ListHeaderComponent={calendarHeader}
-          ListEmptyComponent={<View style={styles.emptyInset}>{calendarEmpty}</View>}
-          ItemSeparatorComponent={() => <View style={styles.itemGap} />}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews
-          initialNumToRender={6}
-          windowSize={7}
+      <View style={styles.stablePlannerRoot}>
+        <PlannerShell
+          mode={mode}
+          modeProgress={plannerModeProgress}
+          canModerate={canModerate}
+          hiddenCount={hiddenEvents.length}
+          onCreate={openComposer}
+          onModerate={openModeration}
+          onPreviewMode={previewMode}
+          onChangeMode={changeMode}
         />
-      ) : (
-        <SectionList
-          sections={listSections}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <View style={styles.eventItemInset}><EventCard event={item} memberByUid={memberByUid} onPress={() => openEvent(item)} /></View>}
-          ItemSeparatorComponent={() => <View style={styles.itemGap} />}
-          SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
-          renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeaderList}><BloomSectionHeader title={section.title} subtitle={section.subtitle} /></View>
-          )}
-          renderSectionFooter={({ section }) => {
-            const upcoming = section.key === "upcoming";
-            const hasMore = upcoming ? hasMoreUpcoming : hasMorePast;
-            const busy = upcoming ? loadingMoreUpcoming : loadingMorePast;
-            if (!hasMore) return null;
-            return <BloomButton title={busy ? "Đang mở thêm…" : upcoming ? "Xem thêm sự kiện sắp tới" : "Xem thêm kỷ niệm đã qua"} variant="transparent" isLoading={busy} onPress={upcoming ? loadMoreUpcoming : loadMorePast} customStyle={styles.moreButton} />;
-          }}
-          ListHeaderComponent={renderTop}
-          ListEmptyComponent={<View style={styles.emptyInset}>{loadingList ? <View style={styles.loading}><ActivityIndicator color={COLORS.primary} /><Text style={styles.loadingText}>Bloom đang xếp lịch…</Text></View> : <BloomEmptyState icon="calendar-clear-outline" title="Chưa có sự kiện nào" description="Khi cả nhà tạo sự kiện, danh sách sẽ tự cập nhật ở đây." />}</View>}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          removeClippedSubviews
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={7}
-        />
-      )}
 
-      <BloomFullScreenFlow
-        visible={moderationVisible}
+        <View
+          style={styles.panelViewport}
+          onLayout={(event) => capturePanelWidth(event.nativeEvent.layout.width)}
+        >
+          <Animated.View
+              style={[
+                styles.panelTrack,
+                { width: panelWidth * 2 },
+                panelTrackStyle,
+              ]}
+            >
+              <View
+                style={[styles.panelPage, { width: panelWidth }]}
+                pointerEvents={mode === "calendar" ? "auto" : "none"}
+                accessibilityElementsHidden={mode !== "calendar"}
+                importantForAccessibility={mode === "calendar" ? "auto" : "no-hide-descendants"}
+              >
+                <CalendarPanel
+                  active={mode === "calendar"}
+                  monthIndex={monthIndex}
+                  year={year}
+                  month={month}
+                  leadingSlots={leadingSlots}
+                  daysInMonth={daysInMonth}
+                  selectedDay={selectedDay}
+                  eventDays={eventDays}
+                  todayYear={today.getFullYear()}
+                  todayMonth={today.getMonth()}
+                  todayDay={today.getDate()}
+                  selectedEvents={selectedEvents}
+                  loadingMonth={loadingMonth}
+                  memberByUid={memberByUid}
+                  onSelectDay={selectDay}
+                  onMoveMonth={moveMonth}
+                  onCreate={openComposer}
+                  onOpenEvent={openEvent}
+                />
+              </View>
+
+              <View
+                style={[styles.panelPage, { width: panelWidth }]}
+                pointerEvents={mode === "list" ? "auto" : "none"}
+                accessibilityElementsHidden={mode !== "list"}
+                importantForAccessibility={mode === "list" ? "auto" : "no-hide-descendants"}
+              >
+                <EventsPanel
+                  active={mode === "list"}
+                  sections={listSections}
+                  loadingList={loadingList}
+                  loadingMoreUpcoming={loadingMoreUpcoming}
+                  loadingMorePast={loadingMorePast}
+                  hasMoreUpcoming={hasMoreUpcoming}
+                  hasMorePast={hasMorePast}
+                  memberByUid={memberByUid}
+                  onLoadMoreUpcoming={loadMoreUpcoming}
+                  onLoadMorePast={loadMorePast}
+                  onOpenEvent={openEvent}
+                />
+              </View>
+            </Animated.View>
+        </View>
+      </View>
+
+      {moderationVisible && <BloomFullScreenFlow
+        visible
         eyebrow="KIỂM DUYỆT SỰ KIỆN"
         title="Những sự kiện đang tạm ẩn"
         subtitle="Bloom giữ nguyên lời của người tạo; người giữ nhà chỉ giúp chăm sóc điều gì đang hiện với cả nhà."
@@ -576,10 +915,10 @@ export default function PlannerScreen() {
             />
           )}
         </View>
-      </BloomFullScreenFlow>
+      </BloomFullScreenFlow>}
 
-      <BloomFullScreenFlow
-        visible={composerVisible}
+      {composerVisible && <BloomFullScreenFlow
+        visible
         eyebrow="SỰ KIỆN MỚI"
         title="Gieo một ngày đáng nhớ"
         subtitle="Chọn ngày, người thân và lời nhắc để cả nhà cùng mong chờ."
@@ -719,12 +1058,18 @@ export default function PlannerScreen() {
 
           <BloomButton title="Đăng sự kiện & tiếp tục" icon="sparkles-outline" onPress={publishEvent} customStyle={styles.publishButton} />
         </BloomKeyboardScreen>
-      </BloomFullScreenFlow>
+      </BloomFullScreenFlow>}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  stablePlannerRoot: { flex: 1, minHeight: 0 },
+  panelViewport: { flex: 1, minHeight: 0, overflow: "hidden", backgroundColor: COLORS.background },
+  panelTrack: { flex: 1, minHeight: 0, flexDirection: "row" },
+  panelPage: { height: "100%", minHeight: 0, backgroundColor: COLORS.background },
+  panelList: { flex: 1 },
+  panelContent: { paddingBottom: 28 },
   content: { paddingBottom: 28 },
   topInset: { paddingHorizontal: 16, paddingTop: 16 },
   calendarInset: { paddingHorizontal: 16 },
@@ -747,9 +1092,9 @@ const styles = StyleSheet.create({
   },
   addButton: { width: 52, height: 52, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", shadowColor: COLORS.primary, shadowOpacity: 0.22, shadowRadius: 10, elevation: 4 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  segment: { flexDirection: "row", gap: 8, backgroundColor: COLORS.white, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 5, marginBottom: 16 },
-  segmentItem: { flex: 1, minHeight: 42, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  segmentActive: { backgroundColor: COLORS.primary },
+  segment: { position: "relative", flexDirection: "row", gap: 8, backgroundColor: COLORS.white, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: 5, marginBottom: 16, overflow: "hidden" },
+  segmentIndicator: { position: "absolute", top: 5, left: 0, height: 42, borderRadius: 16, backgroundColor: COLORS.primary },
+  segmentItem: { zIndex: 1, flex: 1, minHeight: 42, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   segmentText: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "800" },
   segmentTextActive: { color: COLORS.white },
   moderationButton: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16 },

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFamilyEventsRealtime } from "../../context/FamilyRealtimeContext";
+import { useTabLiveEffect, type MainTabId } from "../../context/TabRuntimeContext";
 import { calendarService } from "../../services/calendar/calendarService";
 import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
+import { canonicalizeFamilyEvents, canonicalizeFamilyEventsStable } from "../../services/event/eventEntityCache";
 import type { EventPage, EventPageCursor, FamilyEvent } from "../../types";
 import { getEffectiveEventDate, mergeEventsById } from "../../utils/event";
 
@@ -10,15 +12,35 @@ type UseFamilyEventsOptions = {
   viewDate: Date;
   calendarEnabled?: boolean;
   listEnabled?: boolean;
+  runtimeTabId?: MainTabId;
 };
 
 const EMPTY_PAGE: EventPage = { items: [], cursor: null, hasMore: false };
+const PLANNER_REALTIME_KEEP_ALIVE_MS = 1800;
+
+const sameEventList = (current: FamilyEvent[], next: FamilyEvent[]) =>
+  current.length === next.length
+  && current.every((event, index) => {
+    const candidate = next[index];
+    return event.id === candidate?.id
+      && event.updatedAt === candidate.updatedAt
+      && event.moderationStatus === candidate.moderationStatus;
+  });
+
+const keepEventList = (current: FamilyEvent[], next: FamilyEvent[]) =>
+  sameEventList(current, next) ? current : next;
+
+const keepEventPage = (current: EventPage, next: EventPage) =>
+  current.hasMore === next.hasMore && sameEventList(current.items, next.items)
+    ? current
+    : next;
 
 export const useFamilyEvents = ({
   familyId,
   viewDate,
   calendarEnabled = true,
   listEnabled = true,
+  runtimeTabId = "planner",
 }: UseFamilyEventsOptions) => {
   const shared = useFamilyEventsRealtime();
   const useShared = !!familyId && shared?.familyId === familyId;
@@ -44,65 +66,85 @@ export const useFamilyEvents = ({
   const upcomingExtraCursor = useRef<EventPageCursor | null>(null);
   const pastExtraCursor = useRef<EventPageCursor | null>(null);
   const upcomingHeadIdsRef = useRef("");
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth() + 1;
 
+  // Phase 17.8: keep the last month snapshot warm while the user switches
+  // between Calendar/List modes. Only a real family/month change invalidates it.
+  // This prevents mode toggles from blanking the list and rebuilding the month
+  // immediately before the listener reconnects.
   useEffect(() => {
     setMonthBase([]);
     setError(null);
-    if (!familyId || !calendarEnabled) {
-      setLoadingMonth(false);
-      return;
-    }
-    setLoadingMonth(true);
-    const year = viewDate.getFullYear();
-    const month = viewDate.getMonth() + 1;
+    setLoadingMonth(!!familyId);
+  }, [familyId, month, year]);
+
+  useTabLiveEffect(runtimeTabId, (scope) => {
+    if (!familyId || !calendarEnabled) return;
     const subscribeMonth = useShared ? calendarService.subscribeMonthRegular : calendarService.subscribeMonth;
     return subscribeSharedRealtime<FamilyEvent[]>({
       key: `planner.events.month:${familyId}:${year}:${month}:${useShared ? "regular" : "combined"}`,
       listenerName: "planner.events.month",
       start: (onData, onError) => subscribeMonth(familyId, year, month, onData, onError),
       onData: (items) => {
-        setMonthBase(items);
+        if (!scope.isCurrent()) return;
+        setMonthBase((current) => canonicalizeFamilyEventsStable(familyId, current, items));
         setLoadingMonth(false);
       },
       onError: (nextError) => {
+        if (!scope.isCurrent()) return;
         setError(nextError);
         setLoadingMonth(false);
       },
+      keepAliveMs: PLANNER_REALTIME_KEEP_ALIVE_MS,
     });
-  }, [calendarEnabled, familyId, useShared, viewDate.getFullYear(), viewDate.getMonth()]);
+  }, [calendarEnabled, familyId, month, useShared, year]);
 
   useEffect(() => {
     setUpcomingLocal(EMPTY_PAGE);
     setYearlyLocal([]);
-    setUpcomingLoadingLocal(!!familyId && listEnabled && !useShared);
-    setYearlyLoadingLocal(!!familyId && listEnabled && !useShared);
-    if (!familyId || !listEnabled || useShared) return;
+    setUpcomingLoadingLocal(!!familyId && !useShared);
+    setYearlyLoadingLocal(!!familyId && !useShared);
+  }, [familyId, useShared]);
 
+  useTabLiveEffect(runtimeTabId, (scope) => {
+    if (!familyId || !listEnabled || useShared) return;
     const stopUpcoming = subscribeSharedRealtime<EventPage>({
       key: `planner.events.upcoming_local:${familyId}`,
       listenerName: "planner.events.upcoming_local",
       start: (onData, onError) => calendarService.subscribeUpcoming(familyId, onData, onError),
       onData: (page) => {
-        setUpcomingLocal(page);
+        if (!scope.isCurrent()) return;
+        setUpcomingLocal((current) => {
+          const items = canonicalizeFamilyEventsStable(familyId, current.items, page.items);
+          return current.hasMore === page.hasMore && current.items === items
+            ? current
+            : { ...page, items };
+        });
         setUpcomingLoadingLocal(false);
       },
       onError: (nextError) => {
+        if (!scope.isCurrent()) return;
         setError(nextError);
         setUpcomingLoadingLocal(false);
       },
+      keepAliveMs: PLANNER_REALTIME_KEEP_ALIVE_MS,
     });
     const stopYearly = subscribeSharedRealtime<FamilyEvent[]>({
       key: `planner.events.yearly_local:${familyId}`,
       listenerName: "planner.events.yearly_local",
       start: (onData, onError) => calendarService.subscribeYearly(familyId, onData, onError),
       onData: (items) => {
-        setYearlyLocal(items);
+        if (!scope.isCurrent()) return;
+        setYearlyLocal((current) => canonicalizeFamilyEventsStable(familyId, current, items));
         setYearlyLoadingLocal(false);
       },
       onError: (nextError) => {
+        if (!scope.isCurrent()) return;
         setError(nextError);
         setYearlyLoadingLocal(false);
       },
+      keepAliveMs: PLANNER_REALTIME_KEEP_ALIVE_MS,
     });
     return () => {
       stopUpcoming();
@@ -116,15 +158,18 @@ export const useFamilyEvents = ({
     pastCursor.current = null;
     pastExtraCursor.current = null;
     setHasMorePast(false);
-    setPastLoading(!!familyId && listEnabled);
-    if (!familyId || !listEnabled) return;
+    setPastLoading(!!familyId);
+  }, [familyId]);
 
+  useTabLiveEffect(runtimeTabId, (scope) => {
+    if (!familyId || !listEnabled) return;
     return subscribeSharedRealtime<EventPage>({
       key: `planner.events.past:${familyId}`,
       listenerName: "planner.events.past",
       start: (onData, onError) => calendarService.subscribePast(familyId, onData, onError),
       onData: (page) => {
-        setPastBase(page.items);
+        if (!scope.isCurrent()) return;
+        setPastBase((current) => canonicalizeFamilyEventsStable(familyId, current, page.items));
         pastCursor.current = page.cursor;
         if (pastExtraCursor.current) {
           setPastExtra([]);
@@ -134,20 +179,29 @@ export const useFamilyEvents = ({
         setPastLoading(false);
       },
       onError: (nextError) => {
+        if (!scope.isCurrent()) return;
         setError(nextError);
         setPastLoading(false);
       },
+      keepAliveMs: PLANNER_REALTIME_KEEP_ALIVE_MS,
     });
   }, [familyId, listEnabled]);
 
-  const upcomingPage = useShared && shared ? shared.upcomingPage : upcomingLocal;
-  const yearlyEvents = useShared && shared ? shared.yearlyEvents : yearlyLocal;
+  const upcomingPageRaw = useShared && shared ? shared.upcomingPage : upcomingLocal;
+  const yearlyEventsRaw = useShared && shared ? shared.yearlyEvents : yearlyLocal;
+  const upcomingPage = useMemo<EventPage>(() => ({
+    ...upcomingPageRaw,
+    items: familyId ? canonicalizeFamilyEvents(familyId, upcomingPageRaw.items) : upcomingPageRaw.items,
+  }), [familyId, upcomingPageRaw]);
+  const yearlyEvents = useMemo(
+    () => familyId ? canonicalizeFamilyEvents(familyId, yearlyEventsRaw) : yearlyEventsRaw,
+    [familyId, yearlyEventsRaw],
+  );
   const monthEvents = useMemo(() => {
     if (!useShared) return monthBase;
-    const month = viewDate.getMonth() + 1;
     return mergeEventsById(monthBase, yearlyEvents.filter((event) => event.month === month))
       .sort((a, b) => a.day - b.day || a.dateISO.localeCompare(b.dateISO));
-  }, [monthBase, useShared, viewDate, yearlyEvents]);
+  }, [monthBase, month, useShared, yearlyEvents]);
 
   useEffect(() => {
     setHasMoreUpcoming(upcomingPage.hasMore);
@@ -179,9 +233,11 @@ export const useFamilyEvents = ({
     setLoadingMoreUpcoming(true);
     try {
       const page = await calendarService.listMoreUpcoming(familyId, cursor);
-      setUpcomingExtra((current) => mergeEventsById(current, page.items));
+      setUpcomingExtra((current) => canonicalizeFamilyEvents(
+        familyId,
+        mergeEventsById(current, page.items),
+      ));
       upcomingExtraCursor.current = page.cursor;
-      // When the fetched page is exhausted, keep a null cursor so future taps stop.
       setHasMoreUpcoming(page.hasMore);
     } catch (nextError) {
       setError(nextError);
@@ -196,7 +252,10 @@ export const useFamilyEvents = ({
     try {
       const cursor = pastExtraCursor.current ?? pastCursor.current;
       const page = await calendarService.listMorePast(familyId, cursor);
-      setPastExtra((current) => mergeEventsById(current, page.items));
+      setPastExtra((current) => canonicalizeFamilyEvents(
+        familyId,
+        mergeEventsById(current, page.items),
+      ));
       pastExtraCursor.current = page.cursor;
       setHasMorePast(page.hasMore);
     } catch (nextError) {

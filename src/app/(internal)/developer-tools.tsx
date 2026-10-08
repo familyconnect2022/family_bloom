@@ -1,0 +1,37 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScreenContainer } from "../../components/layout/ScreenContainer";
+import { BloomCard, BloomSectionHeader } from "../../components/ui/BloomPageComponents";
+import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
+import { useBloomToast } from "../../components/ui/BloomToast";
+import { COLORS } from "../../constants/theme";
+import { isPerformanceTestAccount } from "../../constants/performanceTest";
+import { useAuth } from "../../context/AuthContext";
+import { gameRuntimePerf } from "../../services/games/gameRuntimePerf";
+import { performanceTestService } from "../../services/performance/performanceTestService";
+import { localNotificationService } from "../../services/push/localNotificationService";
+
+function ToolButton({icon,label,onPress,disabled=false}:{icon:keyof typeof Ionicons.glyphMap;label:string;onPress:()=>void;disabled?:boolean}){return <Pressable disabled={disabled} onPress={onPress} style={({pressed})=>[styles.toolButton,disabled&&styles.disabled,pressed&&styles.pressed]}><Ionicons name={icon} size={17} color={COLORS.primary}/><Text style={styles.toolButtonText}>{label}</Text><Ionicons name="chevron-forward" size={16} color={COLORS.secondaryText}/></Pressable>}
+
+export default function DeveloperToolsScreen(){
+ const router=useRouter(); const {user,activeFamilyId,families}=useAuth(); const {showToast}=useBloomToast();
+ const allowed=isPerformanceTestAccount(user?.email); const [gamePerf,setGamePerf]=useState(gameRuntimePerf.isEnabled()); const [busy,setBusy]=useState(false);
+ useEffect(()=>{if(!allowed) router.replace('/settings' as never);},[allowed,router]);
+ if(!allowed) return null;
+ const copyPerf=async()=>{await Clipboard.setStringAsync(performanceTestService.exportText());showToast({title:'Đã sao chép báo cáo',message:'Báo cáo hiệu năng hiện tại đã ở trong clipboard.',duration:2400});};
+ const oneNotif=async()=>{setBusy(true);try{const x=await localNotificationService.scheduleTest(activeFamilyId??families[0]?.familyId??null);showToast({title:x.permissionGranted?'Đã hẹn thông báo thử 🌸':'Chưa có quyền thông báo',message:x.permissionGranted?'Thông báo sẽ tới sau khoảng 8 giây.':'Bật quyền Thông báo của Family Bloom rồi thử lại.',duration:3200});}finally{setBusy(false);}};
+ const fullNotif=async()=>{setBusy(true);try{const x=await localNotificationService.scheduleFullTestSuite(activeFamilyId??families[0]?.familyId??null);showToast({title:x.permissionGranted?`Đã hẹn ${x.scheduled} thông báo`:'Chưa có quyền thông báo',message:x.permissionGranted?`Bộ 9 ca sẽ chạy trong khoảng ${x.durationSeconds} giây.`:'Bật quyền Thông báo rồi thử lại.',duration:4200});}catch(e){showToast({title:'Chưa tạo được bộ test',message:e instanceof Error?e.message:String(e),type:'warning',duration:4200});}finally{setBusy(false);}};
+ const toggleGame=()=>{const next=!gameRuntimePerf.isEnabled();gameRuntimePerf.setEnabled(next);setGamePerf(next);showToast({title:next?'Đã bật đo game':'Đã tắt đo game',message:next?'Chess/Xiangqi sẽ ghi diagnostic cho tới khi bạn tắt hoặc reload app.':'Normal runtime lại hoàn toàn im lặng.',duration:3000});};
+ const copyGame=async()=>{await Clipboard.setStringAsync(JSON.stringify(gameRuntimePerf.snapshot(),null,2));showToast({message:'Đã sao chép game diagnostics.',duration:2200});};
+ return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={COLORS.background}><StatusBar translucent backgroundColor="transparent" style="dark"/><BloomHeroHeader eyebrow="INTERNAL · DEBUG" title="Kiểm thử & chẩn đoán" subtitle="Chỉ chạy khi bạn chủ động bấm. Không có HUD, timer hay listener test trong lúc dùng app bình thường." variant="profile" onBack={()=>router.back()} compact roundedBottom/><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  <View style={styles.section}><BloomSectionHeader title="Hiệu năng & tải" subtitle="Các bài cùng mục đích được gom về một nhóm"/><BloomCard style={styles.card}><ToolButton icon="pulse-outline" label="Đo tương tác JS trong 60 giây" onPress={()=>{performanceTestService.reset();performanceTestService.startInteractionProbe(60_000,'developer_tools');showToast({title:'Đã bắt đầu đo 60 giây',message:'Hãy thao tác app bình thường rồi quay lại sao chép báo cáo.',duration:3200});}}/><View style={styles.divider}/><ToolButton icon="copy-outline" label="Sao chép báo cáo hiệu năng" onPress={()=>void copyPerf()}/><View style={styles.divider}/><ToolButton icon="git-network-outline" label="Graph RAM · 100 người" onPress={()=>router.push({pathname:'/performance-graph-test',params:{count:'100'}} as never)}/><View style={styles.divider}/><ToolButton icon="git-network-outline" label="Graph RAM · 500 người" onPress={()=>router.push({pathname:'/performance-graph-test',params:{count:'500'}} as never)}/><View style={styles.divider}/><ToolButton icon="list-outline" label="Long-list RAM · 200 mục" onPress={()=>router.push({pathname:'/performance-data-test',params:{kind:'moments',count:'200'}} as never)}/></BloomCard></View>
+  <View style={styles.section}><BloomSectionHeader title="Thông báo Android" subtitle="Test cục bộ, không cần Cloud Functions"/><BloomCard style={styles.card}><ToolButton disabled={busy} icon="notifications-outline" label="Một thông báo thử · ~8 giây" onPress={()=>void oneNotif()}/><View style={styles.divider}/><ToolButton disabled={busy} icon="albums-outline" label="Bộ 9 thông báo đầy đủ" onPress={()=>void fullNotif()}/></BloomCard></View>
+  <View style={styles.section}><BloomSectionHeader title="Game" subtitle="Diagnostics mặc định tắt hoàn toàn"/><BloomCard style={styles.card}><ToolButton icon={gamePerf?'stop-circle-outline':'speedometer-outline'} label={gamePerf?'Tắt đo game':'Bật đo game'} onPress={toggleGame}/>{gamePerf&&<><View style={styles.divider}/><ToolButton icon="copy-outline" label="Sao chép game diagnostics" onPress={()=>void copyGame()}/></>}<View style={styles.divider}/><ToolButton icon="grid-outline" label="Mở Cờ vua realtime" onPress={()=>router.push('/chess-lobby' as never)}/><View style={styles.divider}/><ToolButton icon="apps-outline" label="Mở Cờ tướng" onPress={()=>router.push('/xiangqi-preview' as never)}/></BloomCard></View>
+  <Text style={styles.note}>Developer Tools chỉ hiện trong Debug và đúng tài khoản nội bộ. Release build không expose khu vực này.</Text>
+ </ScrollView></ScreenContainer>;
+}
+const styles=StyleSheet.create({content:{padding:16,paddingBottom:40,gap:20},section:{gap:9},card:{paddingHorizontal:14},toolButton:{minHeight:58,flexDirection:'row',alignItems:'center',gap:10,paddingVertical:10},toolButtonText:{flex:1,fontSize:12.5,fontWeight:'900',color:COLORS.primaryText},divider:{borderTopWidth:1,borderTopColor:COLORS.border},pressed:{opacity:.68},disabled:{opacity:.45},note:{fontSize:10.5,lineHeight:16,color:COLORS.secondaryText,textAlign:'center',paddingHorizontal:18}});

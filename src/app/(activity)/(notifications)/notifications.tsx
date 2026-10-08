@@ -9,15 +9,12 @@ import { BloomEmptyState, BloomPill } from "../../../components/ui/BloomPageComp
 import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
 import { BloomLoadingOverlay } from "../../../components/ui/BloomLoadingOverlay";
 import { COLORS } from "../../../constants/theme";
-import { isPerformanceTestAccount } from "../../../constants/performanceTest";
 import { useAuth } from "../../../context/AuthContext";
 import { useBloomToast } from "../../../components/ui/BloomToast";
 import { activityService } from "../../../services/activity/activityService";
-import { appWidePerformanceService } from "../../../services/performance/appWidePerformanceService";
 import { smartReminderService } from "../../../services/activity/smartReminderService";
 import { momentsService } from "../../../services/moments/momentsService";
 import { momentDeepLinkCache } from "../../../services/moments/momentDeepLinkCache";
-import { localNotificationService } from "../../../services/push/localNotificationService";
 import type { FamilyActivity } from "../../../types";
 
 type ActivityWithFamily = FamilyActivity & { familyName: string; isUnread: boolean; isSmartReminder?: boolean };
@@ -63,45 +60,7 @@ export default function Notifications() {
   const [loadError, setLoadError] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [openingStage, setOpeningStage] = useState<string | null>(null);
-  const [schedulingTestSuite, setSchedulingTestSuite] = useState(false);
-  const showNotificationTest = isPerformanceTestAccount(user?.email);
 
-  const scheduleNotificationTestSuite = useCallback(async () => {
-    if (!user || schedulingTestSuite) return;
-    const familyId = activeFamilyId ?? families[0]?.familyId ?? null;
-    if (!familyId) {
-      showToast({ title: "Chưa có gia đình để test", message: "Hãy vào một gia đình trước rồi thử lại.", type: "warning", duration: 2600 });
-      return;
-    }
-    setSchedulingTestSuite(true);
-    try {
-      const result = await localNotificationService.scheduleFullTestSuite(familyId);
-      if (!result.permissionGranted) {
-        showToast({ title: "Android chưa cho phép thông báo", message: "Bật quyền Thông báo cho Family Bloom rồi thử lại.", type: "warning", duration: 3200 });
-        return;
-      }
-      showToast({
-        title: `Đã hẹn ${result.scheduled} thông báo test 🌸`,
-        message: `Đưa app xuống nền. Bloom sẽ lần lượt gửi Kỷ niệm → Lịch nhà → Phả hệ, đủ 3 mức trong khoảng ${result.durationSeconds} giây.`,
-        type: "info",
-        duration: 5200,
-      });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      console.error("[Bloom notifications] test suite scheduling failed", error);
-      const exactAlarmIssue = /exact alarm|SCHEDULE_EXACT_ALARM/i.test(detail);
-      showToast({
-        title: "Chưa tạo được bộ test",
-        message: exactAlarmIssue
-          ? "Android chưa cho phép hẹn thông báo chính xác. Hãy cài lại bản build mới rồi thử lại."
-          : detail || "Không thể hẹn thông báo test. Xem log Android để biết lỗi chi tiết.",
-        type: "warning",
-        duration: 5200,
-      });
-    } finally {
-      setSchedulingTestSuite(false);
-    }
-  }, [activeFamilyId, families, schedulingTestSuite, showToast, user]);
 
   const load = useCallback(async () => {
     if (!user) {
@@ -150,12 +109,10 @@ export default function Notifications() {
       setLoadError(successfulPages.length === 0 && families.length > 0);
       // Opening Chuyện trong nhà means both persisted activity and smart reminders
       // currently visible to the user are considered seen.
-      if (!appWidePerformanceService.isNoWriteMode()) {
-        await Promise.all(successfulPages.flatMap(({ membership, activityPage, reminderPage }) => [
-          activityPage ? activityService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
-          reminderPage ? smartReminderService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
-        ]));
-      }
+      await Promise.all(successfulPages.flatMap(({ membership, activityPage, reminderPage }) => [
+        activityPage ? activityService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
+        reminderPage ? smartReminderService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
+      ]));
     } catch {
       setLoadError(true);
     } finally {
@@ -264,22 +221,6 @@ export default function Notifications() {
               <Ionicons name="notifications-outline" size={20} color={COLORS.primary} />
               <Text style={styles.introText}>Bloom chỉ làm nổi bật những điều thật sự cần chú ý. Kỷ niệm “Toàn gia đình” bình thường vẫn ở đây nhưng không làm phiền bạn.</Text>
             </View>
-            {showNotificationTest && (
-              <View style={styles.testCard}>
-                <View style={styles.testCopy}>
-                  <Text style={styles.testTitle}>Test toàn bộ thông báo 11.2A</Text>
-                  <Text style={styles.testText}>9 thông báo local: Kỷ niệm, Lịch nhà, Phả hệ × Bình thường, Đáng chú ý, Quan trọng. Mỗi thông báo cách nhau 8 giây.</Text>
-                </View>
-                <BloomButton
-                  title="Gửi 9 thông báo test"
-                  variant="outline"
-                  icon="flask-outline"
-                  isLoading={schedulingTestSuite}
-                  onPress={() => void scheduleNotificationTestSuite()}
-                  customStyle={styles.testButton}
-                />
-              </View>
-            )}
           </View>
         )}
         ListEmptyComponent={loading ? (
@@ -336,11 +277,6 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 34 },
   intro: { marginBottom: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, padding: 14, flexDirection: "row", gap: 10, alignItems: "flex-start" },
   introText: { flex: 1, color: COLORS.secondaryText, fontSize: 11, lineHeight: 16, fontWeight: "600" },
-  testCard: { marginTop: -8, marginBottom: 20, borderRadius: 22, borderWidth: 1, borderColor: COLORS.focusBorder, backgroundColor: COLORS.white, padding: 14, gap: 12 },
-  testCopy: { gap: 4 },
-  testTitle: { color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
-  testText: { color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, fontWeight: "600" },
-  testButton: { minHeight: 46 },
   loading: { minHeight: 180, alignItems: "center", justifyContent: "center", gap: 10 },
   loadingText: { color: COLORS.secondaryText, fontSize: 11.5, fontWeight: "700" },
   sectionHeader: { backgroundColor: COLORS.background, paddingTop: 8, paddingBottom: 9 },

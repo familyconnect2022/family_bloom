@@ -1,18 +1,20 @@
-import { usePathname, useRouter } from "expo-router";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
-import { ChessChallengeOverlay } from "../components/chess/ChessChallengeOverlay";
-import { useBloomToast } from "../components/ui/BloomToast";
 import { chessSocketService } from "../services/chess/chessSocketService";
 import { cacheChessGameSnapshot, clearCachedChessGameSnapshot } from "../services/chess/chessGameSnapshotCache";
+import { clearChessGameStore, getChessGameStoreSnapshot, publishChessGameNetwork, publishChessGameSnapshot, publishChessMoveDelta } from "../services/chess/chessGameStore";
+import { chessDiagnostics } from "../services/chess/chessDiagnostics";
+import { publishChessUiEvent } from "../services/chess/chessUiEventStore";
+import { resetChessSurfaceSession } from "../services/chess/chessSurfaceStore";
 import {
-  CHESS_ERROR_COPY,
   CHESS_EVENTS,
-  applyChessMoveDelta,
   type ChessAck,
   type ChessGameState,
   type ChessInvite,
+  type ChessMoveCommandAck,
+  type ChessPromotionPiece,
   type ChessPresence,
+  type ChessSessionRecovery,
   type ChessTimeControl,
   isChessTestBotUid,
 } from "../types/chess";
@@ -27,9 +29,8 @@ type ChessRealtimeValue = {
   incomingInvite: ChessInvite | null;
   outgoingInvite: ChessInvite | null;
   activeGameId: string | null;
-  activeGameState: ChessGameState | null;
-  pendingAwayResultGameId: string | null;
-  acknowledgeAwayResult: (gameId: string) => void;
+  pendingResultGameId: string | null;
+  acknowledgeResult: (gameId: string) => void;
   challenge: (toUid: string, timeControl: ChessTimeControl) => Promise<ChessAck<ChessInvite>>;
   cancelInvite: (inviteId: string) => Promise<ChessAck>;
   acceptInvite: (inviteId: string) => Promise<ChessAck<{ gameId: string; state: ChessGameState }>>;
@@ -42,6 +43,20 @@ type ChessRealtimeValue = {
 };
 
 const ChessRealtimeContext = createContext<ChessRealtimeValue | null>(null);
+export type ChessRealtimeActionsValue = {
+  acknowledgeResult: (gameId: string) => void;
+  setBoardPresence: (gameId: string | null, visible: boolean) => void;
+  resyncGame: (gameId: string) => Promise<ChessGameState | null>;
+  moveGame: (gameId: string, from: string, to: string, promotion?: ChessPromotionPiece, clientMoveId?: string, expectedVersion?: number) => Promise<ChessAck<ChessMoveCommandAck>>;
+  resignGame: (gameId: string) => Promise<ChessAck<ChessGameState>>;
+  offerDraw: (gameId: string) => Promise<ChessAck<ChessGameState>>;
+  acceptDraw: (gameId: string) => Promise<ChessAck<ChessGameState>>;
+  rejectDraw: (gameId: string) => Promise<ChessAck<ChessGameState>>;
+  rematchGame: (gameId: string, stableRequestId?: string) => Promise<ChessAck<{ waiting: boolean; gameId?: string; state?: ChessGameState; expiresAt?: number }>>;
+  cancelRematch: (gameId: string) => Promise<ChessAck<{ cancelled: boolean }>>;
+  readyGame: (gameId: string) => Promise<ChessAck<ChessGameState>>;
+};
+const ChessRealtimeActionsContext = createContext<ChessRealtimeActionsValue | null>(null);
 const requestId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
 // Keep the foreground socket lifecycle silent on-device. Errors are surfaced through connection/UI
@@ -55,34 +70,39 @@ export function useChessRealtime() {
   return value;
 }
 
+/** Stable, narrow action channel for game surfaces. Presence/invite/lobby state
+ * changes must not force ChessBoard-facing consumers to re-render. */
+export function useChessRealtimeActions() {
+  const value = useContext(ChessRealtimeActionsContext);
+  if (!value) throw new Error("useChessRealtimeActions phải nằm trong ChessRealtimeProvider");
+  return value;
+}
+
 export function ChessRealtimeProvider({ children }: { children: React.ReactNode }) {
   const { user, activeFamilyId, profileStatus } = useAuth();
   const familyMembers = useFamilyMembersRealtime();
-  const { showToast } = useBloomToast();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const [connection, setConnection] = useState<ChessConnectionState>("idle");
   const [presence, setPresence] = useState<ChessPresence[]>([]);
   const [incomingInvite, setIncomingInvite] = useState<ChessInvite | null>(null);
   const [outgoingInvite, setOutgoingInvite] = useState<ChessInvite | null>(null);
-  const [activeGameState, setActiveGameState] = useState<ChessGameState | null>(null);
-  const [challengeBusy, setChallengeBusy] = useState(false);
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
+  const [pendingResultGameId, setPendingResultGameId] = useState<string | null>(null);
   const [testBotEnabled, setTestBotEnabled] = useState(false);
 
   const familyIdRef = useRef<string | null>(activeFamilyId);
   const foregroundRef = useRef(AppState.currentState === "active");
   const stateRef = useRef<ChessGameState | null>(null);
-  const pathnameRef = useRef(pathname);
   const notifiedRevisionRef = useRef<string | null>(null);
   const outgoingRef = useRef<ChessInvite | null>(null);
   const membersRef = useRef(familyMembers?.memberByUid);
-  const joinInFlightRef = useRef<Promise<void> | null>(null);
+  const joinInFlightRef = useRef<{ familyId: string; promise: Promise<void> } | null>(null);
+  const gameSyncInFlightRef = useRef(false);
+  const identityRef = useRef<{ uid: string | null; familyId: string | null }>({ uid: user?.uid ?? null, familyId: activeFamilyId });
   const lobbyWantedRef = useRef(false);
   const connectionRef = useRef<ChessConnectionState>(connection);
+  const boardPresenceRef = useRef<{ gameId: string | null; visible: boolean }>({ gameId: null, visible: false });
   familyIdRef.current = activeFamilyId;
-  stateRef.current = activeGameState;
-  pathnameRef.current = pathname;
   outgoingRef.current = outgoingInvite;
   membersRef.current = familyMembers?.memberByUid;
   connectionRef.current = connection;
@@ -92,20 +112,13 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     setConnection((current) => current === next ? current : next);
   }, []);
 
-  const activeGameId = activeGameState && (activeGameState.status === "active" || activeGameState.status === "paused")
-    ? activeGameState.gameId
-    : null;
-
-  const pendingAwayResultGameId = activeGameState?.status === "finished" && activeGameState.finishReason === "away_timeout"
-    ? activeGameState.gameId
-    : null;
-
-  const acknowledgeAwayResult = useCallback((gameId: string) => {
-    setActiveGameState((current) => {
-      if (!current || current.gameId !== gameId || current.status !== "finished" || current.finishReason !== "away_timeout") return current;
-      if (stateRef.current?.gameId === gameId) stateRef.current = null;
-      return null;
-    });
+  const acknowledgeResult = useCallback((gameId: string) => {
+    const current = stateRef.current?.gameId === gameId ? stateRef.current : getChessGameStoreSnapshot(gameId).state;
+    const familyId = current?.familyId ?? familyIdRef.current;
+    if (stateRef.current?.gameId === gameId && stateRef.current.status === "finished") stateRef.current = null;
+    setPendingResultGameId((pending) => pending === gameId ? null : pending);
+    if (!familyId) return;
+    void chessSocketService.emitAck<{ acknowledged: boolean }>(CHESS_EVENTS.gameResultAck, { familyId, gameId }, 12_000);
   }, []);
 
   const memberName = useCallback((uid: string) => {
@@ -114,13 +127,8 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     return member?.shortName || member?.displayName || "Người thân";
   }, []);
 
-  const isOnGameScreen = useCallback((gameId: string) => {
-    const path = pathnameRef.current || "";
-    return path.startsWith("/chess-game/") && path.includes(gameId);
-  }, []);
-
   const showGameStateToast = useCallback((next: ChessGameState, previous: ChessGameState | null) => {
-    if (!user || isOnGameScreen(next.gameId)) return;
+    if (!user) return;
     const myColor = next.whiteUid === user.uid ? "w" : next.blackUid === user.uid ? "b" : null;
     if (!myColor) return;
     const opponentUid = myColor === "w" ? next.blackUid : next.whiteUid;
@@ -134,14 +142,15 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         : mine
           ? (awayTimeout ? "🏆 Bạn thắng vì đối thủ rời bàn quá lâu" : "♟️ Bạn đã thắng ván cờ")
           : (awayTimeout ? "⏱️ Bạn đã hết thời gian rời bàn" : "♟️ Ván cờ đã khép lại");
-      showToast({
+      publishChessUiEvent({
         type: "notification",
         title,
         message: awayTimeout
           ? `${opponentName} · Mở lại Cờ vua để xem kết quả.`
           : `${opponentName} · Chạm để xem bàn cờ và kết quả.`,
         duration: 6500,
-        onPress: () => router.push({ pathname: "/chess-game/[gameId]" as never, params: { gameId: next.gameId } } as never),
+        gameId: next.gameId,
+        suppressWhenGameVisible: true,
       });
       return;
     }
@@ -153,75 +162,98 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     notifiedRevisionRef.current = notificationKey;
     const moveNumber = Math.max(1, Math.ceil(next.ply / 2));
     const inCheck = !!next.checkSquare;
-    showToast({
+    publishChessUiEvent({
       type: inCheck ? "warning" : "notification",
       title: inCheck ? `♟️ Vua của bạn đang bị chiếu • Nước ${moveNumber}` : `♟️ Đến lượt bạn • Nước ${moveNumber}`,
       message: `${opponentName} vừa đi ${next.lastMove.san}. Chạm để quay lại bàn cờ.`,
       duration: 7200,
-      onPress: () => router.push({ pathname: "/chess-game/[gameId]" as never, params: { gameId: next.gameId } } as never),
+      gameId: next.gameId,
+      suppressWhenGameVisible: true,
     });
-  }, [isOnGameScreen, memberName, router, showToast, user]);
+  }, [memberName, user]);
 
   const handleState = useCallback((next: ChessGameState) => {
+    // A socket can briefly receive a stale room packet while a family switch is
+    // crossing native/JS boundaries. Never let another family's state enter the
+    // canonical client store.
+    if (next.familyId !== familyIdRef.current) return;
     const previous = stateRef.current?.gameId === next.gameId ? stateRef.current : null;
+    publishChessGameSnapshot(next);
+    publishChessGameNetwork(next.gameId, {
+      connectionPhase: !chessSocketService.isConnected()
+        ? "reconnecting"
+        : gameSyncInFlightRef.current
+          ? "synchronizing"
+          : "connected",
+      error: null,
+    });
     cacheChessGameSnapshot(next);
     stateRef.current = next;
-    setActiveGameState(next);
+    const nextActiveGameId = next.status === "waiting" || next.status === "active" || next.status === "paused" ? next.gameId : null;
+    const nextResult = next.status === "finished" ? next.gameId : null;
+    setActiveGameId((current) => current === nextActiveGameId ? current : nextActiveGameId);
+    setPendingResultGameId((current) => current === nextResult ? current : nextResult);
     setIncomingInvite((current) => current && (next.whiteUid === current.fromUid || next.blackUid === current.fromUid) ? null : current);
     showGameStateToast(next, previous);
 
     const pending = outgoingRef.current;
     if (pending && next.status === "active" && (next.whiteUid === pending.toUid || next.blackUid === pending.toUid)) {
       setOutgoingInvite(null);
-      if (!isOnGameScreen(next.gameId)) {
-        showToast({
-          type: "success",
-          title: `${memberName(pending.toUid)} đã nhận lời ♟️`,
-          message: "Ván cờ đã bắt đầu. Chạm để vào bàn cờ.",
-          duration: 6000,
-          onPress: () => router.push({ pathname: "/chess-game/[gameId]" as never, params: { gameId: next.gameId } } as never),
-        });
-      }
+      publishChessUiEvent({
+        type: "success",
+        title: `${memberName(pending.toUid)} đã nhận lời ♟️`,
+        message: "Ván cờ đã bắt đầu. Chạm để vào bàn cờ.",
+        duration: 6000,
+        gameId: next.gameId,
+        suppressWhenGameVisible: true,
+      });
     }
-  }, [isOnGameScreen, memberName, router, showGameStateToast, showToast]);
+  }, [memberName, showGameStateToast]);
 
   const handleMoveDelta = useCallback((delta: import("../types/chess").ChessMoveDelta) => {
-    const current = stateRef.current;
-    if (!current || current.gameId !== delta.gameId || delta.version <= current.revision) return;
-    handleState(applyChessMoveDelta(current, delta));
+    const current = stateRef.current?.gameId === delta.gameId
+      ? stateRef.current
+      : getChessGameStoreSnapshot(delta.gameId).state;
+    if (!current || current.familyId !== familyIdRef.current || delta.version <= current.revision) return;
+    const next = publishChessMoveDelta(delta, current);
+    if (!next) return;
+    handleState(next);
   }, [handleState]);
 
   const joinForeground = useCallback(async () => {
-    if (joinInFlightRef.current) return joinInFlightRef.current;
-    const task = (async () => {
-      const familyId = familyIdRef.current;
-      if (!user || profileStatus !== "ready" || !familyId || !foregroundRef.current) {
-        updateConnection("idle");
-        return;
-      }
-      try {
-        // Never downgrade a lobby-proven ready connection just because an
-        // overlapping app:join probe is running. This removes the UI flicker
-        // and the false “opening table” state after Render is already awake.
-        const alreadyReady = connectionRef.current === "ready" && chessSocketService.isConnected();
-        if (!alreadyReady) updateConnection("waking");
+    const familyId = familyIdRef.current;
+    if (!user || profileStatus !== "ready" || !familyId || !foregroundRef.current) {
+      updateConnection("idle");
+      return;
+    }
+    const existing = joinInFlightRef.current;
+    if (existing?.familyId === familyId) return existing.promise;
 
-        // Health prewake is useful for Render cold-start, but it must never be on
-        // the critical UI path. A /health request can legitimately outlive an
-        // already-connected WebSocket on some Android networks. Start it in
-        // parallel, then trust Socket.IO connect as the readiness signal.
+    const task = (async () => {
+      const isCurrentFamily = () => foregroundRef.current && familyIdRef.current === familyId;
+      try {
+        const alreadyReady = connectionRef.current === "ready" && chessSocketService.isConnected();
+        if (isCurrentFamily()) {
+          if (!alreadyReady) updateConnection("waking");
+        }
         const healthPromise = chessSocketService.prewake().catch(() => null);
-        if (!alreadyReady) updateConnection("connecting");
+        if (isCurrentFamily()) {
+          if (!alreadyReady) updateConnection("connecting");
+        }
         await chessSocketService.connect();
-        if (foregroundRef.current) updateConnection("ready");
+        if (!isCurrentFamily()) return;
+        updateConnection("ready");
+
+        const localGameId = stateRef.current?.familyId === familyId ? stateRef.current.gameId : null;
+        if (localGameId) {
+          gameSyncInFlightRef.current = true;
+          publishChessGameNetwork(localGameId, { connectionPhase: "synchronizing", error: null });
+        }
 
         const joined = await chessSocketService.emitAck<{ ready: boolean; testBotEnabled?: boolean }>(CHESS_EVENTS.appJoin, { familyId }, 30_000);
+        if (!isCurrentFamily()) return;
         if (!joined.ok) {
-          // The authenticated socket is still a healthy transport. Keep the UI
-          // ready and retry membership/app-room assertion without painting a
-          // false “Bloom đang mở bàn cờ…” state.
           if (joined.errorCode === "CHESS_SERVER_RECOVERING" && chessSocketService.isConnected()) {
-            chessDebug("appJoin delayed; socket remains connected", { familyId, errorCode: joined.errorCode });
             updateConnection("ready");
             setTimeout(() => {
               if (foregroundRef.current && familyIdRef.current === familyId) void joinForeground();
@@ -238,28 +270,50 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
           chessDebug("server:capabilities", { testBotEnabled: botEnabled, source: "appJoin" });
         } else {
           void healthPromise.then((health) => {
-            if (typeof health?.chessTestBotEnabled === "boolean") {
+            if (isCurrentFamily() && typeof health?.chessTestBotEnabled === "boolean") {
               setTestBotEnabled(health.chessTestBotEnabled);
-              chessDebug("health:capabilities", { testBotEnabled: health.chessTestBotEnabled });
+              chessDebug("health:capabilities", { testBotEnabled: health.chessTestBotEnabled, source: "health" });
             }
           });
         }
         updateConnection("ready");
 
-        const active = await chessSocketService.emitAck<{ gameId: string } | null>(CHESS_EVENTS.sessionGetActive, { familyId }, 20_000);
-        if (active.ok && active.data?.gameId) {
-          const game = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameJoin, { familyId, gameId: active.data.gameId });
-          if (game.ok) handleState(game.data);
-        } else if (stateRef.current?.familyId === familyId && stateRef.current.status !== "finished") {
-          setActiveGameState(null);
+        const recovery = await chessSocketService.emitAck<ChessSessionRecovery>(CHESS_EVENTS.sessionRecover, { familyId }, 20_000);
+        if (!isCurrentFamily()) return;
+        if (!recovery.ok) throw new Error(recovery.errorCode);
+
+        if (recovery.data.kind === "active" || recovery.data.kind === "finished_unseen") {
+          gameSyncInFlightRef.current = true;
+          publishChessGameNetwork(recovery.data.gameId, { connectionPhase: "synchronizing", error: null });
+          const game = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameJoin, { familyId, gameId: recovery.data.gameId }, 20_000);
+          if (!isCurrentFamily()) return;
+          if (!game.ok) throw new Error(game.errorCode);
+          handleState(game.data);
+          gameSyncInFlightRef.current = false;
+          publishChessGameNetwork(game.data.gameId, { connectionPhase: "connected", error: null });
+          if (recovery.data.kind === "finished_unseen") setPendingResultGameId(game.data.gameId);
+          const presence = boardPresenceRef.current;
+          if (game.data.status !== "finished" && presence.visible && presence.gameId === game.data.gameId) {
+            chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId: game.data.gameId, visible: true });
+          }
+        } else {
+          gameSyncInFlightRef.current = false;
+          if (stateRef.current?.familyId === familyId) stateRef.current = null;
+          setActiveGameId(null);
+          setPendingResultGameId(null);
         }
       } catch (error) {
+        gameSyncInFlightRef.current = false;
         chessDebugError("joinForeground failed", error);
-        if (foregroundRef.current) updateConnection("error");
+        const currentGameId = stateRef.current?.familyId === familyId ? stateRef.current.gameId : null;
+        if (currentGameId) publishChessGameNetwork(currentGameId, { connectionPhase: "reconnecting" });
+        if (foregroundRef.current && familyIdRef.current === familyId) updateConnection("error");
       }
     })();
-    joinInFlightRef.current = task;
-    try { await task; } finally { if (joinInFlightRef.current === task) joinInFlightRef.current = null; }
+    joinInFlightRef.current = { familyId, promise: task };
+    try { await task; } finally {
+      if (joinInFlightRef.current?.promise === task) joinInFlightRef.current = null;
+    }
   }, [handleState, profileStatus, updateConnection, user]);
 
   useEffect(() => {
@@ -274,14 +328,14 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       setIncomingInvite((current) => current?.inviteId === inviteId ? null : current);
       setOutgoingInvite((current) => {
         if (current?.inviteId !== inviteId) return current;
-        showToast({ type: "info", title: "Lời thách đấu vừa khép lại", message: "Có lẽ mình sẽ gặp nhau ở một ván khác nhé." });
+        publishChessUiEvent({ type: "info", title: "Lời thách đấu vừa khép lại", message: "Có lẽ mình sẽ gặp nhau ở một ván khác nhé." });
         return null;
       });
     });
     const stopRejected = chessSocketService.on("inviteRejected", ({ inviteId, byUid }) => {
       setOutgoingInvite((current) => {
         if (current?.inviteId !== inviteId) return current;
-        showToast({ type: "info", title: `${memberName(byUid)} chưa tiện chơi lúc này 🌿`, message: "Mình có thể thách đấu lại vào một lúc khác." });
+        publishChessUiEvent({ type: "info", title: `${memberName(byUid)} chưa tiện chơi lúc này 🌿`, message: "Mình có thể thách đấu lại vào một lúc khác." });
         return null;
       });
     });
@@ -294,6 +348,11 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       // “Bloom đang mở bàn cờ…” while the socket is already healthy.
       connectionRef.current = "ready";
       updateConnection("ready");
+      const currentGame = stateRef.current;
+      if (currentGame?.familyId === familyIdRef.current) {
+        gameSyncInFlightRef.current = true;
+        publishChessGameNetwork(currentGame.gameId, { connectionPhase: "synchronizing", error: null });
+      }
       void joinForeground().finally(() => {
         const familyId = familyIdRef.current;
         if (!lobbyWantedRef.current || !familyId || !foregroundRef.current) return;
@@ -308,21 +367,53 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       });
     });
     const stopDisconnected = chessSocketService.on("disconnected", () => {
+      gameSyncInFlightRef.current = true;
       if (foregroundRef.current) updateConnection("connecting");
+      const currentGame = stateRef.current;
+      if (currentGame?.familyId === familyIdRef.current) publishChessGameNetwork(currentGame.gameId, { connectionPhase: "reconnecting" });
     });
     return () => {
       stopState(); stopMove(); stopInvite(); stopPresence(); stopExpired(); stopRejected(); stopConnected(); stopDisconnected();
     };
-  }, [handleMoveDelta, handleState, joinForeground, memberName, showToast, updateConnection]);
+  }, [handleMoveDelta, handleState, joinForeground, memberName, updateConnection]);
+
+  useEffect(() => {
+    const previous = identityRef.current;
+    const next = { uid: user?.uid ?? null, familyId: activeFamilyId };
+    const identityChanged = previous.uid !== next.uid || previous.familyId !== next.familyId;
+    if (!identityChanged) return;
+
+    // Proactive boundary: mark the old board away and leave its family before
+    // discarding local bindings. The server repeats this cleanup on app:join,
+    // so correctness never depends on React effect ordering.
+    if (previous.uid === next.uid && previous.familyId) {
+      const previousGame = stateRef.current?.familyId === previous.familyId ? stateRef.current : null;
+      if (previousGame && previousGame.status !== "finished") {
+        chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId: previousGame.gameId, visible: false });
+      }
+      chessSocketService.emitBestEffort(CHESS_EVENTS.appLeave, { familyId: previous.familyId });
+    }
+
+    identityRef.current = next;
+    gameSyncInFlightRef.current = false;
+    resetChessSurfaceSession();
+    clearCachedChessGameSnapshot();
+    clearChessGameStore();
+    stateRef.current = null;
+    boardPresenceRef.current = { gameId: null, visible: false };
+  }, [activeFamilyId, user?.uid]);
 
   useEffect(() => {
     setPresence([]);
     setIncomingInvite(null);
     setOutgoingInvite(null);
+    setActiveGameId(null);
+    setPendingResultGameId(null);
     if (!user || profileStatus !== "ready" || !activeFamilyId) {
       updateConnection("idle");
       setTestBotEnabled(false);
       clearCachedChessGameSnapshot();
+      clearChessGameStore();
       chessSocketService.disconnect();
       return;
     }
@@ -342,8 +433,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         foregroundRef: foregroundRef.current,
         socketConnected: chessSocketService.isConnected(),
         connection: connectionRef.current,
-        pathname: pathnameRef.current,
-      });
+              });
       if (!active) return;
       foregroundRef.current = true;
       if (!chessSocketService.isConnected() || connectionRef.current !== "ready") {
@@ -355,7 +445,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     const changeSubscription = AppState.addEventListener("change", (next) => {
       const wasActive = foregroundRef.current;
       const active = next === "active";
-      chessDebug("appState:change", { fromActive: wasActive, next, pathname: pathnameRef.current });
+      chessDebug("appState:change", { fromActive: wasActive, next });
       foregroundRef.current = active;
       const familyId = familyIdRef.current;
       if (active) {
@@ -364,6 +454,8 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
         setIncomingInvite(null);
         setPresence([]);
         updateConnection("idle");
+        const presence = boardPresenceRef.current;
+        if (presence.gameId) chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId: presence.gameId, visible: false });
         if (familyId) chessSocketService.emitBestEffort(CHESS_EVENTS.appLeave, { familyId });
         chessSocketService.disconnect();
       }
@@ -387,8 +479,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
           foregroundRef: foregroundRef.current,
           socketConnected,
           connection: connectionRef.current,
-          pathname: pathnameRef.current,
-        });
+                  });
         foregroundRef.current = true;
         updateConnection("connecting");
         void joinForeground();
@@ -423,21 +514,21 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     if (response.ok) {
       setIncomingInvite(null);
       setOutgoingInvite(null);
+      cacheChessGameSnapshot(response.data.state);
       handleState(response.data.state);
-      router.replace({ pathname: "/chess-game/[gameId]" as never, params: { gameId: response.data.gameId } } as never);
     }
     return response;
-  }, [handleState, router]);
+  }, [handleState]);
 
   const rejectInvite = useCallback(async (inviteId: string) => {
     const rejecting = incomingInvite?.inviteId === inviteId ? incomingInvite : null;
     const response = await chessSocketService.emitAck(CHESS_EVENTS.inviteReject, { inviteId });
     if (response.ok) {
       setIncomingInvite(null);
-      if (rejecting?.isTestBot) showToast({ type: "info", title: "Bloom Bot sẽ chờ bạn ♟️", message: "Khi muốn thử lại, mở Sảnh Cờ vua và gọi đối thủ thử nghiệm nhé." });
+      if (rejecting?.isTestBot) publishChessUiEvent({ type: "info", title: "Bloom Bot sẽ chờ bạn ♟️", message: "Khi muốn thử lại, mở Sảnh Cờ vua và gọi đối thủ thử nghiệm nhé." });
     }
     return response;
-  }, [incomingInvite, showToast]);
+  }, [incomingInvite]);
 
   const enterLobby = useCallback(async () => {
     lobbyWantedRef.current = true;
@@ -496,15 +587,106 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     return response;
   }, []);
 
+  const setBoardPresence = useCallback((gameId: string | null, visible: boolean) => {
+    boardPresenceRef.current = { gameId, visible };
+    if (!gameId || !chessSocketService.isConnected() || !foregroundRef.current) return;
+    chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId, visible });
+  }, []);
+
+  const resyncGame = useCallback(async (gameId: string): Promise<ChessGameState | null> => {
+    if (!gameId) return null;
+    publishChessGameNetwork(gameId, { connectionPhase: chessSocketService.isConnected() ? "synchronizing" : "reconnecting", error: null });
+    gameSyncInFlightRef.current = true;
+    chessDiagnostics.mark({ gameId, stage: "resync_start" });
+    const response = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameResync, { gameId });
+    if (!response.ok) {
+      gameSyncInFlightRef.current = false;
+      publishChessGameNetwork(gameId, { connectionPhase: "reconnecting", error: response.errorCode });
+      chessDiagnostics.mark({ gameId, stage: "resync_fail", detail: response.errorCode });
+      return null;
+    }
+    handleState(response.data);
+    gameSyncInFlightRef.current = false;
+    publishChessGameNetwork(gameId, { connectionPhase: "connected", error: null });
+    chessDiagnostics.mark({ gameId, stage: "resync_ok", version: response.data.revision });
+    return response.data;
+  }, [handleState]);
+
+  const moveGame = useCallback(async (
+    gameId: string,
+    from: string,
+    to: string,
+    promotion?: ChessPromotionPiece,
+    clientMoveId = requestId(),
+    expectedVersion?: number,
+  ): Promise<ChessAck<ChessMoveCommandAck>> => {
+    const current = getChessGameStoreSnapshot(gameId).state;
+    if (!current) return { ok: false, errorCode: "CHESS_GAME_NOT_FOUND" };
+    const commandVersion = expectedVersion ?? current.revision;
+    chessDiagnostics.mark({ gameId, stage: "socket_emit", clientMoveId, from, to, version: commandVersion });
+    const response = await chessSocketService.emitAck<ChessMoveCommandAck>(CHESS_EVENTS.gameMove, {
+      clientMoveId,
+      gameId,
+      expectedVersion: commandVersion,
+      from,
+      to,
+      promotion,
+    });
+    chessDiagnostics.mark({
+      gameId,
+      stage: response.ok ? "socket_ack_ok" : "socket_ack_fail",
+      clientMoveId,
+      from,
+      to,
+      version: response.ok ? response.data.version : current.revision,
+      detail: response.ok ? undefined : response.errorCode,
+    });
+    if (!response.ok && response.errorCode === "CHESS_STATE_CONFLICT") void resyncGame(gameId);
+    return response;
+  }, [resyncGame]);
+
+  const applyGameStateMutation = useCallback(async (event: string, gameId: string): Promise<ChessAck<ChessGameState>> => {
+    const response = await chessSocketService.emitAck<ChessGameState>(event, { requestId: requestId(), gameId });
+    if (response.ok) {
+      handleState(response.data);
+      return response;
+    }
+    publishChessGameNetwork(gameId, { error: response.errorCode });
+    if (response.errorCode === "CHESS_STATE_CONFLICT") void resyncGame(gameId);
+    return response;
+  }, [handleState, resyncGame]);
+
+  const resignGame = useCallback((gameId: string) => applyGameStateMutation(CHESS_EVENTS.gameResign, gameId), [applyGameStateMutation]);
+  const offerDraw = useCallback((gameId: string) => applyGameStateMutation(CHESS_EVENTS.drawOffer, gameId), [applyGameStateMutation]);
+  const acceptDraw = useCallback((gameId: string) => applyGameStateMutation(CHESS_EVENTS.drawAccept, gameId), [applyGameStateMutation]);
+  const rejectDraw = useCallback((gameId: string) => applyGameStateMutation(CHESS_EVENTS.drawReject, gameId), [applyGameStateMutation]);
+  const rematchGame = useCallback(async (gameId: string, stableRequestId?: string): Promise<ChessAck<{ waiting: boolean; gameId?: string; state?: ChessGameState; expiresAt?: number }>> => {
+    const response = await chessSocketService.emitAck<{ waiting: boolean; gameId?: string; state?: ChessGameState; expiresAt?: number }>(CHESS_EVENTS.gameRematch, { requestId: stableRequestId || requestId(), gameId });
+    if (response.ok && response.data.state) {
+      handleState(response.data.state);
+    }
+    return response;
+  }, [handleState]);
+
+
+  const cancelRematch = useCallback(async (gameId: string): Promise<ChessAck<{ cancelled: boolean }>> => {
+    return chessSocketService.emitAck<{ cancelled: boolean }>(CHESS_EVENTS.gameRematchCancel, { requestId: requestId(), gameId });
+  }, []);
+
+  const readyGame = useCallback(async (gameId: string): Promise<ChessAck<ChessGameState>> => {
+    const response = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameReady, { requestId: requestId(), gameId });
+    if (response.ok) handleState(response.data);
+    return response;
+  }, [handleState]);
+
   const value = useMemo<ChessRealtimeValue>(() => ({
     connection,
     presence,
     incomingInvite,
     outgoingInvite,
     activeGameId,
-    activeGameState,
-    pendingAwayResultGameId,
-    acknowledgeAwayResult,
+    pendingResultGameId,
+    acknowledgeResult,
     challenge,
     cancelInvite,
     acceptInvite,
@@ -515,34 +697,28 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     testBotEnabled,
     requestTestBotChallenge,
   }), [
-    connection, presence, incomingInvite, outgoingInvite, activeGameId, activeGameState, pendingAwayResultGameId, acknowledgeAwayResult,
+    connection, presence, incomingInvite, outgoingInvite, activeGameId, pendingResultGameId, acknowledgeResult,
     challenge, cancelInvite, acceptInvite, rejectInvite, enterLobby, leaveLobby, joinForeground, testBotEnabled, requestTestBotChallenge,
   ]);
 
-  const challenger = incomingInvite && !incomingInvite.isTestBot ? familyMembers?.memberByUid.get(incomingInvite.fromUid) : null;
-
+  const actionsValue = useMemo<ChessRealtimeActionsValue>(() => ({
+    acknowledgeResult,
+    setBoardPresence,
+    resyncGame,
+    moveGame,
+    resignGame,
+    offerDraw,
+    acceptDraw,
+    rejectDraw,
+    rematchGame,
+    cancelRematch,
+    readyGame,
+  }), [acknowledgeResult, acceptDraw, cancelRematch, moveGame, offerDraw, readyGame, rejectDraw, rematchGame, resignGame, resyncGame, setBoardPresence]);
   return (
-    <ChessRealtimeContext.Provider value={value}>
-      {children}
-      <ChessChallengeOverlay
-        invite={incomingInvite}
-        challenger={challenger}
-        busy={challengeBusy}
-        onAccept={() => {
-          if (!incomingInvite || challengeBusy || !user) return;
-          setChallengeBusy(true);
-          void acceptInvite(incomingInvite.inviteId).then((response) => {
-            if (!response.ok) showToast({ type: "warning", title: "Chưa vào được ván", message: CHESS_ERROR_COPY[response.errorCode] });
-          }).finally(() => setChallengeBusy(false));
-        }}
-        onReject={() => {
-          if (!incomingInvite || challengeBusy) return;
-          setChallengeBusy(true);
-          void rejectInvite(incomingInvite.inviteId).then((response) => {
-            if (!response.ok) showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
-          }).finally(() => setChallengeBusy(false));
-        }}
-      />
-    </ChessRealtimeContext.Provider>
+    <ChessRealtimeActionsContext.Provider value={actionsValue}>
+      <ChessRealtimeContext.Provider value={value}>
+        {children}
+      </ChessRealtimeContext.Provider>
+    </ChessRealtimeActionsContext.Provider>
   );
 }

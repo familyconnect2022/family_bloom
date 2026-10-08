@@ -6,7 +6,14 @@ set "TARGET=%~1"
 if not defined TARGET (
   echo ========================================================
   echo Family Bloom - PRE-COPY CLEAN OLD PROJECT
-  echo Phase 16B.17 - Away-time policy + SharedValue tab continuity
+  echo Phase 17.9A11 - Family Recovery Reconnect Sync Time Controls
+rem Successor of Phase 17.9A10 - Tap Only Material Rail Smaller Mini
+rem Successor of Phase 17.9A9 - Chess Lifecycle Root Mini Premove
+rem Successor of Phase 17.9A8 - Rematch Race Fix No Battle FX
+rem Successor of Phase 17.9A7 - Real Device Surface Ownership FX Clip
+rem Successor of Phase 17.9A6 - Fixed Screen Geometry Single Icon Tabbar
+rem Successor of Phase 17.9A5 - Chess Surface Layer Geometry Tabbar
+  echo Base: Phase 16B.18 - Game overlay occlusion + gesture/flicker hotfix
   echo ========================================================
   echo.
   echo Enter the EXISTING Family Bloom project folder that will receive
@@ -31,10 +38,19 @@ if not exist "%TARGET%\app.config.js" (
 echo.
 echo Target: %TARGET%
 echo.
-echo [1/4] Removing legacy Expo Router duplicates and post-V4K Chess overlays...
+echo [1/5] Removing retired guided performance runner/HUD and legacy routes...
 
 for %%F in (
+  "src\components\system\AppWidePerformanceDriver.tsx"
+  "src\components\system\GuidedPerformanceOverlay.tsx"
+  "src\services\performance\appWidePerformanceService.ts"
+  "src\services\performance\finalPerformanceGateService.ts"
+  "src\services\performance\automatedRegressionService.ts"
+  "src\app\(internal)\performance-test.tsx"
+  "scripts\android\Family_Bloom_Phase15B_Performance_Run.bat"
+  "scripts\android\Family_Bloom_Phase15B_Performance_Run.ps1"
   "src\components\chess\ChessPromotionOverlay.tsx"
+  "src\components\chess\ChessBattleEffects.tsx"
   "src\components\chess\ChessResultToast.tsx"
   "src\services\games\gameAssetWarmup.ts"
   "scripts\test-phase16b16-game-surface-warmstart.js"
@@ -51,6 +67,41 @@ for %%F in (
   "PHASE_16B15_BUILD_REPORT.md"
   "PHASE_16B16_BUILD_REPORT.md"
   "PHASE_16B17_BUILD_REPORT.md"
+  "PHASE_16B18_BUILD_REPORT.md"
+  "PHASE_17_BUILD_REPORT.md"
+  "PHASE_17_1_BUILD_REPORT.md"
+  "PHASE_17_2_BUILD_REPORT.md"
+  "PHASE_17_3_BUILD_REPORT.md"
+  "PHASE_17_3A_BUILD_REPORT.md"
+  "PHASE_17_3B_BUILD_REPORT.md"
+  "PHASE_17_3C_BUILD_REPORT.md"
+  "PHASE_17_3D_BUILD_REPORT.md"
+  "PHASE_17_3E_BUILD_REPORT.md"
+  "PHASE_17_4_BUILD_REPORT.md"
+  "PHASE_17_4A_BUILD_REPORT.md"
+  "PHASE_17_5_BUILD_REPORT.md"
+  "PHASE_17_5A_BUILD_REPORT.md"
+  "PHASE_17_5B_BUILD_REPORT.md"
+  "PHASE_17_5C_BUILD_REPORT.md"
+  "PHASE_17_6_BUILD_REPORT.md"
+  "PHASE_17_7_BUILD_REPORT.md"
+  "PHASE_17_8_BUILD_REPORT.md"
+  "PHASE_17_8A_BUILD_REPORT.md"
+  "PHASE_17_8B_BUILD_REPORT.md"
+  "PHASE_17_8C_BUILD_REPORT.md"
+  "PHASE_17_8D_BUILD_REPORT.md"
+  "PHASE_17_8E_BUILD_REPORT.md"
+  "PHASE_17_9A_BUILD_REPORT.md"
+  "PHASE_17_9A1_BUILD_REPORT.md"
+  "PHASE_17_9A2_BUILD_REPORT.md"
+  "PHASE_17_9A3_BUILD_REPORT.md"
+  "PHASE_17_9A4_BUILD_REPORT.md"
+  "PHASE_17_9A5_BUILD_REPORT.md"
+  "PHASE_17_9A6_BUILD_REPORT.md"
+  "PHASE_17_9A7_BUILD_REPORT.md"
+  "PHASE_17_9A8_BUILD_REPORT.md"
+  "PHASE_17_9A9_BUILD_REPORT.md"
+  "PHASE_17_9A10_BUILD_REPORT.md"
   "src\app\chess-history.tsx"
   "src\app\chess-lobby.tsx"
   "src\app\create-profile.tsx"
@@ -91,31 +142,40 @@ for %%D in (
   "src\app\home-kitchen"
   "src\app\home-time-capsule"
   "src\app\member"
+  "assets\images\chess\pieces-webp-default"
 ) do if exist "%TARGET%\%%~D" rmdir /s /q "%TARGET%\%%~D" >nul 2>nul
 
-echo [2/4] Removing generated JS shadows only when matching TS/TSX source exists...
+for /f "delims=" %%F in ('dir /b "%TARGET%\scripts\test-phase17_*.js" 2^>nul') do (
+  echo %%F| findstr /r /c:"test-phase17_[2345]" >nul && del /f /q "%TARGET%\scripts\%%F" >nul 2>nul
+)
+for /f "delims=" %%F in ('dir /b "%TARGET%\scripts\test-phase15b*.js" 2^>nul') do del /f /q "%TARGET%\scripts\%%F" >nul 2>nul
+
+echo [2/5] Removing generated JS shadows only when matching TS/TSX source exists...
 if exist "%TARGET%\src" call :CleanJsShadows "%TARGET%\src"
 if errorlevel 1 goto :fail
 if exist "%TARGET%\server\src" call :CleanJsShadows "%TARGET%\server\src"
 if errorlevel 1 goto :fail
 
-echo [3/4] Clearing project-local Metro/Expo/Gradle build caches...
+echo [3/5] Clearing project-local Metro/Expo/Gradle build caches...
 if exist "%TARGET%\.expo" rmdir /s /q "%TARGET%\.expo" >nul 2>nul
 if exist "%TARGET%\node_modules\.cache" rmdir /s /q "%TARGET%\node_modules\.cache" >nul 2>nul
 if exist "%TARGET%\android\.gradle" rmdir /s /q "%TARGET%\android\.gradle" >nul 2>nul
 if exist "%TARGET%\android\app\build" rmdir /s /q "%TARGET%\android\app\build" >nul 2>nul
 
-echo [4/4] Verifying dangerous leftovers are gone...
-if exist "%TARGET%\src\app\chess-game\[gameId].tsx" goto :leftover
-if exist "%TARGET%\src\app\chess-lobby.tsx" goto :leftover
-if exist "%TARGET%\src\components\chess\ChessPromotionOverlay.tsx" goto :leftover
-if exist "%TARGET%\src\components\chess\ChessResultToast.tsx" goto :leftover
+echo [4/5] Verifying retired test runtime is gone...
+if exist "%TARGET%\src\app\(internal)\performance-test.tsx" goto :leftover
+if exist "%TARGET%\src\components\system\AppWidePerformanceDriver.tsx" goto :leftover
+if exist "%TARGET%\src\components\system\GuidedPerformanceOverlay.tsx" goto :leftover
+if exist "%TARGET%\src\services\performance\appWidePerformanceService.ts" goto :leftover
+
+echo [5/5] Preserving reusable opt-in tests only...
+echo       performance-graph-test + performance-data-test stay for Developer Tools.
 
 echo.
 echo ========================================================
 echo PRE-COPY CLEAN PASS
 echo ========================================================
-echo Now COPY the entire Phase 16B.17 FULL package over:
+echo Now COPY the entire Phase 17.9A11 FULL package over:
 echo   %TARGET%
 echo Then run inside the updated project:
 echo   Family_Bloom_CLEAN_APPLY_FULL.bat
@@ -132,7 +192,7 @@ for /r "%SCANROOT%" %%J in (*.js) do (
 exit /b 0
 
 :leftover
-echo [ERROR] One or more obsolete Chess/route files remain.
+echo [ERROR] One or more retired performance/legacy files remain.
 goto :fail
 
 :fail

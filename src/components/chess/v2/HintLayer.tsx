@@ -57,12 +57,12 @@ const HintSlot = React.memo(forwardRef<HintSlotController, {
       opacity.value = 0;
       scale.value = 0.64;
       opacity.value = withDelay(delayMs, withTiming(1, {
-        duration: Math.min(60, HINT_POP_MS),
+        duration: Math.min(34, HINT_POP_MS),
         easing: Easing.out(Easing.quad),
       }));
       scale.value = withDelay(delayMs, withSequence(
-        withTiming(1.10, { duration: 44, easing: Easing.out(Easing.cubic) }),
-        withTiming(1, { duration: Math.max(1, HINT_POP_MS - 44), easing: Easing.out(Easing.quad) }),
+        withTiming(1.06, { duration: 28, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: Math.max(1, HINT_POP_MS - 28), easing: Easing.out(Easing.quad) }),
       ));
     },
     hide() {

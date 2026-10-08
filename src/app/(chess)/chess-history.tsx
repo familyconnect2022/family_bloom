@@ -106,7 +106,7 @@ export default function ChessHistoryScreen() {
                   )}
                 </View>
                 <View style={styles.copy}>
-                  <Text style={styles.title}>{opponentName} · {result}{isBot ? " · Thử nghiệm" : ""}</Text>
+                  <Text style={styles.title}>{opponentName} · {result}</Text>
                   <Text style={styles.meta}>{myWhite ? "Quân trắng" : "Quân đen"} · {control(item.timeControl)} · {reason(item.finishReason)}</Text>
                   <Text style={styles.date}>{item.endedAt ? new Date(item.endedAt).toLocaleString("vi-VN") : ""}</Text>
                 </View>

@@ -12,7 +12,6 @@ import { COLORS } from "@/constants/theme";
 import { BloomConfirmModal } from "@/components/ui/BloomConfirmModal";
 import { BloomTextInput } from "@/components/ui/BloomInputComponents";
 import { BloomNoteCallout } from "@/components/ui/BloomNoteCallout";
-import { appWidePerformanceService } from "@/services/performance/appWidePerformanceService";
 
 const EMOTIONS: Array<{ value: HomeWhisperEmotion; emoji: string; label: string }> = [
   { value: "heart", emoji: "❤️", label: "Thương" },
@@ -69,9 +68,7 @@ export function WhisperFeaturePanel() {
     if (!activeFamilyId || !uid) return;
     // Performance sweep is strictly read-only: never let maintenance cleanup write
     // to Firestore while automated profiling is moving through production screens.
-    if (!appWidePerformanceService.isNoWriteMode()) {
-      void homeWhisperService.cleanupExpired(activeFamilyId, uid).catch(() => {});
-    }
+    void homeWhisperService.cleanupExpired(activeFamilyId, uid).catch(() => {});
     let alive = true;
     familyService.listMembers(activeFamilyId)
       .then(list => { if (alive) setMembers(list); })

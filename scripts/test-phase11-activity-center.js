@@ -1,6 +1,22 @@
 const fs = require('fs');
 const vm = require('vm');
-const ts = require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript');
+const path = require('path');
+const { execFileSync } = require('child_process');
+function loadTypeScript() {
+  try {
+    return require('typescript');
+  } catch (localError) {
+    try {
+      const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      const globalRoot = execFileSync(npmBin, ['root', '-g'], { encoding: 'utf8' }).trim();
+      if (globalRoot) return require(path.join(globalRoot, 'typescript'));
+    } catch (globalError) {
+      // Fall through to one clear, cross-platform error below.
+    }
+    throw new Error('TypeScript is not installed for this Family Bloom project. Run npm install before running build gates.');
+  }
+}
+const ts = loadTypeScript();
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };

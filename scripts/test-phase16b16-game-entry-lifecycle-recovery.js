@@ -66,7 +66,7 @@ ok('Chess binds heavy board surface to route focus', has(chessScreen, /useDeferr
 ok('Xiangqi binds heavy board surface to route focus', has(xiangqiScreen, /useDeferredGameSurface\(screenFocused\)/) && has(xiangqiScreen, /const boardSurfaceVisible = heavySurfaceMounted/));
 ok('Chess physically unmounts native board while heavy surface is absent', has(chessScreen, /boardSurfaceVisible \? \(/) && has(chessScreen, /<ChessBoard/));
 ok('Xiangqi physically unmounts native board while heavy surface is absent', has(xiangqiScreen, /boardSurfaceVisible \? \(/) && has(xiangqiScreen, /<XiangqiGameBoard/));
-ok('Perf probe records native surface retention', has(perf, /surfaceMounted: boolean/) && has(perf, /markSurface/));
+ok('Opt-in perf probe can record native surface retention without running by default', has(perf, /surfaceMounted:boolean/) && has(perf, /markSurface/) && has(perf, /let enabled=false/));
 ok('Chess and Xiangqi report native surface lifecycle', has(chessScreen, /markSurface\("chess", heavySurfaceMounted\)/) && has(xiangqiScreen, /markSurface\("xiangqi", heavySurfaceMounted\)/));
 
 ok('Ready sheet supports static first presentation', has(modal, /staticFirstPresentation\?: boolean/) && has(modal, /staticFirstPresentation && firstPresentation/));
@@ -78,17 +78,17 @@ ok('Xiangqi modal only advances to Ready after real board readiness', has(xiangq
 ok('Chess modal only advances to Ready after real board readiness', has(chessScreen, /if \(!boardReady\)[\s\S]{0,140}setEntryPhase\("preparing"\)/) && has(chessScreen, /setEntryPhase\("ready"\)/));
 ok('Xiangqi already-playing round does not replay ready ceremony', has(xiangqiScreen, /if \(roundPhase === "playing"\) return undefined/));
 
-ok('Chess launcher uses a high-contrast real black knight asset', has(homeGames, /accessibilityLabel="Quân Mã cờ vua"/) && has(homeGames, /pieces-webp-default\/bn\.webp/) && has(homeGames, /chessPieceIcon/));
-ok('Chess launcher avoids the washed-out white king asset', !has(homeGames, /pieces-webp-default\/wk\.webp/));
+ok('Chess launcher uses a high-contrast real black knight asset', has(homeGames, /accessibilityLabel="Quân Mã cờ vua"/) && has(homeGames, /pieces-png-default\/bn\.png/) && has(homeGames, /chessPieceIcon/));
+ok('Chess launcher avoids the washed-out white king asset', !has(homeGames, /pieces-png-default\/wk\.png/));
 ok('Chess first route render starts focus-active so preparing shield can paint immediately', has(chessScreen, /useState\(true\)/));
 ok('Xiangqi first route render starts focus-active so preparing shield can paint immediately', has(xiangqiScreen, /useState\(true\)/));
 ok('Chess piece nodes are staged across multiple paint frames', has(chessPieceLayer, /renderCount/) && has(chessPieceLayer, /Math\.min\(8, pieces\.length\)/) && has(chessPieceLayer, /Math\.min\(18, pieces\.length\)/) && has(chessPieceLayer, /Math\.min\(26, pieces\.length\)/));
-ok('Xiangqi piece nodes are staged across multiple paint frames', has(xiangqiBoard, /pieceRenderCount/) && has(xiangqiBoard, /Math\.min\(8, pieces\.length\)/) && has(xiangqiBoard, /Math\.min\(18, pieces\.length\)/) && has(xiangqiBoard, /Math\.min\(26, pieces\.length\)/));
+ok('Xiangqi piece nodes are staged across multiple paint frames', has(xiangqiBoard, /pieceRenderCount/) && has(xiangqiBoard, /Math\.min\(8, initialCount\)/) && has(xiangqiBoard, /Math\.min\(18, initialCount\)/) && has(xiangqiBoard, /Math\.min\(26, initialCount\)/));
 ok('Chess and Xiangqi piece art use expo-image memory cache', has(chessPiece, /from "expo-image"/) && has(chessPiece, /cachePolicy="memory"/) && has(xiangqiPiece, /from "expo-image"/) && has(xiangqiPiece, /cachePolicy="memory"/));
 
 ok('Phase 16B16 package script exists', has(packageJson, /"phase16b16:check"\s*:\s*"node \.\/scripts\/test-phase16b16-game-entry-lifecycle-recovery\.js"/));
-ok('Post-copy updater runs Phase 16B16 through current Chess aggregate once', has(postCopy, /chess:current-check/) && !has(postCopy, /npm run phase16b16:check/) && has(postCopy, /Phase 16B\.(16|17)/));
-ok('Pre-copy script identifies Phase 16B16', has(preCopy, /Phase 16B\.(16|17)/));
+ok('Post-copy updater runs Phase 16B16 through current Chess aggregate once', has(postCopy, /chess:current-check/) && !has(postCopy, /npm run phase16b16:check/) && has(postCopy, /Phase 16B\.(16|17|18)/));
+ok('Pre-copy script identifies Phase 16B16', has(preCopy, /Phase 16B\.(16|17|18)/));
 ok('Pre-copy removes obsolete Phase 16B15 asset warmup file', has(preCopy, /gameAssetWarmup\.ts/));
 ok('Current Chess aggregate includes Phase 16B16', has(currentGate, /test-phase16b16-game-entry-lifecycle-recovery\.js/));
 ok('Android Debug and Release preserve Phase 16B16 through current aggregate without duplicate direct calls', has(debugBat, /chess:current-check/) && has(releaseBat, /chess:current-check/) && !has(debugBat, /phase16b16:check/) && !has(releaseBat, /phase16b16:check/));

@@ -34,7 +34,7 @@ check('diagnostics moved below player controls', screen.lastIndexOf('<ChessDiagn
 check('diagnostics default collapsed', panel.includes('const [expanded, setExpanded] = useState(false)'));
 check('material strip is isolated with React.memo', material.includes('export const ChessMaterialStrip = React.memo') && material.includes('sameCounts'));
 check('material strip has standard piece values', material.includes('{ p: 1, n: 3, b: 3, r: 5, q: 9 }'));
-check('material strip renders captured local piece assets', material.includes('pieces-webp-default') && material.includes('capturedColor'));
+check('material strip renders captured local piece assets', material.includes('pieces-png-default') && material.includes('capturedColor'));
 check('material advantage is only displayed for leading side', material.includes('advantage > 0') && material.includes('Lợi thế +'));
 check('client snapshot type carries compact capture summary', clientTypes.includes('export type ChessCaptureSummary') && clientTypes.includes('captureSummary: ChessCaptureSummary'));
 check('move delta increments capture summary locally without adding summary to hot packet', clientTypes.includes('delta.move.captured') && !/export type ChessMoveDelta[\s\S]*captureSummary/.test(clientTypes.match(/export type ChessMoveDelta[\s\S]*?\n};/)?.[0] || ''));

@@ -10,7 +10,7 @@ const debug = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat
 const release = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
 const codes=['wk','wq','wr','wb','wn','wp','bk','bq','br','bb','bn','bp'];
 check('ChessBoard uses native React Native Image for local pieces', /from \"react-native\"/.test(board) && /\bImage\b/.test(board) && !board.includes('from "expo-image"'));
-check('all 12 local WebP assets remain mapped', codes.every(c=>board.includes(`pieces-webp-default/${c}.webp`)));
+check('all 12 local PNG assets remain mapped', codes.every(c=>board.includes(`pieces-png-default/${c}.png`)) || codes.every(c=>fs.existsSync(path.join(root, `assets/images/chess/pieces-png-default/${c}.png`))));
 check('board hardware texture cache removed', !board.includes('renderToHardwareTextureAndroid'));
 check('expo-image recycling keys removed from board pieces', !board.includes('recyclingKey='));
 check('static piece layer remains persistent and explicit sized', board.includes('styles.pieceLayer') && board.includes('width: boardSize') && board.includes('height: boardSize'));

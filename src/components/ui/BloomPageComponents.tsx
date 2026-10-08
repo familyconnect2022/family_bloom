@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { COLORS, UI } from "../../constants/theme";
 import { BLOOM_SUPPER } from "../../constants/bloomSupper";
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
-import { performanceTestService } from "../../services/performance/performanceTestService";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -16,7 +14,7 @@ export function BloomBackButton({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel="Quay lại"
       hitSlop={8}
-      onPress={() => { if (PERFORMANCE_TEST_BUILD) performanceTestService.recordUiPress("Back"); onPress(); }}
+      onPress={() => { onPress(); }}
       style={({ pressed }) => [styles.backButton, pressed && styles.cardPressed]}
     >
       <Ionicons name="arrow-back" size={21} color={COLORS.primaryText} />
@@ -141,7 +139,7 @@ export function BloomQuickAction({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={() => { if (PERFORMANCE_TEST_BUILD) performanceTestService.recordUiPress(`Quick: ${label}`); onPress(); }} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
+    <Pressable onPress={() => { onPress(); }} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
       <View style={styles.quickIcon}>
         <Ionicons name={icon} size={22} color={COLORS.primaryText} />
       </View>
@@ -210,7 +208,7 @@ export function BloomListRow({
 
   if (onPress) {
     return (
-      <Pressable onPress={() => { if (PERFORMANCE_TEST_BUILD) performanceTestService.recordUiPress(`List: ${title}`); onPress(); }} style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}>
+      <Pressable onPress={() => { onPress(); }} style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}>
         {content}
       </Pressable>
     );

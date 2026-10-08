@@ -328,7 +328,7 @@ const statsBuckets = (period: HomeFundStatsPeriod, anchor = new Date()): { start
   };
 };
 
-const aggregateStats = (period: HomeFundStatsPeriod, rows: HomeFundTransaction[], capped: boolean, simulated = false): HomeFundStats => {
+const aggregateStats = (period: HomeFundStatsPeriod, rows: HomeFundTransaction[], capped: boolean): HomeFundStats => {
   const template = statsBuckets(period);
   const map = new Map(template.buckets.map((bucket) => [bucket.key, { ...bucket }]));
   for (const item of rows) {
@@ -347,26 +347,6 @@ const aggregateStats = (period: HomeFundStatsPeriod, rows: HomeFundTransaction[]
     expenseVnd: buckets.reduce((sum, bucket) => sum + bucket.expenseVnd, 0),
     transactionCount: buckets.reduce((sum, bucket) => sum + bucket.transactionCount, 0),
     capped,
-    simulated,
-  };
-};
-
-const mockStats = (period: HomeFundStatsPeriod): HomeFundStats => {
-  const { buckets } = statsBuckets(period);
-  const seeded = buckets.map((bucket, index) => ({
-    ...bucket,
-    incomeVnd: (2 + ((index * 7 + 3) % 6)) * 450_000,
-    expenseVnd: (1 + ((index * 5 + 2) % 7)) * 320_000,
-    transactionCount: 4 + ((index * 11) % 9),
-  }));
-  return {
-    period,
-    buckets: seeded,
-    incomeVnd: seeded.reduce((sum, bucket) => sum + bucket.incomeVnd, 0),
-    expenseVnd: seeded.reduce((sum, bucket) => sum + bucket.expenseVnd, 0),
-    transactionCount: seeded.reduce((sum, bucket) => sum + bucket.transactionCount, 0),
-    capped: false,
-    simulated: true,
   };
 };
 
@@ -631,13 +611,9 @@ export const homeFundService = {
     const rows = snap.docs.slice(0, STATS_SCAN_LIMIT - 1)
       .filter((row) => !isLegacyVoided(row.data() as Record<string, unknown>))
       .map((row) => normalizeTransaction(row.id, row.data() as Record<string, unknown>));
-    return aggregateStats(period, rows, snap.docs.length >= STATS_SCAN_LIMIT, false);
+    return aggregateStats(period, rows, snap.docs.length >= STATS_SCAN_LIMIT);
   },
 
-  makeMockStats(period: HomeFundStatsPeriod): HomeFundStats {
-    // DEV/test-only synthetic dataset: deterministic and RAM-only, never written to Firestore.
-    return mockStats(period);
-  },
 
   async fetchAudit(familyId: string): Promise<HomeFundAuditEvent[]> {
     const snap = await getDocs(query(

@@ -55,7 +55,7 @@ const screen = read('src/app/(xiangqi)/xiangqi-preview.tsx');
 const debugBuild = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
 const releaseBuild = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
 
-check('piece renderer keeps contain mode', piece.includes('resizeMode="contain"'));
+check('piece renderer keeps contain mode', piece.includes('resizeMode="contain"') || piece.includes('contentFit="contain"')); // expo-image supersedes RN Image resizeMode
 check('piece wrapper explicitly allows overflow', piece.includes('overflow: "visible"'));
 check('playable board uses user-approved 1.3x assets', gameBoard.includes('step * 1.3') && gameBoard.includes('<XiangqiPiece'));
 check('gallery still includes five visual states', ['normal', 'selected', 'hint', 'drag', 'disabled'].every(v => gallery.includes(`"${v}"`) || piece.includes(`"${v}"`)));

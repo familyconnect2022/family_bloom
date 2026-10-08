@@ -502,37 +502,4 @@ export const homeGameService = {
     await batch.commit();
   },
 
-  simulated(familyId: string, uid: string, displayName: string, count: number): HomeGameSession[] {
-    const types: HomeGameType[] = ["know_each_other", "guess_person", "memory_owner", "truth_lie", "story_chain", "family_bingo"];
-    const safeCount = Math.max(1, Math.min(count, 100));
-    return Array.from({ length: safeCount }, (_, index) => {
-      const gameType = types[index % types.length];
-      const meta = GAME_COPY[gameType];
-      const d = new Date(Date.now() - index * 36 * 60 * 1000);
-      return {
-        id: `sim-${index}`,
-        familyId,
-        gameType,
-        title: meta.title,
-        createdByUid: uid,
-        createdByName: displayName,
-        participantUids: [uid, "demo-a", "demo-b", "demo-c"],
-        participantNames: [displayName, "Hà", "Minh", "Lan"],
-        status: index % 4 === 0 ? "revealed" : "playing",
-        prompts: gameType === "know_each_other" ? KNOW_EACH_OTHER_QUESTIONS.slice(index % 10, index % 10 + 5) : [],
-        subjectUid: gameType === "know_each_other" || gameType === "truth_lie" ? uid : null,
-        subjectName: gameType === "know_each_other" || gameType === "truth_lie" ? displayName : null,
-        turnUids: gameType === "story_chain" ? [uid, "demo-a", "demo-b", "demo-c"] : [],
-        turnNames: gameType === "story_chain" ? [displayName, "Hà", "Minh", "Lan"] : [],
-        bingoCellIds: gameType === "family_bingo" ? Array.from({ length: 9 }, (_, i) => `bingo_${(index * 3 + i) % BINGO_CELLS.length}`) : [],
-        memoryPreview: gameType === "memory_owner" ? { caption: "Một buổi chiều cả nhà cùng ngồi lại và cười rất lâu vì một chuyện nhỏ.", mediaUrl: "", mediaType: "none" } : { caption: "", mediaUrl: "", mediaType: "none" },
-        submittedUids: index % 3 === 0 ? [uid, "demo-a"] : [uid],
-        endsAtMs: Date.now() + Math.max(1, 10 - (index % 8)) * 60 * 60 * 1000,
-        playDateKey: "demo",
-        slotId: index % 4,
-        createdAt: d.toISOString(),
-        updatedAt: d.toISOString(),
-      };
-    });
-  },
 };

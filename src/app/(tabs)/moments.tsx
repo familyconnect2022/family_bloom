@@ -3,10 +3,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   ActivityIndicator,
-  AppState,
   Dimensions,
   FlatList,
   Keyboard,
@@ -39,18 +38,18 @@ import {
   BloomPill,
 } from "../../components/ui/BloomPageComponents";
 import { COLORS, SPACING } from "../../constants/theme";
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
-import { performanceTestService } from "../../services/performance/performanceTestService";
 import { useAuth } from "../../context/AuthContext";
+import { useTabLiveEffect, useTabRuntime } from "../../context/TabRuntimeContext";
 import { useMomentPublish, type PendingMoment } from "../../context/MomentPublishContext";
 import { useFamilyMoments } from "../../hooks/moments/useFamilyMoments";
 import { useFamilyMembers } from "../../hooks/family/useFamilyMembers";
 import { useFamilyPersonDirectory } from "../../hooks/family/useFamilyPersonDirectory";
+import { useFamilyPersonsByIds } from "../../hooks/family/useFamilyPersonsByIds";
 import { momentsService } from "../../services/moments/momentsService";
 import { momentDeepLinkCache } from "../../services/moments/momentDeepLinkCache";
 import { mediaService } from "../../services/media/mediaService";
 import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
-import type { MediaFile } from "../../types";
+import type { FamilyMember, MediaFile } from "../../types";
 import type { MomentMedia, MomentPost } from "../../types/moments";
 import { useBloomTaskToast } from "../../hooks/ui/useBloomTaskToast";
 
@@ -58,7 +57,102 @@ type FeedItem =
   | { kind: "pending"; key: string; item: PendingMoment }
   | { kind: "post"; key: string; item: MomentPost };
 
+type LinkedPerson = { id: string; name: string };
+type VisibilityListener = () => void;
+
+type MomentVisibilityStore = {
+  isVisible: (postId: string) => boolean;
+  subscribe: (postId: string, listener: VisibilityListener) => () => void;
+  replaceVisibleIds: (next: Set<string>) => void;
+};
+
+const createMomentVisibilityStore = (): MomentVisibilityStore => {
+  let visibleIds = new Set<string>();
+  const listeners = new Map<string, Set<VisibilityListener>>();
+
+  return {
+    isVisible: (postId) => visibleIds.has(postId),
+    subscribe: (postId, listener) => {
+      const bucket = listeners.get(postId) ?? new Set<VisibilityListener>();
+      bucket.add(listener);
+      listeners.set(postId, bucket);
+      return () => {
+        bucket.delete(listener);
+        if (!bucket.size) listeners.delete(postId);
+      };
+    },
+    replaceVisibleIds: (next) => {
+      const changed = new Set<string>();
+      visibleIds.forEach((id) => { if (!next.has(id)) changed.add(id); });
+      next.forEach((id) => { if (!visibleIds.has(id)) changed.add(id); });
+      visibleIds = next;
+      changed.forEach((id) => listeners.get(id)?.forEach((listener) => listener()));
+    },
+  };
+};
+
+const useMomentVisibility = (store: MomentVisibilityStore, postId: string) => {
+  const subscribe = useCallback((listener: VisibilityListener) => store.subscribe(postId, listener), [postId, store]);
+  const getSnapshot = useCallback(() => store.isVisible(postId), [postId, store]);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+};
+
+const EMPTY_LINKED_PERSONS: LinkedPerson[] = [];
+
+type MomentPostRowProps = {
+  post: MomentPost;
+  familyId: string;
+  currentUid: string;
+  currentName: string;
+  currentAvatarUrl?: string;
+  memberByUid: Map<string, FamilyMember>;
+  screenFocused: boolean;
+  canModerate: boolean;
+  linkedPersons: LinkedPerson[];
+  visibilityStore: MomentVisibilityStore;
+  onCommentFocus: (input: TextInput | null) => void;
+  onCommentScrollLockChange: (locked: boolean) => void;
+  onEditRequest: (post: MomentPost) => void;
+};
+
+const MomentPostRow = memo(function MomentPostRow({
+  post,
+  familyId,
+  currentUid,
+  currentName,
+  currentAvatarUrl,
+  memberByUid,
+  screenFocused,
+  canModerate,
+  linkedPersons,
+  visibilityStore,
+  onCommentFocus,
+  onCommentScrollLockChange,
+  onEditRequest,
+}: MomentPostRowProps) {
+  const visible = useMomentVisibility(visibilityStore, post.id);
+  return (
+    <View style={styles.feedItemInset}>
+      <MomentCard
+        post={post}
+        familyId={familyId}
+        currentUid={currentUid}
+        currentName={currentName}
+        currentAvatarUrl={currentAvatarUrl}
+        onCommentFocus={onCommentFocus}
+        onCommentScrollLockChange={onCommentScrollLockChange}
+        memberByUid={memberByUid}
+        realtimeEnabled={screenFocused && visible}
+        canModerate={canModerate}
+        linkedPersons={linkedPersons}
+        onEditRequest={onEditRequest}
+      />
+    </View>
+  );
+});
+
 export default function MomentsScreen() {
+  useTabRuntime("moments");
   const router = useRouter();
   const { user, userProfile, activeFamilyId, families } = useAuth();
   const params = useLocalSearchParams<{ personId?: string | string[]; highlightMomentId?: string | string[]; highlightFamilyId?: string | string[] }>();
@@ -94,11 +188,12 @@ export default function MomentsScreen() {
   const [hiddenPosts, setHiddenPosts] = useState<MomentPost[]>([]);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
   const [screenFocused, setScreenFocused] = useState(false);
-  const [appActive, setAppActive] = useState(AppState.currentState === "active");
-  const [visiblePostIds, setVisiblePostIds] = useState<Set<string>>(() => new Set());
   const [highlightedMoment, setHighlightedMoment] = useState<MomentPost | null>(null);
   const [highlightOpening, setHighlightOpening] = useState(false);
   const highlightFetchRef = useRef(0);
+  const visibilityStoreRef = useRef<MomentVisibilityStore | null>(null);
+  if (!visibilityStoreRef.current) visibilityStoreRef.current = createMomentVisibilityStore();
+  const visibilityStore = visibilityStoreRef.current;
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 24, minimumViewTime: 120 }).current;
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const next = new Set<string>();
@@ -106,10 +201,7 @@ export default function MomentsScreen() {
       const feedItem = token.item as FeedItem | undefined;
       if (feedItem?.kind === "post") next.add(feedItem.item.id);
     });
-    setVisiblePostIds((current) => {
-      if (current.size === next.size && [...current].every((id) => next.has(id))) return current;
-      return next;
-    });
+    visibilityStoreRef.current?.replaceVisibleIds(next);
   }).current;
 
   // Phase 8.2C correction: only per-card realtime is focus-gated. The active
@@ -118,12 +210,9 @@ export default function MomentsScreen() {
   // to let the cached feed shell paint before visible-card listeners resume.
   useFocusEffect(useCallback(() => {
     let active = true;
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.markTabPhase("moments", "screen_focus");
     const frame = requestAnimationFrame(() => {
       if (!active) return;
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.markTabPhase("moments", "focus_frame_yielded");
       setScreenFocused(true);
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.markTabPhase("moments", "focused_work_enabled");
     });
     return () => {
       active = false;
@@ -131,12 +220,7 @@ export default function MomentsScreen() {
       setScreenFocused(false);
       setCommentScrollLocked(false);
     };
-  }, []));
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => setAppActive(state === "active"));
-    return () => subscription.remove();
-  }, []);
+  }, [activeFamilyId]));
 
   const membership = families.find((item) => item.familyId === activeFamilyId);
   const canModerate = membership?.role === "admin" || membership?.role === "owner";
@@ -144,7 +228,6 @@ export default function MomentsScreen() {
   const { startTask, finishTask, failTask } = useBloomTaskToast();
   const { confirm, inform } = useBloomDialog();
   const { memberByUid } = useFamilyMembers(activeFamilyId);
-  const { persons, personById, loading: personsLoading } = useFamilyPersonDirectory(activeFamilyId, !!activeFamilyId);
   const consumedPersonParamRef = useRef<string | null>(null);
   const {
     pendingMoments,
@@ -162,31 +245,46 @@ export default function MomentsScreen() {
     retry,
     error,
   } = useFamilyMoments(activeFamilyId);
-  useTabStartupTask("moments", !loading && !personsLoading);
+  const linkedPersonIds = useMemo(
+    () => Array.from(new Set(moments.flatMap((item) => item.personIds || []))),
+    [moments],
+  );
+  const { personById: linkedPersonById } = useFamilyPersonsByIds(activeFamilyId, linkedPersonIds);
+  const personDirectoryEnabled = !!activeFamilyId && (!!requestedPersonId || modal || !!editPost);
+  const { persons, personById: directoryPersonById } = useFamilyPersonDirectory(activeFamilyId, personDirectoryEnabled);
+  const personById = useMemo(() => {
+    if (!directoryPersonById.size) return linkedPersonById;
+    if (!linkedPersonById.size) return directoryPersonById;
+    return new Map([...linkedPersonById, ...directoryPersonById]);
+  }, [directoryPersonById, linkedPersonById]);
+  useTabStartupTask("moments", !loading);
 
 
   useEffect(() => {
-    if (!requestedPersonId || !personById.has(requestedPersonId) || consumedPersonParamRef.current === requestedPersonId) return;
+    if (!requestedPersonId || !directoryPersonById.has(requestedPersonId) || consumedPersonParamRef.current === requestedPersonId) return;
     consumedPersonParamRef.current = requestedPersonId;
     setPersonIds([requestedPersonId]);
     setTimelineAudience("persons");
     setComposerDirty(false);
     setModal(true);
     router.setParams({ personId: undefined } as never);
-  }, [personById, requestedPersonId, router]);
+  }, [directoryPersonById, requestedPersonId, router]);
 
   useEffect(() => {
     setHiddenPosts([]);
     setModerationVisible(false);
-    if (!activeFamilyId || !canModerate || !appActive) return;
+  }, [activeFamilyId, canModerate]);
+
+  useTabLiveEffect("moments", (scope) => {
+    if (!activeFamilyId || !canModerate) return;
     return subscribeSharedRealtime<MomentPost[]>({
       key: `moments.moderation_hidden:${activeFamilyId}`,
       listenerName: "moments.moderation_hidden",
       start: (onData, onError) => momentsService.subscribeHiddenForModeration(activeFamilyId, onData, onError),
-      onData: setHiddenPosts,
-      onError: () => setHiddenPosts([]),
+      onData: (items) => { if (scope.isCurrent()) setHiddenPosts(items); },
+      onError: () => { if (scope.isCurrent()) setHiddenPosts([]); },
     });
-  }, [activeFamilyId, appActive, canModerate]);
+  }, [activeFamilyId, canModerate]);
 
   const restoreHiddenPost = useCallback(async (postId: string) => {
     if (!activeFamilyId || !canModerate || moderationBusyId) return;
@@ -266,7 +364,7 @@ export default function MomentsScreen() {
   }, [activeFamilyId]);
 
 
-  useEffect(() => {
+  useTabLiveEffect("moments", () => {
     if (!activeFamilyId || moments.length === 0) return;
     reconcilePublished(activeFamilyId, moments.map((post) => post.id));
   }, [activeFamilyId, moments, reconcilePublished]);
@@ -295,7 +393,7 @@ export default function MomentsScreen() {
     setTimeout(reveal, Platform.OS === "android" ? 240 : 130);
   }, []);
 
-  useEffect(() => {
+  useTabLiveEffect("moments", () => {
     const onShow = (event: any) => {
       const frame = event.endCoordinates;
       const screenHeight = Dimensions.get("screen").height;
@@ -312,7 +410,12 @@ export default function MomentsScreen() {
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const showSub = Keyboard.addListener(showEvent, onShow);
     const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => { showSub.remove(); hideSub.remove(); };
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      keyboardTopRef.current = null;
+      focusedCommentInputRef.current = null;
+    };
   }, [revealCommentInput]);
 
   const previewColumns = screenWidth >= 430 ? 4 : 3;
@@ -637,6 +740,19 @@ export default function MomentsScreen() {
     });
   };
 
+  const linkedPersonsByPostId = useMemo(() => {
+    const byPostId = new Map<string, LinkedPerson[]>();
+    feedItems.forEach((feedItem) => {
+      if (feedItem.kind !== "post" || !feedItem.item.personIds?.length) return;
+      const linked = feedItem.item.personIds
+        .map((id) => personById.get(id))
+        .filter((person) => !!person)
+        .map((person) => ({ id: person!.id, name: person!.nickname || person!.displayName }));
+      if (linked.length) byPostId.set(feedItem.item.id, linked);
+    });
+    return byPostId;
+  }, [feedItems, personById]);
+
   const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.kind === "pending") {
       return (
@@ -651,25 +767,25 @@ export default function MomentsScreen() {
     }
 
     const post = item.item;
+    if (!activeFamilyId) return null;
     return (
-      <View style={styles.feedItemInset}>
-        <MomentCard
-          post={post}
-          familyId={activeFamilyId!}
-          currentUid={user?.uid || ""}
-          currentName={userProfile?.displayName || "Thành viên"}
-          currentAvatarUrl={userProfile?.avatarUrl || undefined}
-          onCommentFocus={revealCommentInput}
-          onCommentScrollLockChange={setCommentScrollLocked}
-          memberByUid={memberByUid}
-          realtimeEnabled={screenFocused && visiblePostIds.has(post.id)}
-          canModerate={canModerate}
-          linkedPersons={(post.personIds || []).map((id) => personById.get(id)).filter((person) => !!person).map((person) => ({ id: person!.id, name: person!.nickname || person!.displayName }))}
-          onEditRequest={openEditPost}
-        />
-      </View>
+      <MomentPostRow
+        post={post}
+        familyId={activeFamilyId}
+        currentUid={user?.uid || ""}
+        currentName={userProfile?.displayName || "Thành viên"}
+        currentAvatarUrl={userProfile?.avatarUrl || undefined}
+        onCommentFocus={revealCommentInput}
+        onCommentScrollLockChange={setCommentScrollLocked}
+        memberByUid={memberByUid}
+        screenFocused={screenFocused}
+        canModerate={canModerate}
+        linkedPersons={linkedPersonsByPostId.get(post.id) ?? EMPTY_LINKED_PERSONS}
+        visibilityStore={visibilityStore}
+        onEditRequest={openEditPost}
+      />
     );
-  }, [activeFamilyId, canModerate, memberByUid, openEditPost, removePendingMoment, retryMoment, revealCommentInput, user?.uid, userProfile?.avatarUrl, userProfile?.displayName, visiblePostIds, screenFocused, personById]);
+  }, [activeFamilyId, canModerate, linkedPersonsByPostId, memberByUid, openEditPost, removePendingMoment, retryMoment, revealCommentInput, screenFocused, user?.uid, userProfile?.avatarUrl, userProfile?.displayName, visibilityStore]);
 
   const listHeader = useMemo(() => (
     <View style={styles.headerBlock}>
@@ -818,8 +934,8 @@ export default function MomentsScreen() {
           updateCellsBatchingPeriod={80}
           windowSize={5}
           removeClippedSubviews={Platform.OS === "android"}
-          scrollEventThrottle={16}
-          onScroll={(event) => { listOffsetRef.current = event.nativeEvent.contentOffset.y; }}
+          onScrollEndDrag={(event) => { listOffsetRef.current = event.nativeEvent.contentOffset.y; }}
+          onMomentumScrollEnd={(event) => { listOffsetRef.current = event.nativeEvent.contentOffset.y; }}
           onScrollToIndexFailed={(info) => {
             listRef.current?.scrollToOffset({
               offset: Math.max(0, info.averageItemLength * info.index),
@@ -844,8 +960,8 @@ export default function MomentsScreen() {
         </View>
       )}
 
-      <BloomFullScreenFlow
-        visible={!!editPost}
+      {editPost && <BloomFullScreenFlow
+        visible
         eyebrow="SỬA KỶ NIỆM"
         title="Giữ câu chuyện đúng như bạn muốn"
         subtitle="Chỉnh lời nhắn, người liên quan và ảnh/video theo cách bạn muốn lưu giữ lâu dài."
@@ -983,10 +1099,10 @@ export default function MomentsScreen() {
             onPress={() => void saveEditedPost()}
           />
         </BloomKeyboardScreen>
-      </BloomFullScreenFlow>
+      </BloomFullScreenFlow>}
 
-      <BloomFullScreenFlow
-        visible={moderationVisible}
+      {moderationVisible && <BloomFullScreenFlow
+        visible
         eyebrow="KIỂM DUYỆT KỶ NIỆM"
         title="Những bài đang tạm ẩn"
         subtitle="Bloom giữ quyền sửa và xóa cho người tạo; người giữ nhà chỉ giúp chăm sóc phần đang hiện trong Kỷ niệm."
@@ -1030,10 +1146,10 @@ export default function MomentsScreen() {
             )}
           />
         </View>
-      </BloomFullScreenFlow>
+      </BloomFullScreenFlow>}
 
-      <BloomFullScreenFlow
-        visible={modal}
+      {modal && <BloomFullScreenFlow
+        visible
         eyebrow="KHOẢNH KHẮC MỚI"
         title="Chia sẻ một điều đáng nhớ"
         subtitle="Một lời nhắn nhỏ, một tấm ảnh hay một video đều có thể thành ký ức đẹp của cả nhà."
@@ -1164,7 +1280,7 @@ export default function MomentsScreen() {
             onPress={create}
           />
         </BloomKeyboardScreen>
-      </BloomFullScreenFlow>
+      </BloomFullScreenFlow>}
     </ScreenContainer>
   );
 }

@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { familyGraphService } from "../../services/familyGraph/familyGraphService";
 import type { FamilyGraphSnapshot } from "../../types/familyGraph";
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
-import { performanceTestService } from "../../services/performance/performanceTestService";
 
 const EMPTY: FamilyGraphSnapshot = { familyId: "", persons: [], relationships: [] };
 
@@ -56,7 +54,7 @@ export const useFamilyGraph = (
         setLoading(false);
       },
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("graph.snapshot", stop) : stop;
+    return stop;
   }, [enabled, familyId]);
 
   useEffect(() => {

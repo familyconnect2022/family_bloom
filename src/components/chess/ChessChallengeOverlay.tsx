@@ -75,7 +75,7 @@ export function ChessChallengeOverlay({
             </Pressable>
             <Pressable disabled={busy} style={[styles.accept, busy && styles.disabled]} onPress={onAccept}>
               <Ionicons name="flash" size={18} color={COLORS.white} />
-              <Text style={styles.acceptText}>{busy ? "Đang vào ván…" : "Nhận lời"}</Text>
+              <Text style={styles.acceptText}>{busy ? "Đang chuẩn bị bàn cờ…" : "Nhận lời"}</Text>
             </Pressable>
           </View>
 

@@ -5,6 +5,7 @@ export class ChessPersistenceService {
   constructor(private db: Firestore) {}
   gameRef(familyId: string, gameId: string) { return this.db.doc(`families/${familyId}/chessGames/${gameId}`); }
   lockRef(uid: string) { return this.db.doc(`chessActiveUsers/${uid}`); }
+  recoveryRef(uid: string, familyId: string) { return this.db.doc(`chessRecovery/${uid}/families/${familyId}`); }
 
   async createWithLocks(game: PersistedGame) {
     await this.db.runTransaction(async (tx) => {
@@ -22,6 +23,9 @@ export class ChessPersistenceService {
     const batch = this.db.batch();
     batch.set(this.gameRef(game.familyId, game.id), game, { merge: false });
     batch.delete(this.lockRef(game.whiteUid)); batch.delete(this.lockRef(game.blackUid));
+    const recovery = { familyId: game.familyId, gameId: game.id, endedAt: game.endedAt, updatedAt: game.updatedAt };
+    batch.set(this.recoveryRef(game.whiteUid, game.familyId), { ...recovery, uid: game.whiteUid }, { merge: false });
+    batch.set(this.recoveryRef(game.blackUid, game.familyId), { ...recovery, uid: game.blackUid }, { merge: false });
     await batch.commit();
   }
   async load(familyId: string, gameId: string): Promise<PersistedGame | null> {
@@ -31,5 +35,18 @@ export class ChessPersistenceService {
   async getActiveForUid(uid: string) {
     const snap = await this.lockRef(uid).get();
     return snap.exists ? snap.data() as { familyId: string; gameId: string } : null;
+  }
+  async getUnseenResult(uid: string, familyId: string) {
+    const snap = await this.recoveryRef(uid, familyId).get();
+    return snap.exists ? snap.data() as { uid: string; familyId: string; gameId: string; endedAt: string | null; updatedAt: string } : null;
+  }
+  async acknowledgeResult(uid: string, familyId: string, gameId: string) {
+    const ref = this.recoveryRef(uid, familyId);
+    await this.db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const current = snap.data() as { gameId?: string };
+      if (current.gameId === gameId) tx.delete(ref);
+    });
   }
 }

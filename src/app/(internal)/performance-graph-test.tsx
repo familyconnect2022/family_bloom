@@ -7,8 +7,6 @@ import { BloomBackButton } from "../../components/ui/BloomPageComponents";
 import { COLORS } from "../../constants/theme";
 import { createSyntheticFamilyGraph } from "../../services/performance/syntheticFamilyGraph";
 import { performanceTestService } from "../../services/performance/performanceTestService";
-import { finalPerformanceGateService } from "../../services/performance/finalPerformanceGateService";
-import { appWidePerformanceService } from "../../services/performance/appWidePerformanceService";
 import { isPerformanceTestAccount } from "../../constants/performanceTest";
 import { useAuth } from "../../context/AuthContext";
 
@@ -25,21 +23,10 @@ export default function PerformanceGraphTestScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const allowed = isPerformanceTestAccount(user?.email);
-  const params = useLocalSearchParams<{ count?: string; finalGate?: string; gateRunId?: string; gateStep?: string; appSweep?: string; sweepRunId?: string; sweepStep?: string }>();
+  const params = useLocalSearchParams<{ count?: string }>();
   const countParam = Array.isArray(params.count) ? params.count[0] : params.count;
   const parsed = Number(countParam ?? 100);
   const count = ALLOWED.has(parsed) ? parsed : 100;
-  const gateRunId = Array.isArray(params.gateRunId) ? params.gateRunId[0] : params.gateRunId ?? null;
-  const gateStepParam = Array.isArray(params.gateStep) ? params.gateStep[0] : params.gateStep;
-  const gateStep = Number(gateStepParam ?? -1);
-  const gateRequested = (Array.isArray(params.finalGate) ? params.finalGate[0] : params.finalGate) === "1";
-  const gateActive = gateRequested && finalPerformanceGateService.isActiveStep(gateRunId, gateStep, { type: "graph", count });
-  const sweepRunId = Array.isArray(params.sweepRunId) ? params.sweepRunId[0] : params.sweepRunId ?? null;
-  const sweepStepParam = Array.isArray(params.sweepStep) ? params.sweepStep[0] : params.sweepStep;
-  const sweepStep = Number(sweepStepParam ?? -1);
-  const sweepRequested = (Array.isArray(params.appSweep) ? params.appSweep[0] : params.appSweep) === "1";
-  const sweepActive = sweepRequested && appWidePerformanceService.isActiveSyntheticStep(sweepRunId, sweepStep, { type: "graph", count });
-  const autoActive = gateActive || sweepActive;
   const [prepared, setPrepared] = useState<PreparedGraph | null>(null);
   const [rendered, setRendered] = useState({ current: 0, total: count });
   const [summary, setSummary] = useState("Đang chuẩn bị dữ liệu giả…");
@@ -49,46 +36,17 @@ export default function PerformanceGraphTestScreen() {
   const pendingProgressRef = useRef({ current: 0, total: count });
   const progressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastProgressUiAtRef = useRef(0);
-  const gateAdvancedRef = useRef(false);
 
-  const advanceAutomation = useCallback((status: "PASS" | "FAIL", detail: string) => {
-    if (gateAdvancedRef.current) return;
-    if (gateActive && gateRunId) {
-      const nextRoute = finalPerformanceGateService.markStep(gateRunId, gateStep, status, detail);
-      gateAdvancedRef.current = true;
-      if (nextRoute) setTimeout(() => router.replace(nextRoute as never), 180);
-      return;
-    }
-    if (sweepActive && sweepRunId) {
-      // The global Phase 15B driver owns navigation between sweep steps. Keeping
-      // route changes in one place avoids two replace() calls racing each other.
-      appWidePerformanceService.markSyntheticStep(sweepRunId, sweepStep, status, detail);
-      gateAdvancedRef.current = true;
-    }
-  }, [gateActive, gateRunId, gateStep, router, sweepActive, sweepRunId, sweepStep]);
 
-  const handleBack = useCallback(() => {
-    if (gateActive && gateRunId) {
-      finalPerformanceGateService.abort(gateRunId, `Người dùng dừng tại Graph ${count}`);
-      router.replace({ pathname: "/performance-test", params: { finalGate: "aborted", gateRunId } } as never);
-      return;
-    }
-    if (sweepActive && sweepRunId) {
-      appWidePerformanceService.abort(sweepRunId, `Người dùng dừng tại Graph ${count}`);
-      router.replace({ pathname: "/performance-test", params: { appSweep: "aborted", sweepRunId } } as never);
-      return;
-    }
-    router.back();
-  }, [count, gateActive, gateRunId, router, sweepActive, sweepRunId]);
+  const handleBack = useCallback(() => router.back(), [router]);
 
   useEffect(() => {
     if (!allowed) {
-      router.replace("/(tabs)/play" as never);
+      router.replace("/settings" as never);
       return;
     }
     let active = true;
     completedRef.current = false;
-    gateAdvancedRef.current = false;
     firstPaintElapsedRef.current = null;
     pendingFullMountRef.current = null;
     pendingProgressRef.current = { current: 0, total: count };
@@ -124,14 +82,6 @@ export default function PerformanceGraphTestScreen() {
     };
   }, [allowed, count, router]);
 
-  useEffect(() => {
-    if (!autoActive) return undefined;
-    const timer = setTimeout(() => {
-      performanceTestService.finish("graph_test", "error");
-      advanceAutomation("FAIL", `timeout > 25s ở Graph ${count}`);
-    }, 25_000);
-    return () => clearTimeout(timer);
-  }, [advanceAutomation, autoActive, count]);
 
   const finishFullMount = useCallback((current: number, total: number, elapsed: number) => {
     if (!prepared || completedRef.current) return;
@@ -147,9 +97,8 @@ export default function PerformanceGraphTestScreen() {
     }
     performanceTestService.mark("graph_test", "all_people_mounted");
     performanceTestService.finish("graph_test");
-    setSummary(`Đã mount ${current}/${total} Person trong ${elapsed} ms.${autoActive ? " Bloom sẽ tự chuyển bài tiếp theo…" : " Giờ hãy pan/pinch khoảng 10 giây để cảm nhận."}`);
-    advanceAutomation("PASS", `full mount ${elapsed}ms · ${current}/${total} Person`);
-  }, [advanceAutomation, autoActive, prepared]);
+    setSummary(`Đã mount ${current}/${total} Person trong ${elapsed} ms. Giờ hãy pan/pinch khoảng 10 giây để cảm nhận.`);
+  }, [prepared]);
 
   useEffect(() => {
     if (!prepared) return;
@@ -251,7 +200,7 @@ export default function PerformanceGraphTestScreen() {
       </View>
 
       <Pressable onPress={handleBack} style={({ pressed }) => [styles.resultButton, pressed && styles.pressed]}>
-        <Text style={styles.resultText}>{autoActive ? "Dừng test tự động" : "Xem báo cáo đo"}</Text>
+        <Text style={styles.resultText}>Quay lại Developer Tools</Text>
       </Pressable>
     </View>
   );

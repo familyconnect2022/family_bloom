@@ -3,6 +3,7 @@ import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
 import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
 import { ChessDomainError, type ChessTimeControl, type ClientGameState, type PublicGameState } from "../chess/chessTypes.js";
+import { RematchProposalStore } from "../chess/rematchProposalStore.js";
 import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 
@@ -28,9 +29,13 @@ const E = {
   drawAccept: "chess:draw:accept",
   drawReject: "chess:draw:reject",
   gameRematch: "chess:game:rematch",
+  gameRematchCancel: "chess:game:rematch:cancel",
+  gameReady: "chess:game:ready",
   gameResync: "chess:game:resync",
   gameBoardPresence: "chess:game:boardPresence",
   sessionGetActive: "chess:session:getActive",
+  sessionRecover: "chess:session:recover",
+  gameResultAck: "chess:game:resultAck",
   testBotInvite: "chess:test:bot:invite",
 } as const;
 
@@ -56,7 +61,7 @@ type Bucket = { count: number; resetAt: number };
 const memberCache = new Map<string, { ok: boolean; expires: number }>();
 const memberInFlight = new Map<string, Promise<boolean>>();
 const invites = new Map<string, Invite>();
-const rematchVotes = new Map<string, Set<string>>();
+const rematchVotes = new RematchProposalStore(45_000);
 const buckets = new Map<string, Bucket>();
 
 const ALLOWED_TIME_CONTROLS = new Set(["180000:2000", "300000:0", "600000:0", "600000:5000", "unlimited"]);
@@ -317,6 +322,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     }
   }
 
+
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -347,12 +353,28 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       return state;
     };
 
+    const leaveBoundGameForFamily = async (familyId: string, markAway = true) => {
+      const gameId = socket.data.gameId;
+      if (!gameId || socket.data.gameFamilyId !== familyId) return;
+      if (markAway) {
+        try { await manager.setBoardVisible(gameId, uid, false); }
+        catch (error) {
+          if (!(error instanceof ChessDomainError) || !["CHESS_GAME_FINISHED", "CHESS_GAME_NOT_FOUND"].includes(error.code)) throw error;
+        }
+      }
+      manager.disconnect(gameId, uid);
+      socket.leave(`chess:game:${gameId}`);
+      delete socket.data.gameId;
+      delete socket.data.gameFamilyId;
+    };
+
     socket.on(E.appJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`app:${uid}`, 12, 10_000);
       const familyId = asId(asRecord(raw).familyId, "familyId");
       await requireMember(uid, familyId);
       const previousFamilyId = socket.data.appFamilyId;
       if (previousFamilyId && previousFamilyId !== familyId) {
+        await leaveBoundGameForFamily(previousFamilyId, true);
         socket.leave(`chess:family:${previousFamilyId}`);
         if (socket.data.lobbyFamilyId === previousFamilyId) {
           socket.leave(`chess:lobby:${previousFamilyId}`);
@@ -370,6 +392,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
 
     socket.on(E.appLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {
       const familyId = asId(asRecord(raw).familyId, "familyId");
+      await leaveBoundGameForFamily(familyId, true);
       if (socket.data.appFamilyId === familyId) {
         socket.leave(`chess:family:${familyId}`);
         delete socket.data.appFamilyId;
@@ -389,7 +412,10 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       await requireMember(uid, familyId);
       if (socket.data.appFamilyId !== familyId) {
         const previousAppFamilyId = socket.data.appFamilyId;
-        if (previousAppFamilyId) socket.leave(`chess:family:${previousAppFamilyId}`);
+        if (previousAppFamilyId) {
+          await leaveBoundGameForFamily(previousAppFamilyId, true);
+          socket.leave(`chess:family:${previousAppFamilyId}`);
+        }
         socket.data.appFamilyId = familyId;
         await socket.join(`chess:family:${familyId}`);
         if (previousAppFamilyId && previousAppFamilyId !== familyId) refreshPresenceSoon(previousAppFamilyId);
@@ -569,14 +595,47 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       return { gameId: active.gameId };
     }));
 
+    socket.on(E.sessionRecover, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      await requireMember(uid, familyId);
+      const active = await persistence.getActiveForUid(uid);
+      if (active?.familyId === familyId) return { kind: "active", gameId: active.gameId };
+
+      const unseen = await persistence.getUnseenResult(uid, familyId);
+      if (!unseen) return { kind: "none" };
+      const stored = await persistence.load(familyId, unseen.gameId);
+      const belongs = !!stored && (stored.whiteUid === uid || stored.blackUid === uid);
+      if (!stored || !belongs || stored.status !== "finished") {
+        await persistence.acknowledgeResult(uid, familyId, unseen.gameId);
+        return { kind: "none" };
+      }
+      return { kind: "finished_unseen", gameId: unseen.gameId };
+    }));
+
+    socket.on(E.gameResultAck, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      const gameId = asId(payload.gameId, "gameId");
+      await requireMember(uid, familyId);
+      const stored = await persistence.load(familyId, gameId);
+      if (!stored) throw new ChessDomainError("CHESS_GAME_NOT_FOUND");
+      if (stored.whiteUid !== uid && stored.blackUid !== uid) throw new ChessDomainError("CHESS_NOT_PLAYER");
+      if (stored.status !== "finished") throw new ChessDomainError("CHESS_INVALID_REQUEST");
+      await persistence.acknowledgeResult(uid, familyId, gameId);
+      return { acknowledged: true };
+    }));
+
     socket.on(E.gameJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`join:${uid}`, 15, 20_000);
       const payload = asRecord(raw);
       const familyId = asId(payload.familyId, "familyId");
       const gameId = asId(payload.gameId, "gameId");
       await requireMember(uid, familyId);
+      if (socket.data.gameId && socket.data.gameId !== gameId && socket.data.gameFamilyId) {
+        await leaveBoundGameForFamily(socket.data.gameFamilyId, true);
+      }
       const state = await manager.join(familyId, gameId, uid);
-      if (socket.data.gameId && socket.data.gameId !== gameId) socket.leave(`chess:game:${socket.data.gameId}`);
       socket.data.gameId = gameId;
       socket.data.gameFamilyId = familyId;
       await socket.join(`chess:game:${gameId}`);
@@ -589,6 +648,17 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       limit(`resync:${uid}`, 12, 10_000);
       const gameId = asId(asRecord(raw).gameId, "gameId");
       return toClientGameState(await requireGameMembership(gameId));
+    }));
+
+    socket.on(E.gameReady, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      const current = await requireGameMembership(gameId);
+      const next = await manager.markReady(gameId, uid, requestId);
+      if (next.status === "active") scheduleTestBotAction(next);
+      if (current.status !== next.status) await emitPresence(next.familyId);
+      return toClientGameState(next);
     }));
 
     socket.on(E.gameBoardPresence, (raw: unknown, ack: Ack) => safe(ack, async () => {
@@ -642,16 +712,34 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const gameId = asId(payload.gameId, "gameId");
       const old = await requireGameMembership(gameId);
       if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
-      // Human-vs-human rematches still respect quiet hours; Bloom Bot rematches are allowed anytime.
       if (!old.testBotUid && !isFamilyGameCreationOpen()) {
-        rematchVotes.delete(gameId);
+        rematchVotes.clear(gameId);
         throw new ChessDomainError("CHESS_QUIET_HOURS", "Nhà mình nghỉ ngơi nhé 🌙 Mình hẹn nhau chơi tiếp từ 6:00 sáng.");
       }
+
+      const existingActive = await persistence.getActiveForUid(uid);
+      if (existingActive && existingActive.gameId !== gameId) {
+        const stored = await persistence.load(existingActive.familyId, existingActive.gameId);
+        if (stored?.recentRequestIds.includes(requestId)) {
+          const existing = await manager.join(existingActive.familyId, existingActive.gameId, uid);
+          return { waiting: false, gameId: existing.gameId, state: toClientGameState(existing) };
+        }
+        throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      }
+
       if (old.testBotUid) {
         if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
         const humanUid = old.whiteUid === old.testBotUid ? old.blackUid : old.whiteUid;
         if (uid !== humanUid) invalid();
-        const next = await manager.create(old.familyId, humanUid, old.testBotUid, old.timeControl, requestId, { testBotUid: old.testBotUid });
+
+        const next = await manager.create(
+          old.familyId,
+          humanUid,
+          old.testBotUid,
+          old.timeControl,
+          requestId,
+          { testBotUid: old.testBotUid, whiteUid: old.blackUid, blackUid: old.whiteUid },
+        );
         for (const playerSocket of socketsForUidInFamily(humanUid, old.familyId)) {
           playerSocket.leave(`chess:game:${gameId}`);
           playerSocket.data.gameId = next.gameId;
@@ -659,17 +747,22 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           await playerSocket.join(`chess:game:${next.gameId}`);
           playerSocket.emit(E.gameState, toClientGameState(next));
         }
-        scheduleTestBotAction(next);
         await emitPresence(old.familyId);
         return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
       }
-      const votes = rematchVotes.get(gameId) ?? new Set<string>();
-      votes.add(uid);
-      rematchVotes.set(gameId, votes);
-      if (votes.size < 2) return { waiting: true };
 
-      rematchVotes.delete(gameId);
-      const next = await manager.create(old.familyId, old.whiteUid, old.blackUid, old.timeControl);
+      const vote = rematchVotes.vote(gameId, uid, requestId);
+      if (!vote.ready) return { waiting: true, expiresAt: vote.expiresAt };
+
+      rematchVotes.clear(gameId);
+      const next = await manager.create(
+        old.familyId,
+        old.whiteUid,
+        old.blackUid,
+        old.timeControl,
+        requestId,
+        { whiteUid: old.blackUid, blackUid: old.whiteUid, additionalRequestIds: vote.requestIds.filter((id) => id !== requestId) },
+      );
       for (const playerUid of [old.whiteUid, old.blackUid]) {
         for (const playerSocket of socketsForUidInFamily(playerUid, old.familyId)) {
           playerSocket.leave(`chess:game:${gameId}`);
@@ -681,6 +774,16 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       }
       await emitPresence(old.familyId);
       return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
+    }));
+
+    socket.on(E.gameRematchCancel, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      const old = await requireGameMembership(gameId);
+      if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
+      rematchVotes.cancel(gameId, uid);
+      return { cancelled: true };
     }));
 
     socket.on("disconnect", () => {

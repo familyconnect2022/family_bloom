@@ -4,7 +4,6 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import Animated, {
   Easing,
   cancelAnimation,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -250,18 +249,28 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
   // preparation shield is still covering the board. This avoids one large
   // decode/native-node spike on Android without weakening the real readiness
   // gate: onReady still waits for every current piece asset plus two frames.
+  const initialPieceCountRef = useRef(pieces.length);
+  const initialPaintCompleteRef = useRef(false);
   const [pieceRenderCount, setPieceRenderCount] = useState(() => Math.min(8, pieces.length));
 
+  // Stage ONLY the first native image paint. `pieces.length` changes whenever a
+  // capture happens; the old dependency reset renderCount to 8 after every
+  // capture, briefly removing most of the board and producing the severe
+  // in-game flash reported on Android.
   useEffect(() => {
+    const initialCount = initialPieceCountRef.current;
     let frame1: number | null = null;
     let frame2: number | null = null;
     let frame3: number | null = null;
-    setPieceRenderCount(Math.min(8, pieces.length));
+    setPieceRenderCount(Math.min(8, initialCount));
     frame1 = requestAnimationFrame(() => {
-      setPieceRenderCount(Math.min(18, pieces.length));
+      setPieceRenderCount(Math.min(18, initialCount));
       frame2 = requestAnimationFrame(() => {
-        setPieceRenderCount(Math.min(26, pieces.length));
-        frame3 = requestAnimationFrame(() => setPieceRenderCount(pieces.length));
+        setPieceRenderCount(Math.min(26, initialCount));
+        frame3 = requestAnimationFrame(() => {
+          initialPaintCompleteRef.current = true;
+          setPieceRenderCount(initialCount);
+        });
       });
     });
     return () => {
@@ -269,6 +278,12 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
       if (frame2 != null) cancelAnimationFrame(frame2);
       if (frame3 != null) cancelAnimationFrame(frame3);
     };
+  }, []);
+
+  // After the initial paint, captures/restores update the exact count directly.
+  // Never replay the 8 -> 18 -> 26 staging sequence during a live round.
+  useEffect(() => {
+    if (initialPaintCompleteRef.current) setPieceRenderCount(pieces.length);
   }, [pieces.length]);
 
   const diagonals = useMemo(() => {
@@ -321,11 +336,14 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
   }, [onTap, step]);
 
   const tapGesture = useMemo(() => Gesture.Tap()
+    // Xiangqi tap handling mutates React game state, so make the execution
+    // domain explicit instead of relying on RNGH/Reanimated auto-workletization.
+    .runOnJS(true)
     .enabled(runtimeActive)
     .maxDuration(420)
     .maxDistance(16)
     .onEnd((event, success) => {
-      if (success) runOnJS(handleBoardTap)(event.x, event.y);
+      if (success) handleBoardTap(event.x, event.y);
     }), [handleBoardTap, runtimeActive]);
 
   return (

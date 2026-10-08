@@ -45,9 +45,9 @@ check('visible session query is bounded', service.includes('limit(SESSION_LIMIT)
 check('public response listener bounded', service.includes('where("public", "==", true)') && service.includes('limit(60)'));
 check('no per-session listener on home hub', hub.includes('homeGameService.watchVisible') && !hub.includes('watchSession'));
 check('shared realtime registry used for hub', hub.includes('subscribeSharedRealtime'));
-check('simulation supports 10 50 100', hub.includes('[0, 10, 50, 100]'));
-check('simulation is RAM-only helper', service.includes('simulated(') && !service.match(/simulated[\s\S]{0,2500}(setDoc|writeBatch|runTransaction)/));
-check('simulated sessions cap at 100', service.includes('Math.min(count, 100)'));
+check('home games hub no longer exposes simulation size controls', !hub.includes('[0, 10, 50, 100]')); 
+check('home game service no longer ships simulated-session helper', !service.includes('simulated('));
+check('home game service contains no simulated-session cap branch', !service.includes('Math.min(count, 100)'));
 check('responses owned by own uid in rules', rules.includes('request.auth.uid == uid') && rules.includes('match /responses/{uid}'));
 check('hidden responses only readable after reveal', rules.includes("resource.data.public == true || parentGame().status in ['revealed','completed']"));
 check('secret create uses getAfter with session batch', rules.includes('function parentGameAfter()') && rules.includes('parentGameAfter().createdByUid'));

@@ -15,6 +15,7 @@ import { useChessLobby } from "../../hooks/chess/useChessLobby";
 import { CHESS_ERROR_COPY, CHESS_TIME_CONTROLS, type ChessTimeControl } from "../../types/chess";
 import { getHomeGamePlayWindow } from "../../services/games/gameRoomPolicy";
 import { safeRouterBack } from "../../utils/safeRouterBack";
+import { showChessSurfaceFull } from "../../services/chess/chessSurfaceStore";
 
 export default function ChessLobbyScreen() {
   const router = useRouter();
@@ -38,11 +39,9 @@ export default function ChessLobbyScreen() {
   }, []);
 
   useEffect(() => {
-    const gameId = lobby.pendingAwayResultGameId || lobby.activeGameId;
-    if (gameId) {
-      router.replace({ pathname: "/chess-game/[gameId]" as never, params: { gameId } } as never);
-    }
-  }, [lobby.activeGameId, lobby.pendingAwayResultGameId, router]);
+    const gameId = lobby.pendingResultGameId || lobby.activeGameId;
+    if (gameId) showChessSurfaceFull(gameId);
+  }, [lobby.activeGameId, lobby.pendingResultGameId]);
 
   const sendChallenge = async (uid: string) => {
     const latest = getHomeGamePlayWindow();
@@ -157,7 +156,7 @@ export default function ChessLobbyScreen() {
                 onPress={() => void summonTestBot()}
                 style={[styles.challenge, (lobby.connection !== "ready" || !!lobby.outgoingInvite || !!lobby.invite) && styles.disabled]}
               >
-                <Text style={styles.challengeText}>Test thách đấu 5s</Text>
+                <Text style={styles.challengeText}>Thách đấu Bloom Bot</Text>
               </Pressable>
             </BloomCard>
           ) : null}

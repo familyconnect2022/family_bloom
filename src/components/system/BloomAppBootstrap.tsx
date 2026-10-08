@@ -3,8 +3,6 @@ import { Animated, ActivityIndicator, StyleSheet, Text, View } from "react-nativ
 import { Image } from "expo-image";
 import { COLORS } from "@/components/ui/BloomButtonComponents";
 import { BLOOM_MOTION } from "@/constants/motion";
-import { PERFORMANCE_TEST_BUILD } from "@/constants/performanceTest";
-import { performanceTestService } from "@/services/performance/performanceTestService";
 
 type Props = { ready: boolean; message?: string };
 
@@ -20,9 +18,6 @@ export function BloomAppBootstrap({ ready, message }: Props) {
       opacity.stopAnimation();
       opacity.setValue(1);
       setVisible(true);
-      if (PERFORMANCE_TEST_BUILD) {
-        requestAnimationFrame(() => performanceTestService.mark("family_switch", "bootstrap_frame"));
-      }
       return;
     }
 

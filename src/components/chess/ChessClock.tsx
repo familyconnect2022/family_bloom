@@ -70,17 +70,17 @@ export const ChessClock = React.memo(function ChessClock({
 
 const styles = StyleSheet.create({
   box: {
-    minWidth: 94,
-    minHeight: 54,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    minWidth: 72,
+    minHeight: 38,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1.2,
     alignItems: "center",
     justifyContent: "center",
   },
   time: {
-    fontSize: 21,
+    fontSize: 16,
     fontWeight: "900",
     fontVariant: ["tabular-nums"],
   },

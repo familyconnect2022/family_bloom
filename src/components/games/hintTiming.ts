@@ -1,7 +1,7 @@
 export type HintGridPoint = { col: number; row: number };
 
-export const HINT_REVEAL_BUDGET_MS = 200;
-export const HINT_POP_MS = 72;
+export const HINT_REVEAL_BUDGET_MS = 96;
+export const HINT_POP_MS = 44;
 
 const sign = (value: number) => value === 0 ? 0 : value > 0 ? 1 : -1;
 
@@ -12,10 +12,10 @@ function isRayMove(dx: number, dy: number) {
 /**
  * Family Bloom hint scheduler.
  *
- * A fixed 200 ms budget is shared by the WHOLE legal-hint set. Linear rays
+ * A fixed sub-100 ms budget is shared by the WHOLE legal-hint set. Linear rays
  * (rook/queen/bishop and Xiangqi rook/cannon directions) start in parallel;
  * only squares inside the same ray cascade outward. This prevents four rook
- * rays from becoming 4 x 200 ms while preserving the visual "wave" from the
+ * rays from becoming a long serial reveal while preserving the visual "wave" from the
  * selected piece toward farther squares.
  */
 export function buildParallelHintDelays<T extends HintGridPoint>(

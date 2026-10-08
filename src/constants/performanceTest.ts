@@ -1,10 +1,8 @@
 import { INTERNAL_TOOLS_ENABLED } from "./buildMode";
 
-/**
- * Performance instrumentation stays in source as a regression guard, but its
- * routes and UI are development-only. Release builds always resolve this false.
- */
 export const PERFORMANCE_TEST_BUILD = INTERNAL_TOOLS_ENABLED;
+export const FAMILY_BLOOM_DEV_EMAIL = "huynh235@gmail.com";
 
-/** Performance Lab is available to signed-in users only in a development build. */
-export const isPerformanceTestAccount = (_email?: string | null) => INTERNAL_TOOLS_ENABLED;
+/** Internal tools are available only in Debug/internal builds to the dedicated developer account. */
+export const isPerformanceTestAccount = (email?: string | null) =>
+  INTERNAL_TOOLS_ENABLED && (email ?? "").trim().toLowerCase() === FAMILY_BLOOM_DEV_EMAIL;

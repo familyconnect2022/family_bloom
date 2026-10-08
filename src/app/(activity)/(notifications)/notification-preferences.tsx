@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
-import { BloomButton, BloomSwitch } from "../../../components/ui/BloomButtonComponents";
+import { BloomSwitch } from "../../../components/ui/BloomButtonComponents";
 import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
 import { useBloomToast } from "../../../components/ui/BloomToast";
 import { COLORS } from "../../../constants/theme";
@@ -80,20 +80,6 @@ export default function NotificationPreferencesScreen() {
     }
   };
 
-
-  const sendLocalTest = async () => {
-    if (!user) return;
-    try {
-      const result = await localNotificationService.scheduleTest(userProfile?.activeFamilyId ?? null);
-      if (!result.permissionGranted) {
-        showToast({ title: "Android chưa cho phép thông báo", message: "Hãy bật quyền Thông báo cho Family Bloom rồi thử lại.", type: "warning", duration: 3000 });
-        return;
-      }
-      showToast({ title: "Đã hẹn lời nhắc thử", message: "Đưa app xuống nền. Khoảng 8 giây nữa Bloom sẽ nhắc bạn.", type: "info", duration: 3200 });
-    } catch {
-      showToast({ title: "Chưa tạo được lời nhắc thử", message: "Thử build lại Android rồi kiểm tra quyền Thông báo.", type: "warning", duration: 3000 });
-    }
-  };
 
   const updatePreference = async (key: keyof SmartReminderPreferences, value: boolean) => {
     if (!user || savingKey) return;
@@ -172,14 +158,6 @@ export default function NotificationPreferencesScreen() {
           ))}
         </View>
 
-        <BloomButton
-          title="Gửi lời nhắc thử sau 8 giây"
-          variant="outline"
-          icon="notifications-outline"
-          onPress={() => void sendLocalTest()}
-          customStyle={styles.testButton}
-        />
-
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={18} color={COLORS.secondaryText} />
           <Text style={styles.noteText}>Lời thì thầm “Người thân” chỉ báo đúng người được chọn. Lời gửi “Cả nhà” không phát thông báo hàng loạt. Một số thông báo vẫn cần kết nối mạng để đến ngay khi app đã đóng hẳn.</Text>
@@ -206,7 +184,6 @@ const styles = StyleSheet.create({
   title: { color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
   description: { marginTop: 3, color: COLORS.secondaryText, fontSize: 10.3, lineHeight: 15, fontWeight: "600" },
   saving: { opacity: 0.55 },
-  testButton: { marginTop: 2 },
   note: { marginTop: 15, borderRadius: 18, backgroundColor: COLORS.softSurface, padding: 13, flexDirection: "row", gap: 9, alignItems: "flex-start" },
   noteText: { flex: 1, color: COLORS.secondaryText, fontSize: 10.3, lineHeight: 15, fontWeight: "600" },
 });

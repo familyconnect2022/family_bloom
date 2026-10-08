@@ -14,10 +14,8 @@ import {
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { Easing, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { APP_CONFIG_DEFAULTS } from "../../constants/appConfiguration";
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
 import { COLORS } from "../../constants/theme";
 import type { FamilyGraphVietnameseRelationship } from "../../types/familyGraphQuery";
-import { performanceTestService } from "../../services/performance/performanceTestService";
 import { getColorByName } from "../../utils";
 import { BloomChipButton } from "../ui/BloomButtonComponents";
 import { BloomTextInput } from "../ui/BloomInputComponents";
@@ -678,6 +676,7 @@ export function FamilyGraphPrototype({
     .minDistance(3)
     .maxPointers(1)
     .onStart(() => {
+      "worklet";
       // Một phiên pan chỉ hợp lệ nếu nó thực sự bắt đầu khi không pinch.
       // Nếu user đang kéo 1 ngón rồi đặt ngón thứ hai để pinch, pinch sẽ
       // invalidate phiên pan này để ngón còn lại không "đẩy" canvas khi thả pinch.
@@ -690,11 +689,13 @@ export function FamilyGraphPrototype({
       }
     })
     .onUpdate((event) => {
+      "worklet";
       if (pinchActive.value !== 0 || panSessionValid.value === 0) return;
       canvasTranslateX.value = panStartX.value + event.translationX;
       canvasTranslateY.value = panStartY.value + event.translationY;
     })
     .onFinalize(() => {
+      "worklet";
       panSessionValid.value = 0;
     }), [
       canvasTranslateX,
@@ -707,6 +708,7 @@ export function FamilyGraphPrototype({
 
   const pinchGesture = useMemo(() => Gesture.Pinch()
     .onStart((event) => {
+      "worklet";
       pinchActive.value = 1;
       panSessionValid.value = 0;
 
@@ -725,6 +727,7 @@ export function FamilyGraphPrototype({
         + (event.focalY - canvasTranslateY.value - canvasCenterY) / startScale;
     })
     .onUpdate((event) => {
+      "worklet";
       // Một số thiết bị Android có thể phát thêm một update khi một trong hai
       // ngón vừa rời màn hình. focal của frame đó có thể nhảy về ngón còn lại
       // và làm canvas bị "đẩy" đúng lúc người dùng buông tay. Bỏ qua frame
@@ -749,6 +752,7 @@ export function FamilyGraphPrototype({
         - nextScale * (pinchAnchorCanvasY.value - canvasCenterY);
     })
     .onFinalize(() => {
+      "worklet";
       // QUAN TRỌNG: tuyệt đối không ghi lại scale/translate tại đây.
       // Giá trị frame cuối đã là trạng thái cuối; thả tay chỉ kết thúc gesture.
       pinchActive.value = 0;
@@ -883,10 +887,6 @@ export function FamilyGraphPrototype({
     setFocusOverlay(null);
   }, [focusOverlayContentProgress, focusOverlayProgress]);
 
-  const finishBranchOpenPerf = useCallback(() => {
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.finish("branch_open");
-  }, []);
-
   const getPersonScreenFrame = useCallback((personId: string) => {
     const cached = lastPressedPersonFrameRef.current;
     if (cached?.personId === personId) return cached;
@@ -1001,10 +1001,6 @@ export function FamilyGraphPrototype({
     // transient sheets; view mode, visible nodes/lines, pan and zoom are untouched.
     setDetailPersonId(null);
     setSearchVisible(false);
-    if (PERFORMANCE_TEST_BUILD) {
-      performanceTestService.start("branch_open", personName);
-      performanceTestService.mark("branch_open", "overlay_requested");
-    }
 
     focusOverlayStartTranslateX.value = geometry.dx;
     focusOverlayStartTranslateY.value = geometry.dy;
@@ -1032,14 +1028,13 @@ export function FamilyGraphPrototype({
     // Phase 14N: native Modal visibility is the hard boundary between shell and
     // branch data. The Focus shell must become visible first, even if extracting
     // or laying out a large branch blocks the JS thread afterwards.
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.mark("branch_open", "portal_shown");
     requestAnimationFrame(() => {
       if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
       focusOverlayProgress.value = withTiming(
         1,
         { duration: durationMs, easing: Easing.bezier(0.16, 1, 0.3, 1) },
         (finished) => {
-          if (finished && PERFORMANCE_TEST_BUILD) runOnJS(finishBranchOpenPerf)();
+
         },
       );
     });

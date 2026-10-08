@@ -131,6 +131,10 @@ export function applyChessMoveDelta(current: ChessGameState, delta: ChessMoveDel
 }
 
 export type ChessPresence = { uid: string; status: ChessPresenceStatus };
+export type ChessSessionRecovery =
+  | { kind: "active"; gameId: string }
+  | { kind: "finished_unseen"; gameId: string }
+  | { kind: "none" };
 export type ChessInviteRejected = { inviteId: string; byUid: string };
 export type ChessInvite = {
   inviteId: string;
@@ -155,10 +159,10 @@ export type ChessAck<T = undefined> = T extends undefined
   : { ok: true; data: T } | { ok: false; errorCode: ChessErrorCode; message?: string };
 
 export const CHESS_TIME_CONTROLS: { id: string; label: string; value: ChessTimeControl }[] = [
-  { id: "3+2", label: "3 + 2", value: { kind: "clocked", initialMs: 180_000, incrementMs: 2_000 } },
-  { id: "5+0", label: "5 + 0", value: { kind: "clocked", initialMs: 300_000, incrementMs: 0 } },
-  { id: "10+0", label: "10 + 0", value: { kind: "clocked", initialMs: 600_000, incrementMs: 0 } },
-  { id: "10+5", label: "10 + 5", value: { kind: "clocked", initialMs: 600_000, incrementMs: 5_000 } },
+  { id: "3+2", label: "Siêu nhanh · 3+2", value: { kind: "clocked", initialMs: 180_000, incrementMs: 2_000 } },
+  { id: "5+0", label: "Nhanh · 5+0", value: { kind: "clocked", initialMs: 300_000, incrementMs: 0 } },
+  { id: "10+0", label: "Nhanh · 10+0", value: { kind: "clocked", initialMs: 600_000, incrementMs: 0 } },
+  { id: "10+5", label: "Nhanh +5 · 10+5", value: { kind: "clocked", initialMs: 600_000, incrementMs: 5_000 } },
   { id: "unlimited", label: "Không giờ", value: { kind: "unlimited", initialMs: null, incrementMs: 0 } },
 ];
 
@@ -204,10 +208,14 @@ export const CHESS_EVENTS = {
   drawAccept: "chess:draw:accept",
   drawReject: "chess:draw:reject",
   gameRematch: "chess:game:rematch",
+  gameRematchCancel: "chess:game:rematch:cancel",
+  gameReady: "chess:game:ready",
   gameOver: "chess:game:gameOver",
   gameResync: "chess:game:resync",
   gameBoardPresence: "chess:game:boardPresence",
   sessionGetActive: "chess:session:getActive",
+  sessionRecover: "chess:session:recover",
+  gameResultAck: "chess:game:resultAck",
   testBotInvite: "chess:test:bot:invite",
   serverError: "server:error",
 } as const;

@@ -157,7 +157,14 @@ export function BloomGameBottomModal({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
 
-  if (!mounted) return null;
+  // Android can keep an elevated/transparent native layer in the compositor
+  // even when its animated opacity has reached zero. That hidden layer was
+  // observed masking game boards and adding GPU work after leaving the route.
+  // A blurred route must therefore own no modal surface at all. Likewise, a
+  // normal non-kept sheet disappears from the native tree immediately once it
+  // is no longer visible; opening motion stays animated, closing is intentionally
+  // deterministic rather than risking an invisible elevated layer.
+  if (suspended || !mounted || (!visible && !keepMounted)) return null;
 
   return (
     <View

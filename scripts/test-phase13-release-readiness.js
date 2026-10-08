@@ -14,7 +14,12 @@ const token = read("src/services/push/pushTokenService.ts");
 const hero = read("src/components/ui/BloomHeroHeader.tsx");
 const flags = read("src/constants/featureFlags.ts");
 const app = JSON.parse(read("app.json"));
-check("Internal tools are __DEV__ gated", build.includes("__DEV__") && perf.includes("INTERNAL_TOOLS_ENABLED") && !perf.includes("huynh235"), "No hard-coded developer account gate in release policy.");
+check("Internal tools are Debug-only and exact developer-account gated",
+  build.includes("__DEV__")
+  && perf.includes("INTERNAL_TOOLS_ENABLED")
+  && perf.includes('FAMILY_BLOOM_DEV_EMAIL = "huynh235@gmail.com"')
+  && /INTERNAL_TOOLS_ENABLED\s*&&/.test(perf),
+  "Developer Tools must require both the internal build boundary and the dedicated developer email.");
 check("E2E harness is internal-only", e2e.includes("INTERNAL_TOOLS_ENABLED"), "E2E controls are disabled in release.");
 check("Push token registry wired", bridge.includes("pushTokenService") && token.includes("getDevicePushTokenAsync") && rules.includes("match /pushTokens/{tokenId}") && cloudRules.includes("match /pushTokens/{tokenId}"), "Native token registration + private Firestore schema in direct/cloud rule sets.");
 check("Logout disables device token", read("src/context/AuthContext.tsx").includes("disableCurrentDevice"), "Signed-out account must not retain an enabled device token.");

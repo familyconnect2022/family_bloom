@@ -4,6 +4,7 @@ const root = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const fx = read('src/components/chess/ChessBattleEffects.tsx');
 const game = read('src/app/(chess)/chess-game/[gameId].tsx');
+const surfaceHost = read('src/components/chess/ChessSurfaceHost.tsx');
 const board = read('src/components/chess/ChessBoard.tsx');
 
 const checks = [
@@ -16,7 +17,7 @@ const checks = [
   ['qualified capture copy is material swing', fx.includes('title: "ĐỘT BIẾN!"') && fx.includes(':material-swing')],
   ['check remains higher priority than capture filter', fx.indexOf('if (checking)') < fx.indexOf('if (captured)')],
   ['promotion remains higher priority than capture filter', fx.indexOf('if (promoted)') < fx.indexOf('if (captured)')],
-  ['visual commit fx pipeline preserved', game.includes('deriveChessBattleEvent(previous, current, myColor)') && board.includes('onVisualCommit?.(previousVisualState, interactionStateRef.current)')],
+  ['visual commit fx pipeline preserved', surfaceHost.includes('deriveChessBattleEvent(previous, current, myColor)') && board.includes('onVisualCommit?.(previousVisualState, interactionStateRef.current)')],
   ['hint pipeline remains preserved', board.includes('hintControllerRef.current?.show(targets, premoveMode, square)')],
 ];
 let failed = 0;

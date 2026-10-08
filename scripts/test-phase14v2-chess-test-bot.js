@@ -8,6 +8,7 @@ const lobby=read('src/app/(chess)/chess-lobby.tsx');
 const hook=read('src/hooks/chess/useChessLobby.ts');
 const overlay=read('src/components/chess/ChessChallengeOverlay.tsx');
 const game=read('src/app/(chess)/chess-game/[gameId].tsx');
+const surfaceHost=read('src/components/chess/ChessSurfaceHost.tsx');
 const history=read('src/app/(chess)/chess-history.tsx');
 const server=read('server/src/socket/socketServer.ts');
 const manager=read('server/src/chess/chessGameManager.ts');
@@ -50,8 +51,8 @@ check('Bloom Bot UI is warm and avoids technical test labels',lobby.includes('Bl
 check('overlay renders bot identity without fake family member',overlay.includes('invite.isTestBot')&&overlay.includes('♞'));
 check('global context resolves bot name',ctx.includes('isChessTestBotUid(uid)')&&ctx.includes('Bloom Bot'));
 check('rejecting bot invite stays local and gentle',ctx.includes('Bloom Bot sẽ chờ bạn'));
-check('game screen labels bot opponent',game.includes('isTestBotOpponent')&&game.includes('Bloom Bot'));
-check('history labels test games',history.includes('Thử nghiệm')&&history.includes('item.testBotUid'));
+check('persistent game surface labels bot opponent',surfaceHost.includes('isBot')&&surfaceHost.includes('Bloom Bot'));
+check('history identifies Bloom Bot without technical test copy',history.includes('item.testBotUid')&&history.includes('Bloom Bot')&&!history.includes('Thử nghiệm')); 
 check('client bot request always reaches server authority',!ctx.includes('if (!testBotEnabled)')&&ctx.includes('CHESS_EVENTS.testBotInvite')&&ctx.includes('response.errorCode === "CHESS_TEST_BOT_DISABLED"'));
 check('server returns typed disabled error',protocol.includes('CHESS_TEST_BOT_DISABLED')&&server.includes('CHESS_TEST_BOT_DISABLED'));
 check('server bot move never requires a bot socket',!server.includes('socket.data.uid = testBotUid'));

@@ -4,10 +4,9 @@ import { DATA_LIMITS } from "../constants/dataLimits";
 import { calendarService } from "../services/calendar/calendarService";
 import { familyService } from "../services/family/familyService";
 import { momentsService } from "../services/moments/momentsService";
+import { canonicalizeFamilyEventsStable } from "../services/event/eventEntityCache";
 import type { EventPage, FamilyEvent, FamilyMember, MomentPage } from "../types";
 import { useAuth } from "./AuthContext";
-import { PERFORMANCE_TEST_BUILD } from "../constants/performanceTest";
-import { performanceTestService } from "../services/performance/performanceTestService";
 
 type FamilyMembersRealtimeValue = {
   familyId: string | null;
@@ -113,7 +112,7 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
         setMembersLoading(false);
       },
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("family.members", stop) : stop;
+    return stop;
   }, [appActive, familyId, restartKey]);
 
   useEffect(() => {
@@ -131,7 +130,7 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
       },
       DATA_LIMITS.moments.initialFeed,
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("family.moments", stop) : stop;
+    return stop;
   }, [appActive, familyId, restartKey]);
 
   useEffect(() => {
@@ -140,7 +139,12 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
     const stop = calendarService.subscribeUpcoming(
       familyId,
       (page) => {
-        setUpcomingPage(page);
+        setUpcomingPage((current) => {
+          const items = canonicalizeFamilyEventsStable(familyId, current.items, page.items);
+          return current.hasMore === page.hasMore && current.items === items
+            ? current
+            : { ...page, items };
+        });
         setUpcomingLoading(false);
       },
       (error) => {
@@ -149,7 +153,7 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
       },
       DATA_LIMITS.events.realtimePage,
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("family.events.upcoming", stop) : stop;
+    return stop;
   }, [appActive, familyId, restartKey]);
 
   useEffect(() => {
@@ -158,7 +162,7 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
     const stop = calendarService.subscribeYearly(
       familyId,
       (items) => {
-        setYearlyEvents(items);
+        setYearlyEvents((current) => canonicalizeFamilyEventsStable(familyId, current, items));
         setYearlyLoading(false);
       },
       (error) => {
@@ -166,7 +170,7 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
         setYearlyLoading(false);
       },
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("family.events.yearly", stop) : stop;
+    return stop;
   }, [appActive, familyId, restartKey]);
 
   const memberByUid = useMemo(

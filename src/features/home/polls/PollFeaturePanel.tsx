@@ -12,7 +12,6 @@ import { COLORS } from "@/constants/theme";
 import { BloomConfirmModal } from "@/components/ui/BloomConfirmModal";
 import { BloomTextInput } from "@/components/ui/BloomInputComponents";
 import { BloomNoteCallout } from "@/components/ui/BloomNoteCallout";
-import { appWidePerformanceService } from "@/services/performance/appWidePerformanceService";
 
 const addDays = (days: number) => {
   const d = new Date();
@@ -56,9 +55,7 @@ export function PollFeaturePanel() {
 
   useEffect(() => {
     if (!activeFamilyId || !uid) return;
-    if (!appWidePerformanceService.isNoWriteMode()) {
-      void homePollService.cleanupExpired(activeFamilyId, uid).catch(() => {});
-    }
+    void homePollService.cleanupExpired(activeFamilyId, uid).catch(() => {});
   }, [activeFamilyId, uid]);
 
   useEffect(() => {

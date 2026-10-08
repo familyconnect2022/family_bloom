@@ -9,12 +9,12 @@ const debugBat=read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.ba
 const releaseBat=read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
 check('socket ACK API supports longer lifecycle timeout',socket.includes('timeoutMs = 12_000')&&socket.includes('socket.timeout(timeoutMs)'));
 check('app join gets cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.appJoin, { familyId }, 30_000'));
-check('session restore gets extended ACK window',ctx.includes('CHESS_EVENTS.sessionGetActive, { familyId }, 20_000'));
+check('session restore gets extended ACK window',ctx.includes('CHESS_EVENTS.sessionRecover, { familyId }, 20_000')||ctx.includes('CHESS_EVENTS.sessionGetActive, { familyId }, 20_000'));
 check('cold-start app join timeout is soft while socket is connected',ctx.includes('joined.errorCode === "CHESS_SERVER_RECOVERING"')&&ctx.includes('chessSocketService.isConnected()')&&ctx.includes('updateConnection("ready")'));
 check('soft app join retry is scheduled',ctx.includes('setTimeout(() =>')&&ctx.includes('void joinForeground()'));
 check('successful lobby join repairs UI connection state',/if \(response\.ok\)[\s\S]{0,420}updateConnection\("ready"\)/.test(ctx)&&ctx.includes('connectionRef.current = "ready"'));
 check('lobby join also uses cold-start tolerant ACK window',ctx.includes('CHESS_EVENTS.lobbyJoin, { familyId }, 30_000'));
-check('AppState transitions are diagnosed with current route',ctx.includes('appState:change')&&ctx.includes('pathname: pathnameRef.current'));
+check('AppState transitions are diagnosed without route coupling',ctx.includes('appState:change')&&!ctx.includes('pathnameRef.current'));
 check('background still intentionally leaves app presence',ctx.includes('CHESS_EVENTS.appLeave')&&ctx.includes('chessSocketService.disconnect()'));
 check('leaving lobby alone does not disconnect global socket',ctx.includes('CHESS_EVENTS.lobbyLeave')&&!ctx.match(/leaveLobby[\s\S]{0,220}disconnect\(/));
 check('server presence refresh is detached from lifecycle ACK',server.includes('function refreshPresenceSoon')&&server.includes('void emitPresence(familyId).catch'));

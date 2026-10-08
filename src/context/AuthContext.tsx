@@ -8,8 +8,6 @@ import { pushTokenService } from "../services/push/pushTokenService";
 import { ConfirmationResult, User } from "@react-native-firebase/auth";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
-import { PERFORMANCE_TEST_BUILD } from "../constants/performanceTest";
-import { performanceTestService } from "../services/performance/performanceTestService";
 import { AuthStatus, ProfileStatus, UserFamilyMembership, UserProfile } from "../types";
 
 export type FamilyTransition = {
@@ -163,7 +161,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Giữ snapshot hiện tại nếu listener tạm lỗi; service/action cụ thể vẫn kiểm tra quyền.
       },
     );
-    return PERFORMANCE_TEST_BUILD ? performanceTestService.trackListener("auth.memberships", stop) : stop;
+    return stop;
   }, [appActive, applyMemberships, profileStatus, user, userProfile]);
 
   const refreshProfile = useCallback(() => loadProfile(user), [loadProfile, user]);
@@ -173,18 +171,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const localTarget = families.find((item) => item.familyId === familyId);
     if (userProfile?.activeFamilyId === familyId && localTarget) return true;
 
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.start("family_switch", localTarget?.familyName || familyId);
     setFamilyTransition({ targetFamilyId: familyId, targetFamilyName: localTarget?.familyName || "gia đình mới", startedAt: Date.now() });
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.mark("family_switch", "transition_state_requested");
     try {
       // Give React two frames to commit/paint BloomAppBootstrap BEFORE Firestore verification.
       // This keeps perceived response immediate even when the network takes 1–3 seconds.
       await yieldToPaint();
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.mark("family_switch", "transition_painted_before_network");
       // Không tin local UI cache: service xác nhận reverse index + authoritative member doc.
       // Điều này cũng xử lý race khi admin vừa approve nhưng membership listener chưa render kịp.
       const verified = await familyService.switchActiveFamily(user.uid, familyId);
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.mark("family_switch", "membership_verified");
       setFamilies((current) => current.some((item) => item.familyId === familyId)
         ? current
         : sortMemberships([verified, ...current]));
@@ -192,7 +186,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUserProfile((current) => current ? { ...current, activeFamilyId: familyId } : current);
       return true;
     } catch (error) {
-      if (PERFORMANCE_TEST_BUILD) performanceTestService.finish("family_switch", "error");
       setFamilyTransition(null);
       showToast({ ...parseAppError(error), duration: 3500 });
       return false;
@@ -203,10 +196,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setFamilyTransition((current) => {
       if (current && typeof __DEV__ !== "undefined" && __DEV__) {
         console.log(`[Phase7][perf] family switch ${current.targetFamilyId} ready in ${Date.now() - current.startedAt}ms`);
-      }
-      if (current && PERFORMANCE_TEST_BUILD) {
-        performanceTestService.mark("family_switch", "tabs_ready");
-        performanceTestService.finish("family_switch");
       }
       return null;
     });

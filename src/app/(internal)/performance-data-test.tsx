@@ -11,8 +11,6 @@ import { COLORS } from "../../constants/theme";
 import { isPerformanceTestAccount } from "../../constants/performanceTest";
 import { useAuth } from "../../context/AuthContext";
 import { performanceTestService } from "../../services/performance/performanceTestService";
-import { finalPerformanceGateService } from "../../services/performance/finalPerformanceGateService";
-import { appWidePerformanceService } from "../../services/performance/appWidePerformanceService";
 import {
   generateSyntheticEvents,
   generateSyntheticMembers,
@@ -85,20 +83,9 @@ function BookStressRow({ item }: { item: SyntheticMemoryBookItem }) {
 
 export default function PerformanceDataTestScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ kind?: string; count?: string; finalGate?: string; gateRunId?: string; gateStep?: string; appSweep?: string; sweepRunId?: string; sweepStep?: string }>();
+  const params = useLocalSearchParams<{ kind?: string; count?: string }>();
   const kind = safeKind(Array.isArray(params.kind) ? params.kind[0] : params.kind);
   const count = safeCount(Array.isArray(params.count) ? params.count[0] : params.count);
-  const gateRunId = Array.isArray(params.gateRunId) ? params.gateRunId[0] : params.gateRunId ?? null;
-  const gateStepRaw = Array.isArray(params.gateStep) ? params.gateStep[0] : params.gateStep;
-  const gateStep = Number(gateStepRaw ?? -1);
-  const gateRequested = (Array.isArray(params.finalGate) ? params.finalGate[0] : params.finalGate) === "1";
-  const gateActive = gateRequested && finalPerformanceGateService.isActiveStep(gateRunId, gateStep, { type: "stress", kind, count });
-  const sweepRunId = Array.isArray(params.sweepRunId) ? params.sweepRunId[0] : params.sweepRunId ?? null;
-  const sweepStepRaw = Array.isArray(params.sweepStep) ? params.sweepStep[0] : params.sweepStep;
-  const sweepStep = Number(sweepStepRaw ?? -1);
-  const sweepRequested = (Array.isArray(params.appSweep) ? params.appSweep[0] : params.appSweep) === "1";
-  const sweepActive = sweepRequested && appWidePerformanceService.isActiveSyntheticStep(sweepRunId, sweepStep, { type: "stress", kind, count });
-  const autoActive = gateActive || sweepActive;
   const { user } = useAuth();
   const allowed = isPerformanceTestAccount(user?.email);
   const listRef = useRef<FlatList<any> | SectionList<any>>(null);
@@ -106,7 +93,6 @@ export default function PerformanceDataTestScreen() {
   const firstViewableRecorded = useRef(false);
   const firstPaintRecorded = useRef(false);
   const initialTraceFinished = useRef(false);
-  const gateAdvancedRef = useRef(false);
   const jumpSequenceRef = useRef(0);
   const jumpAttemptRef = useRef<{
     id: number;
@@ -119,35 +105,8 @@ export default function PerformanceDataTestScreen() {
   const kindRef = useRef(kind);
   kindRef.current = kind;
 
-  const advanceAutomation = useCallback((status: "PASS" | "FAIL", detail: string) => {
-    if (gateAdvancedRef.current) return;
-    if (gateActive && gateRunId) {
-      const nextRoute = finalPerformanceGateService.markStep(gateRunId, gateStep, status, detail);
-      gateAdvancedRef.current = true;
-      if (nextRoute) setTimeout(() => router.replace(nextRoute as never), 160);
-      return;
-    }
-    if (sweepActive && sweepRunId) {
-      // The global Phase 15B driver owns navigation between sweep steps. Keeping
-      // route changes in one place avoids two replace() calls racing each other.
-      appWidePerformanceService.markSyntheticStep(sweepRunId, sweepStep, status, detail);
-      gateAdvancedRef.current = true;
-    }
-  }, [gateActive, gateRunId, gateStep, router, sweepActive, sweepRunId, sweepStep]);
 
-  const handleBack = useCallback(() => {
-    if (gateActive && gateRunId) {
-      finalPerformanceGateService.abort(gateRunId, `Người dùng dừng tại ${kindTitle[kind]} ${count}`);
-      router.replace({ pathname: "/performance-test", params: { finalGate: "aborted", gateRunId } } as never);
-      return;
-    }
-    if (sweepActive && sweepRunId) {
-      appWidePerformanceService.abort(sweepRunId, `Người dùng dừng tại ${kindTitle[kind]} ${count}`);
-      router.replace({ pathname: "/performance-test", params: { appSweep: "aborted", sweepRunId } } as never);
-      return;
-    }
-    router.back();
-  }, [count, gateActive, gateRunId, kind, router, sweepActive, sweepRunId]);
+  const handleBack = useCallback(() => router.back(), [router]);
 
   // IMPORTANT: generating data during render is fine, but publishing metrics is not.
   // The previous harness emitted to PerformanceTestScreen from inside useMemo(),
@@ -206,14 +165,13 @@ export default function PerformanceDataTestScreen() {
 
   useEffect(() => {
     if (!allowed) {
-      router.replace("/(tabs)/play" as never);
+      router.replace("/settings" as never);
       return;
     }
     screenStartedAt.current = Date.now();
     firstViewableRecorded.current = false;
     firstPaintRecorded.current = false;
     initialTraceFinished.current = false;
-    gateAdvancedRef.current = false;
     setGateReady(false);
     const target = `${kindTitle[kind]} · ${count}`;
     performanceTestService.start("app_stress_test", target);
@@ -363,22 +321,7 @@ export default function PerformanceDataTestScreen() {
     }
   }, [completeJumpMeasurement, count, handleTimelineScrollToIndexFailed, kind, timelineSections]);
 
-  useEffect(() => {
-    if (!autoActive || !gateReady) return undefined;
-    const timer = setTimeout(() => {
-      jumpToEnd(() => advanceAutomation("PASS", `initial render + jump-end hoàn tất · ${kindTitle[kind]} ${count}`));
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [advanceAutomation, autoActive, count, gateReady, jumpToEnd, kind]);
 
-  useEffect(() => {
-    if (!autoActive) return undefined;
-    const timer = setTimeout(() => {
-      performanceTestService.finish("app_stress_test", "error");
-      advanceAutomation("FAIL", `timeout > 15s ở ${kindTitle[kind]} ${count}`);
-    }, 15_000);
-    return () => clearTimeout(timer);
-  }, [advanceAutomation, autoActive, count, kind]);
 
   useEffect(() => () => {
     const pending = jumpAttemptRef.current;

@@ -15,6 +15,19 @@ export type FamilyGraphUnsubscribe = () => void;
 // persistent cache: the entry is removed as soon as Firestore resolves, so graph edits
 // cannot leave stale Person data hanging around.
 const personListInflight = new Map<string, Promise<FamilyPerson[]>>();
+const personLookupInflight = new Map<string, Promise<FamilyPerson | null>>();
+
+const getPersonDeduped = (familyId: string, personId: string): Promise<FamilyPerson | null> => {
+  const key = `${familyId}:${personId}`;
+  const existing = personLookupInflight.get(key);
+  if (existing) return existing;
+  const request = familyGraphRepository.getPerson(familyId, personId)
+    .finally(() => {
+      if (personLookupInflight.get(key) === request) personLookupInflight.delete(key);
+    });
+  personLookupInflight.set(key, request);
+  return request;
+};
 
 const listPersonsDeduped = (familyId: string): Promise<FamilyPerson[]> => {
   const existing = personListInflight.get(familyId);
@@ -43,6 +56,22 @@ export const familyGraphService = {
 
   async listPersons(familyId: string): Promise<FamilyPerson[]> {
     return listPersonsDeduped(familyId);
+  },
+
+  async getPersonsByIds(familyId: string, personIds: readonly string[]): Promise<FamilyPerson[]> {
+    const uniqueIds = Array.from(new Set(personIds.map((id) => id.trim()).filter(Boolean)));
+    if (!uniqueIds.length) return [];
+
+    // For a normal Moments page this is only a handful of references. If a post
+    // intentionally targets a very large group, one collection read is cheaper
+    // than launching hundreds of individual document requests.
+    if (uniqueIds.length > 80) {
+      const wanted = new Set(uniqueIds);
+      return (await listPersonsDeduped(familyId)).filter((person) => wanted.has(person.id));
+    }
+
+    const persons = await Promise.all(uniqueIds.map((personId) => getPersonDeduped(familyId, personId)));
+    return persons.filter((person): person is FamilyPerson => !!person);
   },
 
   async getSnapshot(familyId: string): Promise<FamilyGraphSnapshot> {

@@ -8,8 +8,9 @@ const root = path.resolve(__dirname, '..');
 const enginePath = path.join(root, 'src/games/xiangqi/xiangqiEngine.ts');
 const screenPath = path.join(root, 'src/app/(xiangqi)/xiangqi-preview.tsx');
 const boardPath = path.join(root, 'src/components/xiangqi/XiangqiGameBoard.tsx');
-const perfPath = path.join(root, 'src/app/(internal)/performance-test.tsx');
-const servicePath = path.join(root, 'src/services/performance/appWidePerformanceService.ts');
+const devToolsPath = path.join(root, 'src/app/(internal)/developer-tools.tsx');
+const playPath = path.join(root, 'src/app/(tabs)/play.tsx');
+const perfConstPath = path.join(root, 'src/constants/performanceTest.ts');
 const homeGamesPath = path.join(root, 'src/app/(home)/(games)/home-games.tsx');
 const chessBoardPath = path.join(root, 'src/components/chess/ChessBoard.tsx');
 const chessPieceLayerPath = path.join(root, 'src/components/chess/v2/PieceLayer.tsx');
@@ -23,6 +24,7 @@ function check(name, condition) {
   else { fail += 1; console.error(`FAIL ${name}`); }
 }
 
+const play = fs.readFileSync(playPath, 'utf8');
 const source = fs.readFileSync(enginePath, 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
@@ -94,8 +96,8 @@ check('local Xiangqi clock can finish on timeout', timedOut.gameOver && timedOut
 
 const screen = fs.readFileSync(screenPath, 'utf8');
 const board = fs.readFileSync(boardPath, 'utf8');
-const perf = fs.readFileSync(perfPath, 'utf8');
-const service = fs.readFileSync(servicePath, 'utf8');
+const devTools = fs.readFileSync(devToolsPath, 'utf8');
+const perfConst = fs.readFileSync(perfConstPath, 'utf8');
 const home = fs.readFileSync(homeGamesPath, 'utf8');
 const chessBoard = fs.readFileSync(chessBoardPath, 'utf8');
 const chessPieceLayer = fs.readFileSync(chessPieceLayerPath, 'utf8');
@@ -104,17 +106,18 @@ const releaseBuild = fs.readFileSync(releaseBuildPath, 'utf8');
 check('Xiangqi page uses chess-like player rails', screen.includes('PlayerRail') && screen.includes('Bloom Bot') && screen.includes('Đầu hàng'));
 check('Xiangqi rail uses focused 10-minute clock UI', screen.includes('600_000') && screen.includes('clockActive') && screen.includes('clockTextActive'));
 check('Xiangqi page is playable, not gallery-only', screen.includes('playXiangqiMove') && screen.includes('chooseXiangqiBotMove'));
-check('board uses native RNGH tap surface inside ScrollView', board.includes('GestureDetector') && board.includes('Gesture.Tap()') && board.includes('runOnJS(handleBoardTap)'));
+check('board uses native RNGH tap surface inside ScrollView', board.includes('GestureDetector') && board.includes('Gesture.Tap()') && board.includes('.runOnJS(true)') && board.includes('handleBoardTap(event.x, event.y)'));
 check('piece box uses user-approved 1.3x scale', board.includes('step * 1.3') && board.includes('Math.min(72'));
 const internalStyleBlock = chessBoard.split('const styles=StyleSheet.create({')[1] || '';
 check('Chess restored proven V4P single-plane tree', chessBoard.includes('<SquareLayer') && chessBoard.includes('style={[StyleSheet.absoluteFill, fadeStyle]}') && !chessBoard.includes('piecePlane:{'));
 check('Chess PieceLayer uses plain absolute fill', (chessPieceLayer.includes('style={StyleSheet.absoluteFill}') || (chessPieceLayer.includes('style={styles.layer}') && chessPieceLayer.includes('...StyleSheet.absoluteFillObject'))) && !/elevation\s*:/.test(chessPieceLayer));
-const startBlock = perf.split('const startAppWideSweep = () => {')[1]?.split('const copyAppWideSweepReport')[0] || '';
-check('performance start leaves route ownership to global driver', startBlock.includes('appWidePerformanceService.start()') && !startBlock.includes('router.'));
-check('performance new run clears stale watchdog', service.includes('this.clearHardWatchdog();') && service.indexOf('this.clearHardWatchdog();') < service.indexOf('performanceTestService.reset();'));
+check('retired app-wide performance route is absent', !fs.existsSync(path.join(root, 'src/app/(internal)/performance-test.tsx')));
+check('retired app-wide runner service is absent', !fs.existsSync(path.join(root, 'src/services/performance/appWidePerformanceService.ts')));
+check('developer tools owns explicit opt-in performance tests', devTools.includes('Hiệu năng & tải') && devTools.includes('performanceTestService.startInteractionProbe'));
+check('developer tools are exact-account and internal-build gated', perfConst.includes('INTERNAL_TOOLS_ENABLED') && perfConst.includes('huynh235@gmail.com'));
 check('home games presents Xiangqi as playable', home.includes('Chơi được ngay') && home.includes('Luật nền V1'));
 check('Android builds keep safe-asset and Phase16B gates', [debugBuild, releaseBuild].every((text) => text.includes('phase16a2:check') && text.includes('phase16b:check')));
 check('historical Phase16A gallery gate no longer blocks current builds', [debugBuild, releaseBuild].every((text) => !text.includes('phase16a:check')));
 
-console.log(`Phase 16B Xiangqi Playable Logic + Performance Start: ${pass} PASS / ${fail} FAIL`);
+console.log(`Phase 16B Xiangqi Playable Logic + Clean Developer Tools: ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

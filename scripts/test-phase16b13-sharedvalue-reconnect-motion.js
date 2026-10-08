@@ -9,7 +9,10 @@ function check(name, ok) { if (ok) { pass++; console.log('PASS', name); } else {
 const board = read('src/components/chess/ChessBoard.tsx');
 const piece = read('src/components/chess/v2/ChessPiece.tsx');
 const hook = read('src/hooks/chess/useChessGame.ts');
+const realtime = read('src/context/ChessRealtimeContext.tsx');
+const store = read('src/services/chess/chessGameStore.ts');
 const game = read('src/app/(chess)/chess-game/[gameId].tsx');
+const surfaceHost = read('src/components/chess/ChessSurfaceHost.tsx');
 const modal = read('src/components/chess/BloomGameBottomModal.tsx');
 const xiangqi = read('src/components/xiangqi/XiangqiGameBoard.tsx');
 const hint = read('src/components/chess/v2/HintLayer.tsx');
@@ -20,7 +23,7 @@ const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.b
 check('Chess piece position lives in SharedValues', piece.includes('const x = useSharedValue(initialX)') && piece.includes('const y = useSharedValue(initialY)') && piece.includes('const scale = useSharedValue(1)'));
 check('Programmatic move stays on UI thread with eased travel', piece.includes('profile === "travel"') && piece.includes('MOVE_EASING') && piece.includes('withTiming(nextX') && piece.includes('withTiming(nextY'));
 check('Chess travel reaches approved 1.30 lift then settles', piece.includes('withTiming(1.30') && piece.includes('withSequence('));
-check('Drag coordinates remain UI-thread only', piece.includes('.onUpdate((event) =>') && piece.includes('x.value = startX.value + event.translationX') && piece.includes('y.value = startY.value + event.translationY'));
+check('Chess piece nodes are visual-only under tap-only input policy', !piece.includes('Gesture.Pan()') && piece.includes('pointerEvents="none"') && !piece.includes('startX.value'));
 const moveMs = Number(board.match(/const MOVE_MS = (\d+)/)?.[1] || 0);
 const opponentMoveMs = Number(board.match(/const OPPONENT_MOVE_MS = (\d+)/)?.[1] || 0);
 const premoveMoveMs = Number(board.match(/const PREMOVE_MOVE_MS = (\d+)/)?.[1] || 0);
@@ -33,12 +36,12 @@ check('One missed authoritative move is derived and animated', board.includes('d
 check('Multi-revision recovery reuses existing native piece controllers', board.includes('controllersRef.current.get(id)') && board.includes('assignments = new Map') && board.includes('runtime.alive = false'));
 check('Server authoritative contract remains versioned', board.includes('onMove(from, to, chosenPromotion, clientMoveId, current.revision)'));
 
-check('Socket hook exposes reconnecting without dropping current state', hook.includes('connectionPhase') && hook.includes('chessSocketService.on("disconnected"') && hook.includes('stateRef.current ? "reconnecting"'));
-check('Snapshot epoch separates position changes from visual metadata changes', hook.includes('const positionChanged = !current') && hook.includes('const visualMetaChanged = positionChanged'));
-check('Reconnect same FEN can still refresh status/turn without moving pieces', hook.includes('current?.status !== next.status') && hook.includes('current?.turn !== next.turn'));
-check('Game keeps board visible and shows compact reconnect pill', game.includes('Đang kết nối lại… bàn cờ được giữ nguyên') && game.includes('styles.reconnectPill'));
-check('Board input is blocked while transport reconciles', game.includes('interactionBlocked={game.connectionPhase !== "connected"'));
-check('In-progress paused reconnect no longer forces large preparation modal', game.includes('(state.status === "paused" && state.ply === 0)'));
+check('Socket hook exposes reconnecting without dropping current state', hook.includes('connectionPhase: store.connectionPhase') && realtime.includes('chessSocketService.on("disconnected"') && realtime.includes('connectionPhase: "reconnecting"'));
+check('Snapshot epoch separates position changes from visual metadata changes', (hook.includes('const positionChanged = !current') && hook.includes('const visualMetaChanged = positionChanged')) || (store.includes('const positionChanged = !previous') && store.includes('const visualMetaChanged = positionChanged')));
+check('Reconnect same FEN can still refresh status/turn without moving pieces', (hook.includes('current?.status !== next.status') && hook.includes('current?.turn !== next.turn')) || (store.includes('previous?.status !== next.status') && store.includes('previous?.turn !== next.turn')));
+check('Persistent game surface keeps board visible and shows compact reconnect pill', surfaceHost.includes('Đang kết nối lại… bàn cờ được giữ nguyên') && surfaceHost.includes('styles.reconnectPill'));
+check('Board input is blocked while transport reconciles', surfaceHost.includes('game.connectionPhase === "connected"') && surfaceHost.includes('interactionBlocked={!boardInteractive}'));
+check('In-progress paused reconnect uses centered preparation layer', surfaceHost.includes('state.status === "waiting" || state.status === "paused"') && (surfaceHost.includes('styles.surfaceOverlay') || surfaceHost.includes('styles.boardOverlay') || surfaceHost.includes('styles.chessModalLayer')));
 
 check('Bloom bottom modal animation uses Reanimated SharedValues', modal.includes('useSharedValue(76)') && modal.includes('useAnimatedStyle') && /translateY\.value\s*=\s*with(?:Spring|Timing)\(0/.test(modal));
 check('Bottom modal no longer uses React Native Animated progress', !modal.includes('new Animated.Value') && !modal.includes('progress.interpolate'));

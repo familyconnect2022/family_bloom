@@ -28,8 +28,8 @@ const realtime = read('src/context/ChessRealtimeContext.tsx');
 const lobbyHook = read('src/hooks/chess/useChessLobby.ts');
 const lobbyScreen = read('src/app/(chess)/chess-lobby.tsx');
 const chessScreen = read('src/app/(chess)/chess-game/[gameId].tsx');
+const chessSurfaceHost = read('src/components/chess/ChessSurfaceHost.tsx');
 const history = read('src/app/(chess)/chess-history.tsx');
-const fx = read('src/components/chess/ChessBattleEffects.tsx');
 const tabs = read('src/app/(tabs)/_layout.tsx');
 const motion = read('src/constants/motion.ts');
 const pkg = read('package.json');
@@ -56,26 +56,26 @@ ok('Away timeout is persisted as a terminal game', has(manager, /finishByAwayTim
 ok('Terminal cleanup removes all away budgets', has(manager, /finishRuntime[\s\S]{0,180}boardAwayByUid\.clear\(\)/));
 ok('Move command cannot sneak through an already-expired away deadline', has(manager, /const expired = this\.expiredTerminal\(r\)/) && has(manager, /finishByAwayTimeout\(r, expired\.uid\)/));
 
-ok('Client reports visible board after join/rejoin', (gameHook.match(/reportBoardPresence\(true\)/g) || []).length >= 2);
-ok('Client reports away before focus cleanup', has(gameHook, /return \(\) => \{[\s\S]{0,120}reportBoardPresence\(false\)/));
-ok('Background app also counts as leaving the board', has(gameHook, /AppState\.addEventListener[\s\S]{0,300}reportBoardPresence\(false\)/));
-ok('Foreground return clears away state and resyncs', has(gameHook, /next === "active"[\s\S]{0,180}reportBoardPresence\(true\)[\s\S]{0,180}resync\(\)/));
-ok('Away loss reason is visible in result modal', has(chessScreen, /away_timeout:\s*"Hết thời gian rời bàn"/) && has(chessScreen, /Bạn đã rời bàn quá nửa quỹ thời gian/));
+ok('Client reports visible board through engine-owned presence channel', has(gameHook, /actions\.setBoardPresence\(gameId, !!gameId && boardVisible\)/) && has(realtime, /gameBoardPresence[\s\S]{0,180}visible: true/));
+ok('Client reports away when board UI sleeps', has(gameHook, /return \(\) => actions\.setBoardPresence\(gameId, false\)/));
+ok('Background app also counts as leaving the board', has(realtime, /AppState\.addEventListener[\s\S]{0,900}gameBoardPresence[\s\S]{0,120}visible: false/));
+ok('Foreground return rejoins authoritative game and restores board presence', has(realtime, /sessionRecover|sessionGetActive/) && has(realtime, /CHESS_EVENTS\.gameJoin/) && has(realtime, /gameBoardPresence[\s\S]{0,180}visible: true/));
+ok('Away loss reason is visible in persistent result surface', has(chessSurfaceHost, /HẾT THỜI GIAN RỜI BÀN/) && has(chessSurfaceHost, /Bạn đã rời bàn quá thời gian cho phép/));
 ok('Chess history preserves away-time reason', has(history, /away_timeout:\s*"Hết thời gian rời bàn"/));
-ok('Away terminal FX has dedicated copy', has(fx, /current\.finishReason === "timeout" \|\| current\.finishReason === "away_timeout"/) && has(fx, /rời bàn quá/));
-ok('Global realtime retains pending away result outside game route', has(realtime, /pendingAwayResultGameId/) && has(realtime, /finishReason === "away_timeout"/));
-ok('Lobby automatically returns pending away result to result screen', has(lobbyHook, /pendingAwayResultGameId/) && has(lobbyScreen, /pendingAwayResultGameId \|\| lobby\.activeGameId/));
-ok('Away result is acknowledged only when result modal is dismissed or rematched', has(realtime, /acknowledgeAwayResult/) && has(chessScreen, /dismissResult/) && has(chessScreen, /acknowledgeAwayResult\(state\.gameId\)/));
+ok('Away terminal copy remains on the persistent result surface after battle FX retirement', has(chessSurfaceHost, /HẾT THỜI GIAN RỜI BÀN/) && has(chessSurfaceHost, /rời bàn quá thời gian cho phép/));
+ok('Global realtime retains pending finished result outside game route', has(realtime, /pendingResultGameId/) && has(realtime, /next\.status === "finished"/));
+ok('Lobby automatically returns pending result to result screen', has(lobbyHook, /pendingResultGameId/) && has(lobbyScreen, /pendingResultGameId \|\| lobby\.activeGameId/));
+ok('Finished result is durably acknowledged when result surface is dismissed or rematched', has(realtime, /acknowledgeResult/) && has(realtime, /gameResultAck/) && has(chessSurfaceHost, /leaveFinished/) && has(chessSurfaceHost, /acknowledgeResult\(surface\.gameId\)/));
 
 ok('Tabs keep screen transition disabled', has(motion, /tabs:[\s\S]{0,160}animation:\s*"none"/));
-ok('Tab bar uses one SharedValue sliding indicator', has(tabs, /useSharedValue\(state\.index \* itemWidth \+ 6\)/) && has(tabs, /styles\.slidingIndicator/));
-ok('Tab slider animates on UI thread with timing', has(tabs, /indicatorX\.value = withTiming/) && has(tabs, /useAnimatedStyle/));
-ok('Tab slider does not create one animated pill per tab', (tabs.match(/slidingIndicator/g) || []).length <= 3 && !has(tabs, /iconPillSelected/));
-ok('Tab press still feeds performance trace', has(tabs, /performanceTestService\.start\("tab_switch", route\.name\)/));
+ok('Tab bar uses one SharedValue sliding indicator', (has(tabs, /useSharedValue\(state\.index\)/) || has(tabs, /useSharedValue\(state\.index \* itemWidth \+ 6\)/)) && has(tabs, /styles\.slidingIndicator/));
+ok('Tab slider animates on UI thread with timing', (has(tabs, /indicatorIndex\.value = withTiming/) || has(tabs, /indicatorX\.value = withTiming/)) && has(tabs, /useAnimatedStyle/));
+ok('Tab slider does not create one animated pill per tab', (tabs.match(/<Animated\.View[^>]+styles\.slidingIndicator/g) || []).length <= 3 && !has(tabs, /iconPillSelected/));
+ok('Tab press no longer feeds always-on performance traces', !has(tabs, /performanceTestService\.start\("tab_switch", route\.name\)/));
 
 ok('Phase 16B17 package script exists', has(pkg, /"phase16b17:check"\s*:\s*"node \.\/scripts\/test-phase16b17-away-timeout-tab-sharedvalue\.js"/));
 ok('Current Chess aggregate includes Phase 16B17', has(currentGate, /test-phase16b17-away-timeout-tab-sharedvalue\.js/));
-ok('Copy-over scripts identify Phase 16B17', has(preCopy, /Phase 16B\.17/) && has(postCopy, /Phase 16B\.17/));
+ok('Copy-over scripts preserve Phase 16B17 through current package', has(preCopy, /Phase 16B\.(17|18)/) && has(postCopy, /Phase 16B\.(17|18)/));
 ok('Post-copy updater uses current aggregate without duplicate direct Phase 16B17 call', has(postCopy, /chess:current-check/) && !has(postCopy, /npm run phase16b17:check/));
 
 const syntaxFiles = [
@@ -88,8 +88,8 @@ const syntaxFiles = [
   'src/hooks/chess/useChessLobby.ts',
   'src/app/(chess)/chess-lobby.tsx',
   'src/app/(chess)/chess-game/[gameId].tsx',
+  'src/components/chess/ChessSurfaceHost.tsx',
   'src/app/(chess)/chess-history.tsx',
-  'src/components/chess/ChessBattleEffects.tsx',
   'src/app/(tabs)/_layout.tsx',
 ];
 const syntaxErrors = syntaxFiles.flatMap(rel => syntax(rel).map(diag => `${rel}: ${ts.flattenDiagnosticMessageText(diag.messageText, ' ')}`));

@@ -34,7 +34,7 @@ check('new DEBUG script uses the same root Firebase config', /google-services\.j
 check('DEBUG build has no side-by-side install claim', !/Side-by-side|RELEASE_WAS_INSTALLED|\.dev/.test(debugBat));
 check('RELEASE build has no APP_VARIANT dependency', !/APP_VARIANT/.test(releaseBat));
 check('RELEASE build no longer validates debug suffix', !/check-generated-android-debug-suffix/.test(releaseBat));
-check('root contains no txt files', rootTxt.length === 0);
+check('root contains no stray txt files', rootTxt.every(name => name === 'COPY_OVER_README.txt')); // canonical copy-over instructions are intentionally shipped at root
 check('patch notes are managed under document history', fs.existsSync(path.join(root, 'document/phases/phase-14/history/PATCH_README_PHASE_14T.txt')));
 check('device checklist is managed under reports/device', fs.existsSync(path.join(root, 'reports/device/PHASE_14T_DEVICE_CHECKLIST.txt')));
 check('current handoff supersedes the dual-app decision', /SINGLE ANDROID IDENTITY/.test(master) && /dual-app decision is retired/i.test(master));

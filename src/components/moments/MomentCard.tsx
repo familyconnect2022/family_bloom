@@ -150,7 +150,7 @@ function MomentCardComponent({
   const [comment, setComment] = useState("");
   const [myReaction, setMyReaction] = useState<MomentReaction | null>(null);
   const [reactionCounts, setReactionCounts] = useState(post.reactionCounts || {} as Record<MomentReaction, number>);
-  const [showComments, setShowComments] = useState((post.commentCount || 0) > 0);
+  const [showComments, setShowComments] = useState(false);
   const [commentViewportHeight, setCommentViewportHeight] = useState(0);
   const [commentContentHeight, setCommentContentHeight] = useState(0);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -173,6 +173,14 @@ function MomentCardComponent({
   const desiredReactionRef = useRef<MomentReaction | null>(null);
   const reactionDirtyRef = useRef(false);
   const reactionHydratedRef = useRef(false);
+  const postMenuMountedRef = useRef(false);
+  const editFlowMountedRef = useRef(false);
+  const reactionPickerMountedRef = useRef(false);
+  const reactionDetailMountedRef = useRef(false);
+  if (postMenuVisible) postMenuMountedRef.current = true;
+  if (editVisible) editFlowMountedRef.current = true;
+  if (showReactionPicker) reactionPickerMountedRef.current = true;
+  if (reactionDetailVisible) reactionDetailMountedRef.current = true;
   const router = useRouter();
   const { openMediaViewer } = useMediaViewer();
   const { confirm, inform } = useBloomDialog();
@@ -279,24 +287,29 @@ function MomentCardComponent({
   }, [comments]);
 
   useEffect(() => {
-    if ((post.commentCount || 0) > 0) setShowComments(true);
-  }, [post.commentCount]);
-
-
-  useEffect(() => {
     if (!realtimeEnabled || reactionHydratedRef.current) return;
     let active = true;
-    momentsService
-      .getMyReaction(familyId, post.id, currentUid)
-      .then((result) => {
-        if (!active || reactionDirtyRef.current) return;
-        const reaction = result?.reaction ?? null;
-        reactionHydratedRef.current = true;
-        setMyReaction(reaction);
-        desiredReactionRef.current = reaction;
-      })
-      .catch(() => {});
-    return () => { active = false; };
+    // A card can cross the viewability threshold while the user is still
+    // flinging the feed. Delay the one-shot personal-reaction read slightly so
+    // transient cards do not compete with scroll/layout work. Leaving the
+    // viewport cancels the timer before Firestore is touched.
+    const hydrateTimer = setTimeout(() => {
+      if (!active || reactionHydratedRef.current) return;
+      void momentsService
+        .getMyReaction(familyId, post.id, currentUid)
+        .then((result) => {
+          if (!active || reactionDirtyRef.current) return;
+          const reaction = result?.reaction ?? null;
+          reactionHydratedRef.current = true;
+          setMyReaction(reaction);
+          desiredReactionRef.current = reaction;
+        })
+        .catch(() => {});
+    }, 180);
+    return () => {
+      active = false;
+      clearTimeout(hydrateTimer);
+    };
   }, [familyId, post.id, currentUid, realtimeEnabled]);
 
   useEffect(() => {
@@ -723,8 +736,8 @@ function MomentCardComponent({
         </View>
       )}
 
-      <Modal visible={postMenuVisible} transparent animationType="fade" onRequestClose={() => setPostMenuVisible(false)}>
-        <Pressable style={styles.postMenuBackdrop} onPress={() => setPostMenuVisible(false)}>
+      {postMenuMountedRef.current && <Modal visible={postMenuVisible} transparent animationType="fade" onRequestClose={() => setPostMenuVisible(false)}>
+        {postMenuVisible && <Pressable style={styles.postMenuBackdrop} onPress={() => setPostMenuVisible(false)}>
           <Pressable style={styles.postMenuSheet} onPress={(event) => event.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <Text style={styles.postMenuTitle}>Khoảnh khắc này</Text>
@@ -757,10 +770,10 @@ function MomentCardComponent({
               </Pressable>
             )}
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Pressable>}
+      </Modal>}
 
-      <BloomFullScreenFlow
+      {editFlowMountedRef.current && <BloomFullScreenFlow
         visible={editVisible}
         eyebrow="SỬA KỶ NIỆM"
         title="Viết lại theo cách bạn muốn nhớ"
@@ -769,7 +782,7 @@ function MomentCardComponent({
         onBack={requestCloseInlineEdit}
         backDisabled={postActionBusy}
       >
-        <BloomKeyboardScreen contentContainerStyle={styles.inlineEditPage}>
+        {editVisible && <BloomKeyboardScreen contentContainerStyle={styles.inlineEditPage}>
           <BloomTextInput
             label="Lời của khoảnh khắc"
             value={editCaption}
@@ -787,11 +800,11 @@ function MomentCardComponent({
             {postActionBusy ? <ActivityIndicator size="small" color={COLORS.white} /> : <Ionicons name="checkmark" size={18} color={COLORS.white} />}
             <Text style={styles.editSaveText}>Lưu thay đổi</Text>
           </Pressable>
-        </BloomKeyboardScreen>
-      </BloomFullScreenFlow>
+        </BloomKeyboardScreen>}
+      </BloomFullScreenFlow>}
 
-      <Modal visible={showReactionPicker} transparent animationType="fade" onRequestClose={() => setShowReactionPicker(false)}>
-        <Pressable style={styles.pickerBackdrop} onPress={() => setShowReactionPicker(false)}>
+      {reactionPickerMountedRef.current && <Modal visible={showReactionPicker} transparent animationType="fade" onRequestClose={() => setShowReactionPicker(false)}>
+        {showReactionPicker && <Pressable style={styles.pickerBackdrop} onPress={() => setShowReactionPicker(false)}>
           <Pressable style={styles.pickerSheet} onPress={(event) => event.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <Text style={styles.pickerSheetEyebrow}>MỘT CHÚT CẢM XÚC</Text>
@@ -813,11 +826,11 @@ function MomentCardComponent({
               ))}
             </View>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Pressable>}
+      </Modal>}
 
-      <Modal visible={reactionDetailVisible} transparent animationType="fade" onRequestClose={() => setReactionDetailVisible(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setReactionDetailVisible(false)}>
+      {reactionDetailMountedRef.current && <Modal visible={reactionDetailVisible} transparent animationType="fade" onRequestClose={() => setReactionDetailVisible(false)}>
+        {reactionDetailVisible && <Pressable style={styles.modalBackdrop} onPress={() => setReactionDetailVisible(false)}>
           <Pressable style={styles.reactionSheet} onPress={(event) => event.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <View style={styles.reactionSheetHeader}>
@@ -885,8 +898,8 @@ function MomentCardComponent({
               />
             )}
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Pressable>}
+      </Modal>}
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
@@ -24,21 +24,28 @@ export default function HomeGamesScreen() {
   const { user, userProfile, activeFamilyId } = useAuth();
   const { showToast } = useBloomToast();
   const [sessions, setSessions] = useState<HomeGameSession[]>([]);
-  const [demoCount, setDemoCount] = useState<0 | 10 | 50 | 100>(0);
   const [clockNow, setClockNow] = useState(Date.now());
+  const [screenFocused, setScreenFocused] = useState(true);
+  useFocusEffect(useCallback(() => {
+    setScreenFocused(true);
+    setClockNow(Date.now());
+    return () => setScreenFocused(false);
+  }, []));
   const uid = user?.uid ?? "";
   const displayName = userProfile?.shortName || userProfile?.displayName || "Bạn";
   const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
 
   useEffect(() => {
+    if (!screenFocused) return undefined;
     const timer = setInterval(() => setClockNow(Date.now()), 30_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [screenFocused]);
 
   useEffect(() => {
+    if (!screenFocused) return undefined;
     if (!activeFamilyId || !uid) {
       setSessions([]);
-      return;
+      return undefined;
     }
     return subscribeSharedRealtime<HomeGameSession[]>({
       key: `home.games.visible:${activeFamilyId}:${uid}`,
@@ -47,12 +54,9 @@ export default function HomeGamesScreen() {
       onData: setSessions,
       onError: () => undefined,
     });
-  }, [activeFamilyId, uid]);
+  }, [activeFamilyId, screenFocused, uid]);
 
-  const visibleSessions = useMemo(() => {
-    if (!demoCount || !activeFamilyId || !uid) return sessions;
-    return homeGameService.simulated(activeFamilyId, uid, displayName, demoCount);
-  }, [activeFamilyId, demoCount, displayName, sessions, uid]);
+  const visibleSessions = sessions;
 
   const todayType = TYPES[new Date().getDate() % TYPES.length];
   const today = GAME_COPY[todayType];
@@ -96,7 +100,7 @@ export default function HomeGamesScreen() {
 
           <BloomSectionHeader title="Cờ vua cùng lúc" subtitle="Một bàn cờ riêng cho hai người đang cùng có mặt trong Bloom." />
           <BloomCard style={styles.chessCard} onPress={() => router.push("/chess-lobby" as never)}>
-            <View style={styles.chessIcon}><Image accessibilityLabel="Quân Mã cờ vua" source={require("../../../../assets/images/chess/pieces-webp-default/bn.webp")} resizeMode="contain" fadeDuration={0} style={styles.chessPieceIcon} /></View>
+            <View style={styles.chessIcon}><Image accessibilityLabel="Quân Mã cờ vua" source={require("../../../../assets/images/chess/pieces-png-default/bn.png")} resizeMode="contain" fadeDuration={0} style={styles.chessPieceIcon} /></View>
             <View style={styles.chessCopy}>
               <Text style={styles.chessTitle}>Cờ vua Nhà Mình</Text>
               <Text style={styles.chessText}>Thách đấu trực tiếp · Bloom giữ nhịp ván cờ và giúp bạn trở lại nếu kết nối chập chờn.</Text>
@@ -105,12 +109,12 @@ export default function HomeGamesScreen() {
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </BloomCard>
 
-          <BloomSectionHeader title="Cờ tướng Nhà Mình" subtitle="Bộ quân đã chốt · luật nền đã chạy · thử một ván cùng Bloom Bot." />
+          <BloomSectionHeader title="Cờ tướng Nhà Mình" subtitle="Bộ quân đã chốt · luật nền đã chạy · chơi một ván cùng Bloom Bot." />
           <BloomCard style={styles.chessCard} onPress={() => router.push("/xiangqi-preview" as never)}>
             <View style={styles.xiangqiIcon}><XiangqiPiece color="red" type="general" size={48} /></View>
             <View style={styles.chessCopy}>
               <Text style={styles.chessTitle}>Cờ tướng Nhà Mình</Text>
-              <Text style={styles.chessText}>Chạm để chơi thử trọn ván với Bloom Bot: chọn quân, xem nước hợp lệ, bắt quân và chiếu Tướng.</Text>
+              <Text style={styles.chessText}>Chạm để chơi trọn ván với Bloom Bot: chọn quân, xem nước hợp lệ, bắt quân và chiếu Tướng.</Text>
               <View style={styles.pills}><BloomPill icon="game-controller-outline" label="Chơi được ngay" /><BloomPill icon="shield-checkmark-outline" label="Luật nền V1" /></View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -133,23 +137,15 @@ export default function HomeGamesScreen() {
 
           <BloomSectionHeader
             title="Ván của nhà mình"
-            subtitle={demoCount ? `Đang xem ${demoCount} ván mẫu · hoàn toàn tách khỏi dữ liệu gia đình` : "Những ván gần đây của nhà được giữ gọn ở đây"}
+            subtitle="Những ván gần đây của nhà được giữ gọn ở đây"
           />
-          <View style={styles.demoRow}>
-            <Text style={styles.demoLabel}>Dữ liệu thử:</Text>
-            {([0, 10, 50, 100] as const).map(count => (
-              <Pressable key={count} onPress={() => setDemoCount(count)} style={[styles.demoChip, demoCount === count && styles.demoChipActive]}>
-                <Text style={[styles.demoChipText, demoCount === count && styles.demoChipTextActive]}>{count === 0 ? "Tắt" : count}</Text>
-              </Pressable>
-            ))}
-          </View>
 
           {visibleSessions.length ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sessionRail} snapToInterval={236} decelerationRate="fast">
-              {visibleSessions.slice(0, demoCount ? demoCount : 20).map(item => {
+              {visibleSessions.slice(0, 20).map(item => {
                 const meta = GAME_COPY[item.gameType];
                 return (
-                  <Pressable key={item.id} disabled={item.id.startsWith("sim-")} onPress={() => open(item.id)} style={({ pressed }) => [styles.sessionCard, pressed && styles.pressed]}>
+                  <Pressable key={item.id} onPress={() => open(item.id)} style={({ pressed }) => [styles.sessionCard, pressed && styles.pressed]}>
                     <View style={[styles.sessionIcon, { backgroundColor: meta.tone }]}><Ionicons name={meta.icon as any} size={22} color={COLORS.primaryText} /></View>
                     <Text style={styles.sessionStatus}>{homeGameStatusLabel(item, clockNow)}</Text>
                     <Text style={styles.sessionTitle} numberOfLines={2}>{item.title}</Text>
@@ -201,12 +197,6 @@ const styles = StyleSheet.create({
   gameText: { marginTop: 5, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15.5 },
   gameBottom: { marginTop: "auto", paddingTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   gameMinutes: { color: COLORS.primary, fontSize: 9.5, fontWeight: "900" },
-  demoRow: { flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" },
-  demoLabel: { color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "800" },
-  demoChip: { minWidth: 42, height: 32, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.white },
-  demoChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  demoChipText: { color: COLORS.primaryText, fontSize: 10.5, fontWeight: "900" },
-  demoChipTextActive: { color: COLORS.white },
   sessionRail: { gap: 10, paddingRight: 20 },
   sessionCard: { width: 226, minHeight: 156, borderRadius: 24, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, padding: 14, shadowColor: "#7E4D61", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
   sessionIcon: { width: 40, height: 40, borderRadius: 15, alignItems: "center", justifyContent: "center" },

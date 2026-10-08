@@ -57,8 +57,8 @@ check('fake standalone audit entries are blocked by linked mutation', /fundAudit
 check('day month year analytics exist', /\["day", "month", "year"\]/.test(screen) && /statsBuckets/.test(service));
 check('analytics are bounded to 1000 usable rows', /STATS_SCAN_LIMIT = 1001/.test(service) && /slice\(0, STATS_SCAN_LIMIT - 1\)/.test(service));
 check('chart is custom RN view based', /function FundBarChart/.test(screen) && /chartBar/.test(screen));
-check('deterministic simulated stats available in DEV', /makeMockStats/.test(service) && /(Mô phỏng|Dữ liệu thử)/.test(screen) && /__DEV__/.test(screen));
-check('simulated stats never write Firestore', /RAM-only/.test(service) && !/makeMockStats[\s\S]{0,800}tx\.set/.test(service));
+check('fund screen no longer exposes simulated statistics mode', !/makeMockStats|simulateStats|Mô phỏng|Dữ liệu thử/.test(screen));
+check('fund service no longer carries simulated statistics code', !/makeMockStats|mockStats/.test(service));
 check('audit list is bounded', /AUDIT_PAGE_SIZE = 30/.test(service) && /limit\(AUDIT_PAGE_SIZE\)/.test(service));
 check('history remains paginated 30', /PAGE_SIZE = 30/.test(service) && /Xem thêm 30 khoản/.test(screen));
 check('rules direct and cloud fund blocks match', (() => {

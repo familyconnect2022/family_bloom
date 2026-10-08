@@ -10,6 +10,7 @@ const board = read('src/components/chess/ChessBoard.tsx');
 const piece = read('src/components/chess/v2/ChessPiece.tsx');
 const hook = read('src/hooks/chess/useChessGame.ts');
 const game = read('src/app/(chess)/chess-game/[gameId].tsx');
+const surfaceHost = read('src/components/chess/ChessSurfaceHost.tsx');
 const clock = read('src/components/chess/ChessClock.tsx');
 const rail = read('src/components/chess/ChessPlayerRail.tsx');
 const modal = read('src/components/chess/BloomGameBottomModal.tsx');
@@ -20,9 +21,9 @@ const realtime = read('src/context/ChessRealtimeContext.tsx');
 const socket = read('src/services/chess/chessSocketService.ts');
 const postCopy = read('Family_Bloom_CLEAN_APPLY_FULL.bat');
 
-check('Chess screen lifecycle follows Expo Router focus', game.includes('useFocusEffect') && game.includes('const [screenFocused, setScreenFocused]'));
-check('Game hook suspends game-specific listeners while route is blurred', hook.includes('runtimeActive = true') && /if \(!familyId \|\| !gameId \|\| !runtimeActive\)/.test(hook));
-check('Game resync becomes inert while route runtime is suspended', hook.includes('if (!runtimeActiveRef.current) return stateRef.current'));
+check('Chess route lifecycle is controller-only while board lives at root', game.includes('useFocusEffect') && game.includes('ChessGameRouteController') && !game.includes('<ChessBoard'));
+check('Game hook owns no game-specific socket listeners after engine separation', !hook.includes('chessSocketService') && hook.includes('actions.setBoardPresence'));
+check('Game resync is delegated to root realtime engine', hook.includes('actions.resyncGame(gameId)') && !hook.includes('gameResync'));
 check('Global realtime provider remains separate from game-route runtime', realtime.includes('ChessRealtimeContext.Provider') && socket.includes('disconnectIfIdle'));
 check('Global socket idle disconnect remains no-op for foreground presence', socket.includes('authenticated foreground app owns Chess socket lifecycle') && socket.includes('disconnectIfIdle'));
 
@@ -39,17 +40,17 @@ check('PieceLayer remains persistent across focus changes', !board.includes('pie
 
 check('Piece controller can synchronously cancel and normalize native motion', piece.includes('sync: (pieceKey: PieceKey') && piece.includes('cancelAnimation(x)') && piece.includes('cancelAnimation(scale)'));
 check('Cancelling a piece resolves pending animation Promise', piece.includes('pendingDoneRef') && piece.includes('finishPending()'));
-check('Piece sync restores drag and moving flags to idle', piece.includes('dragAllowed.value = 0') && piece.includes('moving.value = 0'));
+check('Piece sync restores moving flag to idle without drag state', !piece.includes('dragAllowed') && piece.includes('moving.value = 0'));
 check('Piece sync can repair promotion artwork after interrupted transition', piece.includes('setPieceKeyState(nextPieceKey)'));
 
 check('Chess clock interval is focus/runtime gated', clock.includes('runtimeActive = true') && clock.includes('const clockRunning = runtimeActive &&'));
 check('Player rail propagates runtime lifecycle to clock', rail.includes('runtimeActive={runtimeActive}'));
-check('Chess screen disables both clocks after blur or game finish', game.includes('runtimeActive={screenFocused && boardSurfaceVisible && entryPhase === "playing" && state.status === "active"}'));
-check('Chess effects are not mounted behind another route', game.includes('FX_ENABLED && screenFocused'));
-check('Chess reconnect indicator is hidden behind another route', game.includes('screenFocused && game.connectionPhase === "reconnecting"'));
-check('Chess result modal is focus-gated', game.includes('visible={screenFocused && state.status === "finished"'));
-check('Chess promotion and ready bottom modals are focus-gated', game.includes('visible={screenFocused && !!promotion}') && game.includes('visible={screenFocused && gameFlowVisible && !promotion}'));
-check('Blur resolves a pending promotion promise instead of leaking it', game.includes('current?.resolve?.(null)'));
+check('Persistent host runs full clocks only while full active game is visible', surfaceHost.includes('runtimeActive={fullVisible && state.status === "active"}'));
+check('Chess battle FX runtime is retired and cannot run behind mini route', !surfaceHost.includes('ChessBattleEffects') && !surfaceHost.includes('boardFxLayer'));
+check('Chess reconnect/sync indicator belongs to full root surface only', surfaceHost.includes('actualGame && fullVisible && game.connectionPhase !== "connected"') && surfaceHost.includes('Đang đồng bộ ván cờ…'));
+check('Chess result overlay is full-surface gated without a native Modal', surfaceHost.includes('showResult = fullVisible') && !surfaceHost.includes('<Modal'));
+check('Chess promotion and ready overlays stay inside the persistent Chess surface coordinate space', surfaceHost.includes('promotion && actualGame') && surfaceHost.includes('showPreparing') && (surfaceHost.includes('styles.surfaceOverlay') || surfaceHost.includes('styles.boardOverlay') || surfaceHost.includes('styles.chessModalLayer')));
+check('Session change resolves a pending promotion promise instead of leaking it', surfaceHost.includes('current?.resolve(null)'));
 check('Chess terminal state hard-locks input after the final visual commit', board.includes('if (state.status !== "active")') && board.includes('boardLocked.value = 1'));
 
 check('Bloom bottom modal does not retain forced hardware raster layer', !modal.includes('renderToHardwareTextureAndroid') && !modal.includes('shouldRasterizeIOS'));
@@ -69,7 +70,7 @@ check('Xiangqi hint animations cancel on suspend', xiangqiBoard.includes('cancel
 check('Post-copy updater still runs current Chess aggregate', postCopy.includes('chess:current-check'));
 
 for (const [file, source] of [
-  ['ChessBoard', board], ['ChessPiece', piece], ['useChessGame', hook], ['Chess game screen', game],
+  ['ChessBoard', board], ['ChessPiece', piece], ['useChessGame', hook], ['Chess game route', game], ['Chess surface host', surfaceHost],
   ['ChessClock', clock], ['ChessPlayerRail', rail], ['Bloom modal', modal], ['Xiangqi preview', xiangqi], ['Xiangqi board', xiangqiBoard], ['Xiangqi FX', xiangqiFx],
 ]) {
   const out = ts.transpileModule(source, {

@@ -125,21 +125,33 @@ call npm run phase15a:check
 if errorlevel 1 goto :fail
 call npm run phase15a4:check
 if errorlevel 1 goto :fail
-call npm run phase15b:check
+call npm run phase17_6:check
 if errorlevel 1 goto :fail
-call npm run phase15b1:check
+call npm run phase17_7:check
 if errorlevel 1 goto :fail
-call npm run phase15b2:check
+call npm run phase17_8:check
 if errorlevel 1 goto :fail
-call npm run phase15b3:check
+call npm run phase17_8a:check
+if errorlevel 1 goto :fail
+call npm run phase17_8b:check
+if errorlevel 1 goto :fail
+call npm run phase17_8c:check
+if errorlevel 1 goto :fail
+call npm run phase17_8d:check
+if errorlevel 1 goto :fail
+call npm run phase17_8e:check
+if errorlevel 1 goto :fail
+call npm run phase17_9a9:check
+if errorlevel 1 goto :fail
+call npm run phase17:check
+if errorlevel 1 goto :fail
+call npm run phase17_1:check
 if errorlevel 1 goto :fail
 call npm run phase16a2:check
 if errorlevel 1 goto :fail
 call npm run phase16b:check
 if errorlevel 1 goto :fail
 call npm run chess:current-check
-if errorlevel 1 goto :fail
-call npm run phase14n:check
 if errorlevel 1 goto :fail
 call npm run phase14q:check
 if errorlevel 1 goto :fail

@@ -399,7 +399,6 @@ export default function XiangqiPreviewScreen() {
 
       <BloomGameBottomModal
         visible={screenFocused && !playing && !game.gameOver}
-        keepMounted
         staticFirstPresentation
         suspended={!screenFocused}
         eyebrow={readyPhase ? "BLOOM READY" : "BLOOM ĐANG CHUẨN BỊ"}

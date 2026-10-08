@@ -1,8 +1,8 @@
-import { Stack, usePathname, useRouter, useSegments } from "expo-router";
-import { Profiler, useEffect, useMemo, useState } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { View } from "react-native";
 import { BloomAppBootstrap } from "../components/system/BloomAppBootstrap";
 import { BloomPushBridge } from "../components/system/BloomPushBridge";
-import { AppWidePerformanceDriver } from "../components/system/AppWidePerformanceDriver";
 import { MediaViewerProvider } from "../components/media/MediaViewerProvider";
 import { WelcomeModal } from "../components/onboarding/WelcomeModal";
 import { BloomToastProvider } from "../components/ui/BloomToast";
@@ -11,12 +11,12 @@ import { BLOOM_MOTION } from "../constants/motion";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
 import { ChessRealtimeProvider } from "../context/ChessRealtimeContext";
+import { ChessSurfaceHost } from "../components/chess/ChessSurfaceHost";
+import { setChessSurfacePresentationReady } from "../services/chess/chessSurfaceStore";
+import { ChessGlobalUiHost } from "../components/chess/ChessGlobalUiHost";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
 import { TabStartupProvider, useTabStartup } from "../context/TabStartupContext";
 import { HomeMusicPlayerProvider } from "../context/HomeMusicPlayerContext";
-import { PERFORMANCE_TEST_BUILD } from "../constants/performanceTest";
-import { performanceTestService } from "../services/performance/performanceTestService";
-import { appWidePerformanceService } from "../services/performance/appWidePerformanceService";
 import { runtimeDiagnosticsService } from "../services/error/runtimeDiagnosticsService";
 
 const RootNavigator = () => {
@@ -35,21 +35,11 @@ const RootNavigator = () => {
     dismissWelcome,
   } = useAuth();
   const segments = useSegments();
-  const pathname = usePathname();
   const router = useRouter();
   const [navigationStable, setNavigationStable] = useState(false);
   const { ready: tabsReady } = useTabStartup();
   const rootSegment = segments[0];
 
-  useEffect(() => {
-    if (!PERFORMANCE_TEST_BUILD) return;
-    performanceTestService.mark("tab_switch", "route_changed");
-    const frame = requestAnimationFrame(() => requestAnimationFrame(() => {
-      performanceTestService.mark("tab_switch", "first_frame");
-      performanceTestService.finish("tab_switch");
-    }));
-    return () => cancelAnimationFrame(frame);
-  }, [pathname]);
 
   useEffect(() => {
     if (authStatus === "initializing" || profileStatus === "loading") {
@@ -127,8 +117,10 @@ const RootNavigator = () => {
     : undefined;
 
   useEffect(() => {
-    if (PERFORMANCE_TEST_BUILD && bootstrapReady) performanceTestService.recordAppReadyOnce();
+    setChessSurfacePresentationReady(bootstrapReady);
+    return () => setChessSurfacePresentationReady(false);
   }, [bootstrapReady]);
+
 
   const navigationStack = (
     <Stack
@@ -146,6 +138,8 @@ const RootNavigator = () => {
       <Stack.Screen name="(family)/(membership)/family-select" options={{ headerShown: false }} />
       <Stack.Screen name="(family)/(membership)/family-memberships" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(profile)/profile" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(profile)/settings" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(internal)/developer-tools" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(activity)/(notifications)/notifications" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(activity)/(notifications)/notification-preferences" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(family)/(membership)/family-join-requests" options={{ animation: BLOOM_MOTION.screen.animation }} />
@@ -174,7 +168,6 @@ const RootNavigator = () => {
       <Stack.Screen name="(chess)/chess-game/[gameId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(xiangqi)/xiangqi-preview" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(memories)/memory-book" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(internal)/performance-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(internal)/performance-graph-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(internal)/performance-data-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
     </Stack>
@@ -182,19 +175,7 @@ const RootNavigator = () => {
 
   return (
     <>
-      {PERFORMANCE_TEST_BUILD ? (
-        <Profiler
-          id="family-bloom-root-navigation"
-          onRender={(_id, phase, actualDuration, baseDuration) => {
-            if (appWidePerformanceService.isRunning()) {
-              performanceTestService.recordReactCommit(pathname || "/", phase, actualDuration, baseDuration);
-            }
-          }}
-        >
-          {navigationStack}
-        </Profiler>
-      ) : navigationStack}
-      <AppWidePerformanceDriver />
+      {navigationStack}
       <BloomAppBootstrap ready={bootstrapReady} message={bootstrapMessage} />
       <BloomPushBridge />
       <WelcomeModal
@@ -215,7 +196,11 @@ function FamilySession() {
   return (
     <FamilyRealtimeProvider key={sessionKey}>
       <ChessRealtimeProvider>
-        <TabStartupProvider><RootNavigator /></TabStartupProvider>
+        <View style={{ flex: 1 }}>
+          <TabStartupProvider><RootNavigator /></TabStartupProvider>
+          <ChessGlobalUiHost />
+          <ChessSurfaceHost />
+        </View>
       </ChessRealtimeProvider>
     </FamilyRealtimeProvider>
   );

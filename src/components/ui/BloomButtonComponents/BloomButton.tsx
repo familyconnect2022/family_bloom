@@ -12,8 +12,6 @@ import {
   ViewStyle,
 } from "react-native";
 import { BloomIconProp, COLORS, renderIcon, useBloomTouchAnimation } from "./shared";
-import { PERFORMANCE_TEST_BUILD } from "../../../constants/performanceTest";
-import { performanceTestService } from "../../../services/performance/performanceTestService";
 
 export type ButtonVariant =
   | "primary"
@@ -88,7 +86,6 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
   };
   const vStyles = getVariantStyles();
   const handleMeasuredPress = () => {
-    if (PERFORMANCE_TEST_BUILD) performanceTestService.recordUiPress(`Button: ${title}`);
     onPress();
   };
 

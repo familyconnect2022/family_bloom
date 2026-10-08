@@ -2,14 +2,14 @@ import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { BloomCard, BloomSectionHeader } from "../../components/ui/BloomPageComponents";
 import { COLORS } from "../../constants/theme";
-import { PERFORMANCE_TEST_BUILD, isPerformanceTestAccount } from "../../constants/performanceTest";
 import { useAuth } from "../../context/AuthContext";
+import { useTabLiveEffect, useTabRuntime } from "../../context/TabRuntimeContext";
 import { homeTimeCapsuleService, isTimeCapsuleOpen, timeCapsuleOpenMillis } from "../../services/home/homeTimeCapsuleService";
 import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
 import type { HomeTimeCapsule } from "../../types/homeLiving";
@@ -49,29 +49,31 @@ function HubCard({ icon, title, description, accent, badge, statusLine, attentio
 
 export default function PlayScreen() {
   useTabStartupTask("play");
+  useTabRuntime("play");
   const router = useRouter();
   const { user, userProfile, activeMembership, activeFamilyId } = useAuth();
   const [timeCapsules, setTimeCapsules] = useState<HomeTimeCapsule[]>([]);
   const [capsuleClock, setCapsuleClock] = useState(0);
-  const showPerformanceLab = PERFORMANCE_TEST_BUILD && isPerformanceTestAccount(user?.email);
   const name = userProfile?.shortName || userProfile?.displayName || "bạn";
   const familyName = activeMembership?.familyName || "gia đình mình";
 
+
   useEffect(() => {
-    if (!activeFamilyId || !user?.uid) {
-      setTimeCapsules([]);
-      return;
-    }
+    if (!activeFamilyId || !user?.uid) setTimeCapsules([]);
+  }, [activeFamilyId, user?.uid]);
+
+  useTabLiveEffect("play", (scope) => {
+    if (!activeFamilyId || !user?.uid) return;
     return subscribeSharedRealtime<HomeTimeCapsule[]>({
       key: `home.time_capsules.recipient.all:${activeFamilyId}:${user.uid}`,
       listenerName: "home.time_capsules.recipient",
       start: (onData, onError) => homeTimeCapsuleService.watchRecipientCapsules(activeFamilyId, user.uid, onData, onError),
-      onData: setTimeCapsules,
+      onData: (items) => { if (scope.isCurrent()) setTimeCapsules(items); },
       onError: () => undefined,
     });
   }, [activeFamilyId, user?.uid]);
 
-  useEffect(() => {
+  useTabLiveEffect("play", () => {
     const now = Date.now();
     const next = timeCapsules
       .map(timeCapsuleOpenMillis)
@@ -199,18 +201,6 @@ export default function PlayScreen() {
               <Text style={styles.soon}>XEM GIAO DIỆN</Text>
             </BloomCard>
           </View>
-
-          {showPerformanceLab && (
-            <BloomCard style={styles.performanceCard} onPress={() => router.push("/performance-test" as never)}>
-              <View style={styles.performanceIcon}><Ionicons name="speedometer-outline" size={24} color={COLORS.primary} /></View>
-              <View style={styles.hubCopy}>
-                <Text style={styles.performanceKicker}>INTERNAL · TEST LAB</Text>
-                <Text style={styles.hubTitle}>Phòng đo hiệu năng</Text>
-                <Text style={styles.hubDescription}>Chỉ hiện ở internal build; production vẫn giữ Nhà Mình sạch và dễ dùng.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-            </BloomCard>
-          )}
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -250,7 +240,4 @@ const styles = StyleSheet.create({
   miniTitle: { marginTop: 12, color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
   miniText: { marginTop: 5, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15.5 },
   soon: { marginTop: "auto", paddingTop: 10, color: COLORS.primary, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.7 },
-  performanceCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 15, marginTop: 2 },
-  performanceIcon: { width: 48, height: 48, borderRadius: 17, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
-  performanceKicker: { color: COLORS.primary, fontSize: 9.5, fontWeight: "900", letterSpacing: 0.7, marginBottom: 3 },
 });

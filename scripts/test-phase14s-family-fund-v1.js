@@ -52,7 +52,7 @@ check('phase14s npm gate exists', pkg.scripts && pkg.scripts['phase14s:check'] =
 check('no bank credential fields introduced', !/accountNumber|cardNumber|cvv|bankPassword|pinCode/.test(service + types));
 check('stats scan is bounded', /STATS_SCAN_LIMIT = 1001/.test(service));
 check('audit scan is bounded', /AUDIT_PAGE_SIZE = 30/.test(service));
-check('mock statistics are RAM-only', /RAM-only/.test(service) && /makeMockStats/.test(service));
+check('production fund service no longer carries mock statistics helper', !/makeMockStats|mockStats/.test(service));
 
 console.log(`Phase14S Family Fund foundation: ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

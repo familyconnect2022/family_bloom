@@ -17,6 +17,7 @@ import {
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
+import { useTabRuntime } from "../../context/TabRuntimeContext";
 import { useFamilyMembers } from "../../hooks/family/useFamilyMembers";
 
 const roleLabel: Record<string, string> = {
@@ -28,6 +29,7 @@ const roleLabel: Record<string, string> = {
 
 export default function FamilyScreen() {
   useTabStartupTask("family");
+  useTabRuntime("family");
   const router = useRouter();
   const [familySwitcherVisible, setFamilySwitcherVisible] = useState(false);
   const { user, userProfile, families } = useAuth();

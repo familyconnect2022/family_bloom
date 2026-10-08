@@ -307,7 +307,6 @@ export type HomeFundStats = {
   expenseVnd: number;
   transactionCount: number;
   capped: boolean;
-  simulated: boolean;
 };
 
 export type HomeGameType =

@@ -5,11 +5,12 @@ import { ChessDomainError, type AppliedMove, type CaptureSummary, type CapturedP
 import { ChessPersistenceService } from "./chessPersistenceService.js";
 
 type AwayBudget = { leftAtMono: number; deadlineMono: number; remainingAtLeaveMs: number };
-type Runtime = { game: PersistedGame; chess: Chess; turnStartedMono: number | null; connectedUids: Set<string>; captures: CaptureSummary; boardAwayByUid: Map<string, AwayBudget> };
+type Runtime = { game: PersistedGame; chess: Chess; turnStartedMono: number | null; connectedUids: Set<string>; readyUids: Set<string>; captures: CaptureSummary; boardAwayByUid: Map<string, AwayBudget> };
 type Broadcast = (event: { kind: "state"; state: PublicGameState } | { kind: "move"; state: PublicGameState; delta: MoveDelta }) => void;
 const iso = () => new Date().toISOString();
 const otherColor = (c: ChessColor): ChessColor => c === "w" ? "b" : "w";
 const CHECKPOINT_EVERY_PLY = 4;
+const FINISHED_RUNTIME_TTL_MS = 30 * 60_000;
 type CapturablePiece = NonNullable<AppliedMove["captured"]>;
 const emptyCaptureSummary = (): CaptureSummary => ({
   byWhite: { p: 0, n: 0, b: 0, r: 0, q: 0 },
@@ -42,6 +43,7 @@ export class ChessGameManager {
   private games = new Map<string, Runtime>();
   private queues = new Map<string, Promise<unknown>>();
   private timer: NodeJS.Timeout;
+  private finishedEvictionTimers = new Map<string, NodeJS.Timeout>();
   constructor(private persistence: ChessPersistenceService, private broadcast: Broadcast) {
     this.timer = setInterval(() => { void this.checkTimeouts(); }, 300);
     this.timer.unref();
@@ -55,20 +57,39 @@ export class ChessGameManager {
     return next;
   }
 
-  async create(familyId: string, uidA: string, uidB: string, timeControl: ChessTimeControl, createRequestId?: string, options?: { testBotUid?: string | null }) {
+  async create(
+    familyId: string,
+    uidA: string,
+    uidB: string,
+    timeControl: ChessTimeControl,
+    createRequestId?: string,
+    options?: { testBotUid?: string | null; whiteUid?: string; blackUid?: string; additionalRequestIds?: string[] },
+  ) {
     const gameId = randomUUID();
-    const whiteUid = Math.random() < 0.5 ? uidA : uidB; const blackUid = whiteUid === uidA ? uidB : uidA;
+    const explicitColors = options?.whiteUid && options?.blackUid
+      && new Set([options.whiteUid, options.blackUid]).size === 2
+      && [options.whiteUid, options.blackUid].every((uid) => uid === uidA || uid === uidB);
+    const whiteUid = explicitColors ? options!.whiteUid! : (Math.random() < 0.5 ? uidA : uidB);
+    const blackUid = explicitColors ? options!.blackUid! : (whiteUid === uidA ? uidB : uidA);
     const chess = new Chess(); const now = iso();
     const game: PersistedGame = {
-      id: gameId, familyId, whiteUid, blackUid, playerUids: [whiteUid, blackUid], status: "active",
+      id: gameId, familyId, whiteUid, blackUid, playerUids: [whiteUid, blackUid], status: "waiting",
       fen: chess.fen(), pgn: chess.pgn(), turn: "w", revision: 1,
       whiteRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       timeControl, result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
-      recentRequestIds: createRequestId ? [createRequestId] : [], testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: now, endedAt: null, updatedAt: now,
+      recentRequestIds: [...new Set([...(createRequestId ? [createRequestId] : []), ...(options?.additionalRequestIds ?? [])])].slice(-24), testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: null, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
-    const runtime: Runtime = { game, chess, turnStartedMono: timeControl.kind === "clocked" ? performance.now() : null, connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []), captures: emptyCaptureSummary(), boardAwayByUid: new Map() };
+    const runtime: Runtime = {
+      game,
+      chess,
+      turnStartedMono: null,
+      connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
+      readyUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
+      captures: emptyCaptureSummary(),
+      boardAwayByUid: new Map(),
+    };
     this.games.set(gameId, runtime);
     return this.publicState(runtime);
   }
@@ -83,7 +104,7 @@ export class ChessGameManager {
       stored.status = "paused"; stored.revision += 1; stored.updatedAt = iso();
       await this.persistence.save(stored);
     }
-    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), captures: deriveCaptureSummary(chess), boardAwayByUid: new Map() };
+    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), readyUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), captures: deriveCaptureSummary(chess), boardAwayByUid: new Map() };
     this.games.set(gameId, runtime); return runtime;
   }
 
@@ -102,6 +123,41 @@ export class ChessGameManager {
       }
       const state = this.publicState(r);
       if (resumed) this.broadcast({ kind: "state", state });
+      return state;
+    });
+  }
+
+  async markReady(gameId: string, uid: string, requestId: string) {
+    return this.enqueue(gameId, async () => {
+      const r = this.games.get(gameId);
+      if (!r) throw new ChessDomainError("CHESS_GAME_NOT_FOUND");
+      this.assertPlayer(r, uid);
+      if (r.game.status === "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
+      if (r.game.status === "active") return this.publicState(r);
+      if (r.game.status !== "waiting") throw new ChessDomainError("CHESS_SERVER_RECOVERING");
+
+      r.readyUids.add(uid);
+      const bothReady = r.readyUids.has(r.game.whiteUid) && r.readyUids.has(r.game.blackUid);
+      if (!bothReady) return this.publicState(r);
+
+      const before = this.snapshot(r);
+      const readyBefore = new Set(r.readyUids);
+      try {
+        const now = iso();
+        r.game.status = "active";
+        r.game.startedAt = now;
+        r.game.updatedAt = now;
+        r.game.revision += 1;
+        this.remember(r.game, requestId);
+        r.turnStartedMono = r.game.timeControl.kind === "clocked" ? performance.now() : null;
+        await this.persistence.save(r.game);
+      } catch (error) {
+        this.restoreSnapshot(r, before);
+        r.readyUids = readyBefore;
+        throw error;
+      }
+      const state = this.publicState(r);
+      this.broadcast({ kind: "state", state });
       return state;
     });
   }
@@ -333,7 +389,19 @@ export class ChessGameManager {
     return null;
   }
   private applyTerminal(r: Runtime, t: {result:"white"|"black"|"draw";reason:FinishReason}) { r.game.result=t.result; r.game.finishReason=t.reason; this.finishRuntime(r); }
-  private finishRuntime(r: Runtime) { r.game.status="finished"; r.game.endedAt=iso(); r.game.drawOfferByUid=null; r.turnStartedMono=null; r.boardAwayByUid.clear(); }
+  private finishRuntime(r: Runtime) {
+    r.game.status="finished"; r.game.endedAt=iso(); r.game.drawOfferByUid=null; r.turnStartedMono=null; r.boardAwayByUid.clear();
+    const gameId = r.game.id;
+    const previous = this.finishedEvictionTimers.get(gameId);
+    if (previous) clearTimeout(previous);
+    const timer = setTimeout(() => {
+      const current = this.games.get(gameId);
+      if (current === r && current.game.status === "finished") this.games.delete(gameId);
+      this.finishedEvictionTimers.delete(gameId);
+    }, FINISHED_RUNTIME_TTL_MS);
+    timer.unref();
+    this.finishedEvictionTimers.set(gameId, timer);
+  }
   private hasMatingPossibility(chess: Chess, color: ChessColor) {
     const pieces: PieceSymbol[] = []; const opponent: PieceSymbol[] = [];
     for (const row of chess.board()) for (const piece of row) if (piece) (piece.color === color ? pieces : opponent).push(piece.type);
@@ -345,8 +413,8 @@ export class ChessGameManager {
   private assertPlayer(r: Runtime, uid: string) { if (uid !== r.game.whiteUid && uid !== r.game.blackUid) throw new ChessDomainError("CHESS_NOT_PLAYER"); }
   private assertActive(r: Runtime) { if (r.game.status === "finished") throw new ChessDomainError("CHESS_GAME_FINISHED"); if (r.game.status !== "active") throw new ChessDomainError("CHESS_SERVER_RECOVERING"); }
   private remember(g: PersistedGame, id: string) { g.recentRequestIds = [...g.recentRequestIds.filter((v) => v !== id), id].slice(-24); }
-  private snapshot(r: Runtime) { return { game: structuredClone(r.game), pgn: r.chess.pgn(), turnStartedMono: r.turnStartedMono, captures: cloneCaptureSummary(r.captures), boardAwayByUid: new Map<string, AwayBudget>([...r.boardAwayByUid].map(([uid, budget]) => [uid, { ...budget }] as [string, AwayBudget])) }; }
-  private restoreSnapshot(r: Runtime, s: {game:PersistedGame;pgn:string;turnStartedMono:number|null;captures:CaptureSummary;boardAwayByUid:Map<string,AwayBudget>}) { r.game=s.game; const c=new Chess(); if(s.pgn)c.loadPgn(s.pgn); r.chess=c; r.turnStartedMono=s.turnStartedMono; r.captures=cloneCaptureSummary(s.captures); r.boardAwayByUid=new Map<string, AwayBudget>([...s.boardAwayByUid].map(([uid, budget]) => [uid, { ...budget }] as [string, AwayBudget])); }
+  private snapshot(r: Runtime) { return { game: structuredClone(r.game), pgn: r.chess.pgn(), turnStartedMono: r.turnStartedMono, readyUids: new Set(r.readyUids), captures: cloneCaptureSummary(r.captures), boardAwayByUid: new Map<string, AwayBudget>([...r.boardAwayByUid].map(([uid, budget]) => [uid, { ...budget }] as [string, AwayBudget])) }; }
+  private restoreSnapshot(r: Runtime, s: {game:PersistedGame;pgn:string;turnStartedMono:number|null;readyUids:Set<string>;captures:CaptureSummary;boardAwayByUid:Map<string,AwayBudget>}) { r.game=s.game; const c=new Chess(); if(s.pgn)c.loadPgn(s.pgn); r.chess=c; r.turnStartedMono=s.turnStartedMono; r.readyUids=new Set(s.readyUids); r.captures=cloneCaptureSummary(s.captures); r.boardAwayByUid=new Map<string, AwayBudget>([...s.boardAwayByUid].map(([uid, budget]) => [uid, { ...budget }] as [string, AwayBudget])); }
 
   private publicState(r: Runtime): PublicGameState {
     let white = r.game.whiteRemainingMs, black = r.game.blackRemainingMs;

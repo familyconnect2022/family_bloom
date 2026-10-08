@@ -1,5 +1,3 @@
-import { PERFORMANCE_TEST_BUILD } from "../../constants/performanceTest";
-import { performanceTestService } from "../performance/performanceTestService";
 
 type Subscriber<T> = {
   onData: (value: T) => void;
@@ -9,6 +7,7 @@ type Subscriber<T> = {
 type SharedEntry<T> = {
   subscribers: Map<number, Subscriber<T>>;
   stop?: () => void;
+  disposeTimer?: ReturnType<typeof setTimeout>;
   hasValue: boolean;
   lastValue?: T;
   hasError: boolean;
@@ -21,6 +20,8 @@ type SharedSubscribeOptions<T> = {
   start: (onData: (value: T) => void, onError: (error: unknown) => void) => (() => void) | undefined | null;
   onData: (value: T) => void;
   onError?: (error: unknown) => void;
+  /** Keep the underlying listener alive briefly after the last subscriber leaves. */
+  keepAliveMs?: number;
 };
 
 const entries = new Map<string, SharedEntry<unknown>>();
@@ -44,6 +45,7 @@ export function subscribeSharedRealtime<T>({
   start,
   onData,
   onError,
+  keepAliveMs = 0,
 }: SharedSubscribeOptions<T>): () => void {
   let entry = entries.get(key) as SharedEntry<T> | undefined;
   const isNewEntry = !entry;
@@ -54,6 +56,11 @@ export function subscribeSharedRealtime<T>({
       hasError: false,
     };
     entries.set(key, entry as SharedEntry<unknown>);
+  }
+
+  if (entry.disposeTimer) {
+    clearTimeout(entry.disposeTimer);
+    entry.disposeTimer = undefined;
   }
 
   const subscriberId = subscriberSequence++;
@@ -84,9 +91,7 @@ export function subscribeSharedRealtime<T>({
 
     try {
       const rawStop = start(broadcastData, broadcastError) ?? undefined;
-      entry.stop = PERFORMANCE_TEST_BUILD && listenerName
-        ? performanceTestService.trackListener(listenerName, rawStop) ?? undefined
-        : rawStop ?? undefined;
+      entry.stop = rawStop ?? undefined;
     } catch (error) {
       entries.delete(key);
       entry.subscribers.clear();
@@ -103,15 +108,30 @@ export function subscribeSharedRealtime<T>({
     if (!current) return;
     current.subscribers.delete(subscriberId);
     if (current.subscribers.size > 0) return;
-    entries.delete(key);
-    current.stop?.();
+
+    const dispose = () => {
+      const latest = entries.get(key) as SharedEntry<T> | undefined;
+      if (!latest || latest !== current || latest.subscribers.size > 0) return;
+      entries.delete(key);
+      latest.disposeTimer = undefined;
+      latest.stop?.();
+    };
+
+    if (keepAliveMs > 0) {
+      current.disposeTimer = setTimeout(dispose, keepAliveMs);
+      return;
+    }
+    dispose();
   };
 }
 
 export const sharedRealtimeRegistryDebug = {
   activeKeys: () => [...entries.keys()].sort(),
   clearForTests: () => {
-    [...entries.values()].forEach((entry) => entry.stop?.());
+    [...entries.values()].forEach((entry) => {
+      if (entry.disposeTimer) clearTimeout(entry.disposeTimer);
+      entry.stop?.();
+    });
     entries.clear();
   },
 };

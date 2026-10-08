@@ -1,45 +1,78 @@
-Family Bloom Phase 16B.16 — Game Entry / Lifecycle Recovery + Staged Board Paint
+FAMILY BLOOM - PHASE 17.9A11 - FAMILY RECOVERY / RECONNECT SYNC / TIME CONTROLS
 
-COPY-OVER ORDER
-1. Run Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat from this FULL package and point it at the existing Family Bloom project.
-2. Wait for PRE-COPY CLEAN PASS.
-3. Copy/overlay the entire Phase 16B.16 FULL package into the existing project.
-4. Run Family_Bloom_CLEAN_APPLY_FULL.bat inside the updated project.
-5. Only after PASS, run npx expo start -c or the normal Android Debug/Release BAT under scripts/android/.
+Goal
+- Close the remaining Chess reconnect gap where Socket.IO transport could be connected before the game was authoritatively rejoined.
+- Make Chess family switching strictly isolated: leave/mark-away the old family's game room before binding the new family.
+- Recover either an active game or a finished-but-unseen result when returning to a family.
+- Persist result acknowledgement per user + family so a finished result is shown once and survives server runtime eviction.
+- Keep all A10 tap-only input, external material lanes, smaller Mini Chess, persistent root geometry and A9 lifecycle behavior.
+- Keep one generic server clock model for every supported time control.
 
-WHAT 16B.16 FIXES
-- Game entry is split into a lightweight first frame and a deferred heavy board surface.
-- The first Preparing sheet is already settled; it does not slide/scale at the same time as route navigation.
-- Chess/Xiangqi initial piece nodes are staged across paint frames (8 -> 18 -> 26 -> full) behind the Preparing shield.
-- Chess/Xiangqi piece artwork uses expo-image memory caching with zero transition.
-- Ready still waits for the COMPLETE real board: layout + controllers/piece nodes + assets + two painted frames.
-- Hidden game routes physically release their heavy board/FX surface on blur while Phase 16B.14 runtime cleanup remains active.
-- Chess can warm-start from the authoritative snapshot already received by the global realtime provider.
-- Chess fallback loading UI is a designed Bloom shell rather than an empty-looking route.
-- Socket readiness no longer waits behind /health, preventing false “Bloom đang mở bàn cờ…” when Socket.IO is already healthy.
-- Chess launcher uses the real high-contrast black knight asset (bn.webp); the washed-out white king treatment is gone.
-- Phase 16B.15 200 ms parallel hints, motion, drag path, 1-second Bot cadence, victory polish and confetti remain intact.
+Reconnect contract
+- Transport connected is NOT the same as game synchronized.
+- Game connection phases: connecting / reconnecting / synchronizing / connected.
+- During synchronizing the persistent board stays painted but interaction remains blocked.
+- Foreground recovery runs appJoin -> sessionRecover -> gameJoin -> authoritative state commit -> connected.
+- A stale state packet whose familyId does not match the active family is discarded before entering ChessGameStore.
+- A move delta is ignored unless its current authoritative game belongs to the active family.
 
-SERVER / FIREBASE
-- No new 16B.16 server protocol or Firestore Rules/index change.
-- If Phase 16B.15 server is already deployed, no Render restart is required specifically for 16B.16.
-- If the 16B.15 ~1000 ms Chess Bloom Bot server change was never deployed, deploy/restart server/ first.
-- No Firestore Rules/index deploy is required.
+Family switching
+- Client proactively sends boardPresence=false + appLeave for the old family before local Chess bindings are reset.
+- Server repeats the cleanup authoritatively when appJoin changes family: mark old board away, disconnect runtime membership, leave chess:game:<id>, leave old family/lobby rooms.
+- Old-family game state can no longer leak into the new family's client store.
+- Returning to the old family calls sessionRecover.
 
-DEVICE ACCEPTANCE
-- Enter Xiangqi: Preparing sheet should already be visible/stable; no sheet + board decode hitch.
-- Do not judge Ready until the complete board has appeared behind it; the sheet must wait automatically.
-- Leave either game and immediately scroll Kỷ niệm/Lịch/Cây nhà/Nhà Mình: normal app responsiveness should return.
-- Enter Chess with an existing authoritative snapshot: no long blank game route.
-- With Render awake, Chess lobby should reach “Sẵn sàng” instead of staying at “Bloom đang mở bàn cờ…”.
-- Confirm the black knight is visible on the Chess launcher card.
-- Re-test Chess drag/drop on the physical device. If it still fails, remove it cleanly in the next checkpoint rather than ship a half-working path.
+Session recovery
+- active: return the current-family active/waiting/paused game and gameJoin it.
+- finished_unseen: reopen the final authoritative board + Result surface even if the game runtime has already been evicted from server RAM.
+- none: no Chess surface is restored.
+- Finished results are recorded by Firebase Admin at chessRecovery/<uid>/families/<familyId>.
+- Closing Result or starting a rematch sends gameResultAck; only that user's matching recovery pointer is deleted.
+- A wrong/stale ACK cannot delete a newer recovery pointer.
+- Recovery collection is server-only; no client Firestore Rules/Indexes change is needed.
 
-AUTOMATED CHECKPOINT
-- Phase 16B.16: 48/48 PASS
-- Phase 16B.15: 51/51 PASS
-- Phase 16B.14: 51/51 PASS
-- Xiangqi playable logic: 26/26 PASS
-- Current Chess aggregate: 14/14 gate groups PASS
-- Phase 16B.10 server-authority compatibility: 20/20 PASS
-- cleanup-overlay-routes: PASS
+Time controls
+- Siêu nhanh · 3+2 = 180s initial + 2s after each accepted move.
+- Nhanh · 5+0 = 300s initial, no increment.
+- Nhanh · 10+0 = 600s initial, no increment.
+- Nhanh +5 · 10+5 = 600s initial + 5s after each accepted move.
+- Không giờ = null clock; no away-time loss by design.
+- All presets use the same {initialMs, incrementMs} server engine.
+- Increment is added only after a legal server-accepted move; reconnect/rejoin never grants an extra increment.
+- Rematch preserves the exact time control from the previous game while swapping colors deterministically.
+- Ready handshake still starts the clock only after both boards are ready.
+
+Preserved A10 behavior
+- Chess pieces are tap-only; piece drag/drop remains retired.
+- One local premove remains server-revalidated.
+- Material/captured pieces remain outside HUD cards.
+- Mini Chess remains 88x40, independently draggable/snappable, while the heavy full-board subscription sleeps.
+- Root Chess has no elevation:1000 and no full-screen alpha fade.
+- Battle FX remains retired.
+
+Intentional policies still preserved
+- Switching away from a clocked game grants the existing 50%-of-remaining-time away allowance; repeated away events do not extend it.
+- Unlimited games are intentionally exempt from away-time loss.
+- A Render restart restores active games as paused and waits for both players before resuming the clock.
+
+Server / Firestore
+- A11 changes server code relative to A10/A9. DEPLOY/RESTART the included Render server before testing A11 Chess.
+- Firebase Admin writes a small server-only recovery document per player when a game finishes and deletes it after Result ACK.
+- No Firestore Rules deployment is required.
+- No Firestore Indexes deployment is required.
+
+Copy-over
+1. Run Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat against the existing project.
+2. Copy the entire Phase 17.9A11 FULL package over the project and replace files.
+3. Run Family_Bloom_CLEAN_APPLY_FULL.bat.
+4. Deploy/redeploy the included server to Render and wait for /health.
+5. Run npx expo start -c or the normal Android Debug/Release BAT.
+
+Primary real-device checks
+- During a network drop, the board stays visible and input stays blocked through “Đang đồng bộ ván cờ…” until authoritative gameJoin completes.
+- Switch Nhà A -> Nhà B while a Chess game is active: Nhà B must not receive or paint Nhà A game packets.
+- Switch back to Nhà A before away deadline: the active game must restore at the latest authoritative position.
+- Let the Nhà A game end while viewing Nhà B, then return to Nhà A: final board + Result must reopen once.
+- Close Result, leave/re-enter the family: the acknowledged result must not reopen.
+- Test 3+2 and 10+5: increment is applied once after each accepted move and never again on reconnect.
+- A10 tap-only board/material/mini geometry must remain unchanged.
