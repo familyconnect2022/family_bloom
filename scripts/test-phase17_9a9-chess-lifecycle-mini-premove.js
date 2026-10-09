@@ -126,6 +126,8 @@ async function main() {
   check('auth/family reset preserves warm native surface + presentation readiness', resetState.prepared === true && resetState.presentationReady === true);
 
   const host = read('src/components/chess/ChessSurfaceHost.tsx');
+  const miniHost = read('src/components/chess/ChessMiniHost.tsx');
+  const appRoot = read('src/app/_layout.tsx');
   const board = read('src/components/chess/ChessBoard.tsx');
   const realtime = read('src/context/ChessRealtimeContext.tsx');
   const managerSource = read('server/src/chess/chessGameManager.ts');
@@ -135,17 +137,18 @@ async function main() {
   const tabs = read('src/app/(tabs)/_layout.tsx');
 
   check('Root Chess no longer elevates a full-screen Android layer', !/chessSurfaceRoot[\s\S]{0,250}elevation\s*:\s*1000/.test(host) && !host.includes('elevation: 1000'));
-  check('Root Chess owns a GestureHandlerRootView so mini drag is valid on Android', host.includes('<GestureHandlerRootView') && host.includes('ref={surfaceRootRef}') && host.includes('</GestureHandlerRootView>'));
+  check('one app-root GestureHandlerRootView owns Chess gestures without nested board roots', appRoot.includes('<GestureHandlerRootView style={{ flex: 1 }}>') && !host.includes('GestureHandlerRootView') && !board.includes('GestureHandlerRootView'));
   check('Ready handshake waits for authoritative visual revision plus two painted frames', host.includes('visualRevision < state.revision') && (host.match(/requestAnimationFrame\(\(\) =>/g)||[]).length >= 2 && host.includes('realtimeActions.readyGame(gameId)'));
   check('active clock is never covered by a post-activation Ready delay', host.includes('active frame must also be the first interactive/uncovered frame') && !host.includes('setEntryPhase("ready")') && !host.includes('setTimeout(() => setEntryPhase("playing"), 560)'));
   check('Chess geometry remains one width-owned source with native-origin correction', host.includes('windowWidth - CHESS_SCREEN_GUTTER * 2') && host.includes('Math.floor(raw / 8) * 8') && host.includes('measureInWindow') && host.includes('left: -screenOrigin.x') && host.includes('top: -screenOrigin.y'));
   check('Ready Promotion Result remain in one full-screen modal coordinate system', host.includes('styles.chessModalLayer') && host.includes('promotion && actualGame') && host.includes('showResult') && host.includes('width: windowWidth, height: windowHeight'));
-  check('bottom tab keeps exactly one icon node with white active glyph', (tabs.match(/<Ionicons/g)||[]).length === 1 && tabs.includes('focused ? COLORS.white : COLORS.tabInactive') && tabs.includes('TAB_INDICATOR_WIDTH = 50') && tabs.includes('TAB_INDICATOR_HEIGHT = 36'));
-  check('full Chess transition no longer alpha-animates full screen', !host.includes('fullProgress') && !host.includes('animateSurfaceMode') && host.includes('display: (fullVisible'));
-  check('mini is draggable with pan/tap race and edge snap', host.includes('Gesture.Pan()') && host.includes('Gesture.Race(pan, tap)') && host.includes('targetX') && host.includes('setChessMiniPosition'));
+  const phase17_9a17 = read('package.json').includes('phase17_9a17:check');
+  check('bottom tab keeps one geometry slot with stable active glyph treatment', phase17_9a17 ? ((tabs.match(/<Ionicons/g)||[]).length === 2 && tabs.includes('tabIconLayer') && tabs.includes('...StyleSheet.absoluteFillObject') && tabs.includes('color={COLORS.white}') && tabs.includes('color={COLORS.tabInactive}') && tabs.includes('TAB_INDICATOR_WIDTH = 50') && tabs.includes('TAB_INDICATOR_HEIGHT = 36')) : ((tabs.match(/<Ionicons/g)||[]).length === 1 && tabs.includes('focused ? COLORS.white : COLORS.tabInactive') && tabs.includes('TAB_INDICATOR_WIDTH = 50') && tabs.includes('TAB_INDICATOR_HEIGHT = 36')));
+  check('full Chess transition uses persistent offscreen transform without display relayout', !host.includes('fullProgress') && !host.includes('display:') && host.includes('fullSurfaceX') && host.includes('translateX: fullSurfaceX.value'));
+  check('mini is draggable with pan/tap race and edge snap', miniHost.includes('Gesture.Pan()') && miniHost.includes('Gesture.Race(pan, tap)') && miniHost.includes('targetX') && miniHost.includes('setChessMiniPosition'));
   check('full game store subscription sleeps in mini mode', host.includes('surface.mode === "full"') && host.includes('useChessGame(activeFamilyId'));
   check('useChessGame supports dormant external-store subscription', gameHook.includes('liveSubscription = true') && gameHook.includes('liveSubscription ? subscribeChessGameStore'));
-  check('mini owns lightweight direct game-store subscription', host.includes('subscribeChessGameStore(gameId, listener)') && host.includes('MiniChessCard'));
+  check('mini owns lightweight direct game-store subscription in an independent host', miniHost.includes('subscribeChessGameStore(gameId, listener)') && miniHost.includes('ChessMiniHost') && appRoot.includes('<ChessMiniHost />'));
   check('session binding resets on account/family identity change', realtime.includes('resetChessSurfaceSession()') && realtime.includes('[activeFamilyId, user?.uid]'));
   check('server/client ready protocol is wired', types.includes('chess:game:ready') && socket.includes('socket.on(E.gameReady') && realtime.includes('readyGame'));
   check('server/client rematch cancel protocol is wired', types.includes('chess:game:rematch:cancel') && socket.includes('socket.on(E.gameRematchCancel') && realtime.includes('cancelRematch'));

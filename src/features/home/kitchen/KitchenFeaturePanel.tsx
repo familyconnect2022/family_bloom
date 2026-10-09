@@ -102,6 +102,20 @@ export function KitchenFeaturePanel() {
 
   return (
     <View style={styles.wrapper}>
+      <BloomTextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Tìm món mình đang thèm…"
+        isSearch
+        containerStyle={styles.searchField}
+      />
+      {!!search && (
+        <View style={styles.menuList}>
+          {searchResults.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} onOpen={() => setOpened(recipe)} />)}
+          {!searchResults.length && <Text style={styles.empty}>Chưa thấy món nào đúng ý. Thử một từ khóa khác nhé.</Text>}
+        </View>
+      )}
+
       <View style={styles.prefCard}>
         <Text style={styles.heading}>Khẩu vị & ưu tiên của tôi</Text>
         <BloomNoteCallout title="Chỉ cá nhân hoá khi bạn chọn" icon="options-outline" tone="green">Nếu để “Ăn bình thường”, bạn sẽ thấy đúng thực đơn chung của cả nhà hôm nay. Chỉ các bộ lọc bạn chủ động chọn mới làm thực đơn của riêng bạn khác đi.</BloomNoteCallout>
@@ -136,20 +150,6 @@ export function KitchenFeaturePanel() {
           /> : null;
         })}
       </View>
-
-      <BloomTextInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Tìm món mình đang thèm…"
-        isSearch
-        containerStyle={styles.searchField}
-      />
-      {!!search && (
-        <View style={styles.menuList}>
-          {searchResults.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} onOpen={() => setOpened(recipe)} />)}
-          {!searchResults.length && <Text style={styles.empty}>Chưa thấy món nào đúng ý. Thử một từ khóa khác nhé.</Text>}
-        </View>
-      )}
 
       <BloomNoteCallout title="Một thực đơn mới mỗi ngày" icon="sunny-outline" tone="amber">Mỗi ngày Bloom mở ra một thực đơn chung mới cho cả nhà. Khi bạn chọn khẩu vị riêng, những gợi ý dành cho bạn sẽ đổi theo thật nhẹ nhàng.</BloomNoteCallout>
     </View>

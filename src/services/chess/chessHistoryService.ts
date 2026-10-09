@@ -9,6 +9,7 @@ import {
   where,
 } from "@react-native-firebase/firestore";
 import type { ChessFinishReason, ChessResult, ChessTimeControl } from "../../types/chess";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 
 export type ChessHistoryItem = {
   id: string;
@@ -35,7 +36,7 @@ export type ChessHistoryPage = {
 
 export const chessHistoryService = {
   async list(familyId: string, uid: string, cursor?: unknown | null): Promise<ChessHistoryPage> {
-    const games = collection(getFirestore(), `families/${familyId}/chessGames`);
+    const games = collection(getFirestore(), FIRESTORE_PATHS.familyChessGames(familyId));
     const gamesQuery = cursor
       ? query(
         games,

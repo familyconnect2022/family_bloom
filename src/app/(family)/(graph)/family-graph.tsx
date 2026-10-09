@@ -8,6 +8,7 @@ import { BloomButton } from "../../../components/ui/BloomButtonComponents";
 import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
 import { FamilyGraphPrototype } from "../../../components/familyGraph/FamilyGraphPrototype";
 import { adaptFamilyGraphSnapshot } from "../../../components/familyGraph/familyGraphLiveAdapter";
+import { getFamilyGraphWarmRecord, getOrBuildFamilyGraphVisual, updateFamilyGraphViewState } from "../../../components/familyGraph/familyGraphWarmCache";
 import { COLORS } from "../../../constants/theme";
 import {
   DEFAULT_FAMILY_GRAPH_FOCUS_CONFIG,
@@ -49,8 +50,9 @@ export default function FamilyGraphScreen() {
   const resolvedFocusId = (requestedFocusId && snapshot.persons.some((person) => person.id === requestedFocusId))
     ? requestedFocusId
     : snapshot.persons.find((person) => person.id === defaultFocusId && person.linkedUid === user?.uid)?.id ?? snapshot.persons.find((person) => person.linkedUid === user?.uid)?.id ?? null;
+  const warmGraph = getFamilyGraphWarmRecord(familyId);
   const visual = useMemo(
-    () => adaptFamilyGraphSnapshot(snapshot, resolvedFocusId),
+    () => getOrBuildFamilyGraphVisual(snapshot, resolvedFocusId),
     [resolvedFocusId, snapshot],
   );
   const visibleFocusId = useMemo(() => {
@@ -125,9 +127,7 @@ export default function FamilyGraphScreen() {
     });
     if (!subgraph) return null;
 
-    const branchVisual = adaptFamilyGraphSnapshot(subgraph.snapshot, focusPersonId, {
-      preserveGenerationHierarchy: true,
-    });
+    const branchVisual = getOrBuildFamilyGraphVisual(subgraph.snapshot, focusPersonId, true);
     const result = {
       ...branchVisual,
       personIds: subgraph.personIds,
@@ -289,6 +289,11 @@ export default function FamilyGraphScreen() {
               people={visual.people}
               connections={visual.connections}
               defaultFocusId={visibleFocusId}
+              initialViewMode={warmGraph?.viewState.viewMode}
+              initialCameraSnapshot={warmGraph?.viewState.camera}
+              onViewStateChange={(state) => {
+                if (familyId) updateFamilyGraphViewState(familyId, state);
+              }}
               canEdit={isAdmin}
               onEditPerson={(personId) => router.push({
                 pathname: "/family-graph-person-editor",

@@ -56,9 +56,15 @@ const legacyFiles = [
   'PHASE_17_9A6_BUILD_REPORT.md',
   'PHASE_17_9A7_BUILD_REPORT.md',
   'PHASE_17_9A8_BUILD_REPORT.md',
+  'PHASE_17_9A9_BUILD_REPORT.md',
+  'PHASE_17_9A10_BUILD_REPORT.md',
+  'PHASE_17_9A11_BUILD_REPORT.md',
+  'PHASE_17_9A12_BUILD_REPORT.md',
+  'PHASE_17_9A13_BUILD_REPORT.md',
   'src/components/system/AppWidePerformanceDriver.tsx',
   'src/components/system/GuidedPerformanceOverlay.tsx',
   'src/services/performance/appWidePerformanceService.ts',
+  'src/services/homeHub/homeHubService.ts',
   'src/services/performance/finalPerformanceGateService.ts',
   'src/services/performance/automatedRegressionService.ts',
   'src/app/(internal)/performance-test.tsx',
@@ -144,6 +150,7 @@ const mustNotExist = [
   'src/components/system/AppWidePerformanceDriver.tsx',
   'src/components/system/GuidedPerformanceOverlay.tsx',
   'src/services/performance/appWidePerformanceService.ts',
+  'src/services/homeHub/homeHubService.ts',
 ];
 const leftovers = mustNotExist.filter((p) => fs.existsSync(rel(p)));
 if (leftovers.length) {

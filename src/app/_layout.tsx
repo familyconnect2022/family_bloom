@@ -1,7 +1,8 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 import { BloomAppBootstrap } from "../components/system/BloomAppBootstrap";
+import { DeferredFamilyPrewarm } from "../components/system/DeferredFamilyPrewarm";
 import { BloomPushBridge } from "../components/system/BloomPushBridge";
 import { MediaViewerProvider } from "../components/media/MediaViewerProvider";
 import { WelcomeModal } from "../components/onboarding/WelcomeModal";
@@ -12,14 +13,18 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
 import { ChessRealtimeProvider } from "../context/ChessRealtimeContext";
 import { ChessSurfaceHost } from "../components/chess/ChessSurfaceHost";
+import { ChessMiniHost } from "../components/chess/ChessMiniHost";
 import { setChessSurfacePresentationReady } from "../services/chess/chessSurfaceStore";
 import { ChessGlobalUiHost } from "../components/chess/ChessGlobalUiHost";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
 import { TabStartupProvider, useTabStartup } from "../context/TabStartupContext";
 import { HomeMusicPlayerProvider } from "../context/HomeMusicPlayerContext";
 import { runtimeDiagnosticsService } from "../services/error/runtimeDiagnosticsService";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-const RootNavigator = () => {
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+const RootNavigator = ({ runtimeReady }: { runtimeReady: boolean }) => {
   useEffect(() => runtimeDiagnosticsService.installGlobalHandler(), []);
   const {
     user,
@@ -31,6 +36,7 @@ const RootNavigator = () => {
     completeFamilyTransition,
     authStatus,
     profileStatus,
+    membershipStatus,
     showWelcome,
     dismissWelcome,
   } = useAuth();
@@ -42,7 +48,7 @@ const RootNavigator = () => {
 
 
   useEffect(() => {
-    if (authStatus === "initializing" || profileStatus === "loading") {
+    if (authStatus === "initializing" || profileStatus === "loading" || membershipStatus === "loading") {
       setNavigationStable(false);
       return;
     }
@@ -96,6 +102,7 @@ const RootNavigator = () => {
     familySelectionRequired,
     familyTransition,
     profileStatus,
+    membershipStatus,
     rootSegment,
     router,
     user,
@@ -106,20 +113,20 @@ const RootNavigator = () => {
     if (rootSegment === "(tabs)" && tabsReady && navigationStable) completeFamilyTransition();
   }, [activeFamilyId, completeFamilyTransition, familyTransition, navigationStable, rootSegment, tabsReady]);
 
-  const bootstrapReady = authStatus !== "initializing"
+  const nativeBootReady = authStatus !== "initializing"
     && profileStatus !== "loading"
-    && navigationStable
-    && !familyTransition
-    && (rootSegment !== "(tabs)" || tabsReady);
-
-  const bootstrapMessage = familyTransition
-    ? `Đang vào ${familyTransition.targetFamilyName}…`
-    : undefined;
+    && membershipStatus !== "loading"
+    && navigationStable;
 
   useEffect(() => {
-    setChessSurfacePresentationReady(bootstrapReady);
+    if (!nativeBootReady) return;
+    void SplashScreen.hideAsync().catch(() => undefined);
+  }, [nativeBootReady]);
+
+  useEffect(() => {
+    setChessSurfacePresentationReady(nativeBootReady && !familyTransition);
     return () => setChessSurfacePresentationReady(false);
-  }, [bootstrapReady]);
+  }, [familyTransition, nativeBootReady]);
 
 
   const navigationStack = (
@@ -176,10 +183,12 @@ const RootNavigator = () => {
   return (
     <>
       {navigationStack}
-      <BloomAppBootstrap ready={bootstrapReady} message={bootstrapMessage} />
-      <BloomPushBridge />
+      {familyTransition ? (
+        <BloomAppBootstrap ready={false} message={`Đang vào ${familyTransition.targetFamilyName}…`} />
+      ) : null}
+      {runtimeReady ? <BloomPushBridge /> : null}
       <WelcomeModal
-        visible={showWelcome && bootstrapReady && !!user && !!activeFamilyId}
+        visible={showWelcome && nativeBootReady && !!user && !!activeFamilyId}
         name={userProfile?.displayName}
         onContinue={dismissWelcome}
       />
@@ -189,18 +198,43 @@ const RootNavigator = () => {
 
 function FamilySession() {
   const { user, activeFamilyId } = useAuth();
-  // Đây là Family Scope Boundary. Mọi read-cache/tab state nằm bên trong bị huỷ và
-  // dựng lại theo uid + activeFamilyId. Upload provider ở BÊN NGOÀI để job đang chạy
-  // giữ nguyên familyId đã capture lúc tạo và không bị hủy khi đổi nhà.
   const sessionKey = useMemo(() => `${user?.uid ?? "guest"}:${activeFamilyId ?? "no-family"}`, [activeFamilyId, user?.uid]);
+  const [backgroundWarmReady, setBackgroundWarmReady] = useState(false);
+
+  // Home gets the first painted frames alone. Firestore family feeds, Graph
+  // prewarm and Chess socket wake-up are released only afterwards.
+  useEffect(() => {
+    setBackgroundWarmReady(false);
+    let cancelled = false;
+    let frameTwo = 0;
+    const frameOne = requestAnimationFrame(() => {
+      frameTwo = requestAnimationFrame(() => {
+        if (cancelled) return;
+        const host = globalThis as typeof globalThis & { requestIdleCallback?: (cb: () => void, options?: { timeout?: number }) => number };
+        if (typeof host.requestIdleCallback === "function") {
+          host.requestIdleCallback(() => { if (!cancelled) setBackgroundWarmReady(true); }, { timeout: 240 });
+        } else {
+          setTimeout(() => { if (!cancelled) setBackgroundWarmReady(true); }, 80);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameOne);
+      if (frameTwo) cancelAnimationFrame(frameTwo);
+    };
+  }, [sessionKey]);
+
   return (
-    <FamilyRealtimeProvider key={sessionKey}>
-      <ChessRealtimeProvider>
-        <View style={{ flex: 1 }}>
-          <TabStartupProvider><RootNavigator /></TabStartupProvider>
+    <FamilyRealtimeProvider key={sessionKey} liveReady={backgroundWarmReady}>
+      <ChessRealtimeProvider bootReady={backgroundWarmReady}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <TabStartupProvider><RootNavigator runtimeReady={backgroundWarmReady} /></TabStartupProvider>
+          <DeferredFamilyPrewarm ready={backgroundWarmReady} />
           <ChessGlobalUiHost />
-          <ChessSurfaceHost />
-        </View>
+          {backgroundWarmReady ? <ChessSurfaceHost /> : null}
+          {backgroundWarmReady ? <ChessMiniHost /> : null}
+        </GestureHandlerRootView>
       </ChessRealtimeProvider>
     </FamilyRealtimeProvider>
   );

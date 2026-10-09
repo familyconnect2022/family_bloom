@@ -22,12 +22,12 @@ const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.b
 
 check('Chess piece position lives in SharedValues', piece.includes('const x = useSharedValue(initialX)') && piece.includes('const y = useSharedValue(initialY)') && piece.includes('const scale = useSharedValue(1)'));
 check('Programmatic move stays on UI thread with eased travel', piece.includes('profile === "travel"') && piece.includes('MOVE_EASING') && piece.includes('withTiming(nextX') && piece.includes('withTiming(nextY'));
-check('Chess travel reaches approved 1.30 lift then settles', piece.includes('withTiming(1.30') && piece.includes('withSequence('));
+check('Chess travel uses lightweight 1.12 lift then settles', piece.includes('withTiming(1.12') && piece.includes('withSequence('));
 check('Chess piece nodes are visual-only under tap-only input policy', !piece.includes('Gesture.Pan()') && piece.includes('pointerEvents="none"') && !piece.includes('startX.value'));
 const moveMs = Number(board.match(/const MOVE_MS = (\d+)/)?.[1] || 0);
 const opponentMoveMs = Number(board.match(/const OPPONENT_MOVE_MS = (\d+)/)?.[1] || 0);
 const premoveMoveMs = Number(board.match(/const PREMOVE_MOVE_MS = (\d+)/)?.[1] || 0);
-check('Move windows are smoother rather than old 80-110ms snap', moveMs >= 140 && moveMs <= 220 && opponentMoveMs >= 140 && opponentMoveMs <= 220 && premoveMoveMs >= 120 && premoveMoveMs <= 190);
+check('Move windows stay lightweight but visibly animated', moveMs >= 120 && moveMs <= 150 && opponentMoveMs >= 120 && opponentMoveMs <= 150 && premoveMoveMs >= 95 && premoveMoveMs <= 120);
 
 check('Reconnect snapshot uses persistent FEN reconciler', board.includes('reconcileRuntimeToSnapshot') && board.includes('previous.fen === snapshot.fen'));
 check('Reconnect no longer fades whole board to zero', !board.includes('boardOpacity.value = withTiming(0'));

@@ -7,6 +7,7 @@ import { AppError } from "../../types/errors";
 import { familyGraphRepository } from "./familyGraphRepository";
 import { createFamilyGraphQueryEngine } from "./familyGraphQueryEngine";
 import type { FamilyGraphQueryRuntimeConfig } from "../../constants/appConfiguration";
+import { subscribeSharedRealtime } from "../realtime/sharedRealtimeRegistry";
 
 export type FamilyGraphUnsubscribe = () => void;
 
@@ -104,43 +105,41 @@ export const familyGraphService = {
     familyId: string,
     onChange: (snapshot: FamilyGraphSnapshot) => void,
     onError?: (error: unknown) => void,
+    keepAliveMs = 0,
   ): FamilyGraphUnsubscribe {
-    let latestPersons: FamilyPerson[] | null = null;
-    let latestRelationships: FamilyRelationship[] | null = null;
-    let closed = false;
-
-    const emit = () => {
-      if (closed || latestPersons === null || latestRelationships === null) return;
-      onChange({ familyId, persons: latestPersons, relationships: latestRelationships });
-    };
-
-    const reportError = (error: unknown) => {
-      if (!closed) onError?.(error);
-    };
-
-    const unsubscribePersons = familyGraphRepository.watchPersons(
-      familyId,
-      (persons) => {
-        latestPersons = persons;
-        emit();
+    return subscribeSharedRealtime<FamilyGraphSnapshot>({
+      key: `family.graph.snapshot:${familyId}`,
+      listenerName: "family.graph.snapshot",
+      keepAliveMs,
+      start: (broadcast, broadcastError) => {
+        let latestPersons: FamilyPerson[] | null = null;
+        let latestRelationships: FamilyRelationship[] | null = null;
+        let closed = false;
+        const emit = () => {
+          if (closed || latestPersons === null || latestRelationships === null) return;
+          broadcast({ familyId, persons: latestPersons, relationships: latestRelationships });
+        };
+        const reportError = (error: unknown) => {
+          if (!closed) broadcastError(error);
+        };
+        const unsubscribePersons = familyGraphRepository.watchPersons(
+          familyId,
+          (persons) => { latestPersons = persons; emit(); },
+          reportError,
+        );
+        const unsubscribeRelationships = familyGraphRepository.watchRelationships(
+          familyId,
+          (relationships) => { latestRelationships = relationships; emit(); },
+          reportError,
+        );
+        return () => {
+          closed = true;
+          unsubscribePersons();
+          unsubscribeRelationships();
+        };
       },
-      reportError,
-    );
-
-    const unsubscribeRelationships = familyGraphRepository.watchRelationships(
-      familyId,
-      (relationships) => {
-        latestRelationships = relationships;
-        emit();
-      },
-      reportError,
-    );
-
-    return () => {
-      if (closed) return;
-      closed = true;
-      unsubscribePersons();
-      unsubscribeRelationships();
-    };
+      onData: onChange,
+      onError,
+    });
   },
 };

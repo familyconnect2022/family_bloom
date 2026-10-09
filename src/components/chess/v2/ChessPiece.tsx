@@ -91,15 +91,15 @@ export const ChessPiece = React.memo(forwardRef<ChessPieceController, Props>(fun
       }
 
       if (profile === "travel") {
-        const liftMs = Math.max(55, Math.round(duration * 0.48));
-        const settleMs = Math.max(65, duration - liftMs);
+        const liftMs = Math.max(42, Math.round(duration * 0.46));
+        const settleMs = Math.max(50, duration - liftMs);
         scale.value = withSequence(
-          withTiming(1.30, { duration: liftMs, easing: Easing.out(Easing.quad) }),
+          withTiming(1.12, { duration: liftMs, easing: Easing.out(Easing.quad) }),
           withTiming(1, { duration: settleMs, easing: Easing.inOut(Easing.quad) }),
         );
       } else if (profile === "reconcile") {
         scale.value = withSequence(
-          withTiming(1.08, { duration: Math.min(70, Math.round(duration * 0.36)), easing: Easing.out(Easing.quad) }),
+          withTiming(1.04, { duration: Math.min(55, Math.round(duration * 0.36)), easing: Easing.out(Easing.quad) }),
           withTiming(1, { duration: Math.max(80, Math.round(duration * 0.64)), easing: Easing.out(Easing.cubic) }),
         );
       } else if (profile === "settle") {

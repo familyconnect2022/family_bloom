@@ -17,6 +17,8 @@ const modal = read('src/components/chess/BloomGameBottomModal.tsx');
 const xiangqi = read('src/app/(xiangqi)/xiangqi-preview.tsx');
 const xiangqiBoard = read('src/components/xiangqi/XiangqiGameBoard.tsx');
 const xiangqiFx = read('src/components/xiangqi/XiangqiBattleEffects.tsx');
+const xiangqiManager = read('server/src/xiangqi/xiangqiGameManager.ts');
+const xiangqiSocket = read('server/src/xiangqi/xiangqiSocket.ts');
 const realtime = read('src/context/ChessRealtimeContext.tsx');
 const socket = read('src/services/chess/chessSocketService.ts');
 const postCopy = read('Family_Bloom_CLEAN_APPLY_FULL.bat');
@@ -57,8 +59,9 @@ check('Bloom bottom modal does not retain forced hardware raster layer', !modal.
 
 check('Xiangqi screen lifecycle follows Expo Router focus', xiangqi.includes('useFocusEffect') && xiangqi.includes('screenFocused'));
 check('Xiangqi preparation timers are focus-gated', xiangqi.includes('if (!screenFocused) return undefined') && xiangqi.includes('roundPhase === "playing"') && xiangqi.includes('boardReady') && xiangqi.includes('screenFocused'));
-check('Xiangqi clock is stopped while screen is blurred', xiangqi.includes('if (!screenFocused || roundPhase !== "playing" || game.gameOver)'));
-check('Xiangqi bot timer is stopped while screen is blurred', xiangqi.includes('!screenFocused || roundPhase !== "playing" || game.gameOver || game.turn !== "black"'));
+check('Xiangqi blur reports board presence to authoritative server', xiangqi.includes('XIANGQI_EVENTS.gameBoardPresence') && xiangqi.includes('visible: screenFocused && appActive'));
+check('Xiangqi clock/away lifecycle is server authoritative', xiangqiManager.includes('setBoardVisible') && xiangqiManager.includes('awayDeadlineAt') && (xiangqiManager.includes('remaining*.5') || xiangqiManager.includes('remaining * .5') || xiangqiManager.includes('remaining * 0.5')));
+check('Xiangqi bot timer is server-owned, not screen-owned', xiangqiSocket.includes('scheduleBot') && xiangqiSocket.includes('MOVE_DELAY') && xiangqiSocket.includes('CHECK_DELAY'));
 check('Xiangqi battle FX unmounts with hidden heavy surface', xiangqi.includes('screenFocused && boardSurfaceVisible ? <XiangqiBattleEffects'));
 check('Xiangqi FX cleanup stops native animations as well as timer', xiangqiFx.includes('opacity.stopAnimation()') && xiangqiFx.includes('pulse.stopAnimation()') && xiangqiFx.includes('clearTimeout(timer)'));
 check('Xiangqi modals are focus-gated', xiangqi.includes('visible={screenFocused && !playing && !game.gameOver}') && xiangqi.includes('visible={screenFocused && game.gameOver && resultRevealReady}'));

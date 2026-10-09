@@ -88,7 +88,7 @@ export const e2eTestHarnessService = {
     const uid = getAuth().currentUser?.uid;
     if (!uid) throw new Error("E2E_AUTH_REQUIRED");
     const db = getFirestore();
-    const memberships = await getDocs(collection(db, `users/${uid}/memberships`));
+    const memberships = await getDocs(collection(db, FIRESTORE_PATHS.userMemberships(uid)));
     for (const membership of memberships.docs) {
       const data = membership.data() as { familyName?: unknown };
       const familyName = typeof data.familyName === "string" ? data.familyName.trim() : "";

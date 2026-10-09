@@ -1,4 +1,3 @@
-
 type Subscriber<T> = {
   onData: (value: T) => void;
   onError?: (error: unknown) => void;
@@ -12,6 +11,9 @@ type SharedEntry<T> = {
   lastValue?: T;
   hasError: boolean;
   lastError?: unknown;
+  listenerName: string;
+  physicalStarts: number;
+  createdAt: number;
 };
 
 type SharedSubscribeOptions<T> = {
@@ -26,18 +28,14 @@ type SharedSubscribeOptions<T> = {
 
 const entries = new Map<string, SharedEntry<unknown>>();
 let subscriberSequence = 1;
+let physicalStartSequence = 0;
 
 /**
  * Ref-counted Firestore listener pool for identical bounded queries.
  *
- * Expo Router can temporarily keep more than one React screen instance mounted
- * while unwinding a nested stack or during development navigation. Those views
- * may all ask for the same realtime query. The pool guarantees that only ONE
- * underlying Firestore listener exists per stable query key and fans snapshots
- * out to every mounted consumer. When the last consumer leaves, the underlying
- * listener is released immediately.
- *
- * This is runtime-only: it does not cache across families or persist data.
+ * A14 contract: one stable query key owns at most ONE physical listener. Every
+ * screen/provider is a logical subscriber only. This registry is deliberately
+ * runtime-only; persisted boot/layout caches live in their own services.
  */
 export function subscribeSharedRealtime<T>({
   key,
@@ -47,6 +45,7 @@ export function subscribeSharedRealtime<T>({
   onError,
   keepAliveMs = 0,
 }: SharedSubscribeOptions<T>): () => void {
+  const resolvedName = listenerName?.trim() || key;
   let entry = entries.get(key) as SharedEntry<T> | undefined;
   const isNewEntry = !entry;
   if (!entry) {
@@ -54,8 +53,13 @@ export function subscribeSharedRealtime<T>({
       subscribers: new Map<number, Subscriber<T>>(),
       hasValue: false,
       hasError: false,
+      listenerName: resolvedName,
+      physicalStarts: 0,
+      createdAt: Date.now(),
     };
     entries.set(key, entry as SharedEntry<unknown>);
+  } else if (typeof __DEV__ !== "undefined" && __DEV__ && entry.listenerName !== resolvedName) {
+    console.warn(`[FirebaseRegistry] query key '${key}' reused by '${resolvedName}' (owner '${entry.listenerName}').`);
   }
 
   if (entry.disposeTimer) {
@@ -66,8 +70,6 @@ export function subscribeSharedRealtime<T>({
   const subscriberId = subscriberSequence++;
   entry.subscribers.set(subscriberId, { onData, onError });
 
-  // A second mounted consumer should become useful immediately without waiting
-  // for Firestore to emit the same snapshot again.
   if (entry.hasValue) onData(entry.lastValue as T);
   if (entry.hasError && onError) onError(entry.lastError);
 
@@ -90,6 +92,8 @@ export function subscribeSharedRealtime<T>({
     };
 
     try {
+      physicalStartSequence += 1;
+      entry.physicalStarts += 1;
       const rawStop = start(broadcastData, broadcastError) ?? undefined;
       entry.stop = rawStop ?? undefined;
     } catch (error) {
@@ -125,13 +129,39 @@ export function subscribeSharedRealtime<T>({
   };
 }
 
+export type SharedRealtimeRegistryRow = {
+  key: string;
+  listenerName: string;
+  subscribers: number;
+  physicalStarts: number;
+  hasValue: boolean;
+  ageMs: number;
+};
+
+export const getSharedRealtimeRegistrySnapshot = (): SharedRealtimeRegistryRow[] =>
+  [...entries.entries()]
+    .map(([key, entry]) => ({
+      key,
+      listenerName: entry.listenerName,
+      subscribers: entry.subscribers.size,
+      physicalStarts: entry.physicalStarts,
+      hasValue: entry.hasValue,
+      ageMs: Math.max(0, Date.now() - entry.createdAt),
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+
+/** Account/family boundary cleanup. Safe in production; consumers will recreate on demand. */
+export const resetSharedRealtimeRegistry = () => {
+  [...entries.values()].forEach((entry) => {
+    if (entry.disposeTimer) clearTimeout(entry.disposeTimer);
+    entry.stop?.();
+  });
+  entries.clear();
+};
+
 export const sharedRealtimeRegistryDebug = {
   activeKeys: () => [...entries.keys()].sort(),
-  clearForTests: () => {
-    [...entries.values()].forEach((entry) => {
-      if (entry.disposeTimer) clearTimeout(entry.disposeTimer);
-      entry.stop?.();
-    });
-    entries.clear();
-  },
+  snapshot: getSharedRealtimeRegistrySnapshot,
+  physicalStarts: () => physicalStartSequence,
+  clearForTests: resetSharedRealtimeRegistry,
 };

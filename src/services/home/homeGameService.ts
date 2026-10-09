@@ -23,17 +23,18 @@ import type {
   HomeGameType,
 } from "../../types/homeLiving";
 import { momentsService } from "../moments/momentsService";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { getHomeGamePlayWindow, HOME_GAME_MAX_ACTIVE_PER_TYPE } from "./homeGamePolicy";
 
 const SESSION_LIMIT = 80;
 const nowIso = () => new Date().toISOString();
-const sessionsPath = (familyId: string) => `families/${familyId}/homeGameSessions`;
-const sessionPath = (familyId: string, sessionId: string) => `${sessionsPath(familyId)}/${sessionId}`;
-const responsePath = (familyId: string, sessionId: string, uid: string) => `${sessionPath(familyId, sessionId)}/responses/${uid}`;
-const secretPath = (familyId: string, sessionId: string) => `${sessionPath(familyId, sessionId)}/secrets/main`;
-const activeSlotsPath = (familyId: string) => `families/${familyId}/homeGameActiveSlots`;
-const activeSlotPath = (familyId: string, gameType: HomeGameType, slotId: number) => `${activeSlotsPath(familyId)}/${gameType}_${slotId}`;
-const rotationPath = (familyId: string, gameType: HomeGameType) => `families/${familyId}/homeGameRotations/${gameType}`;
+const sessionsPath = FIRESTORE_PATHS.familyHomeGameSessions;
+const sessionPath = FIRESTORE_PATHS.familyHomeGameSession;
+const responsePath = FIRESTORE_PATHS.familyHomeGameResponse;
+const secretPath = FIRESTORE_PATHS.familyHomeGameSecret;
+const activeSlotsPath = FIRESTORE_PATHS.familyHomeGameActiveSlots;
+const activeSlotPath = (familyId: string, gameType: HomeGameType, slotId: number) => FIRESTORE_PATHS.familyHomeGameActiveSlot(familyId, `${gameType}_${slotId}`);
+const rotationPath = (familyId: string, gameType: HomeGameType) => FIRESTORE_PATHS.familyHomeGameRotation(familyId, gameType);
 const isSubjectGame = (gameType: HomeGameType) => ["know_each_other", "guess_person", "truth_lie"].includes(gameType);
 
 const normalizePrompt = (raw: any): HomeGamePrompt => ({

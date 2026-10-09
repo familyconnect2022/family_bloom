@@ -110,8 +110,13 @@ export const useFamilyDashboard = (familyId: string | null | undefined) => {
   const upcomingHasMore = upcomingHasMoreBase
     || mergeEventsById(upcomingBase, yearlyEvents).length > DATA_LIMITS.dashboard.upcomingEvents;
 
-  const sharedLoading = (useSharedEvents && sharedEvents ? sharedEvents.upcomingLoading || sharedEvents.yearlyLoading : false)
-    || (useSharedMoments && sharedMoments ? sharedMoments.loading : false);
+  const eventsLoading = useSharedEvents && sharedEvents
+    ? sharedEvents.upcomingLoading || sharedEvents.yearlyLoading
+    : eventsLoadingLocal || yearlyLoadingLocal;
+  const momentsLoading = useSharedMoments && sharedMoments
+    ? sharedMoments.loading
+    : momentsLoadingLocal;
+  const sharedLoading = eventsLoading || momentsLoading;
   const sharedError = (useSharedEvents && sharedEvents ? sharedEvents.upcomingError ?? sharedEvents.yearlyError : null)
     ?? (useSharedMoments && sharedMoments ? sharedMoments.error : null);
 
@@ -122,7 +127,10 @@ export const useFamilyDashboard = (familyId: string | null | undefined) => {
     upcomingHasMore,
     recentMoments,
     momentsHaveMore,
-    loading: membersLoading || sharedLoading || eventsLoadingLocal || yearlyLoadingLocal || momentsLoadingLocal,
+    membersLoading,
+    eventsLoading,
+    momentsLoading,
+    loading: membersLoading || sharedLoading,
     error: sharedError ?? errorLocal ?? membersError,
   };
 };

@@ -30,6 +30,11 @@ const MAX_MESSAGE = 4000;
 const MAX_RECIPIENTS = 500;
 const nowIso = () => new Date().toISOString();
 
+const recipientRealtimeCache = new Map<string, HomeTimeCapsule[]>();
+const createdRealtimeCache = new Map<string, HomeTimeCapsule[]>();
+const capsuleCacheKey = (familyId: string, uid: string) => `${familyId}:${uid}`;
+
+
 const capsuleCollection = (familyId: string) => FIRESTORE_PATHS.familyHomeTimeCapsules(familyId);
 const capsulePath = (familyId: string, capsuleId: string) => FIRESTORE_PATHS.familyHomeTimeCapsule(familyId, capsuleId);
 const contentPath = (familyId: string, capsuleId: string) => FIRESTORE_PATHS.familyHomeTimeCapsuleContent(familyId, capsuleId);
@@ -227,24 +232,37 @@ export const homeTimeCapsuleService = {
 
   async listVisible(familyId: string, uid: string): Promise<HomeTimeCapsule[]> {
     const db = getFirestore();
-    const base = collection(db, capsuleCollection(familyId));
-    const [created, received] = await Promise.all([
-      getDocs(query(base, where("createdByUid", "==", uid), limit(MAX_CAPSULES_PER_LIST))),
-      getDocs(query(base, where("recipientUids", "array-contains", uid), limit(MAX_CAPSULES_PER_LIST))),
-    ]);
+    const cacheKey = capsuleCacheKey(familyId, uid);
+    const cachedCreated = createdRealtimeCache.get(cacheKey);
+    const cachedReceived = recipientRealtimeCache.get(cacheKey);
+
+    let createdRows: HomeTimeCapsule[];
+    let receivedRows: HomeTimeCapsule[];
+    if (cachedCreated && cachedReceived) {
+      createdRows = cachedCreated;
+      receivedRows = cachedReceived;
+    } else {
+      const base = collection(db, capsuleCollection(familyId));
+      const [created, received] = await Promise.all([
+        getDocs(query(base, where("createdByUid", "==", uid), limit(MAX_CAPSULES_PER_LIST))),
+        getDocs(query(base, where("recipientUids", "array-contains", uid), limit(MAX_CAPSULES_PER_LIST))),
+      ]);
+      createdRows = created.docs.map(row => normalizeCapsule(row.id, row.data() as Record<string, unknown>));
+      receivedRows = received.docs.map(row => normalizeCapsule(row.id, row.data() as Record<string, unknown>));
+    }
+
     const byId = new Map<string, HomeTimeCapsule>();
-    for (const row of [...created.docs, ...received.docs]) byId.set(row.id, normalizeCapsule(row.id, row.data() as Record<string, unknown>));
+    for (const row of [...createdRows, ...receivedRows]) byId.set(row.id, row);
     const now = Date.now();
     const visible = Array.from(byId.values())
       .filter(item => item.createdByUid === uid || item.previewMode === "locked" || isTimeCapsuleOpen(item, now));
 
-    // Compatibility bridge for boxes created before openedByUids existed. Only
-    // legacy, already-due boxes pay this extra read cost; all new boxes render
-    // their opened state directly from metadata with no N-listener regression.
+    // Compatibility bridge for legacy boxes created before openedByUids existed.
+    // Base recipient/created queries are still reused from the realtime cache.
     const hydrated = await Promise.all(visible.map(async (item) => {
       if (item.openedByUids !== undefined || !isTimeCapsuleOpen(item, now)) return item;
       if (item.createdByUid === uid) {
-        const snap = await getDocs(collection(db, `${capsulePath(familyId, item.id)}/opens`)).catch(() => null);
+        const snap = await getDocs(collection(db, FIRESTORE_PATHS.familyHomeTimeCapsuleOpens(familyId, item.id))).catch(() => null);
         const openedByUids = snap?.docs
           .map(row => row.data() as Record<string, unknown>)
           .map(data => typeof data.uid === "string" ? data.uid : "")
@@ -280,6 +298,7 @@ export const homeTimeCapsuleService = {
         const items = snap.docs
           .map(row => normalizeCapsule(row.id, row.data() as Record<string, unknown>))
           .sort((a, b) => timeCapsuleOpenMillis(a) - timeCapsuleOpenMillis(b));
+        recipientRealtimeCache.set(capsuleCacheKey(familyId, uid), items);
         onChange(items);
       },
       (error) => onError?.(error),
@@ -304,6 +323,7 @@ export const homeTimeCapsuleService = {
         const items = snap.docs
           .map(row => normalizeCapsule(row.id, row.data() as Record<string, unknown>))
           .sort((a, b) => timeCapsuleOpenMillis(a) - timeCapsuleOpenMillis(b));
+        createdRealtimeCache.set(capsuleCacheKey(familyId, uid), items);
         onChange(items);
       },
       (error) => onError?.(error),
@@ -327,17 +347,27 @@ export const homeTimeCapsuleService = {
     );
   },
   async listUpcomingForRecipient(familyId: string, uid: string): Promise<HomeTimeCapsule[]> {
-    const db = getFirestore();
+    const cached = recipientRealtimeCache.get(capsuleCacheKey(familyId, uid));
+    const now = Date.now();
+    if (cached) {
+      return cached
+        .filter(item => timeCapsuleOpenMillis(item) > now)
+        .sort((a, b) => timeCapsuleOpenMillis(a) - timeCapsuleOpenMillis(b));
+    }
     const snap = await getDocs(query(
-      collection(db, capsuleCollection(familyId)),
+      collection(getFirestore(), capsuleCollection(familyId)),
       where("recipientUids", "array-contains", uid),
       limit(MAX_CAPSULES_PER_LIST),
     ));
-    const now = Date.now();
     return snap.docs
       .map(row => normalizeCapsule(row.id, row.data() as Record<string, unknown>))
       .filter(item => timeCapsuleOpenMillis(item) > now)
       .sort((a, b) => timeCapsuleOpenMillis(a) - timeCapsuleOpenMillis(b));
+  },
+
+  clearRealtimeCache() {
+    recipientRealtimeCache.clear();
+    createdRealtimeCache.clear();
   },
 };
 

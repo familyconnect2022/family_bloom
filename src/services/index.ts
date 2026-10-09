@@ -20,7 +20,6 @@ export * from "./activity/graphActivitySessionService";
 
 export * from "./activity/smartReminderService";
 
-export * from "./homeHub/homeHubService";
 export * from "./home/homeWhisperService";
 export * from "./home/homePollService";
 export * from "./home/homeKitchenService";

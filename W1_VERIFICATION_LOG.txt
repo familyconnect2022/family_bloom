@@ -1,0 +1,51 @@
+PASS 01 exists src/app/_layout.web.tsx
+PASS 02 exists src/app/(tabs)/_layout.web.tsx
+PASS 03 exists src/app/(tabs)/index.web.tsx
+PASS 04 exists src/app/(tabs)/moments.web.tsx
+PASS 05 exists src/app/(tabs)/planner.web.tsx
+PASS 06 exists src/app/(tabs)/family.web.tsx
+PASS 07 exists src/app/(tabs)/play.web.tsx
+PASS 08 exists src/web/firebaseWeb.ts
+PASS 09 exists src/web/context/WebAuthContext.tsx
+PASS 10 exists src/web/context/WebFamilyContext.tsx
+PASS 11 exists src/web/components/WebTabShell.tsx
+PASS 12 exists src/web/games/WebRealtimeGames.tsx
+PASS 13 exists document/WEB_W1_README.md
+PASS 14 exists public/manifest.json
+PASS 15 Firebase JS SDK dependency — ^12.19.0
+PASS 16 web:preview script
+PASS 17 web:build script
+PASS 18 Web root uses WebAuthProvider
+PASS 19 Web root uses WebFamilyProvider
+PASS 20 Native root remains ChessSurfaceHost architecture
+PASS 21 Web Firebase imports modular SDK
+PASS 22 Web Firebase uses browserLocalPersistence
+PASS 23 Web Firebase does not fake Android app id
+PASS 24 Google web auth available
+PASS 25 Phone web auth available
+PASS 26 Membership reverse index realtime
+PASS 27 Family switch writes canonical user activeFamilyId
+PASS 28 Active family members realtime
+PASS 29 game protocol chess:app:join
+PASS 30 game protocol chess:test:bot:invite
+PASS 31 game protocol chess:invite:accept
+PASS 32 game protocol chess:game:ready
+PASS 33 game protocol chess:game:move
+PASS 34 game protocol xiangqi:app:join
+PASS 35 game protocol xiangqi:test:bot:invite
+PASS 36 game protocol xiangqi:invite:accept
+PASS 37 game protocol xiangqi:game:ready
+PASS 38 game protocol xiangqi:game:move
+PASS 39 Game handshake obtains Firebase Web ID token
+PASS 40 Web game server uses shared ENV endpoint
+PASS 41 Web-only files do not import @react-native-firebase — clean
+PASS 42 Web-only files do not import expo-notifications — clean
+PASS 43 Web tab Nhà
+PASS 44 Web tab Kỷ niệm
+PASS 45 Web tab Lịch
+PASS 46 Web tab Phả hệ
+PASS 47 Web tab Nhà Mình
+PASS 48 PWA manifest linked without service worker
+PASS 49 Apple touch icon linked
+
+Phase 17.9W1 Web Companion: 49/49 PASS

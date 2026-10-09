@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { Chess } from "chess.js";
 import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
 import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
@@ -70,8 +71,10 @@ const SQUARE = /^[a-h][1-8]$/;
 const TEST_BOT_ENABLED = /^(1|true|yes)$/i.test(process.env.CHESS_TEST_BOT_ENABLED ?? "");
 const TEST_BOT_UID_PREFIX = "__bloom_test_bot__";
 const TEST_BOT_NAME = "Bloom Bot";
-// V4M diagnostic: fixed response delay removes random think-time as a variable.
-const TEST_BOT_MOVE_DELAY_MS = 1_000;
+// Human-like DEV bot pacing for real-device UX tests. A checking move gets a
+// slightly longer think pause so both board games feel closer to a person.
+const TEST_BOT_MOVE_DELAY_MS = 3_000;
+const TEST_BOT_CHECK_DELAY_MS = 5_000;
 
 function testBotUidFor(uid: string) {
   return `${TEST_BOT_UID_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0, 24)}`;
@@ -201,9 +204,18 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       if (move.promotion) score += 8;
       const center = ["d4", "e4", "d5", "e5"].includes(move.to);
       if (center) score += 0.8;
-      return { move, score };
+      let givesCheck = false;
+      try {
+        const probe = new Chess(state.fen);
+        probe.move({ from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}) });
+        givesCheck = probe.inCheck();
+      } catch {
+        givesCheck = false;
+      }
+      if (givesCheck) score += 1.1;
+      return { move, score, givesCheck };
     }).sort((a, b) => b.score - a.score);
-    return scored[0]?.move ?? null;
+    return scored[0] ?? null;
   }
 
   function scheduleTestBotAction(state: PublicGameState) {
@@ -219,9 +231,8 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     const existing = botTimers.get(state.gameId);
     if (existing?.revision === state.revision) return;
     clearBotTimer(state.gameId);
-    // Phase 16B15 human-cadence test mode: Bloom Bot waits one second before
-    // every authoritative action. Hint/FX animation still has its own much
-    // shorter budget; this delay exists so device testing can actually see it.
+    const planned = shouldMove ? chooseTestBotMove(state) : null;
+    const thinkDelayMs = planned?.givesCheck ? TEST_BOT_CHECK_DELAY_MS : TEST_BOT_MOVE_DELAY_MS;
     const timer = setTimeout(() => {
       void (async () => {
         botTimers.delete(state.gameId);
@@ -234,8 +245,9 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           }
           const latestBotColor = latest.whiteUid === botUid ? "w" : "b";
           if (latest.turn !== latestBotColor) return;
-          const move = chooseTestBotMove(latest);
-          if (!move) return;
+          const chosen = planned ?? chooseTestBotMove(latest);
+          if (!chosen) return;
+          const move = chosen.move;
           await manager.move(
             latest.gameId,
             botUid,
@@ -249,7 +261,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           console.warn("[chess:test-bot] action skipped", { gameId: state.gameId, error: error instanceof Error ? error.message : String(error) });
         }
       })();
-    }, TEST_BOT_MOVE_DELAY_MS);
+    }, thinkDelayMs);
     timer.unref();
     botTimers.set(state.gameId, { revision: state.revision, timer });
   }
@@ -345,7 +357,6 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
 
   io.on("connection", (socket: Socket<any, any, any, SocketData>) => {
     const uid = socket.data.uid;
-    console.info("[chess] authenticated", { uid, socketId: socket.id });
 
     const requireGameMembership = async (gameId: string) => {
       const state = await manager.state(gameId, uid);
@@ -385,6 +396,8 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       }
       socket.data.appFamilyId = familyId;
       await socket.join(`chess:family:${familyId}`);
+      // Keep one low-frequency successful family-join diagnostic for Render health;
+      // per-socket authenticated/disconnected chatter stays removed.
       refreshPresenceSoon(familyId);
       console.info("[chess] app joined", { uid, familyId, socketId: socket.id });
       return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
@@ -591,7 +604,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const familyId = asId(payload.familyId, "familyId");
       await requireMember(uid, familyId);
       const active = await persistence.getActiveForUid(uid);
-      if (!active || active.familyId !== familyId) return null;
+      if (!active || active.familyId !== familyId || active.gameKind === "xiangqi") return null;
       return { gameId: active.gameId };
     }));
 
@@ -600,7 +613,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const familyId = asId(payload.familyId, "familyId");
       await requireMember(uid, familyId);
       const active = await persistence.getActiveForUid(uid);
-      if (active?.familyId === familyId) return { kind: "active", gameId: active.gameId };
+      if (active?.familyId === familyId && active.gameKind !== "xiangqi") return { kind: "active", gameId: active.gameId };
 
       const unseen = await persistence.getUnseenResult(uid, familyId);
       if (!unseen) return { kind: "none" };
@@ -793,7 +806,6 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         manager.disconnect(gameId, uid);
       }
       for (const familyId of familyIds) setTimeout(() => void emitPresence(familyId), 8_000).unref();
-      console.info("[chess] disconnected", { uid, socketId: socket.id });
     });
   });
 }

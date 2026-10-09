@@ -117,7 +117,7 @@ export const profileService = {
     const updated = normalizeUserProfile(safe({ ...existing, ...safeData, updatedAt: nowIso() }) as Record<string, unknown>, uid);
     const batch = writeBatch(db);
     batch.set(doc(db, FIRESTORE_PATHS.user(uid)), safe(updated as unknown as Record<string, unknown>), { merge: true });
-    const memberships = await getDocs(collection(db, `users/${uid}/memberships`));
+    const memberships = await getDocs(collection(db, FIRESTORE_PATHS.userMemberships(uid)));
     memberships.docs.forEach((m) => {
       const membership = m.data() as { role?: string; joinedAt?: string };
       batch.set(doc(db, FIRESTORE_PATHS.familyMember(m.id, uid)), safe({ ...familyVisible(updated), role: membership.role ?? "member", joinedAt: membership.joinedAt ?? nowIso() }), { merge: true });

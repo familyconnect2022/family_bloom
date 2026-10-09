@@ -1,9 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
@@ -11,8 +9,8 @@ import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
 import { useChessRealtimeActions } from "../../context/ChessRealtimeContext";
 import { useChessGame } from "../../hooks/chess/useChessGame";
 import { getCachedChessGameSnapshot, cacheChessGameSnapshot } from "../../services/chess/chessGameSnapshotCache";
-import { getChessGameStoreSnapshot, subscribeChessGameStore } from "../../services/chess/chessGameStore";
 import { shouldReleaseRematchPreparing } from "../../services/chess/chessRematchUiPolicy";
+import { subscribeChessSoundUiEvents } from "../../services/chess/chessSoundEventBus";
 import { getHomeGamePlayWindow } from "../../services/games/gameRoomPolicy";
 import {
   activateChessSurface,
@@ -20,18 +18,17 @@ import {
   markChessSurfacePrepared,
   prepareChessSurface,
   minimizeChessSurface,
-  showChessSurfaceFull,
   useChessSurfaceState,
-  getChessMiniPosition,
-  setChessMiniPosition,
 } from "../../services/chess/chessSurfaceStore";
-import { emptyChessCaptureSummary, type ChessColor, type ChessGameState, type ChessPromotionPiece } from "../../types/chess";
+import { emptyChessCaptureSummary, type ChessColor, type ChessGameState, type ChessMoveDelta, type ChessPromotionPiece } from "../../types/chess";
 import { useBloomDialog } from "../ui/BloomDialogProvider";
 import { useBloomToast } from "../ui/BloomToast";
 import { ChessBoard } from "./ChessBoard";
 import { ChessPlayerRail } from "./ChessPlayerRail";
 import { ChessVictoryConfetti } from "./ChessVictoryConfetti";
+import { useChessSoundscape } from "./useChessSoundscape";
 import { capturePoints, ChessMaterialStrip } from "./ChessMaterialStrip";
+import { resolveBoardMoveSound } from "../../games/shared/boardGameFramework";
 
 const CHESS_START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 type SurfaceEntryPhase = "preparing" | "playing";
@@ -53,48 +50,6 @@ const PROMOTION_IMAGES = {
     n: require("../../../assets/images/chess/pieces-png-default/bn.png"),
   },
 } as const;
-
-const MINI_PIECE_IMAGES = {
-  wp: require("../../../assets/images/chess/pieces-png-default/wp.png"),
-  wn: require("../../../assets/images/chess/pieces-png-default/wn.png"),
-  wb: require("../../../assets/images/chess/pieces-png-default/wb.png"),
-  wr: require("../../../assets/images/chess/pieces-png-default/wr.png"),
-  wq: require("../../../assets/images/chess/pieces-png-default/wq.png"),
-  wk: require("../../../assets/images/chess/pieces-png-default/wk.png"),
-  bp: require("../../../assets/images/chess/pieces-png-default/bp.png"),
-  bn: require("../../../assets/images/chess/pieces-png-default/bn.png"),
-  bb: require("../../../assets/images/chess/pieces-png-default/bb.png"),
-  br: require("../../../assets/images/chess/pieces-png-default/br.png"),
-  bq: require("../../../assets/images/chess/pieces-png-default/bq.png"),
-  bk: require("../../../assets/images/chess/pieces-png-default/bk.png"),
-} as const;
-
-type MiniPieceKey = keyof typeof MINI_PIECE_IMAGES;
-
-function pieceKeyAtSquare(fen: string, square: string | undefined): MiniPieceKey | null {
-  if (!square || square.length !== 2) return null;
-  const file = square.charCodeAt(0) - 97;
-  const rank = Number(square[1]);
-  if (file < 0 || file > 7 || rank < 1 || rank > 8) return null;
-  const rows = fen.split(" ")[0]?.split("/");
-  const row = rows?.[8 - rank];
-  if (!row) return null;
-  let column = 0;
-  for (const token of row) {
-    if (/\d/.test(token)) {
-      column += Number(token);
-      continue;
-    }
-    if (column === file) {
-      const color = token === token.toUpperCase() ? "w" : "b";
-      const type = token.toLowerCase();
-      const key = `${color}${type}` as MiniPieceKey;
-      return key in MINI_PIECE_IMAGES ? key : null;
-    }
-    column += 1;
-  }
-  return null;
-}
 
 function standbyState(familyId: string | null): ChessGameState {
   const now = new Date().toISOString();
@@ -128,116 +83,6 @@ const noopMove = async () => ({ ok: false, errorCode: "CHESS_INVALID_REQUEST" } 
 const noopResync = async () => null;
 const noopPromotion = async () => null;
 
-const MINI_WIDTH = 88;
-const MINI_HEIGHT = 40;
-const MINI_EDGE = 7;
-const MINI_BOTTOM_TRACK = 58;
-
-function MiniChessCard({ gameId, me, visible, onOpen }: {
-  gameId: string | null;
-  me: string;
-  visible: boolean;
-  onOpen: () => void;
-}) {
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const snapshot = useSyncExternalStore(
-    useCallback((listener) => subscribeChessGameStore(gameId, listener), [gameId]),
-    useCallback(() => getChessGameStoreSnapshot(gameId), [gameId]),
-    useCallback(() => getChessGameStoreSnapshot(gameId), [gameId]),
-  );
-  const state = snapshot.state;
-  const [, tick] = useState(0);
-  const receivedAt = useRef(Date.now());
-  useEffect(() => { receivedAt.current = Date.now(); }, [state?.revision, state?.serverNowMs]);
-
-  const myColor: ChessColor = state?.whiteUid === me ? "w" : "b";
-  const myTurn = state?.status === "active" && state.turn === myColor;
-  const base = state ? (myColor === "w" ? state.whiteRemainingMs : state.blackRemainingMs) : null;
-  const actuallyVisible = !!state && visible && (state.status === "active" || state.status === "paused");
-  const running = actuallyVisible && myTurn && state?.timeControl.kind === "clocked";
-  useEffect(() => {
-    if (!running) return undefined;
-    const timer = setInterval(() => tick((value) => value + 1), 1000);
-    return () => clearInterval(timer);
-  }, [running]);
-
-  const remaining = base == null ? null : Math.max(0, base - (running ? Date.now() - receivedAt.current : 0));
-  const clock = remaining == null ? "∞" : `${Math.floor(remaining / 60000).toString().padStart(2, "0")}:${Math.floor((remaining % 60000) / 1000).toString().padStart(2, "0")}`;
-  const pieceKey = state ? (pieceKeyAtSquare(state.fen, state.lastMove?.to) ?? (myColor === "w" ? "wn" : "bn")) : "wn";
-
-  const saved = getChessMiniPosition();
-  const maxX = Math.max(MINI_EDGE, width - MINI_WIDTH - MINI_EDGE);
-  const minY = Math.max(MINI_EDGE, insets.top + 6);
-  const maxY = Math.max(minY, height - insets.bottom - MINI_BOTTOM_TRACK - MINI_HEIGHT - 8);
-  const clampX = (value: number) => Math.max(MINI_EDGE, Math.min(maxX, value));
-  const clampY = (value: number) => Math.max(minY, Math.min(maxY, value));
-  const x = useSharedValue(clampX(saved?.x ?? maxX));
-  const y = useSharedValue(clampY(saved?.y ?? Math.round(height * 0.43)));
-  const startX = useSharedValue(x.value);
-  const startY = useSharedValue(y.value);
-  const progress = useSharedValue(actuallyVisible ? 1 : 0);
-  const attention = useSharedValue(myTurn ? 1 : 0.76);
-
-  useEffect(() => {
-    progress.value = withTiming(actuallyVisible ? 1 : 0, { duration: actuallyVisible ? 115 : 70 });
-  }, [actuallyVisible, progress]);
-  useEffect(() => {
-    attention.value = withTiming(myTurn ? 1 : 0.76, { duration: 120 });
-  }, [attention, myTurn]);
-  useEffect(() => {
-    const nextX = clampX(x.value);
-    const nextY = clampY(y.value);
-    x.value = withTiming(nextX, { duration: 90 });
-    y.value = withTiming(nextY, { duration: 90 });
-    setChessMiniPosition({ x: nextX, y: nextY });
-  }, [height, insets.bottom, insets.top, maxX, maxY, minY, width, x, y]);
-
-  const gesture = useMemo(() => {
-    const pan = Gesture.Pan()
-      .minDistance(6)
-      .onStart(() => { startX.value = x.value; startY.value = y.value; })
-      .onUpdate((event) => {
-        x.value = Math.max(MINI_EDGE, Math.min(maxX, startX.value + event.translationX));
-        y.value = Math.max(minY, Math.min(maxY, startY.value + event.translationY));
-      })
-      .onEnd(() => {
-        const targetX = x.value + MINI_WIDTH / 2 < width / 2 ? MINI_EDGE : maxX;
-        const targetY = Math.max(minY, Math.min(maxY, y.value));
-        x.value = withTiming(targetX, { duration: 120 });
-        y.value = withTiming(targetY, { duration: 90 });
-        runOnJS(setChessMiniPosition)({ x: targetX, y: targetY });
-      });
-    const tap = Gesture.Tap().maxDistance(6).onEnd((_event, success) => {
-      if (success) runOnJS(onOpen)();
-    });
-    return Gesture.Race(pan, tap);
-  }, [maxX, maxY, minY, onOpen, startX, startY, width, x, y]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value * attention.value,
-    transform: [
-      { translateX: x.value },
-      { translateY: y.value },
-      { scale: Math.max(0.001, progress.value) },
-    ],
-  }));
-
-  if (!state) return null;
-  return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View pointerEvents={actuallyVisible ? "auto" : "none"} style={[styles.miniCardShell, animatedStyle]}>
-        <View accessibilityRole="button" accessibilityLabel="Mở lại bàn cờ" style={styles.miniCard}>
-          <View style={styles.miniIcon}>
-            <Image source={MINI_PIECE_IMAGES[pieceKey]} resizeMode="contain" style={styles.miniPiece} />
-          </View>
-          <Text style={styles.miniClock}>{clock}</Text>
-        </View>
-      </Animated.View>
-    </GestureDetector>
-  );
-}
-
 /**
  * One persistent Chess native surface for the whole Family Bloom process.
  * Main-screen renders are siblings of this host and cannot remount the board.
@@ -251,6 +96,17 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
   const realtimeActions = useChessRealtimeActions();
   const { confirm } = useBloomDialog();
   const { showToast } = useBloomToast();
+  const {
+    playMoveKind,
+    playPremove,
+    playIllegal,
+    playTenSeconds,
+    playGameStart,
+    playGameEnd,
+    playReconnect,
+    playChallengeSent,
+    playChallengeAccepted,
+  } = useChessSoundscape();
   const seed = getCachedChessGameSnapshot(surface.gameId);
   const game = useChessGame(activeFamilyId, surface.gameId, surface.mode === "full" && !!surface.gameId, seed, surface.mode === "full");
   const warmState = useMemo(() => standbyState(activeFamilyId), [activeFamilyId]);
@@ -265,7 +121,6 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
   const opponentName = isBot ? "Bloom Bot" : (opponent?.shortName || opponent?.displayName || "Người thân");
   const meMember = members?.memberByUid.get(me);
   const actualGame = !!surface.gameId && state.gameId !== warmState.gameId;
-  const miniVisible = presentationReady && !!surface.gameId && surface.mode === "mini";
 
   const [promotion, setPromotion] = useState<{ resolve: (piece: ChessPromotionPiece | null) => void } | null>(null);
   const [warmReady, setWarmReady] = useState(false);
@@ -285,9 +140,16 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
   const rematchSourceGameIdRef = useRef<string | null>(null);
   const previousSurfaceGameIdRef = useRef<string | null>(surface.gameId);
   const visualRevisionRef = useRef(-1);
+  const soundGameIdRef = useRef<string | null>(null);
+  const lastSoundStatusRef = useRef<ChessGameState["status"] | null>(null);
+  const reconnectSoundArmedRef = useRef(false);
+  const resultSoundPlayedForGameRef = useRef<string | null>(null);
+  const resultSoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const whiteTurn = useSharedValue(0);
   const blackTurn = useSharedValue(0);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const offscreenX = windowWidth + 48;
+  const fullSurfaceX = useSharedValue(surface.mode === "full" ? 0 : offscreenX);
   const surfaceRootRef = useRef<View | null>(null);
   const [screenOrigin, setScreenOrigin] = useState({ x: 0, y: 0, measured: false });
   const frozenBoardStateRef = useRef<ChessGameState>(state);
@@ -303,6 +165,15 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
   }, [windowWidth]);
   const gameStackHeight = CHESS_HUD_HEIGHT * 2 + CHESS_MATERIAL_HEIGHT * 2 + CHESS_CONTENT_GAP * 4 + boardViewportSize;
   const gameStackTop = Math.max(0, Math.floor((windowHeight - gameStackHeight) / 2));
+  const fullSurfaceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: fullSurfaceX.value }],
+  }));
+
+  // A12: never toggle display on the persistent native board. Full/minimized
+  // presentation only moves the already-laid-out surface on/off screen.
+  useLayoutEffect(() => {
+    fullSurfaceX.value = presentationReady && surface.mode === "full" ? 0 : offscreenX;
+  }, [fullSurfaceX, offscreenX, presentationReady, surface.mode]);
 
   // React Navigation/react-native-screens can give this sibling host a native
   // window origin that is not (0, 0), even though the React parent is flex:1.
@@ -372,6 +243,102 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
     whiteTurn.value = active && state.turn === "w" ? 1 : 0;
     blackTurn.value = active && state.turn === "b" ? 1 : 0;
   }, [blackTurn, state.status, state.turn, whiteTurn]);
+
+  useEffect(() => {
+    const gameId = surface.gameId;
+    if (!actualGame || !gameId) {
+      soundGameIdRef.current = null;
+      lastSoundStatusRef.current = null;
+      reconnectSoundArmedRef.current = false;
+      resultSoundPlayedForGameRef.current = null;
+      if (resultSoundTimerRef.current) clearTimeout(resultSoundTimerRef.current);
+      resultSoundTimerRef.current = null;
+      return;
+    }
+    if (soundGameIdRef.current === gameId) return;
+    soundGameIdRef.current = gameId;
+    lastSoundStatusRef.current = state.status;
+    reconnectSoundArmedRef.current = false;
+    resultSoundPlayedForGameRef.current = null;
+    if (resultSoundTimerRef.current) clearTimeout(resultSoundTimerRef.current);
+    resultSoundTimerRef.current = null;
+  }, [actualGame, state.revision, state.status, surface.gameId]);
+
+  const handleMoveLanded = useCallback((delta: ChessMoveDelta) => {
+    if (!actualGame || surface.mode !== "full") return;
+    const kind = resolveBoardMoveSound({
+      isSelf: delta.move.color === myColor,
+      captured: !!delta.move.captured,
+      check: !!delta.checkSquare,
+      castle: delta.move.flags.includes("k") || delta.move.flags.includes("q"),
+      promotion: !!delta.move.promotion,
+    });
+    playMoveKind(kind);
+
+    // A15: a move-triggered game end must never sound before the moving piece
+    // physically reaches its destination. The authoritative delta arms the
+    // terminal sound, but the renderer landing callback owns the exact moment.
+    if (delta.status === "finished" && delta.gameId === surface.gameId && resultSoundPlayedForGameRef.current !== delta.gameId) {
+      resultSoundPlayedForGameRef.current = delta.gameId;
+      if (resultSoundTimerRef.current) clearTimeout(resultSoundTimerRef.current);
+      resultSoundTimerRef.current = setTimeout(() => {
+        resultSoundTimerRef.current = null;
+        playGameEnd();
+      }, 120);
+    }
+  }, [actualGame, myColor, playGameEnd, playMoveKind, surface.gameId, surface.mode]);
+
+  useEffect(() => {
+    const gameId = surface.gameId;
+    if (!actualGame || !gameId) {
+      lastSoundStatusRef.current = null;
+      return;
+    }
+    const previousStatus = lastSoundStatusRef.current;
+    lastSoundStatusRef.current = state.status;
+    if (surface.mode === "full" && previousStatus === "waiting" && state.status === "active") playGameStart();
+  }, [actualGame, playGameStart, state.status, surface.gameId, surface.mode]);
+
+  useEffect(() => {
+    const gameId = surface.gameId;
+    if (!actualGame || !gameId) {
+      reconnectSoundArmedRef.current = false;
+      return;
+    }
+    if (game.connectionPhase === "reconnecting") {
+      reconnectSoundArmedRef.current = true;
+      return;
+    }
+    if (game.connectionPhase === "connected" && reconnectSoundArmedRef.current) {
+      reconnectSoundArmedRef.current = false;
+      if (surface.mode === "full") playReconnect();
+    }
+  }, [actualGame, game.connectionPhase, playReconnect, surface.gameId, surface.mode]);
+
+  useEffect(() => {
+    const gameId = surface.gameId;
+    if (!actualGame || !gameId || surface.mode !== "full" || state.status !== "finished") return undefined;
+    if (resultSoundPlayedForGameRef.current === gameId) return undefined;
+
+    // Resign/draw/timeout have no landing callback, so keep a short fallback.
+    // For checkmate/stalemate caused by a move, handleMoveLanded cancels this
+    // timer and schedules game-end only after the final piece has landed.
+    resultSoundTimerRef.current = setTimeout(() => {
+      resultSoundTimerRef.current = null;
+      if (resultSoundPlayedForGameRef.current === gameId) return;
+      resultSoundPlayedForGameRef.current = gameId;
+      playGameEnd();
+    }, 420);
+    return () => {
+      if (resultSoundTimerRef.current) clearTimeout(resultSoundTimerRef.current);
+      resultSoundTimerRef.current = null;
+    };
+  }, [actualGame, playGameEnd, state.status, surface.gameId, surface.mode]);
+
+  useEffect(() => subscribeChessSoundUiEvents((event) => {
+    if (event === "challenge_sent") playChallengeSent();
+    else if (event === "challenge_accepted") playChallengeAccepted();
+  }), [playChallengeAccepted, playChallengeSent]);
 
   useEffect(() => {
     if (!surface.gameId || surface.mode !== "full" || state.status !== "active" || !state.drawOfferByUid || state.drawOfferByUid === me) return;
@@ -486,22 +453,25 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
 
   const minimize = useCallback(() => {
     setMenuOpen(false);
-    minimizeChessSurface();
-  }, []);
-
-  const openFull = useCallback(() => {
-    if (!surface.gameId) return;
-    showChessSurfaceFull(surface.gameId);
-  }, [surface.gameId]);
+    // Visual handoff first: move the full native surface out of the viewport on
+    // the UI thread. Only on the next frame do we change lifecycle/subscriptions.
+    fullSurfaceX.value = offscreenX;
+    requestAnimationFrame(() => minimizeChessSurface());
+  }, [fullSurfaceX, offscreenX]);
 
   const leaveFinished = useCallback(() => {
-    if (surface.gameId) realtimeActions.acknowledgeResult(surface.gameId);
     const finishedGameId = surface.gameId;
     setResultDismissed(true);
     setMenuOpen(false);
-    if (rematchWaitingUntil && finishedGameId) void realtimeActions.cancelRematch(finishedGameId);
-    finishChessSurfaceGame(finishedGameId);
-  }, [realtimeActions, rematchWaitingUntil, state.finishReason, surface.gameId]);
+    // Hide Chess first so confetti/modal/full-board composition leaves the
+    // screen before result ACK + store cleanup run on the following frame.
+    fullSurfaceX.value = offscreenX;
+    requestAnimationFrame(() => {
+      if (finishedGameId) realtimeActions.acknowledgeResult(finishedGameId);
+      if (rematchWaitingUntil && finishedGameId) void realtimeActions.cancelRematch(finishedGameId);
+      finishChessSurfaceGame(finishedGameId);
+    });
+  }, [fullSurfaceX, offscreenX, realtimeActions, rematchWaitingUntil, surface.gameId]);
 
   const offerDraw = useCallback(async () => {
     const ok = await confirm({ title: "Đề nghị hòa?", message: "Người thân có thể đồng ý hoặc tiếp tục ván.", confirmLabel: "Gửi đề nghị", cancelLabel: "Chưa gửi", icon: "hand-left-outline" });
@@ -638,7 +608,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
   const modalInteractive = !!promotion || showResult;
 
   return (
-    <GestureHandlerRootView
+    <View
       ref={surfaceRootRef}
       collapsable={false}
       pointerEvents="box-none"
@@ -654,11 +624,12 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
       ]}
     >
       {/* Persistent content layer. Geometry is owned here; modal chrome is a sibling. */}
-      <View
+      <Animated.View
         pointerEvents={fullVisible ? "auto" : "none"}
         style={[
           styles.chessContentLayer,
-          { width: windowWidth, height: windowHeight, opacity: fullVisible ? 1 : 0, display: (fullVisible || surface.preparing || resettingWarmBoard || !actualGame) ? "flex" : "none" },
+          { width: windowWidth, height: windowHeight },
+          fullSurfaceStyle,
         ]}
       >
         <View style={[styles.gameStack, { top: gameStackTop, width: windowWidth, height: gameStackHeight }]}>
@@ -736,6 +707,9 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
               onPromotion={actualGame ? requestPromotion : noopPromotion}
               onVisualRevisionChange={handleVisualRevision}
               onBoardReady={handleBoardReady}
+              onPremoveQueued={actualGame ? playPremove : undefined}
+              onMoveLanded={actualGame ? handleMoveLanded : undefined}
+              onIllegalMove={actualGame ? playIllegal : undefined}
               hintsEnabled={actualGame}
               motionFxEnabled={actualGame && surface.mode === "full"}
               interactionBlocked={!boardInteractive}
@@ -773,11 +747,12 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
               avatarFallback={(meMember?.shortName || meMember?.displayName || "B").slice(0, 1)}
               activeSignal={myColor === "w" ? whiteTurn : blackTurn}
               runtimeActive={fullVisible && state.status === "active"}
+              onTenSeconds={playTenSeconds}
             />
           ) : <View style={styles.railPlaceholder} />}
         </View>
         </View>
-      </View>
+      </Animated.View>
 
       {/* One explicit screen coordinate system for Ready / Promotion / Result. */}
       {modalVisible ? (
@@ -825,13 +800,6 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
         </View>
       ) : null}
 
-      <MiniChessCard
-        gameId={surface.gameId}
-        me={me}
-        visible={miniVisible}
-        onOpen={openFull}
-      />
-
       {presentationReady
         && surface.preparing
         && surface.mode === "hidden"
@@ -846,7 +814,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost() {
           </View>
         </View>
       ) : null}
-    </GestureHandlerRootView>
+    </View>
   );
 });
 
@@ -919,11 +887,6 @@ const styles = StyleSheet.create({
   resultButtonDisabled: { opacity: 0.68 },
   cancelRematchButton: { marginTop: 10, minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   cancelRematchText: { color: COLORS.secondaryText, fontSize: 11, fontWeight: "800", textDecorationLine: "underline" },
-  miniCardShell: { position: "absolute", left: 0, top: 0, width: MINI_WIDTH, height: MINI_HEIGHT, zIndex: 1550, elevation: 18 },
-  miniCard: { width: MINI_WIDTH, height: MINI_HEIGHT, borderRadius: 14, backgroundColor: "#B53666", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, gap: 5, shadowColor: "#7B294A", shadowOpacity: 0.20, shadowRadius: 9, shadowOffset: { width: 0, height: 4 } },
-  miniIcon: { width: 26, height: 26, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
-  miniPiece: { width: 22, height: 22 },
-  miniClock: { color: "#FFF", fontSize: 10, fontWeight: "900", fontVariant: ["tabular-nums"], letterSpacing: -0.25 },
   prewarmNoticeWrap: { ...StyleSheet.absoluteFillObject, zIndex: 1490, alignItems: "center", justifyContent: "center", paddingHorizontal: 22 },
   prewarmNotice: { width: "100%", maxWidth: 370, minHeight: 82, borderRadius: 24, backgroundColor: "#FFF9FC", borderWidth: 1, borderColor: "#E9C9D5", flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, elevation: 12, shadowColor: "#3B202C", shadowOpacity: 0.16, shadowRadius: 18 },
   prewarmCopy: { flex: 1 },

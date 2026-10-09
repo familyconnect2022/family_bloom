@@ -10,6 +10,7 @@ let pass=0, fail=0;
 function check(label, ok){ const n=String(pass+fail+1).padStart(2,'0'); if(ok){pass++;console.log(`PASS ${n} - ${label}`)} else {fail++;console.log(`FAIL ${n} - ${label}`)} }
 const phase17_9aChess = fs.existsSync(path.join(root, 'src/components/chess/ChessSurfaceHost.tsx')) && read('package.json').includes('phase17_9a:check');
 const phase17_9a9Server = read('package.json').includes('phase17_9a9:check') && fs.existsSync(path.join(root, 'server/src/chess/rematchProposalStore.ts'));
+const phase17_9a15BoardGames = read('package.json').includes('phase17_9a15:check') && fs.existsSync(path.join(root, 'src/games/shared/boardGameFramework.ts'));
 const planner=read('src/app/(tabs)/planner.tsx');
 const hook=read('src/hooks/family/useFamilyEvents.ts');
 const registry=read('src/services/realtime/sharedRealtimeRegistry.ts');
@@ -53,5 +54,5 @@ const hashes={
  'server/src/socket/socketServer.ts':'dd60cbc1345d5e3f577b32f1265646ae51f24c3d6ba12ac6a4935da38a1efd07',
  'firestore.rules':'a872b09e20259f22e04e8564d3f0c0722a895235bac2da71bf663c6c8b81222a',
  'firestore.indexes.json':'b88b9fab1c5db94017e0d1744abf0d1ca98979ef86bdefa2e6831fc0e49d429f'};
-for(const [f,h] of Object.entries(hashes)) check(`Protected baseline unchanged: ${f}`, ((phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(f)) || (phase17_9a9Server && f === 'server/src/socket/socketServer.ts') || sha(f)===h));
+for(const [f,h] of Object.entries(hashes)) check(`Protected baseline unchanged: ${f}`, ((phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(f)) || (phase17_9a15BoardGames && ['src/components/xiangqi/XiangqiGameBoard.tsx','src/app/(xiangqi)/xiangqi-preview.tsx'].includes(f)) || (phase17_9a9Server && f === 'server/src/socket/socketServer.ts') || sha(f)===h));
 console.log(`\nPhase 17.8A Planner Restore Hotfix gate: ${pass}/${pass+fail} PASS`); if(fail) process.exit(1);

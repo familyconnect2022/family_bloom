@@ -6,7 +6,12 @@ set "TARGET=%~1"
 if not defined TARGET (
   echo ========================================================
   echo Family Bloom - PRE-COPY CLEAN OLD PROJECT
-  echo Phase 17.9A11 - Family Recovery Reconnect Sync Time Controls
+  echo Phase 17.9W1 - Web Companion Preview + Phase 17.9A17 Native Persistent Tabbar
+rem Successor of Phase 17.9A16 - Xiangqi Server Authority Realtime Bot
+rem Successor of Phase 17.9A15 - Shared Board Game Sound Premove Bot Pacing
+rem Successor of Phase 17.9A14 - Instant Home Firebase Data Source Cleanup
+rem Successor of Phase 17.9A12 - Zero Relayout Chess Transition
+rem Successor of Phase 17.9A11 - Family Recovery Reconnect Sync Time Controls
 rem Successor of Phase 17.9A10 - Tap Only Material Rail Smaller Mini
 rem Successor of Phase 17.9A9 - Chess Lifecycle Root Mini Premove
 rem Successor of Phase 17.9A8 - Rematch Race Fix No Battle FX
@@ -44,6 +49,7 @@ for %%F in (
   "src\components\system\AppWidePerformanceDriver.tsx"
   "src\components\system\GuidedPerformanceOverlay.tsx"
   "src\services\performance\appWidePerformanceService.ts"
+  "src\services\homeHub\homeHubService.ts"
   "src\services\performance\finalPerformanceGateService.ts"
   "src\services\performance\automatedRegressionService.ts"
   "src\app\(internal)\performance-test.tsx"
@@ -60,6 +66,8 @@ for %%F in (
   "PHASE_16B8_BUILD_REPORT.md"
   "PHASE_16B9_BUILD_REPORT.md"
   "PHASE_16B10_BUILD_REPORT.md"
+  "PHASE_17_9W1_BUILD_REPORT.md"
+  "PHASE_17_9A17_BUILD_REPORT.md"
   "PHASE_16B11_BUILD_REPORT.md"
   "PHASE_16B12_BUILD_REPORT.md"
   "PHASE_16B13_BUILD_REPORT.md"
@@ -102,6 +110,9 @@ for %%F in (
   "PHASE_17_9A8_BUILD_REPORT.md"
   "PHASE_17_9A9_BUILD_REPORT.md"
   "PHASE_17_9A10_BUILD_REPORT.md"
+  "PHASE_17_9A11_BUILD_REPORT.md"
+  "PHASE_17_9A12_BUILD_REPORT.md"
+  "PHASE_17_9A13_BUILD_REPORT.md"
   "src\app\chess-history.tsx"
   "src\app\chess-lobby.tsx"
   "src\app\create-profile.tsx"
@@ -175,7 +186,7 @@ echo.
 echo ========================================================
 echo PRE-COPY CLEAN PASS
 echo ========================================================
-echo Now COPY the entire Phase 17.9A11 FULL package over:
+echo Now COPY the entire Phase 17.9W1 FULL package over:
 echo   %TARGET%
 echo Then run inside the updated project:
 echo   Family_Bloom_CLEAN_APPLY_FULL.bat

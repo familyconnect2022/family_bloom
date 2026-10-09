@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { getAuth } from "@react-native-firebase/auth";
 import { doc, getFirestore, setDoc } from "@react-native-firebase/firestore";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 
 type ErrorLike = { name?: unknown; code?: unknown };
 const recent = new Map<string, number>();
@@ -28,7 +29,7 @@ export const runtimeDiagnosticsService = {
     const id = makeId();
     // Privacy contract: do not upload raw messages, stack traces, form values,
     // family ids, names, media URLs or any user-generated content.
-    await setDoc(doc(getFirestore(), `users/${uid}/diagnostics/${id}`), {
+    await setDoc(doc(getFirestore(), FIRESTORE_PATHS.userDiagnostic(uid, id)), {
       id,
       code,
       context: safeContext,

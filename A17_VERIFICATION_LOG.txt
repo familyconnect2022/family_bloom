@@ -1,0 +1,15 @@
+Family Bloom Phase 17.9A17 verification
+Date: 2026-10-09
+
+A17 native-persistent tabbar: 35/35 PASS
+Phase 17.8E tabbar compatibility: 39/39 PASS
+Phase 17 lifecycle: 56/56 PASS
+Phase 17.1 tab switch: 41/41 PASS
+Phase 16B15 Chess/Xiangqi smoothness: 50/50 PASS
+Phase 17.9A16 Xiangqi server authority: 44/44 PASS
+Current Chess/Xiangqi aggregate: 19/19 phase groups PASS
+Release readiness: 11/11 PASS
+Full TS/TSX syntax scan in current gate: 292 files PASS
+
+A16 gameplay/server/Firebase protected hashes unchanged.
+A17 adds no native dependency and requires no Render deploy for the tabbar change itself.

@@ -11,6 +11,8 @@ function check(label, ok, detail=''){ const n=String(pass+fail+1).padStart(2,'0'
 
 const phase17_9aChess = fs.existsSync(path.join(root, 'src/components/chess/ChessSurfaceHost.tsx')) && read('package.json').includes('phase17_9a:check');
 const phase17_9a9Server = read('package.json').includes('phase17_9a9:check') && fs.existsSync(path.join(root, 'server/src/chess/rematchProposalStore.ts'));
+const phase17_9a15BoardGames = read('package.json').includes('phase17_9a15:check') && fs.existsSync(path.join(root, 'src/games/shared/boardGameFramework.ts'));
+const phase17_9a17 = read('package.json').includes('phase17_9a17:check');
 const tabs=read('src/app/(tabs)/_layout.tsx');
 const planner=read('src/app/(tabs)/planner.tsx');
 const pkg=JSON.parse(read('package.json'));
@@ -29,10 +31,10 @@ check('Tab icons remain enlarged and centered', tabs.includes('const TAB_ICON_SI
 check('Active indicator is a lower-profile compact centered pill', (tabs.includes('const TAB_INDICATOR_WIDTH = 54') && tabs.includes('const TAB_INDICATOR_HEIGHT = 44')) || (tabs.includes('const TAB_INDICATOR_WIDTH = 52') && tabs.includes('const TAB_INDICATOR_HEIGHT = 40')) || (tabs.includes('const TAB_INDICATOR_WIDTH = 50') && tabs.includes('const TAB_INDICATOR_HEIGHT = 36')));
 check('Pill is fully rounded', tabs.includes('borderRadius: 999'));
 check('Pill uses softer Bloom active pink', tabs.includes('backgroundColor: "#D96F98"') || tabs.includes('backgroundColor: "#E58AA9"') || tabs.includes('backgroundColor: "#ECA0B9"'));
-check('Active icon is white', phase17_9a6 ? tabs.includes('color={focused ? COLORS.white : COLORS.tabInactive}') : tabs.includes('color={COLORS.white}'));
-check('Inactive icon uses neutral tab color', phase17_9a6 ? tabs.includes('color={focused ? COLORS.white : COLORS.tabInactive}') : tabs.includes('color={COLORS.tabInactive}'));
+check('Active icon is white', phase17_9a17 ? tabs.includes('color={COLORS.white}') : phase17_9a6 ? tabs.includes('color={focused ? COLORS.white : COLORS.tabInactive}') : tabs.includes('color={COLORS.white}'));
+check('Inactive icon uses neutral tab color', phase17_9a17 ? tabs.includes('color={COLORS.tabInactive}') : phase17_9a6 ? tabs.includes('color={focused ? COLORS.white : COLORS.tabInactive}') : tabs.includes('color={COLORS.tabInactive}'));
 const buttonSection=tabs.slice(tabs.indexOf('function BloomTabButton'),tabs.indexOf('function BloomSlidingTabBar'));
-check('Icon color behavior matches current architecture', phase17_9a6 ? ((buttonSection.match(/<Ionicons/g)||[]).length===1 && !buttonSection.includes('indicatorIndex')) : tabs.includes('indicatorIndex: SharedValue<number>') && (tabs.match(/Math\.abs\(indicatorIndex\.value - index\)/g)||[]).length >= 2);
+check('Icon color behavior matches current architecture', phase17_9a17 ? ((buttonSection.match(/<Ionicons/g)||[]).length===2 && tabs.includes('indicatorIndex: SharedValue<number>') && buttonSection.includes('indicatorIndex,') && (buttonSection.match(/Math\.abs\(indicatorIndex\.value - index\)/g)||[]).length >= 2 && tabs.includes('...StyleSheet.absoluteFillObject')) : phase17_9a6 ? ((buttonSection.match(/<Ionicons/g)||[]).length===1 && !buttonSection.includes('indicatorIndex')) : tabs.includes('indicatorIndex: SharedValue<number>') && (tabs.match(/Math\.abs\(indicatorIndex\.value - index\)/g)||[]).length >= 2);
 check('UI-thread tab motion starts optimistically on press-in', tabs.includes('onPressIn={onPressIn}') && tabs.includes('animateIndicatorTo(index)'));
 check('Tab motion is deliberately gentler than 17.8D', tabs.includes('const TAB_MOTION_MS = 232'));
 check('Tab motion uses premium easing', tabs.includes('Easing.bezier(0.22, 1, 0.36, 1)'));
@@ -76,6 +78,6 @@ const hashes={
  'server/src/socket/socketServer.ts':'dd60cbc1345d5e3f577b32f1265646ae51f24c3d6ba12ac6a4935da38a1efd07',
  'firestore.rules':'a872b09e20259f22e04e8564d3f0c0722a895235bac2da71bf663c6c8b81222a',
  'firestore.indexes.json':'b88b9fab1c5db94017e0d1744abf0d1ca98979ef86bdefa2e6831fc0e49d429f'};
-for(const [f,h] of Object.entries(hashes)) check(`Protected baseline unchanged: ${f}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(f)) || (phase17_9a9Server && f === 'server/src/socket/socketServer.ts') || sha(f)===h, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(f));
+for(const [f,h] of Object.entries(hashes)) check(`Protected baseline unchanged: ${f}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(f)) || (phase17_9a15BoardGames && ['src/components/xiangqi/XiangqiGameBoard.tsx','src/app/(xiangqi)/xiangqi-preview.tsx'].includes(f)) || (phase17_9a9Server && f === 'server/src/socket/socketServer.ts') || sha(f)===h, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(f));
 
 console.log(`\nPhase 17.8E Icon-only UI-thread Tab Bar gate: ${pass}/${pass+fail} PASS`); if(fail) process.exit(1);

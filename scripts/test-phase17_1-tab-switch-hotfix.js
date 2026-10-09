@@ -13,6 +13,8 @@ const runtime = read('src/context/TabRuntimeContext.tsx');
 const home = read('src/app/(tabs)/index.tsx');
 const phase17_9aChess = fs.existsSync(path.join(root, 'src/components/chess/ChessSurfaceHost.tsx')) && read('package.json').includes('phase17_9a:check');
 const phase17_9a9Server = read('package.json').includes('phase17_9a9:check') && fs.existsSync(path.join(root, 'server/src/chess/rematchProposalStore.ts'));
+const phase17_9a15BoardGames = read('package.json').includes('phase17_9a15:check') && fs.existsSync(path.join(root, 'src/games/shared/boardGameFramework.ts'));
+const phase17_9a17 = read('package.json').includes('phase17_9a17:check');
 const moments = read('src/app/(tabs)/moments.tsx');
 const planner = read('src/app/(tabs)/planner.tsx');
 const family = read('src/app/(tabs)/family.tsx');
@@ -27,7 +29,7 @@ const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.b
 ok('Tab bar imports useEffect used by the sliding indicator', /import React, \{[^}]*useEffect[^}]*\} from [\"']react[\"'];/.test(tabs));
 ok('Navigator returns to warm eager tab surfaces', tabs.includes('lazy: false'));
 ok('freezeOnBlur regression removed', !tabs.includes('freezeOnBlur: true'));
-ok('detachInactiveScreens regression removed', !tabs.includes('detachInactiveScreens={true}'));
+ok('detachInactiveScreens keeps native tab surfaces persistent', phase17_9a17 ? tabs.includes('detachInactiveScreens={false}') : !tabs.includes('detachInactiveScreens={true}'));
 ok('Tab visual transition remains animation:none', tabs.includes('animation: BLOOM_MOTION.tabs.animation'));
 ok('Runtime provider remains installed once', (tabs.match(/<TabRuntimeProvider>/g)||[]).length === 1);
 ok('Eager startup gate waits for all five warm tab shells', read('src/context/TabStartupContext.tsx').includes('REQUIRED.every((task) => tasks[task])'));
@@ -66,7 +68,7 @@ const frozen = {
   'firestore.rules':'a872b09e20259f22e04e8564d3f0c0722a895235bac2da71bf663c6c8b81222a',
   'firestore.indexes.json':'b88b9fab1c5db94017e0d1744abf0d1ca98979ef86bdefa2e6831fc0e49d429f',
 };
-for (const [file, expected] of Object.entries(frozen)) ok(`16B.18 safety hash unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || sha(file)===expected, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
+for (const [file, expected] of Object.entries(frozen)) ok(`16B.18 safety hash unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || (phase17_9a15BoardGames && ['src/components/xiangqi/XiangqiGameBoard.tsx','src/app/(xiangqi)/xiangqi-preview.tsx'].includes(file)) || sha(file)===expected, phase17_9a15BoardGames ? '17.9A15 shared board-game runtime supersedes historical game hash' : phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
 
 ok('Package exposes phase17.1 gate', /"phase17_1:check"\s*:\s*"node \.\/scripts\/test-phase17_1-tab-switch-hotfix\.js"/.test(pkg));
 ok('Post-copy updater runs phase17.1 gate', /run phase17_1:check/.test(clean) || /test-phase17_1-tab-switch-hotfix\.js/.test(clean));

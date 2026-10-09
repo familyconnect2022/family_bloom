@@ -65,7 +65,7 @@ ok('Chess history preserves away-time reason', has(history, /away_timeout:\s*"H�
 ok('Away terminal copy remains on the persistent result surface after battle FX retirement', has(chessSurfaceHost, /HẾT THỜI GIAN RỜI BÀN/) && has(chessSurfaceHost, /rời bàn quá thời gian cho phép/));
 ok('Global realtime retains pending finished result outside game route', has(realtime, /pendingResultGameId/) && has(realtime, /next\.status === "finished"/));
 ok('Lobby automatically returns pending result to result screen', has(lobbyHook, /pendingResultGameId/) && has(lobbyScreen, /pendingResultGameId \|\| lobby\.activeGameId/));
-ok('Finished result is durably acknowledged when result surface is dismissed or rematched', has(realtime, /acknowledgeResult/) && has(realtime, /gameResultAck/) && has(chessSurfaceHost, /leaveFinished/) && has(chessSurfaceHost, /acknowledgeResult\(surface\.gameId\)/));
+ok('Finished result is durably acknowledged when result surface is dismissed or rematched', has(realtime, /acknowledgeResult/) && has(realtime, /gameResultAck/) && has(chessSurfaceHost, /leaveFinished/) && has(chessSurfaceHost, /acknowledgeResult\(finishedGameId\)/));
 
 ok('Tabs keep screen transition disabled', has(motion, /tabs:[\s\S]{0,160}animation:\s*"none"/));
 ok('Tab bar uses one SharedValue sliding indicator', (has(tabs, /useSharedValue\(state\.index\)/) || has(tabs, /useSharedValue\(state\.index \* itemWidth \+ 6\)/)) && has(tabs, /styles\.slidingIndicator/));

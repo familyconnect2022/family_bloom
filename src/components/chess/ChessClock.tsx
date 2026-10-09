@@ -17,13 +17,16 @@ export const ChessClock = React.memo(function ChessClock({
   color,
   activeSignal,
   runtimeActive = true,
+  onTenSeconds,
 }: {
   state: ChessGameState;
   color: ChessColor;
   activeSignal?: SharedValue<number>;
   runtimeActive?: boolean;
+  onTenSeconds?: () => void;
 }) {
   const received = useRef(mono());
+  const warnedKeyRef = useRef<string | null>(null);
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -47,6 +50,14 @@ export const ChessClock = React.memo(function ChessClock({
   const text = ms == null
     ? "∞"
     : `${Math.floor(ms / 60000).toString().padStart(2, "0")}:${Math.floor((ms % 60000) / 1000).toString().padStart(2, "0")}`;
+
+  useEffect(() => {
+    if (!onTenSeconds || !clockRunning || ms == null || ms <= 0 || ms > 10_000) return;
+    const key = `${state.gameId}:${state.revision}:${color}`;
+    if (warnedKeyRef.current === key) return;
+    warnedKeyRef.current = key;
+    onTenSeconds();
+  }, [clockRunning, color, ms, onTenSeconds, state.gameId, state.revision]);
 
   const focus = useDerivedValue(() => withTiming(
     activeSignal?.value ?? (state.turn === color && state.status === "active" ? 1 : 0),

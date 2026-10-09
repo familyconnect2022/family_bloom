@@ -22,6 +22,7 @@ import {
 } from "@/data/music/vietnameseMusicCatalogV2";
 import { resolveVietnameseSeed } from "./vietnameseMusicMatcher";
 import type { MusicProvider } from "./musicProvider";
+import { FIRESTORE_PATHS } from "../../firebase/firestorePaths";
 
 const CYCLE_DAYS = 3;
 const TRACK_COUNT = 20;
@@ -36,9 +37,9 @@ const searchCache = new Map<string, { at: number; tracks: HomeMusicTrack[] }>();
 
 const provider: MusicProvider = audiusMusicProvider;
 const nowIso = () => new Date().toISOString();
-const cycleCollection = (familyId: string) => `families/${familyId}/homeMusicCycles`;
-const familySongsCollection = (familyId: string) => `families/${familyId}/homeMusicSongs`;
-const favoriteCollection = (uid: string) => `users/${uid}/homeMusicFavorites`;
+const cycleCollection = FIRESTORE_PATHS.familyHomeMusicCycles;
+const familySongsCollection = FIRESTORE_PATHS.familyHomeMusicSongs;
+const favoriteCollection = FIRESTORE_PATHS.userHomeMusicFavorites;
 
 const hash = (text: string) => {
   let h = 2166136261;

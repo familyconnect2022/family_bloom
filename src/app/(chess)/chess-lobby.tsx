@@ -16,6 +16,7 @@ import { CHESS_ERROR_COPY, CHESS_TIME_CONTROLS, type ChessTimeControl } from "..
 import { getHomeGamePlayWindow } from "../../services/games/gameRoomPolicy";
 import { safeRouterBack } from "../../utils/safeRouterBack";
 import { showChessSurfaceFull } from "../../services/chess/chessSurfaceStore";
+import { publishChessSoundUiEvent } from "../../services/chess/chessSoundEventBus";
 
 export default function ChessLobbyScreen() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function ChessLobbyScreen() {
     }
     const response = await lobby.challenge(uid, timeControl);
     if (response.ok) {
+      publishChessSoundUiEvent("challenge_sent");
       showToast({ type: "success", title: "Đã gửi lời thách đấu", message: "Lời mời tự hết hạn sau 45 giây." });
     } else {
       showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });

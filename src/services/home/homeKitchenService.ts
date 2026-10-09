@@ -8,8 +8,9 @@ import {
 } from "@react-native-firebase/firestore";
 import { BLOOM_RECIPES_V1 } from "@/data/kitchen/bloomRecipesV1";
 import type { BloomRecipe, HomeKitchenPreference, KitchenPreferenceTag } from "@/types/homeLiving";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 
-const preferenceCollection = (familyId: string) => `families/${familyId}/homeKitchenPreferences`;
+const preferenceCollection = FIRESTORE_PATHS.familyHomeKitchenPreferences;
 const nowIso = () => new Date().toISOString();
 
 const hash = (text: string) => {

@@ -11,7 +11,10 @@
     "@react-native-firebase/firestore": "^26.4.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "axios": "^1.20.0",
+    "chess.js": "^1.4.0",
     "expo": "~57.0.22",
+    "expo-application": "~57.0.3",
+    "expo-audio": "~57.0.5",
     "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.18",
     "expo-dev-client": "~57.0.19",
@@ -22,6 +25,7 @@
     "expo-image": "~57.0.5",
     "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.11",
+    "expo-notifications": "~57.0.21",
     "expo-router": "~57.0.24",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
@@ -38,10 +42,9 @@
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1",
-    "expo-notifications": "~57.0.21",
-    "expo-application": "~57.0.3",
     "socket.io-client": "^4.8.1",
-    "chess.js": "^1.4.0"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "firebase": "^12.19.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -169,7 +172,19 @@
     "phase17_9a8:check": "node ./scripts/test-phase17_9a8-rematch-race-no-battle-fx.js",
     "phase17_9a9:check": "node ./scripts/test-phase17_9a9-chess-lifecycle-mini-premove.js",
     "phase17_9a10:check": "node ./scripts/test-phase17_9a10-tap-only-material-rail-mini.js",
-    "phase17_9a11:check": "node ./scripts/test-phase17_9a11-family-recovery-sync-time-controls.js"
+    "phase17_9a11:check": "node ./scripts/test-phase17_9a11-family-recovery-sync-time-controls.js",
+    "phase17_9a12:check": "node ./scripts/test-phase17_9a12-zero-relayout-chess-transition.js",
+    "phase17_9a13:check": "node ./scripts/test-phase17_9a13-ui-graph-audio-cleanup.js",
+    "phase17_9a14:check": "node ./scripts/test-phase17_9a14-instant-home-firebase-cleanup.js",
+    "phase17_9a15:check": "node ./scripts/test-phase17_9a15-shared-board-game-sound-premove.js",
+    "phase17_9a16:check": "node ./scripts/test-phase17_9a16-xiangqi-server-authority.js",
+    "phase17_9a17:check": "node ./scripts/test-phase17_9a17-native-persistent-tabbar.js",
+    "web:preview": "expo start --web",
+    "web:build": "expo export --platform web",
+    "phase17_9w1:check": "node ./scripts/test-phase17_9w1-web-companion.js",
+    "web:vercel": "npm run web:build",
+    "test:phase17_9w2": "node scripts/test-phase17_9w2-web-parity.js",
+    "web:parity:check": "node scripts/test-phase17_9w1-web-companion.js && node scripts/test-phase17_9w2-web-parity.js"
   },
   "private": true
 }

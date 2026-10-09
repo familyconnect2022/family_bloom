@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { BloomCard } from "../../components/ui/BloomPageComponents";
@@ -16,18 +16,17 @@ import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import { useDeferredGameSurface } from "../../hooks/games/useDeferredGameSurface";
 import { gameRuntimePerf } from "../../services/games/gameRuntimePerf";
+import { xiangqiSocketService } from "../../services/xiangqi/xiangqiSocketService";
+import { XIANGQI_EVENTS, type XiangqiRealtimeState, type XiangqiMoveDelta, type XiangqiTimeControl } from "../../types/xiangqiRealtime";
+import { useBoardGameSoundscape } from "../../components/games/useBoardGameSoundscape";
+import { resolveBoardMoveSound, type BoardGamePremove, type RealtimeBoardRoundPhase } from "../../games/shared/boardGameFramework";
 import {
-  chooseXiangqiBotMove,
-  createInitialXiangqiState,
   getXiangqiLegalMoves,
-  playXiangqiMove,
-  resignXiangqi,
-  timeoutXiangqi,
+  getXiangqiLegalMovesForColor,
   xiangqiFinishCopy,
   type XiangqiGameState,
+  type XiangqiMove,
 } from "../../games/xiangqi/xiangqiEngine";
-
-type XiangqiRoundPhase = "preparing" | "ready" | "playing";
 
 function formatClock(ms: number) {
   const safe = Math.max(0, Math.ceil(ms / 1000));
@@ -36,24 +35,28 @@ function formatClock(ms: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-const XIANGQI_INITIAL_CLOCK_MS = 600_000;
-const XIANGQI_BOT_MOVE_DELAY_MS = 1_000;
+const XIANGQI_DEFAULT_TIME_CONTROL: XiangqiTimeControl = { kind: "clocked", initialMs: 600_000, incrementMs: 0 };
+const reqId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 function XiangqiClockValue({
   baseMs,
   active,
   startedAtMs,
   runtimeActive,
+  onTenSeconds,
 }: {
-  baseMs: number;
+  baseMs: number | null;
   active: boolean;
   startedAtMs: number;
   runtimeActive: boolean;
+  onTenSeconds?: () => void;
 }) {
   // Only this tiny text node ticks. The screen/board never re-render every
   // second just to paint a clock. Server-style truth remains a base snapshot
   // plus an anchor timestamp.
   const [now, setNow] = useState(() => Date.now());
+  const finiteBaseMs = baseMs ?? 0;
+  const warnedTurnRef = useRef<number | null>(null);
   useEffect(() => {
     setNow(Date.now());
     if (!runtimeActive || !active) return undefined;
@@ -62,9 +65,15 @@ function XiangqiClockValue({
   }, [active, baseMs, runtimeActive, startedAtMs]);
 
   const shownMs = active && runtimeActive
-    ? Math.max(0, baseMs - Math.max(0, now - startedAtMs))
-    : baseMs;
-  return <Text style={[styles.clockText, active && styles.clockTextActive]}>{formatClock(shownMs)}</Text>;
+    ? Math.max(0, finiteBaseMs - Math.max(0, now - startedAtMs))
+    : finiteBaseMs;
+  useEffect(() => {
+    if (baseMs == null || !onTenSeconds || !active || !runtimeActive || shownMs <= 0 || shownMs > 10_000) return;
+    if (warnedTurnRef.current === startedAtMs) return;
+    warnedTurnRef.current = startedAtMs;
+    onTenSeconds();
+  }, [active, baseMs, onTenSeconds, runtimeActive, shownMs, startedAtMs]);
+  return <Text style={[styles.clockText, active && styles.clockTextActive]}>{baseMs == null ? "∞" : formatClock(shownMs)}</Text>;
 }
 
 function PlayerRail({
@@ -77,16 +86,18 @@ function PlayerRail({
   clockStartedAtMs,
   runtimeActive,
   phase,
+  onTenSeconds,
 }: {
   side: "red" | "black";
   name: string;
   avatarUrl?: string | null;
   active: boolean;
   thinking?: boolean;
-  clockMs: number;
+  clockMs: number | null;
   clockStartedAtMs: number;
   runtimeActive: boolean;
-  phase: XiangqiRoundPhase;
+  phase: RealtimeBoardRoundPhase;
+  onTenSeconds?: () => void;
 }) {
   const meta = phase === "preparing"
     ? "Đang chuẩn bị bàn cờ…"
@@ -108,7 +119,7 @@ function PlayerRail({
         <Text style={styles.playerMeta}>{meta}</Text>
       </View>
       <View style={[styles.clock, active && styles.clockActive]}>
-        <XiangqiClockValue baseMs={clockMs} active={active} startedAtMs={clockStartedAtMs} runtimeActive={runtimeActive} />
+        <XiangqiClockValue baseMs={clockMs} active={active} startedAtMs={clockStartedAtMs} runtimeActive={runtimeActive} onTenSeconds={onTenSeconds} />
       </View>
     </BloomCard>
   );
@@ -116,197 +127,189 @@ function PlayerRail({
 
 export default function XiangqiPreviewScreen() {
   const router = useRouter();
-  const { userProfile } = useAuth();
+  const { user, userProfile, activeFamilyId } = useAuth();
+  const { playMoveKind, playPremove, playIllegal, playTenSeconds, playGameStart, playGameEnd } = useBoardGameSoundscape();
   const [screenFocused, setScreenFocused] = useState(true);
+  const [appActive, setAppActive] = useState(AppState.currentState === "active");
+  useEffect(() => { const sub = AppState.addEventListener("change", (next) => setAppActive(next === "active")); return () => sub.remove(); }, []);
   useFocusEffect(React.useCallback(() => {
     setScreenFocused(true);
     return () => setScreenFocused(false);
   }, []));
   const heavySurfaceMounted = useDeferredGameSurface(screenFocused);
-  const [game, setGame] = useState<XiangqiGameState>(() => createInitialXiangqiState());
+  const [serverState, setServerState] = useState<XiangqiRealtimeState | null>(null);
+  const serverStateRef = useRef<XiangqiRealtimeState | null>(null);
+  serverStateRef.current = serverState;
+  const game = serverState?.board ?? ({ pieces: [], turn: "red", moveNumber: 1, lastMove: null, inCheck: null, winner: null, finishReason: null, gameOver: false } as XiangqiGameState);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [botThinking, setBotThinking] = useState(false);
-  const [clockMs, setClockMs] = useState({ red: XIANGQI_INITIAL_CLOCK_MS, black: XIANGQI_INITIAL_CLOCK_MS });
-  const clockMsRef = useRef(clockMs);
-  const turnStartedAtRef = useRef(Date.now());
+  const [premove, setPremove] = useState<BoardGamePremove<{ col: number; row: number }, { col: number; row: number }, never> & { pieceId: string } | null>(null);
+  const premoveRef = useRef<typeof premove>(null);
+  premoveRef.current = premove;
+  const landedSoundMoveRef = useRef(0);
+  const gameStartSoundEpochRef = useRef<number | null>(null);
+  const gameEndSoundMoveRef = useRef<number | null>(null);
   const [turnStartedAtMs, setTurnStartedAtMs] = useState(() => Date.now());
   const [boardReady, setBoardReady] = useState(false);
-  const [roundPhase, setRoundPhase] = useState<XiangqiRoundPhase>("preparing");
+  const [roundPhase, setRoundPhase] = useState<RealtimeBoardRoundPhase>("preparing");
   const [roundEpoch, setRoundEpoch] = useState(0);
   const [battleEvent, setBattleEvent] = useState<XiangqiBattleEvent | null>(null);
   const [resultRevealReady, setResultRevealReady] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const previousGameRef = useRef<XiangqiGameState | null>(null);
+  const bootingRef = useRef(false);
+  const readySentForGameRef = useRef<string | null>(null);
+  const resultAckedForGameRef = useRef<string | null>(null);
 
-  const legalTargets = useMemo(() => selectedId ? getXiangqiLegalMoves(game, selectedId) : [], [game, selectedId]);
-  const finish = xiangqiFinishCopy(game);
-  const myName = userProfile?.shortName || userProfile?.displayName || "Bạn";
-  const didWin = game.winner === "red";
-  const resultPalette = didWin
-    ? {
-        backdrop: "rgba(78,31,51,0.50)",
-        hero: "#D56591",
-        border: "#F2CDDC",
-        primary: "#C94F7D",
-        secondaryBg: "#FFF3F7",
-        secondaryText: "#A9486D",
+  const applyState = React.useCallback((next: XiangqiRealtimeState) => {
+    setServerState(next);
+    setTurnStartedAtMs(Date.now());
+    if (serverStateRef.current?.gameId !== next.gameId) {
+      setSelectedId(null); setPremove(null); setBoardReady(false); setRoundEpoch((value) => value + 1);
+      landedSoundMoveRef.current = 0; gameEndSoundMoveRef.current = null; readySentForGameRef.current = null; resultAckedForGameRef.current = null;
+    }
+  }, []);
+
+  const applyDelta = React.useCallback((delta: XiangqiMoveDelta) => {
+    setServerState((current) => current && current.gameId === delta.gameId ? {
+      ...current, board: delta.board, revision: delta.version, redRemainingMs: delta.redRemainingMs,
+      blackRemainingMs: delta.blackRemainingMs, status: delta.status, result: delta.result,
+      finishReason: delta.finishReason, serverNowMs: delta.serverNowMs, endedAt: delta.endedAt,
+    } : current);
+    setTurnStartedAtMs(Date.now());
+  }, []);
+
+  const startOrRecover = React.useCallback(async () => {
+    if (!activeFamilyId || !user?.uid || bootingRef.current) return;
+    bootingRef.current = true; setServerError(null);
+    try {
+      await xiangqiSocketService.prewake();
+      await xiangqiSocketService.connect();
+      const joined = await xiangqiSocketService.emitAck<{ ready: boolean; testBotEnabled: boolean }>(XIANGQI_EVENTS.appJoin, { familyId: activeFamilyId });
+      if (!joined.ok) throw new Error(joined.message ?? joined.errorCode);
+      const recovered = await xiangqiSocketService.emitAck<{ kind: "active" | "finished_unseen" | "none"; gameId?: string }>(XIANGQI_EVENTS.sessionRecover, { familyId: activeFamilyId });
+      if (recovered.ok && recovered.data.kind !== "none" && recovered.data.gameId) {
+        const resume = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameJoin, { familyId: activeFamilyId, gameId: recovered.data.gameId });
+        if (resume.ok) { applyState(resume.data); return; }
       }
-    : {
-        backdrop: "rgba(38,30,35,0.58)",
-        hero: "#6E5361",
-        border: "#DCCCD4",
-        primary: "#795668",
-        secondaryBg: "#F5EDF1",
-        secondaryText: "#654B58",
-      };
+      const invite = await xiangqiSocketService.emitAck<{ inviteId: string }>(XIANGQI_EVENTS.testBotInvite, { requestId: reqId("xq-bot-invite"), familyId: activeFamilyId, timeControl: XIANGQI_DEFAULT_TIME_CONTROL });
+      if (!invite.ok) throw new Error(invite.message ?? invite.errorCode);
+      const accepted = await xiangqiSocketService.emitAck<{ gameId: string; state: XiangqiRealtimeState }>(XIANGQI_EVENTS.inviteAccept, { requestId: reqId("xq-bot-accept"), inviteId: invite.data.inviteId });
+      if (!accepted.ok) throw new Error(accepted.message ?? accepted.errorCode);
+      applyState(accepted.data.state);
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : String(error));
+    } finally { bootingRef.current = false; }
+  }, [activeFamilyId, applyState, user?.uid]);
+
+  useEffect(() => {
+    const offState = xiangqiSocketService.onState(applyState);
+    const offMove = xiangqiSocketService.onMove(applyDelta);
+    const offConnect = xiangqiSocketService.onConnected(() => { void startOrRecover(); });
+    return () => { offState(); offMove(); offConnect(); };
+  }, [applyDelta, applyState, startOrRecover]);
+
+  useEffect(() => { if (screenFocused) void startOrRecover(); }, [screenFocused, startOrRecover]);
+
+  useEffect(() => {
+    const current = serverStateRef.current;
+    if (!current) return;
+    xiangqiSocketService.emitBestEffort(XIANGQI_EVENTS.gameBoardPresence, { gameId: current.gameId, visible: screenFocused && appActive });
+  }, [appActive, screenFocused, serverState?.gameId]);
+
+  const legalTargets = useMemo(() => {
+    if (!selectedId || !serverState) return [];
+    return game.turn === "red" ? getXiangqiLegalMoves(game, selectedId) : getXiangqiLegalMovesForColor(game, selectedId, "red");
+  }, [game, selectedId, serverState]);
+  const finish = serverState?.status === "finished"
+    ? { winner: serverState.result === "red" || serverState.result === "black" ? serverState.result : null, reason: serverState.finishReason === "checkmate" ? "Chiếu bí" : serverState.finishReason === "stalemate" ? "Không còn nước hợp lệ" : serverState.finishReason === "resignation" ? "Đã đầu hàng" : serverState.finishReason === "away_timeout" ? "Rời bàn quá lâu" : serverState.finishReason === "timeout" ? "Hết giờ" : "Ván đã khép lại" }
+    : xiangqiFinishCopy(game);
+  const myName = userProfile?.shortName || userProfile?.displayName || "Bạn";
+  const didWin = serverState?.result === "red";
+  const resultPalette = didWin
+    ? { backdrop: "rgba(78,31,51,0.50)", hero: "#D56591", border: "#F2CDDC", primary: "#C94F7D", secondaryBg: "#FFF3F7", secondaryText: "#A9486D" }
+    : { backdrop: "rgba(38,30,35,0.58)", hero: "#6E5361", border: "#DCCCD4", primary: "#795668", secondaryBg: "#F5EDF1", secondaryText: "#654B58" };
 
   useEffect(() => {
     if (!screenFocused) return undefined;
     setResultRevealReady(false);
-    // Returning to an in-progress round must never replay the ready ceremony.
-    // The heavy native board may remount from cache, but round state stays live.
-    if (roundPhase === "playing") return undefined;
-    if (!boardReady) {
-      setRoundPhase("preparing");
-      return undefined;
+    if (!serverState || !boardReady) { setRoundPhase("preparing"); return undefined; }
+    if (serverState.status === "active") { setRoundPhase("playing"); return undefined; }
+    if (serverState.status === "finished") return undefined;
+    setRoundPhase("ready");
+    if (readySentForGameRef.current !== serverState.gameId) {
+      readySentForGameRef.current = serverState.gameId;
+      void xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameReady, { gameId: serverState.gameId, requestId: reqId("xq-ready") }).then((ack) => { if (ack.ok) applyState(ack.data); });
     }
-    // The board itself owns readiness: layout + every piece image + two painted
-    // frames. Only then may the shield say ready and eventually slide away.
-    if (roundPhase !== "ready") setRoundPhase("ready");
-    const playTimer = setTimeout(() => setRoundPhase("playing"), 620);
-    return () => clearTimeout(playTimer);
-  }, [boardReady, roundEpoch, roundPhase, screenFocused]);
+    return undefined;
+  }, [applyState, boardReady, screenFocused, serverState]);
 
+  useEffect(() => { gameRuntimePerf.markSurface("xiangqi", heavySurfaceMounted); if (!heavySurfaceMounted) setBoardReady(false); }, [heavySurfaceMounted]);
+  useEffect(() => { if (!screenFocused || !serverState) return; const previous = previousGameRef.current; const event = deriveXiangqiBattleEvent(previous, game, "red"); if (event) setBattleEvent(event); previousGameRef.current = game; }, [game, screenFocused, serverState]);
+  useEffect(() => { if (!screenFocused || serverState?.status !== "finished") { setResultRevealReady(false); return undefined; } setSelectedId(null);setPremove(null);const timer=setTimeout(()=>setResultRevealReady(true),820);return()=>clearTimeout(timer); }, [screenFocused, serverState?.revision, serverState?.status]);
   useEffect(() => {
-    gameRuntimePerf.markSurface("xiangqi", heavySurfaceMounted);
-    if (!heavySurfaceMounted) setBoardReady(false);
-  }, [heavySurfaceMounted, roundPhase, screenFocused]);
+    if (!resultRevealReady || serverState?.status !== "finished" || !activeFamilyId) return;
+    if (resultAckedForGameRef.current === serverState.gameId) return;
+    resultAckedForGameRef.current = serverState.gameId;
+    void xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResultAck, { familyId: activeFamilyId, gameId: serverState.gameId }).then((ack) => {
+      if (!ack.ok) resultAckedForGameRef.current = null;
+    });
+  }, [activeFamilyId, resultRevealReady, serverState?.gameId, serverState?.status]);
+  useEffect(() => { if (!screenFocused) { setSelectedId(null); setPremove(null); setBattleEvent(null); } }, [screenFocused]);
+  const handleBoardReady = React.useCallback(() => setBoardReady(true), []);
+  useEffect(() => { if (!screenFocused || serverState?.status !== "active") return; if (gameStartSoundEpochRef.current === roundEpoch) return; gameStartSoundEpochRef.current = roundEpoch; playGameStart(); }, [playGameStart, roundEpoch, screenFocused, serverState?.status]);
+  useEffect(() => { if (!screenFocused || serverState?.status !== "finished" || gameEndSoundMoveRef.current === game.moveNumber) return undefined; gameEndSoundMoveRef.current=game.moveNumber;const timer=setTimeout(()=>playGameEnd(),260);return()=>clearTimeout(timer); }, [game.moveNumber, playGameEnd, screenFocused, serverState?.status]);
 
-  useEffect(() => {
-    if (!screenFocused) return;
-    const previous = previousGameRef.current;
-    const event = deriveXiangqiBattleEvent(previous, game, "red");
-    if (event) setBattleEvent(event);
-    previousGameRef.current = game;
-  }, [game, screenFocused]);
+  const sendMove = React.useCallback(async (pieceId: string, to: { col: number; row: number }) => {
+    const current = serverStateRef.current; if (!current) return false;
+    const ack = await xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameMove, { gameId: current.gameId, clientMoveId: reqId("xq-move"), expectedVersion: current.revision, pieceId, to });
+    if (!ack.ok) { if (ack.errorCode === "XIANGQI_ILLEGAL_MOVE" || ack.errorCode === "XIANGQI_STATE_CONFLICT") playIllegal(); return false; }
+    return true;
+  }, [playIllegal]);
 
-  useEffect(() => {
-    if (!screenFocused) {
-      setResultRevealReady(false);
-      return undefined;
-    }
-    if (!game.gameOver) {
-      setResultRevealReady(false);
-      return undefined;
-    }
-    setSelectedId(null);
-    setBotThinking(false);
-    const timer = setTimeout(() => setResultRevealReady(true), 820);
-    return () => clearTimeout(timer);
-  }, [game.gameOver, game.moveNumber, screenFocused]);
-
-  const commitActiveClock = React.useCallback((side: "red" | "black") => {
-    const now = Date.now();
-    const elapsed = Math.max(0, now - turnStartedAtRef.current);
-    const current = clockMsRef.current;
-    const remaining = Math.max(0, current[side] - elapsed);
-    const next = { ...current, [side]: remaining };
-    clockMsRef.current = next;
-    turnStartedAtRef.current = now;
-    setClockMs(next);
-    return remaining > 0;
-  }, []);
-
-  useEffect(() => {
-    if (!screenFocused || roundPhase !== "playing" || game.gameOver) return undefined;
-    const active = game.turn;
-    const now = Date.now();
-    turnStartedAtRef.current = now;
-    setTurnStartedAtMs(now);
-    const remaining = clockMsRef.current[active];
-    const timer = setTimeout(() => {
-      setGame((state) => state.gameOver || state.turn !== active ? state : timeoutXiangqi(state, active));
-    }, Math.max(25, remaining + 25));
-    return () => clearTimeout(timer);
-  }, [game.gameOver, game.turn, roundPhase, screenFocused]);
-
-  useEffect(() => {
-    if (!screenFocused || roundPhase !== "playing" || game.gameOver || game.turn !== "black") {
-      setBotThinking(false);
-      return undefined;
-    }
-    setSelectedId(null);
-    setBotThinking(true);
-    const timer = setTimeout(() => {
-      if (!commitActiveClock("black")) {
-        setGame((current) => timeoutXiangqi(current, "black"));
-        setBotThinking(false);
-        return;
-      }
-      setGame((current) => {
-        const move = chooseXiangqiBotMove(current);
-        return move ? playXiangqiMove(current, move.pieceId, move.to) : current;
-      });
-      setBotThinking(false);
-    }, XIANGQI_BOT_MOVE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [commitActiveClock, game.gameOver, game.moveNumber, game.turn, roundPhase, screenFocused]);
-
-  useEffect(() => {
-    if (screenFocused) return;
-    setSelectedId(null);
-    setBotThinking(false);
-    setBattleEvent(null);
-  }, [screenFocused]);
-
-  const handleBoardReady = React.useCallback(() => {
-    setBoardReady(true);
-  }, []);
+  const handleXiangqiMoveLanded = React.useCallback((move: XiangqiMove) => {
+    if (!screenFocused || landedSoundMoveRef.current === game.moveNumber) return;
+    landedSoundMoveRef.current = game.moveNumber;
+    const mover = game.pieces.find((piece) => piece.id === move.pieceId);
+    playMoveKind(resolveBoardMoveSound({ isSelf: mover?.color === "red", captured: !!move.capturedId, check: !!game.inCheck }));
+    const queued = premoveRef.current;
+    if (!queued || mover?.color !== "black" || game.turn !== "red" || game.gameOver) return;
+    const legal = getXiangqiLegalMoves(game, queued.pieceId);
+    const stillLegal = legal.some((target) => target.col === queued.to.col && target.row === queued.to.row);
+    setPremove(null);
+    if (!stillLegal) { playIllegal(); return; }
+    requestAnimationFrame(() => { void sendMove(queued.pieceId, queued.to); });
+  }, [game, playIllegal, playMoveKind, screenFocused, sendMove]);
 
   const onBoardTap = (col: number, row: number) => {
-    if (!screenFocused || !boardReady || roundPhase !== "playing" || game.gameOver || game.turn !== "red" || botThinking) return;
+    if (!screenFocused || !boardReady || roundPhase !== "playing" || game.gameOver || !serverState) return;
     const tapped = game.pieces.find((piece) => piece.col === col && piece.row === row);
-
+    const premoveMode = game.turn === "black";
     if (selectedId) {
+      const selectedPiece = game.pieces.find((piece) => piece.id === selectedId);
       const legal = legalTargets.some((target) => target.col === col && target.row === row);
-      if (legal) {
-        if (!commitActiveClock("red")) {
-          setGame((current) => timeoutXiangqi(current, "red"));
-          setSelectedId(null);
-          return;
-        }
-        setGame((current) => playXiangqiMove(current, selectedId, { col, row }));
-        setSelectedId(null);
-        return;
+      if (legal && selectedPiece) {
+        if (premoveMode) { setPremove({ pieceId:selectedId, from:{col:selectedPiece.col,row:selectedPiece.row}, to:{col,row}, queuedAtRevision:serverState.revision }); playPremove(); setSelectedId(null); return; }
+        void sendMove(selectedId,{col,row}); setSelectedId(null); return;
       }
-      if (tapped?.color === "red") {
-        setSelectedId(tapped.id);
-        return;
-      }
-      setSelectedId(null);
-      return;
+      if (tapped?.color === "red") { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); return; }
+      playIllegal(); setSelectedId(null); return;
     }
-
-    if (tapped?.color === "red") setSelectedId(tapped.id);
+    if (premove && ((premove.from.col===col&&premove.from.row===row)||(premove.to.col===col&&premove.to.row===row))) { setPremove(null); return; }
+    if (tapped?.color === "red") { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); }
   };
 
-  const reset = () => {
-    setSelectedId(null);
-    setBotThinking(false);
-    setBattleEvent(null);
-    setResultRevealReady(false);
-    setBoardReady(false);
-    setRoundPhase("preparing");
-    const resetClock = { red: XIANGQI_INITIAL_CLOCK_MS, black: XIANGQI_INITIAL_CLOCK_MS };
-    clockMsRef.current = resetClock;
-    const now = Date.now();
-    turnStartedAtRef.current = now;
-    setTurnStartedAtMs(now);
-    setClockMs(resetClock);
-    setGame(createInitialXiangqiState());
-    setRoundEpoch((current) => current + 1);
+  const reset = async () => {
+    const current=serverStateRef.current;if(!current)return;
+    setSelectedId(null);setPremove(null);setBattleEvent(null);setResultRevealReady(false);setBoardReady(false);setRoundPhase("preparing");
+    const ack=await xiangqiSocketService.emitAck<{waiting:boolean;gameId:string;state:XiangqiRealtimeState}>(XIANGQI_EVENTS.gameRematch,{gameId:current.gameId,requestId:reqId("xq-rematch")});
+    if(ack.ok)applyState(ack.data.state);else setServerError(ack.message??ack.errorCode);
   };
-
-  const statusCopy = roundPhase === "preparing"
+  const resign = async () => { const current=serverStateRef.current;if(!current)return;const ack=await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameResign,{gameId:current.gameId,requestId:reqId("xq-resign")});if(ack.ok)applyState(ack.data); };
+  const botThinking = serverState?.status === "active" && game.turn === "black";
+  const clockMs = { red: serverState?.redRemainingMs ?? null, black: serverState?.blackRemainingMs ?? null };
+  const statusCopy = serverError
+    ? `Máy chủ Cờ tướng: ${serverError}`
+    : roundPhase === "preparing"
     ? "Đang chuẩn bị ván đấu…"
     : roundPhase === "ready"
       ? "Sẵn sàng • Đỏ đi trước"
@@ -338,7 +341,7 @@ export default function XiangqiPreviewScreen() {
         <BloomHeroHeader
           eyebrow="CỜ TƯỚNG NHÀ MÌNH"
           title="Qua sông, giữ Tướng, vui cùng nhà"
-          subtitle="Bộ quân bạn đã duyệt giờ đi cùng luật thật. Thử trọn một ván với Bloom Bot trước khi Bloom nối đấu realtime cùng người thân."
+          subtitle="Bàn Cờ tướng nay chạy trên cùng máy chủ realtime với Cờ vua: server giữ luật, đồng hồ, reconnect và Bloom Bot 3s/5s."
           variant="game"
           roundedBottom
           compact
@@ -362,7 +365,9 @@ export default function XiangqiPreviewScreen() {
                   legalTargets={legalTargets}
                   lastMove={game.lastMove}
                   checkedColor={game.inCheck}
+                  premove={premove}
                   onTap={onBoardTap}
+                  onMoveLanded={handleXiangqiMoveLanded}
                   runtimeActive={screenFocused && boardSurfaceVisible}
                   readyEpoch={roundEpoch}
                   onReady={handleBoardReady}
@@ -377,14 +382,14 @@ export default function XiangqiPreviewScreen() {
             )}
           </View>
 
-          <PlayerRail side="red" name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === "red" && !game.gameOver} clockMs={clockMs.red} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} />
+          <PlayerRail side="red" name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === "red" && !game.gameOver} clockMs={clockMs.red} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} onTenSeconds={playTenSeconds} />
 
           <View style={styles.actions}>
-            <Pressable onPress={reset} style={styles.actionSecondary}>
+            <Pressable disabled={!game.gameOver} onPress={() => { void reset(); }} style={[styles.actionSecondary, !game.gameOver && styles.disabled]}>
               <Ionicons name="refresh-outline" size={20} color={COLORS.primary} />
               <Text style={styles.actionSecondaryText}>Ván mới</Text>
             </Pressable>
-            <Pressable disabled={game.gameOver || !playing} onPress={() => setGame((current) => resignXiangqi(current, "red"))} style={[styles.actionPrimary, (game.gameOver || !playing) && styles.disabled]}>
+            <Pressable disabled={game.gameOver || !playing} onPress={() => { void resign(); }} style={[styles.actionPrimary, (game.gameOver || !playing) && styles.disabled]}>
               <Ionicons name="flag-outline" size={20} color={COLORS.white} />
               <Text style={styles.actionPrimaryText}>Đầu hàng</Text>
             </Pressable>
@@ -435,7 +440,7 @@ export default function XiangqiPreviewScreen() {
             </View>
             <View style={styles.resultBody}>
               <Text style={styles.resultMessage}>{didWin ? "Một ván Cờ tướng thật đẹp. Bloom đã giữ lại khoảnh khắc chiến thắng này." : "Nghỉ một chút rồi mình trở lại. Ván sau có thể là một câu chuyện hoàn toàn khác."}</Text>
-              <Pressable onPress={reset} style={[styles.resultButton, { backgroundColor: resultPalette.primary }]}><Ionicons name="refresh-outline" size={20} color={COLORS.white} /><Text style={styles.resultButtonText}>Chơi ván mới</Text></Pressable>
+              <Pressable onPress={() => { void reset(); }} style={[styles.resultButton, { backgroundColor: resultPalette.primary }]}><Ionicons name="refresh-outline" size={20} color={COLORS.white} /><Text style={styles.resultButtonText}>Chơi ván mới</Text></Pressable>
               <Pressable onPress={() => router.back()} style={[styles.resultClose, { backgroundColor: resultPalette.secondaryBg }]}><Text style={[styles.resultCloseText, { color: resultPalette.secondaryText }]}>Về phòng game</Text></Pressable>
             </View>
           </View>

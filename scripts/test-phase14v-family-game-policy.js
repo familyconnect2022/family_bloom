@@ -22,9 +22,9 @@ check('same game max four active rounds',policy.includes('HOME_GAME_MAX_ACTIVE_P
 check('family round lasts at most four hours',policy.includes('HOME_GAME_ROUND_DURATION_MS = 4 * 60 * 60 * 1000')&&rules.includes('14400000'));
 check('create UI has no participant picker',!create.includes('FamilyMemberPicker')&&create.includes('familyService.listMembers'));
 check('all family members passed into new round',create.includes('participantUids: members.map')&&create.includes('participantNames: members.map'));
-check('subject games use fair daily rotation',service.includes('homeGameRotations')&&service.includes('usedUids')&&service.includes('playDateKey'));
+check('subject games use fair daily rotation',(service.includes('homeGameRotations')||service.includes('familyHomeGameRotation'))&&service.includes('usedUids')&&service.includes('playDateKey'));
 check('fresh rotation avoids creator when possible',service.includes('nonCreator = candidates.filter(uid => uid !== input.creatorUid)'));
-check('four deterministic slots are transactional',service.includes('homeGameActiveSlots')&&service.includes('runTransaction')&&service.includes('slotSnaps.findIndex'));
+check('four deterministic slots are transactional',(service.includes('homeGameActiveSlots')||service.includes('familyHomeGameActiveSlots'))&&service.includes('runTransaction')&&service.includes('slotSnaps.findIndex'));
 check('friendly capacity message exists',service.includes('đã có 4 lượt đang chơi'));
 check('round stores end deadline',service.includes('endsAtMs: window.endsAtMs')&&service.includes('slotId'));
 check('detail auto switches to completed by time',detail.includes('clockNow >= session.endsAtMs')&&detail.includes('effectiveStatus'));

@@ -141,6 +141,8 @@ call npm run phase17_8d:check
 if errorlevel 1 goto :fail
 call npm run phase17_8e:check
 if errorlevel 1 goto :fail
+call npm run phase17_9a17:check
+if errorlevel 1 goto :fail
 call npm run phase17_9a9:check
 if errorlevel 1 goto :fail
 call npm run phase17:check

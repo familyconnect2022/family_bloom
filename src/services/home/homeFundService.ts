@@ -404,7 +404,7 @@ export const homeFundService = {
 
   async ensureInitialControl(familyId: string, actorUid: string, actorName: string): Promise<void> {
     const db = getFirestore();
-    const familyRef = doc(db, `families/${familyId}`);
+    const familyRef = doc(db, FIRESTORE_PATHS.family(familyId));
     const controlRef = doc(db, FIRESTORE_PATHS.familyHomeFundControl(familyId));
     await runTransaction(db, async (tx) => {
       const [familySnap, controlSnap] = await Promise.all([tx.get(familyRef), tx.get(controlRef)]);

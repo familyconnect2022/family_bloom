@@ -16,6 +16,7 @@ function check(label, ok, detail = '') {
 
 const phase17_9aChess = fs.existsSync(path.join(root, 'src/components/chess/ChessSurfaceHost.tsx')) && read('package.json').includes('phase17_9a:check');
 const phase17_9a9Server = read('package.json').includes('phase17_9a9:check') && fs.existsSync(path.join(root, 'server/src/chess/rematchProposalStore.ts'));
+const phase17_9a15BoardGames = read('package.json').includes('phase17_9a15:check') && fs.existsSync(path.join(root, 'src/games/shared/boardGameFramework.ts'));
 const moments = read('src/app/(tabs)/moments.tsx');
 const card = read('src/components/moments/MomentCard.tsx');
 const personHook = read('src/hooks/family/useFamilyPersonsByIds.ts');
@@ -95,7 +96,7 @@ const protectedHashes = {
   'firestore.indexes.json': 'b88b9fab1c5db94017e0d1744abf0d1ca98979ef86bdefa2e6831fc0e49d429f',
 };
 for (const [file, expected] of Object.entries(protectedHashes)) {
-  check(`Protected game/backend baseline unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || sha(file) === expected, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
+  check(`Protected game/backend baseline unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a15BoardGames && ['src/components/xiangqi/XiangqiGameBoard.tsx','src/app/(xiangqi)/xiangqi-preview.tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || sha(file) === expected, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
 }
 
 console.log(`\nPhase 17.7 Moments Tab Optimization gate: ${pass}/${pass + fail} PASS`);

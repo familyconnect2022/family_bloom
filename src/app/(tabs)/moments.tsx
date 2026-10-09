@@ -188,6 +188,8 @@ export default function MomentsScreen() {
   const [hiddenPosts, setHiddenPosts] = useState<MomentPost[]>([]);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
   const [screenFocused, setScreenFocused] = useState(false);
+  const screenFocusGateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenFocusMountedRef = useRef(true);
   const [highlightedMoment, setHighlightedMoment] = useState<MomentPost | null>(null);
   const [highlightOpening, setHighlightOpening] = useState(false);
   const highlightFetchRef = useRef(0);
@@ -204,21 +206,35 @@ export default function MomentsScreen() {
     visibilityStoreRef.current?.replaceVisibleIds(next);
   }).current;
 
-  // Phase 8.2C correction: only per-card realtime is focus-gated. The active
-  // family caches/moderation listeners stay stable across tab switches so a tab
-  // press does not pay an unsubscribe/resubscribe penalty. One frame is enough
-  // to let the cached feed shell paint before visible-card listeners resume.
-  useFocusEffect(useCallback(() => {
-    let active = true;
-    const frame = requestAnimationFrame(() => {
-      if (!active) return;
-      setScreenFocused(true);
-    });
+
+  useEffect(() => {
+    screenFocusMountedRef.current = true;
     return () => {
-      active = false;
-      cancelAnimationFrame(frame);
-      setScreenFocused(false);
-      setCommentScrollLocked(false);
+      screenFocusMountedRef.current = false;
+      if (screenFocusGateTimerRef.current) clearTimeout(screenFocusGateTimerRef.current);
+      screenFocusGateTimerRef.current = null;
+    };
+  }, []);
+
+  // Phase 17.9A17: keep the navigation commit window free of feed-wide React
+  // renders. Per-card realtime may stay warm for a fraction of a second while
+  // the tab indicator finishes on the UI thread; focus state is reconciled only
+  // after that visual handoff, so Moments cannot compete with the tabbar commit.
+  useFocusEffect(useCallback(() => {
+    if (screenFocusGateTimerRef.current) clearTimeout(screenFocusGateTimerRef.current);
+    screenFocusGateTimerRef.current = setTimeout(() => {
+      screenFocusGateTimerRef.current = null;
+      if (!screenFocusMountedRef.current) return;
+      setScreenFocused(true);
+    }, 280);
+    return () => {
+      if (screenFocusGateTimerRef.current) clearTimeout(screenFocusGateTimerRef.current);
+      screenFocusGateTimerRef.current = setTimeout(() => {
+        screenFocusGateTimerRef.current = null;
+        if (!screenFocusMountedRef.current) return;
+        setScreenFocused(false);
+        setCommentScrollLocked(false);
+      }, 280);
     };
   }, [activeFamilyId]));
 

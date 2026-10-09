@@ -22,6 +22,10 @@ const gates = [
   ["Phase 17.9A9 lifecycle + root mini + premove", "test-phase17_9a9-chess-lifecycle-mini-premove.js"],
   ["Phase 17.9A10 tap-only + external material + smaller mini", "test-phase17_9a10-tap-only-material-rail-mini.js"],
   ["Phase 17.9A11 family recovery + sync + time controls", "test-phase17_9a11-family-recovery-sync-time-controls.js"],
+  ["Phase 17.9A12 zero-relayout transition", "test-phase17_9a12-zero-relayout-chess-transition.js"],
+  ["Phase 17.9A15 shared board-game sound + premove + bot pacing", "test-phase17_9a15-shared-board-game-sound-premove.js"],
+  ["Phase 17.9A16 Xiangqi server authority", "test-phase17_9a16-xiangqi-server-authority.js"],
+  ["Phase 17.9A17 native-persistent tabbar", "test-phase17_9a17-native-persistent-tabbar.js"],
 ];
 
 for (const [label, file] of gates) {

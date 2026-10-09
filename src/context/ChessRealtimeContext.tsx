@@ -78,7 +78,7 @@ export function useChessRealtimeActions() {
   return value;
 }
 
-export function ChessRealtimeProvider({ children }: { children: React.ReactNode }) {
+export function ChessRealtimeProvider({ children, bootReady = true }: { children: React.ReactNode; bootReady?: boolean }) {
   const { user, activeFamilyId, profileStatus } = useAuth();
   const familyMembers = useFamilyMembersRealtime();
 
@@ -222,7 +222,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
 
   const joinForeground = useCallback(async () => {
     const familyId = familyIdRef.current;
-    if (!user || profileStatus !== "ready" || !familyId || !foregroundRef.current) {
+    if (!bootReady || !user || profileStatus !== "ready" || !familyId || !foregroundRef.current) {
       updateConnection("idle");
       return;
     }
@@ -314,7 +314,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     try { await task; } finally {
       if (joinInFlightRef.current?.promise === task) joinInFlightRef.current = null;
     }
-  }, [handleState, profileStatus, updateConnection, user]);
+  }, [bootReady, handleState, profileStatus, updateConnection, user]);
 
   useEffect(() => {
     const stopState = chessSocketService.on("state", handleState);
@@ -409,7 +409,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     setOutgoingInvite(null);
     setActiveGameId(null);
     setPendingResultGameId(null);
-    if (!user || profileStatus !== "ready" || !activeFamilyId) {
+    if (!bootReady || !user || profileStatus !== "ready" || !activeFamilyId) {
       updateConnection("idle");
       setTestBotEnabled(false);
       clearCachedChessGameSnapshot();
@@ -422,10 +422,11 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       const familyId = activeFamilyId;
       chessSocketService.emitBestEffort(CHESS_EVENTS.appLeave, { familyId });
     };
-  }, [activeFamilyId, joinForeground, profileStatus, updateConnection, user]);
+  }, [activeFamilyId, bootReady, joinForeground, profileStatus, updateConnection, user]);
 
   useEffect(() => {
     const resume = (source: "change" | "focus" | "watchdog") => {
+      if (!bootReady) return;
       const actualState = AppState.currentState;
       const active = actualState === "active";
       chessDebug(`foreground:${source}`, {
@@ -470,6 +471,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
     // Final safety net: when JS resumes, timers resume too. Re-read the real
     // AppState and live Socket.IO flag instead of trusting stale UI state.
     const watchdog = setInterval(() => {
+      if (!bootReady) return;
       const active = AppState.currentState === "active";
       if (!active) return;
       const socketConnected = chessSocketService.isConnected();
@@ -491,7 +493,7 @@ export function ChessRealtimeProvider({ children }: { children: React.ReactNode 
       focusSubscription.remove();
       clearInterval(watchdog);
     };
-  }, [joinForeground, updateConnection]);
+  }, [bootReady, joinForeground, updateConnection]);
 
   useEffect(() => () => chessSocketService.disconnect(), []);
 

@@ -20,6 +20,8 @@ const tabs = read('src/app/(tabs)/_layout.tsx');
 const home = read('src/app/(tabs)/index.tsx');
 const phase17_9aChess = fs.existsSync(path.join(root, 'src/components/chess/ChessSurfaceHost.tsx')) && read('package.json').includes('phase17_9a:check');
 const phase17_9a9Server = read('package.json').includes('phase17_9a9:check') && fs.existsSync(path.join(root, 'server/src/chess/rematchProposalStore.ts'));
+const phase17_9a15BoardGames = read('package.json').includes('phase17_9a15:check') && fs.existsSync(path.join(root, 'src/games/shared/boardGameFramework.ts'));
+const phase17_9a17 = read('package.json').includes('phase17_9a17:check');
 const moments = read('src/app/(tabs)/moments.tsx');
 const planner = read('src/app/(tabs)/planner.tsx');
 const family = read('src/app/(tabs)/family.tsx');
@@ -51,7 +53,7 @@ ok('Five-tab runtime no longer publishes a global debug snapshot during normal u
 ok('Tabs navigator is wrapped by one TabRuntimeProvider', tabs.includes('<TabRuntimeProvider>') && tabs.includes('</TabRuntimeProvider>'));
 ok('Five tab surfaces stay warm for instant revisits', tabs.includes('lazy: false'));
 ok('Inactive tabs are not frozen by React Navigation', !tabs.includes('freezeOnBlur: true'));
-ok('Inactive native tab screens are not force-detached on every switch', !tabs.includes('detachInactiveScreens={true}'));
+ok('Inactive native tab screens remain attached across switches', phase17_9a17 ? tabs.includes('detachInactiveScreens={false}') : !tabs.includes('detachInactiveScreens={true}'));
 ok('Runtime focus registration does not subscribe the heavy screen to state transitions', runtime.includes('export function useTabRuntime(tabId: MainTabId)') && !runtime.slice(runtime.indexOf('export function useTabRuntime(tabId: MainTabId)'), runtime.indexOf('/** Reactive runtime state')).includes('useSyncExternalStore'));
 ok('Reactive runtime snapshots are opt-in for diagnostics/lightweight UI only', runtime.includes('export function useTabRuntimeSnapshot'));
 
@@ -76,7 +78,7 @@ ok('Nhà Mình next-open timer is also live-tab scoped', (play.match(/useTabLive
 
 ok('Global family cache remains app-global and background-aware', familyRealtime.includes('export const FamilyRealtimeProvider') && familyRealtime.includes('AppState.addEventListener("change"'));
 ok('Global bounded member/moment/event listeners remain intact', familyRealtime.includes('familyService.watchMembers') && familyRealtime.includes('momentsService.subscribeLatest') && familyRealtime.includes('calendarService.subscribeUpcoming') && familyRealtime.includes('calendarService.subscribeYearly'));
-ok('Auth/family/chess global providers remain outside Tabs runtime scope', rootLayout.includes('<FamilyRealtimeProvider') && rootLayout.includes('<ChessRealtimeProvider>') && !rootLayout.includes('TabRuntimeProvider'));
+ok('Auth/family/chess global providers remain outside Tabs runtime scope', rootLayout.includes('<FamilyRealtimeProvider') && /<ChessRealtimeProvider(?:\s|>)/.test(rootLayout) && !rootLayout.includes('TabRuntimeProvider'));
 
 ok('Phase 17 remains independent of retired performance-runner gates', !fs.existsSync(path.join(root, 'scripts/test-phase15b3-state-machine-chess-layering.js')));
 ok('Phase 17 package script exists', /"phase17:check"\s*:\s*"node \.\/scripts\/test-phase17-five-tab-runtime-lifecycle\.js"/.test(pkg));
@@ -97,7 +99,7 @@ const frozenHashes = {
   'firestore.indexes.json': 'b88b9fab1c5db94017e0d1744abf0d1ca98979ef86bdefa2e6831fc0e49d429f',
 };
 for (const [file, expected] of Object.entries(frozenHashes)) {
-  ok(`Phase 16B.18 safety hash unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || sha(file) === expected, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
+  ok(`Phase 16B.18 safety hash unchanged: ${file}`, (phase17_9aChess && ['src/components/chess/ChessBoard.tsx','src/components/chess/v2/ChessPiece.tsx','src/app/(chess)/chess-game/[gameId].tsx'].includes(file)) || (phase17_9a15BoardGames && ['src/components/xiangqi/XiangqiGameBoard.tsx','src/app/(xiangqi)/xiangqi-preview.tsx'].includes(file)) || (phase17_9a9Server && file === 'server/src/socket/socketServer.ts') || sha(file) === expected, phase17_9aChess ? '17.9A Chess architecture supersedes historical hash' : sha(file));
 }
 
 const startupResult = spawnSync(process.execPath, [path.join(root, 'scripts/test-tabStartup.js')], { cwd: root, encoding: 'utf8' });

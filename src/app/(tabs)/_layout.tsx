@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React, { useCallback, useEffect, useRef } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
-import Animated, { Easing, type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, Extrapolation, interpolate, type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BLOOM_MOTION } from "../../constants/motion";
@@ -51,6 +51,7 @@ type BloomTabButtonProps = {
   itemWidth: number;
   label: string;
   focused: boolean;
+  indicatorIndex: SharedValue<number>;
   onPressIn: () => void;
   onPress: () => void;
   onLongPress: () => void;
@@ -62,10 +63,24 @@ function BloomTabButton({
   itemWidth,
   label,
   focused,
+  indicatorIndex,
   onPressIn,
   onPress,
   onLongPress,
 }: BloomTabButtonProps) {
+  const activeIconStyle = useAnimatedStyle(() => {
+    const distance = Math.abs(indicatorIndex.value - index);
+    const opacity = interpolate(distance, [0, 0.56, 1], [1, 0.18, 0], Extrapolation.CLAMP);
+    const scale = interpolate(distance, [0, 1], [1, 0.96], Extrapolation.CLAMP);
+    return { opacity, transform: [{ scale }] };
+  });
+
+  const inactiveIconStyle = useAnimatedStyle(() => {
+    const distance = Math.abs(indicatorIndex.value - index);
+    const opacity = interpolate(distance, [0, 0.48, 1], [0, 0.82, 1], Extrapolation.CLAMP);
+    return { opacity };
+  });
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -77,12 +92,22 @@ function BloomTabButton({
       style={[styles.tabItem, { width: itemWidth }]}
     >
       <View pointerEvents="none" style={styles.tabIconStack}>
-        <Ionicons
-          name={iconFor(route.name)}
-          size={TAB_ICON_SIZE}
-          color={focused ? COLORS.white : COLORS.tabInactive}
-          style={styles.tabIconGlyph}
-        />
+        <Animated.View style={[styles.tabIconLayer, inactiveIconStyle]}>
+          <Ionicons
+            name={iconFor(route.name)}
+            size={TAB_ICON_SIZE}
+            color={COLORS.tabInactive}
+            style={styles.tabIconGlyph}
+          />
+        </Animated.View>
+        <Animated.View pointerEvents="none" style={[styles.tabIconLayer, activeIconStyle]}>
+          <Ionicons
+            name={iconFor(route.name)}
+            size={TAB_ICON_SIZE}
+            color={COLORS.white}
+            style={styles.tabIconGlyph}
+          />
+        </Animated.View>
       </View>
     </Pressable>
   );
@@ -153,6 +178,7 @@ function BloomSlidingTabBar({ state, descriptors, navigation }: BloomTabBarProps
             itemWidth={itemWidth}
             label={label}
             focused={focused}
+            indicatorIndex={indicatorIndex}
             onPressIn={onPressIn}
             onPress={onPress}
             onLongPress={onLongPress}
@@ -171,6 +197,7 @@ export default function TabLayout() {
     <TabRuntimeProvider>
       <View style={styles.navigatorRoot}>
       <Tabs
+      detachInactiveScreens={false}
       tabBar={(props) => <BloomSlidingTabBar {...(props as unknown as BloomTabBarProps)} />}
       screenOptions={{
         // Keep screen content switching instant. Only the single tab indicator
@@ -242,6 +269,11 @@ const styles = StyleSheet.create({
     marginLeft: -TAB_ICON_SIZE / 2,
     width: TAB_ICON_SIZE,
     height: TAB_ICON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabIconLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
   },

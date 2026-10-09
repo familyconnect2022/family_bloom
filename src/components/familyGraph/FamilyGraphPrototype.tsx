@@ -197,6 +197,12 @@ type FamilyGraphPrototypeProps = {
   getFocusBranchVisual?: (viewAnchorPersonId: string) => FamilyGraphFocusBranchVisual | null;
   initialDetailPersonId?: string | null;
   initialViewMode?: FamilyGraphViewMode;
+  initialCameraSnapshot?: FamilyGraphCameraSnapshot | null;
+  onViewStateChange?: (state: {
+    viewMode: FamilyGraphViewMode;
+    viewAnchorPersonId: string | null;
+    camera: FamilyGraphCameraSnapshot;
+  }) => void;
   onRenderedCountChange?: (rendered: number, total: number) => void;
   /** Bloom Supper: route-level hero can own title/copy while graph keeps only actions. */
   headerMode?: "full" | "controls" | "none";
@@ -226,6 +232,8 @@ export function FamilyGraphPrototype({
   getFocusBranchVisual,
   initialDetailPersonId,
   initialViewMode,
+  initialCameraSnapshot,
+  onViewStateChange,
   onRenderedCountChange,
   headerMode = "full",
   surfaceMode = "standard",
@@ -273,18 +281,18 @@ export function FamilyGraphPrototype({
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [viewport, setViewport] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [cameraSnapshot, setCameraSnapshot] = useState<FamilyGraphCameraSnapshot>({
+  const [cameraSnapshot, setCameraSnapshot] = useState<FamilyGraphCameraSnapshot>(() => initialCameraSnapshot ?? ({
     centerX: effectiveCanvasWidth / 2,
     centerY: effectiveCanvasHeight / 2,
     scale: INITIAL_SCALE,
-  });
+  }));
   const [fullTreeRenderLimit, setFullTreeRenderLimit] = useState(
     APP_CONFIG_DEFAULTS.familyGraph.render.fullTreeInitialBatch,
   );
 
   // v6.4: mọi transform gesture chạy trực tiếp trên UI thread bằng Reanimated.
   // Không gửi từng frame pinch qua JS thread để tránh queue event / snap khi thả tay.
-  const canvasScale = useSharedValue(INITIAL_SCALE);
+  const canvasScale = useSharedValue(initialCameraSnapshot?.scale ?? INITIAL_SCALE);
   const canvasTranslateX = useSharedValue(0);
   const canvasTranslateY = useSharedValue(0);
   const panStartX = useSharedValue(0);
@@ -602,6 +610,15 @@ export function FamilyGraphPrototype({
     });
   }, []);
 
+  useEffect(() => {
+    if (!onViewStateChange || surfaceMode !== "standard") return;
+    onViewStateChange({
+      viewMode,
+      viewAnchorPersonId,
+      camera: cameraSnapshot,
+    });
+  }, [cameraSnapshot, onViewStateChange, surfaceMode, viewAnchorPersonId, viewMode]);
+
   // Viewport-aware rendering must not send every pan/pinch frame through React.
   // The UI thread tracks the camera continuously, but JS is notified only after
   // crossing one coarse spatial cell (or a meaningful zoom bucket). Overscan
@@ -837,6 +854,16 @@ export function FamilyGraphPrototype({
       const canvasCenterX = effectiveCanvasWidth / 2;
       const canvasCenterY = effectiveCanvasHeight / 2;
 
+      if (initialCameraSnapshot && !autoFitOnMount) {
+        const restoredScale = Math.max(MIN_SAFE_SCALE, initialCameraSnapshot.scale);
+        setScaleValue(restoredScale);
+        setPan({
+          x: next.width / 2 - canvasCenterX - restoredScale * (initialCameraSnapshot.centerX - canvasCenterX),
+          y: next.height / 2 - canvasCenterY - restoredScale * (initialCameraSnapshot.centerY - canvasCenterY),
+        });
+        return;
+      }
+
       if (autoFitOnMount && visiblePeople.length) {
         const minX = Math.min(...visiblePeople.map((item) => item.x));
         const maxX = Math.max(...visiblePeople.map((item) => item.x + FAMILY_GRAPH_CANVAS.nodeWidth));
@@ -876,7 +903,7 @@ export function FamilyGraphPrototype({
         y: next.height * 0.46 - canvasCenterY - INITIAL_SCALE * (personCenterY - canvasCenterY),
       });
     }
-  }, [autoFitOnMount, effectiveCanvasHeight, effectiveCanvasWidth, initialFocusId, measureRootInWindow, peopleById, setPan, setScaleValue, overviewCenter, visiblePeople]);
+  }, [autoFitOnMount, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, measureRootInWindow, peopleById, setPan, setScaleValue, overviewCenter, visiblePeople]);
 
   const clearFocusOverlay = useCallback(() => {
     focusVisualRequestRef.current += 1;
@@ -1047,7 +1074,7 @@ export function FamilyGraphPrototype({
       if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
       hydrateFocusOverlayVisual(personId, requestId);
     }, 140);
-  }, [finishBranchOpenPerf, focusOverlay, focusOverlayProgress, hydrateFocusOverlayVisual]);
+  }, [focusOverlay, focusOverlayProgress, hydrateFocusOverlayVisual]);
 
   const handleOpenBranch = useCallback((personId: string) => {
     if (surfaceMode === "focusOverlay") {

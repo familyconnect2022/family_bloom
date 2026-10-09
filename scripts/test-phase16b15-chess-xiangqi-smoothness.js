@@ -50,6 +50,7 @@ const lobbyHook = read('src/hooks/chess/useChessLobby.ts');
 const realtime = read('src/context/ChessRealtimeContext.tsx');
 const homeGames = read('src/app/(home)/(games)/home-games.tsx');
 const serverSocket = read('server/src/socket/socketServer.ts');
+const xiangqiServer = read('server/src/xiangqi/xiangqiSocket.ts');
 const xiangqiFx = read('src/components/xiangqi/XiangqiBattleEffects.tsx');
 const perf = read('src/services/games/gameRuntimePerf.ts');
 const victoryConfetti = read('src/components/chess/ChessVictoryConfetti.tsx');
@@ -109,7 +110,7 @@ ok('Chess ready shield has no old 360/1020 synthetic readiness timers', !has(che
 ok('Xiangqi readiness is epoch-aware and reports after two frames', has(xiangqiBoard, /readyEpoch/) && has(xiangqiBoard, /requestAnimationFrame\(\(\) => requestAnimationFrame\(/) && has(xiangqiBoard, /onReady\(\)/));
 ok('Xiangqi piece assets report onLoadEnd', has(xiangqiPiece, /onLoadEnd/) && has(xiangqiPiece, /onAssetReady/));
 ok('Xiangqi screen gates entry on real boardReady', has(xiangqiScreen, /const \[boardReady, setBoardReady\]/) && has(xiangqiScreen, /readyEpoch=\{roundEpoch\}/) && has(xiangqiScreen, /onReady=\{handleBoardReady\}/));
-ok('Ready flows never hold stale preparation over active play', (phase17_9a9 ? (has(chessSurfaceHost, /first interactive\/uncovered frame/) && !has(chessSurfaceHost, /setEntryPhase\("ready"\)/)) : has(chessSurfaceHost, /setTimeout\(\(\) => setEntryPhase\("playing"\), 560\)/)) && has(xiangqiScreen, /setTimeout\(\(\) => setRoundPhase\("playing"\), 620\)/));
+ok('Ready flows never hold stale preparation over active play', (phase17_9a9 ? (has(chessSurfaceHost, /first interactive\/uncovered frame/) && !has(chessSurfaceHost, /setEntryPhase\("ready"\)/)) : has(chessSurfaceHost, /setTimeout\(\(\) => setEntryPhase\("playing"\), 560\)/)) && (has(xiangqiScreen, /serverState\.status === "active"/) && has(xiangqiScreen, /setRoundPhase\("playing"\)/) || has(xiangqiScreen, /setTimeout\(\(\) => setRoundPhase\("playing"\), 620\)/)));
 
 ok('Bloom game modal no longer creates RN Modal/window', !has(modal, /from \"react-native\"[\s\S]{0,160}\bModal\b/) && !has(modal, /<Modal\b/) && has(modal, /StyleSheet\.absoluteFillObject/));
 ok('Bloom game modal supports keepMounted API but hidden input stays blocked', has(modal, /keepMounted/) && has(modal, /pointerEvents=\{visible \? "auto" : "none"\}/));
@@ -123,11 +124,11 @@ ok('Successful lobbyJoin repairs connection state to ready', has(realtime, /conn
 ok('Socket connect itself makes UI readiness monotonic before late appJoin ACK', has(realtime, /Socket\.IO `connect` is the earliest trustworthy proof/) && has(realtime, /connectionRef\.current = "ready"/));
 
 ok('Chess game card has a guaranteed-visible PNG chess piece icon', has(homeGames, /accessibilityLabel="Quân Mã cờ vua"/) && has(homeGames, /pieces-png-default\/bn\.png/) && has(homeGames, /chessPieceIcon/));
-ok('Chess test bot cadence is 1000 ms', has(serverSocket, /TEST_BOT_MOVE_DELAY_MS\s*=\s*1_000/));
-ok('Xiangqi bot cadence is 1000 ms', has(xiangqiScreen, /XIANGQI_BOT_MOVE_DELAY_MS\s*=\s*1_000/));
+ok('Chess test bot cadence is human-like 3s / 5s check', has(serverSocket, /TEST_BOT_MOVE_DELAY_MS\s*=\s*3_000/) && has(serverSocket, /TEST_BOT_CHECK_DELAY_MS\s*=\s*5_000/));
+ok('Xiangqi bot shares 3s / 5s human pacing policy', (has(xiangqiScreen, /humanBotThinkDelayMs\(plan\.givesCheck\)/) && has(xiangqiScreen, /chooseXiangqiBotMovePlan/)) || (has(xiangqiServer, /MOVE_DELAY=3000,CHECK_DELAY=5000/) && has(xiangqiServer, /plan\.givesCheck\?CHECK_DELAY:MOVE_DELAY/)));
 
 ok('Xiangqi clock ticks only in isolated XiangqiClockValue text node', has(xiangqiScreen, /function XiangqiClockValue/) && has(xiangqiScreen, /setInterval\(\(\) => setNow\(Date\.now\(\)\), 500\)/));
-ok('Xiangqi parent uses one expiry timeout, not per-second board state updates', has(xiangqiScreen, /remaining \+ 25/) && !has(xiangqiScreen, /setInterval\([\s\S]{0,200}setClockMs/));
+ok('Xiangqi parent uses one expiry timeout, not per-second board state updates', (has(xiangqiScreen, /remaining \+ 25/) || has(xiangqiScreen, /serverState\?\.redRemainingMs/) || has(xiangqiScreen, /redRemainingMs/)) && !has(xiangqiScreen, /setInterval\([\s\S]{0,200}setClockMs/));
 
 ok('Chess battle FX is retired from the hot path', !has(chessSurfaceHost, /ChessBattleEffects|boardFxLayer|boardFxClip/));
 ok('Xiangqi battle FX keeps reusable native nodes instead of nulling after each FX', !has(xiangqiFx, /setVisibleEvent\(null\)/));
@@ -161,6 +162,13 @@ const syntaxFiles = [
   'src/services/games/gameRuntimePerf.ts',
   'src/hooks/chess/useChessGame.ts',
   'server/src/socket/socketServer.ts',
+  'server/src/xiangqi/xiangqiTypes.ts',
+  'server/src/xiangqi/xiangqiEngine.ts',
+  'server/src/xiangqi/xiangqiPersistenceService.ts',
+  'server/src/xiangqi/xiangqiGameManager.ts',
+  'server/src/xiangqi/xiangqiSocket.ts',
+  'src/services/xiangqi/xiangqiSocketService.ts',
+  'src/types/xiangqiRealtime.ts',
 ];
 const syntaxErrors = syntaxFiles.flatMap(rel => syntax(rel).map(diag => `${rel}: ${ts.flattenDiagnosticMessageText(diag.messageText, ' ')}`));
 ok(`Changed hot-path TypeScript/TSX syntax (${syntaxFiles.length} files)`, syntaxErrors.length === 0, syntaxErrors.slice(0, 3).join(' | '));

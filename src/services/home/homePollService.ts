@@ -14,13 +14,14 @@ import {
   writeBatch,
 } from "@react-native-firebase/firestore";
 import type { HomePoll, HomePollAudience, HomePollBallot, HomePollChoice } from "@/types/homeLiving";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 
 const POLL_RETENTION_DAYS = 30;
 const PAGE_SIZE = 20;
 const nowIso = () => new Date().toISOString();
-const pollsCollection = (familyId: string) => `families/${familyId}/homePolls`;
-const pollPath = (familyId: string, pollId: string) => `${pollsCollection(familyId)}/${pollId}`;
-const ballotPath = (familyId: string, pollId: string, uid: string) => `${pollPath(familyId, pollId)}/ballots/${uid}`;
+const pollsCollection = FIRESTORE_PATHS.familyHomePolls;
+const pollPath = FIRESTORE_PATHS.familyHomePoll;
+const ballotPath = FIRESTORE_PATHS.familyHomePollBallot;
 
 const isMissingIndexError = (error: unknown) => {
   const code = String((error as { code?: unknown } | null)?.code ?? "").toLowerCase();

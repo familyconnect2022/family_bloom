@@ -4,6 +4,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import Animated, {
   Easing,
   cancelAnimation,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -33,7 +34,9 @@ type Props = {
   legalTargets: readonly { col: number; row: number }[];
   lastMove: XiangqiMove | null;
   checkedColor?: "red" | "black" | null;
+  premove?: { from: { col: number; row: number }; to: { col: number; row: number } } | null;
   onTap: (col: number, row: number) => void;
+  onMoveLanded?: (move: XiangqiMove) => void;
   runtimeActive?: boolean;
   onReady?: () => void;
   readyEpoch?: number;
@@ -159,9 +162,10 @@ type PieceSpriteProps = {
   justMoved: boolean;
   runtimeActive: boolean;
   onAssetReady?: (id: string) => void;
+  onLanded?: (id: string) => void;
 };
 
-const XiangqiPieceSprite = React.memo(function XiangqiPieceSprite({ piece, left, top, pieceSize, state, justMoved, runtimeActive, onAssetReady }: PieceSpriteProps) {
+const XiangqiPieceSprite = React.memo(function XiangqiPieceSprite({ piece, left, top, pieceSize, state, justMoved, runtimeActive, onAssetReady, onLanded }: PieceSpriteProps) {
   const x = useSharedValue(left);
   const y = useSharedValue(top);
   const lift = useSharedValue(state === "selected" ? 1.08 : 1);
@@ -183,12 +187,14 @@ const XiangqiPieceSprite = React.memo(function XiangqiPieceSprite({ piece, left,
     if (!moved) return;
 
     x.value = withTiming(left, { duration: 176, easing: Easing.bezier(0.16, 0.78, 0.22, 1) });
-    y.value = withTiming(top, { duration: 176, easing: Easing.bezier(0.16, 0.78, 0.22, 1) });
+    y.value = withTiming(top, { duration: 176, easing: Easing.bezier(0.16, 0.78, 0.22, 1) }, (finished) => {
+      if (finished && justMoved && onLanded) runOnJS(onLanded)(piece.id);
+    });
     lift.value = withSequence(
       withTiming(1.30, { duration: 82, easing: Easing.out(Easing.quad) }),
       withTiming(1, { duration: 94, easing: Easing.inOut(Easing.quad) }),
     );
-  }, [justMoved, left, lift, runtimeActive, top, x, y]);
+  }, [justMoved, left, lift, onLanded, piece.id, runtimeActive, top, x, y]);
 
   useEffect(() => {
     if (!runtimeActive) {
@@ -228,7 +234,7 @@ const XiangqiPieceSprite = React.memo(function XiangqiPieceSprite({ piece, left,
   );
 });
 
-export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, selectedId, legalTargets, lastMove, checkedColor = null, onTap, runtimeActive = true, onReady, readyEpoch = 0 }: Props) {
+export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, selectedId, legalTargets, lastMove, checkedColor = null, premove = null, onTap, onMoveLanded, runtimeActive = true, onReady, readyEpoch = 0 }: Props) {
   const { width: screenWidth } = useWindowDimensions();
   useEffect(() => { gameRuntimePerf.markRender("xiangqi"); });
   useEffect(() => {
@@ -321,6 +327,11 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
     maybeReportReady();
   }, [maybeReportReady]);
 
+  const handlePieceLanded = useCallback((pieceId: string) => {
+    if (!lastMove || lastMove.pieceId !== pieceId) return;
+    onMoveLanded?.(lastMove);
+  }, [lastMove, onMoveLanded]);
+
   useEffect(() => {
     maybeReportReady();
   }, [maybeReportReady, readyEpoch, runtimeActive]);
@@ -370,6 +381,9 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
               <View key={`last-${index}`} style={[styles.lastMarker, { left: padding + square.col * step - step * 0.33, top: padding + square.row * step - step * 0.33, width: step * 0.66, height: step * 0.66, borderRadius: step * 0.33 }]} />
             )) : null}
             {selected ? <View style={[styles.selectedMarker, { left: padding + selected.col * step - step * 0.38, top: padding + selected.row * step - step * 0.38, width: step * 0.76, height: step * 0.76, borderRadius: step * 0.38 }]} /> : null}
+            {premove ? [premove.from, premove.to].map((square, index) => (
+              <View key={`premove-${index}`} style={[styles.premoveMarker, { left: padding + square.col * step - step * 0.36, top: padding + square.row * step - step * 0.36, width: step * 0.72, height: step * 0.72, borderRadius: step * 0.36 }]} />
+            )) : null}
             {checkedGeneral ? <View style={[styles.checkMarker, { left: padding + checkedGeneral.col * step - step * 0.4, top: padding + checkedGeneral.row * step - step * 0.4, width: step * 0.8, height: step * 0.8, borderRadius: step * 0.4 }]} /> : null}
           </View>
 
@@ -390,6 +404,7 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
                   justMoved={justMoved}
                   runtimeActive={runtimeActive}
                   onAssetReady={markAssetReady}
+                  onLanded={handlePieceLanded}
                 />
               );
             })}
@@ -428,5 +443,6 @@ const styles = StyleSheet.create({
   captureHintInner: { width: "72%", height: "72%", borderRadius: 999, borderWidth: 1.5, borderColor: "rgba(255,244,220,0.92)" },
   lastMarker: { position: "absolute", backgroundColor: "rgba(255,212,104,0.34)", borderWidth: 1, borderColor: "rgba(190,132,38,0.38)" },
   selectedMarker: { position: "absolute", backgroundColor: "rgba(232,79,143,0.12)", borderWidth: 2, borderColor: "rgba(232,79,143,0.58)" },
+  premoveMarker: { position: "absolute", backgroundColor: "rgba(132,146,215,0.20)", borderWidth: 2, borderColor: "rgba(111,123,198,0.70)" },
   checkMarker: { position: "absolute", backgroundColor: "rgba(214,57,72,0.18)", borderWidth: 2, borderColor: "rgba(214,57,72,0.72)" },
 });

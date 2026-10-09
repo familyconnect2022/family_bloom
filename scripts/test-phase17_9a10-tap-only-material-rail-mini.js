@@ -24,6 +24,7 @@ const piece = read('src/components/chess/v2/ChessPiece.tsx');
 const layer = read('src/components/chess/v2/PieceLayer.tsx');
 const interaction = read('src/components/chess/v2/InteractionLayer.tsx');
 const host = read('src/components/chess/ChessSurfaceHost.tsx');
+const miniHost = read('src/components/chess/ChessMiniHost.tsx');
 const rail = read('src/components/chess/ChessPlayerRail.tsx');
 const material = read('src/components/chess/ChessMaterialStrip.tsx');
 const perf = read('src/services/games/gameRuntimePerf.ts');
@@ -45,8 +46,8 @@ check('HUD-board stack reserves four fixed inter-item gaps', /CHESS_CONTENT_GAP 
 check('Captured pieces are larger and advantage score is external/readable', /pieceSize = total >= 14 \? 11/.test(material) && /fontSize: 10/.test(material) && /Lợi thế \+/.test(material));
 check('Empty material lane stays visually quiet', !/Chưa ăn quân/.test(material));
 
-check('Mini Chess is reduced to 88x40', /MINI_WIDTH\s*=\s*88/.test(host) && /MINI_HEIGHT\s*=\s*40/.test(host));
-check('Mini drag remains separate from piece input', /Gesture\.Pan\(\)/.test(host) && /Gesture\.Race\(pan, tap\)/.test(host) && !/Gesture\.Pan\(\)/.test(piece));
+check('Mini Chess is reduced to 88x40', /MINI_WIDTH\s*=\s*88/.test(miniHost) && /MINI_HEIGHT\s*=\s*40/.test(miniHost));
+check('Mini drag remains separate from piece input', /Gesture\.Pan\(\)/.test(miniHost) && /Gesture\.Race\(pan, tap\)/.test(miniHost) && !/Gesture\.Pan\(\)/.test(piece));
 check('Root Chess still avoids full-screen elevation', !/elevation:\s*1000/.test(host));
 check('Board geometry remains width-owned', /windowWidth - CHESS_SCREEN_GUTTER \* 2/.test(host) && /Math\.floor\(raw \/ 8\) \* 8/.test(host));
 check('Ready/Promotion/Result still share root modal layer', /styles\.chessModalLayer/.test(host) && /promotion && actualGame/.test(host) && /showResult/.test(host));
@@ -57,6 +58,7 @@ const files = [
   'src/components/chess/v2/PieceLayer.tsx',
   'src/components/chess/v2/InteractionLayer.tsx',
   'src/components/chess/ChessSurfaceHost.tsx',
+  'src/components/chess/ChessMiniHost.tsx',
   'src/components/chess/ChessPlayerRail.tsx',
   'src/components/chess/ChessMaterialStrip.tsx',
   'src/services/games/gameRuntimePerf.ts',

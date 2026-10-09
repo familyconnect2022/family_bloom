@@ -5,6 +5,8 @@ import { calendarService } from "../services/calendar/calendarService";
 import { familyService } from "../services/family/familyService";
 import { momentsService } from "../services/moments/momentsService";
 import { canonicalizeFamilyEventsStable } from "../services/event/eventEntityCache";
+import { subscribeSharedRealtime } from "../services/realtime/sharedRealtimeRegistry";
+import { familyHomeWarmCache } from "../services/bootstrap/familyHomeWarmCache";
 import type { EventPage, FamilyEvent, FamilyMember, MomentPage } from "../types";
 import { useAuth } from "./AuthContext";
 
@@ -51,14 +53,15 @@ const FamilyEventsRealtimeContext = createContext<FamilyEventsRealtimeValue | nu
  * so a Moment snapshot does not force Family-member-only screens to re-render.
  * Listeners are also released while the app is backgrounded and restored on resume.
  */
-export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode }) => {
-  const { userProfile, families, profileStatus } = useAuth();
+export const FamilyRealtimeProvider = ({ children, liveReady = true }: { children: React.ReactNode; liveReady?: boolean }) => {
+  const { user, userProfile, families, profileStatus } = useAuth();
   const requestedFamilyId = userProfile?.activeFamilyId ?? null;
   const familyId = profileStatus === "ready" && requestedFamilyId && families.some((item) => item.familyId === requestedFamilyId)
     ? requestedFamilyId
     : null;
   const [restartKey, setRestartKey] = useState(0);
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
+  const [warmCacheReady, setWarmCacheReady] = useState(!familyId);
 
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(!!familyId);
@@ -96,82 +99,122 @@ export const FamilyRealtimeProvider = ({ children }: { children: React.ReactNode
     setMomentsLoading(!!familyId);
     setUpcomingLoading(!!familyId);
     setYearlyLoading(!!familyId);
+    setWarmCacheReady(!familyId);
   }, [familyId]);
 
+  // Display-only uid/family-scoped cache. It can paint familiar Home content
+  // before network listeners are released, but it never decides Auth or access.
   useEffect(() => {
-    if (!familyId || !appActive) return;
+    if (!user?.uid || !familyId) return;
+    let cancelled = false;
+    const apply = (cached: Awaited<ReturnType<typeof familyHomeWarmCache.read>> | null) => {
+      if (!cached || cancelled) return;
+      setMembers(cached.members);
+      setUpcomingPage({ items: cached.upcomingEvents, cursor: null, hasMore: cached.upcomingHasMore });
+      setYearlyEvents(cached.yearlyEvents);
+      setMomentsPage({ items: cached.moments, cursor: null, hasMore: cached.momentsHaveMore });
+    };
+    const memory = familyHomeWarmCache.peek(user.uid, familyId);
+    if (memory) {
+      apply(memory);
+      setWarmCacheReady(true);
+    } else {
+      void familyHomeWarmCache.read(user.uid, familyId)
+        .then(apply)
+        .finally(() => { if (!cancelled) setWarmCacheReady(true); });
+    }
+    return () => { cancelled = true; };
+  }, [familyId, user?.uid]);
+
+  useEffect(() => {
+    if (!familyId || !appActive || !liveReady || !warmCacheReady) return;
     setMembersError(null);
-    const stop = familyService.watchMembers(
-      familyId,
-      (items) => {
-        setMembers([...items].sort((a, b) => a.displayName.localeCompare(b.displayName, "vi")));
+    const stop = subscribeSharedRealtime<FamilyMember[]>({
+      key: `family.members:${familyId}`,
+      listenerName: "family.members",
+      start: (onData, onError) => familyService.watchMembers(familyId, onData, onError),
+      onData: (items) => {
+        const sorted = [...items].sort((a, b) => a.displayName.localeCompare(b.displayName, "vi"));
+        setMembers(sorted);
+        if (user?.uid) familyHomeWarmCache.update(user.uid, familyId, { members: sorted });
         setMembersLoading(false);
       },
-      (error) => {
+      onError: (error) => {
         setMembersError(error);
         setMembersLoading(false);
       },
-    );
+    });
     return stop;
-  }, [appActive, familyId, restartKey]);
+  }, [appActive, familyId, liveReady, restartKey, user?.uid, warmCacheReady]);
 
   useEffect(() => {
-    if (!familyId || !appActive) return;
+    if (!familyId || !appActive || !liveReady || !warmCacheReady) return;
     setMomentsError(null);
-    const stop = momentsService.subscribeLatest(
-      familyId,
-      (page) => {
+    const stop = subscribeSharedRealtime<MomentPage>({
+      key: `family.moments.latest:${familyId}:${DATA_LIMITS.moments.initialFeed}`,
+      listenerName: "family.moments.latest",
+      start: (onData, onError) => momentsService.subscribeLatest(
+        familyId, onData, onError, DATA_LIMITS.moments.initialFeed,
+      ),
+      onData: (page) => {
         setMomentsPage(page);
+        if (user?.uid) familyHomeWarmCache.update(user.uid, familyId, { moments: page.items, momentsHaveMore: page.hasMore });
         setMomentsLoading(false);
       },
-      (error) => {
+      onError: (error) => {
         setMomentsError(error);
         setMomentsLoading(false);
       },
-      DATA_LIMITS.moments.initialFeed,
-    );
+    });
     return stop;
-  }, [appActive, familyId, restartKey]);
+  }, [appActive, familyId, liveReady, restartKey, user?.uid, warmCacheReady]);
 
   useEffect(() => {
-    if (!familyId || !appActive) return;
+    if (!familyId || !appActive || !liveReady || !warmCacheReady) return;
     setUpcomingError(null);
-    const stop = calendarService.subscribeUpcoming(
-      familyId,
-      (page) => {
+    const stop = subscribeSharedRealtime<EventPage>({
+      key: `family.events.upcoming:${familyId}:${DATA_LIMITS.events.realtimePage}`,
+      listenerName: "family.events.upcoming",
+      start: (onData, onError) => calendarService.subscribeUpcoming(
+        familyId, onData, onError, DATA_LIMITS.events.realtimePage,
+      ),
+      onData: (page) => {
         setUpcomingPage((current) => {
           const items = canonicalizeFamilyEventsStable(familyId, current.items, page.items);
           return current.hasMore === page.hasMore && current.items === items
             ? current
             : { ...page, items };
         });
+        if (user?.uid) familyHomeWarmCache.update(user.uid, familyId, { upcomingEvents: page.items, upcomingHasMore: page.hasMore });
         setUpcomingLoading(false);
       },
-      (error) => {
+      onError: (error) => {
         setUpcomingError(error);
         setUpcomingLoading(false);
       },
-      DATA_LIMITS.events.realtimePage,
-    );
+    });
     return stop;
-  }, [appActive, familyId, restartKey]);
+  }, [appActive, familyId, liveReady, restartKey, user?.uid, warmCacheReady]);
 
   useEffect(() => {
-    if (!familyId || !appActive) return;
+    if (!familyId || !appActive || !liveReady || !warmCacheReady) return;
     setYearlyError(null);
-    const stop = calendarService.subscribeYearly(
-      familyId,
-      (items) => {
+    const stop = subscribeSharedRealtime<FamilyEvent[]>({
+      key: `family.events.yearly:${familyId}`,
+      listenerName: "family.events.yearly",
+      start: (onData, onError) => calendarService.subscribeYearly(familyId, onData, onError),
+      onData: (items) => {
         setYearlyEvents((current) => canonicalizeFamilyEventsStable(familyId, current, items));
+        if (user?.uid) familyHomeWarmCache.update(user.uid, familyId, { yearlyEvents: items });
         setYearlyLoading(false);
       },
-      (error) => {
+      onError: (error) => {
         setYearlyError(error);
         setYearlyLoading(false);
       },
-    );
+    });
     return stop;
-  }, [appActive, familyId, restartKey]);
+  }, [appActive, familyId, liveReady, restartKey, user?.uid, warmCacheReady]);
 
   const memberByUid = useMemo(
     () => new Map(members.map((member) => [member.uid, member])),

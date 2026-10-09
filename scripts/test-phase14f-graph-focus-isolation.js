@@ -54,7 +54,7 @@ record('focus-overlay-still-shields-background', hasAll(graph, ['focusOverlayShi
 record('focus-overlay-still-pan-zoom', hasAll(graph, ['surfaceMode="focusOverlay"', 'autoFitOnMount', 'Gesture.Simultaneous(panGesture, pinchGesture)']));
 record('focus-overlay-same-instance-navigation', hasAll(graph, ['handleFocusOverlayPersonRequest', 'One overlay only', 'personId,', 'visual: null']));
 record('focus-overlay-available-from-3-5-all', !openBlock.includes('viewMode') && !openBlock.includes('focusOverlayMode'));
-record('screen-wires-in-memory-branch-visual', hasAll(screen, ['queryEngine.getFocusSubgraph', 'adaptFamilyGraphSnapshot(subgraph.snapshot, focusPersonId, {', 'getFocusBranchVisual={getFocusBranchVisual}']));
+record('screen-wires-in-memory-branch-visual', hasAll(screen, ['queryEngine.getFocusSubgraph', 'getOrBuildFamilyGraphVisual(subgraph.snapshot, focusPersonId, true)', 'getFocusBranchVisual={getFocusBranchVisual}']));
 record('focus-branch-layout-cache', hasAll(screen, ['focusBranchVisualCache', 'const cacheKey = `full:${focusPersonId}`', 'if (cached) return cached', 'focusBranchVisualCache.set(cacheKey, result)']));
 record('phase14f-script-registered', pkg.scripts?.['phase14f:check'] === 'node ./scripts/test-phase14f-graph-focus-isolation.js');
 

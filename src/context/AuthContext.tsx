@@ -2,9 +2,14 @@ import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
 import { authService } from "@/services/auth/authService";
 import { familyService } from "@/services/family/familyService";
+import { homeTimeCapsuleService } from "@/services/home/homeTimeCapsuleService";
 import { profileService } from "@/services/profile/profileService";
+import { clearFamilyGraphWarmCache } from "../components/familyGraph/familyGraphWarmCache";
+import { bootSessionCache } from "../services/bootstrap/bootSessionCache";
+import { familyHomeWarmCache } from "../services/bootstrap/familyHomeWarmCache";
 import { localNotificationService } from "../services/push/localNotificationService";
 import { pushTokenService } from "../services/push/pushTokenService";
+import { resetSharedRealtimeRegistry } from "../services/realtime/sharedRealtimeRegistry";
 import { ConfirmationResult, User } from "@react-native-firebase/auth";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
@@ -15,6 +20,8 @@ export type FamilyTransition = {
   targetFamilyName: string;
   startedAt: number;
 };
+
+type MembershipStatus = "idle" | "loading" | "ready";
 
 export type AuthContextType = {
   user: User | null;
@@ -30,6 +37,7 @@ export type AuthContextType = {
   dismissWelcome: () => void;
   authStatus: AuthStatus;
   profileStatus: ProfileStatus;
+  membershipStatus: MembershipStatus;
   isInitializing: boolean;
   isLoadingPhone: boolean;
   loginWithGoogle: () => Promise<void>;
@@ -60,13 +68,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [authStatus, setAuthStatus] = useState<AuthStatus>("initializing");
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>("idle");
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>("idle");
   const [isLoadingPhone, setIsLoadingPhone] = useState(false);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const welcomeRequestedRef = useRef(false);
   const autoSwitchRef = useRef<string | null>(null);
+  const profileRef = useRef<UserProfile | null>(null);
+  const familiesRef = useRef<UserFamilyMembership[]>([]);
+  const authEpochRef = useRef(0);
+  const cacheHydratedUidRef = useRef<string | null>(null);
   const { showToast } = useBloomToast();
+
+  profileRef.current = userProfile;
+  familiesRef.current = families;
 
   const applyMemberships = useCallback(async (
     currentUser: User,
@@ -79,16 +95,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const activeStillValid = !!profile.activeFamilyId && memberships.some((item) => item.familyId === profile.activeFamilyId);
     if (activeStillValid || memberships.length !== 1) return profile;
 
-    // Nếu chỉ còn đúng một nhà hợp lệ, tự phục hồi active family. Với >1 nhà,
-    // không tự đoán thay người dùng: Root Navigator sẽ đưa tới màn Chọn nhà.
+    // Only one valid home remains: recover deterministically. More than one
+    // home must always be chosen by the user; never guess during instant boot.
     const only = memberships[0];
     if (autoSwitchRef.current === only.familyId) return { ...profile, activeFamilyId: only.familyId };
 
     autoSwitchRef.current = only.familyId;
     setFamilyTransition({ targetFamilyId: only.familyId, targetFamilyName: only.familyName, startedAt: Date.now() });
     try {
-      await familyService.switchActiveFamily(currentUser.uid, only.familyId);
-      const next = { ...profile, activeFamilyId: only.familyId };
+      const verified = await familyService.switchActiveFamily(currentUser.uid, only.familyId);
+      const next = { ...profile, activeFamilyId: verified.familyId };
+      profileRef.current = next;
       setUserProfile(next);
       return next;
     } catch {
@@ -99,29 +116,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const loadProfile = useCallback(async (currentUser: User | null) => {
+  const loadAuthoritativeProfile = useCallback(async (currentUser: User | null) => {
     if (!currentUser) {
+      profileRef.current = null;
       setUserProfile(null);
       setFamilies([]);
       setFamilyTransition(null);
       setProfileStatus("idle");
+      setMembershipStatus("idle");
       return null;
     }
-    setProfileStatus("loading");
+
+    const epoch = authEpochRef.current;
     try {
-      let profile = await profileService.get(currentUser.uid);
-      if (profile) {
-        try {
-          const memberships = await familyService.listForUser(currentUser.uid);
-          profile = await applyMemberships(currentUser, profile, memberships);
-        } catch {
-          setFamilies([]);
-        }
-      } else {
-        setFamilies([]);
-      }
+      const profile = await profileService.get(currentUser.uid);
+      if (epoch !== authEpochRef.current) return null;
+      profileRef.current = profile;
       setUserProfile(profile);
       setProfileStatus(profile ? "ready" : "missing");
+      if (profile && familiesRef.current.length) {
+        void applyMemberships(currentUser, profile, familiesRef.current);
+      }
 
       if (welcomeRequestedRef.current) {
         if (profile?.activeFamilyId) setShowWelcome(true);
@@ -129,9 +144,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return profile;
     } catch (error) {
-      setProfileStatus("error");
-      showToast({ ...parseAppError(error), duration: 3500 });
-      return null;
+      if (epoch !== authEpochRef.current) return null;
+      // A valid uid-scoped boot cache is allowed to keep the shell usable while
+      // offline; otherwise this remains an explicit profile error.
+      if (!profileRef.current) {
+        setProfileStatus("error");
+        showToast({ ...parseAppError(error), duration: 3500 });
+      }
+      return profileRef.current;
     }
   }, [applyMemberships, showToast]);
 
@@ -140,31 +160,83 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.remove();
   }, []);
 
-  useEffect(() => authService.subscribe(async (currentUser) => {
+  // Auth resolves privacy first. For an already-signed-in uid, hydrate only
+  // that uid's local boot snapshot, then refresh authoritative profile in the
+  // background. No Firestore family read is required before the Home shell.
+  useEffect(() => authService.subscribe((currentUser) => {
+    authEpochRef.current += 1;
+    const epoch = authEpochRef.current;
     setUser(currentUser);
     setAuthStatus(currentUser ? "signed-in" : "signed-out");
-    await loadProfile(currentUser);
-  }), [loadProfile]);
+    setFamilyTransition(null);
+    resetSharedRealtimeRegistry();
+    homeTimeCapsuleService.clearRealtimeCache();
 
-  // Một listener duy nhất cho reverse-index memberships của chính user. Không mở
-  // listener cho từng family inactive; vì vậy số realtime nặng không tăng theo số nhà.
+    if (!currentUser) {
+      cacheHydratedUidRef.current = null;
+      profileRef.current = null;
+      setUserProfile(null);
+      setFamilies([]);
+      setProfileStatus("idle");
+      setMembershipStatus("idle");
+      return;
+    }
+
+    setProfileStatus("loading");
+    setMembershipStatus("loading");
+    void bootSessionCache.read(currentUser.uid).then((cached) => {
+      if (epoch !== authEpochRef.current) return;
+      if (cached) {
+        cacheHydratedUidRef.current = currentUser.uid;
+        profileRef.current = cached.profile;
+        setUserProfile(cached.profile);
+        setFamilies(sortMemberships(cached.memberships));
+        setProfileStatus("ready");
+        setMembershipStatus("ready");
+      }
+      void loadAuthoritativeProfile(currentUser);
+    });
+  }), [loadAuthoritativeProfile]);
+
+  // SINGLE membership source. Its first onSnapshot delivery is the bootstrap
+  // membership read; later deliveries are realtime updates. A14 intentionally
+  // removes listForUser() from auth boot so the same collection is not fetched
+  // and then immediately listened to again.
   useEffect(() => {
-    if (!user || profileStatus !== "ready" || !userProfile || !appActive) return;
+    if (!user || !appActive) return;
+    const epoch = authEpochRef.current;
     let live = true;
     const stop = familyService.watchForUser(
       user.uid,
       (memberships) => {
-        if (!live) return;
-        void applyMemberships(user, userProfile, memberships);
+        if (!live || epoch !== authEpochRef.current) return;
+        const sorted = sortMemberships(memberships);
+        setFamilies(sorted);
+        setMembershipStatus("ready");
+        const profile = profileRef.current;
+        if (profile) void applyMemberships(user, profile, sorted);
       },
       () => {
-        // Giữ snapshot hiện tại nếu listener tạm lỗi; service/action cụ thể vẫn kiểm tra quyền.
+        if (!live || epoch !== authEpochRef.current) return;
+        // Keep a valid uid-scoped cache available offline. Without cache, mark
+        // the membership bootstrap settled so the UI can show a retryable state.
+        setMembershipStatus((current) => current === "ready" ? current : "ready");
       },
     );
-    return stop;
-  }, [appActive, applyMemberships, profileStatus, user, userProfile]);
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [appActive, applyMemberships, user]);
 
-  const refreshProfile = useCallback(() => loadProfile(user), [loadProfile, user]);
+  // Persist only after Firebase Auth has confirmed the uid. This cache speeds up
+  // future cold starts but never grants access or bypasses Firestore Rules.
+  useEffect(() => {
+    if (!user || !userProfile || profileStatus !== "ready" || membershipStatus !== "ready") return;
+    void bootSessionCache.write(user.uid, userProfile, families).catch(() => undefined);
+  }, [families, membershipStatus, profileStatus, user, userProfile]);
+
+  const refreshProfile = useCallback(() => loadAuthoritativeProfile(user), [loadAuthoritativeProfile, user]);
 
   const switchFamily = useCallback(async (familyId: string) => {
     if (!user || !familyId) return false;
@@ -173,17 +245,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setFamilyTransition({ targetFamilyId: familyId, targetFamilyName: localTarget?.familyName || "gia đình mới", startedAt: Date.now() });
     try {
-      // Give React two frames to commit/paint BloomAppBootstrap BEFORE Firestore verification.
-      // This keeps perceived response immediate even when the network takes 1–3 seconds.
       await yieldToPaint();
-      // Không tin local UI cache: service xác nhận reverse index + authoritative member doc.
-      // Điều này cũng xử lý race khi admin vừa approve nhưng membership listener chưa render kịp.
+      // Authoritative membership doc + reverse index are verified by the service.
       const verified = await familyService.switchActiveFamily(user.uid, familyId);
       setFamilies((current) => current.some((item) => item.familyId === familyId)
         ? current
         : sortMemberships([verified, ...current]));
       setFamilyTransition({ targetFamilyId: familyId, targetFamilyName: verified.familyName || localTarget?.familyName || "gia đình mới", startedAt: Date.now() });
-      setUserProfile((current) => current ? { ...current, activeFamilyId: familyId } : current);
+      setUserProfile((current) => {
+        if (!current) return current;
+        const next = { ...current, activeFamilyId: familyId };
+        profileRef.current = next;
+        return next;
+      });
+      resetSharedRealtimeRegistry();
+      homeTimeCapsuleService.clearRealtimeCache();
       return true;
     } catch (error) {
       setFamilyTransition(null);
@@ -195,7 +271,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const completeFamilyTransition = useCallback(() => {
     setFamilyTransition((current) => {
       if (current && typeof __DEV__ !== "undefined" && __DEV__) {
-        console.log(`[Phase7][perf] family switch ${current.targetFamilyId} ready in ${Date.now() - current.startedAt}ms`);
+        console.log(`[A14][perf] family switch ${current.targetFamilyId} ready in ${Date.now() - current.startedAt}ms`);
       }
       return null;
     });
@@ -203,14 +279,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const dismissWelcome = useCallback(() => setShowWelcome(false), []);
 
   const logout = useCallback(async () => {
-    if (user) {
+    const signingOutUid = user?.uid ?? null;
+    if (signingOutUid) {
       await Promise.allSettled([
-        localNotificationService.clearForUser(user.uid),
-        pushTokenService.disableCurrentDevice(user.uid),
+        localNotificationService.clearForUser(signingOutUid),
+        pushTokenService.disableCurrentDevice(signingOutUid),
+        bootSessionCache.clear(signingOutUid),
+        familyHomeWarmCache.clearUser(signingOutUid),
+        clearFamilyGraphWarmCache(),
       ]);
     }
+    resetSharedRealtimeRegistry();
+    homeTimeCapsuleService.clearRealtimeCache();
     await authService.signOut();
     welcomeRequestedRef.current = false;
+    cacheHydratedUidRef.current = null;
     setConfirmation(null);
     setPendingPhoneNumber(null);
     setFamilyTransition(null);
@@ -276,7 +359,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     () => families.find((item) => item.familyId === userProfile?.activeFamilyId) ?? null,
     [families, userProfile?.activeFamilyId],
   );
-  const familySelectionRequired = profileStatus === "ready" && families.length > 1 && !activeMembership;
+  const familySelectionRequired = profileStatus === "ready"
+    && membershipStatus === "ready"
+    && families.length > 1
+    && !activeMembership;
 
   const value = useMemo<AuthContextType>(() => ({
     user,
@@ -290,8 +376,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     completeFamilyTransition,
     authStatus,
     profileStatus,
+    membershipStatus,
     showWelcome,
-    isInitializing: authStatus === "initializing" || profileStatus === "loading",
+    isInitializing: authStatus === "initializing" || profileStatus === "loading" || membershipStatus === "loading",
     isLoadingPhone,
     loginWithGoogle,
     sendPhoneCode,
@@ -303,7 +390,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     logout,
   }), [
     user, userProfile, families, activeMembership, familySelectionRequired, familyTransition,
-    switchFamily, completeFamilyTransition, authStatus, profileStatus, showWelcome, isLoadingPhone,
+    switchFamily, completeFamilyTransition, authStatus, profileStatus, membershipStatus, showWelcome, isLoadingPhone,
     loginWithGoogle, sendPhoneCode, confirmPhoneCode, resendPhoneCode, pendingPhoneNumber,
     refreshProfile, dismissWelcome, logout,
   ]);

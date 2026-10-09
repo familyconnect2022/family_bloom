@@ -1,0 +1,60 @@
+=== A16 ===
+PASS server Xiangqi modules exist
+PASS Xiangqi socket installed beside Chess
+PASS server-authoritative Xiangqi move event
+PASS server validates turn ownership
+PASS server engine protects general/check legality
+PASS server engine supports cannon screen
+PASS server engine supports horse leg
+PASS server engine supports elephant river/eye
+PASS durable Xiangqi Firestore path
+PASS Xiangqi uses shared active-game lock
+PASS Chess locks declare gameKind
+PASS Chess recovery ignores Xiangqi active lock
+PASS ready handshake is server authoritative
+PASS server clock is authoritative
+PASS five time-control shapes accepted
+PASS away allowance is 50 percent
+PASS restart restore pauses active game
+PASS join resumes paused game
+PASS bot pacing is 3s / 5s check
+PASS bot move is sent through authoritative manager
+PASS bot game bypasses quiet hours via test invite
+PASS human invite protocol exists
+PASS session recovery protocol exists
+PASS result acknowledgement exists
+PASS client ACKs finished result after reveal
+PASS bot rematch keeps human on red side
+PASS client Xiangqi socket service uses Firebase token
+PASS client screen consumes server state
+PASS client no longer executes local bot move timer
+PASS premove sends authoritative server move after landing
+PASS route/app background reports board presence
+PASS reconnect triggers recover
+PASS client/server event vocabulary aligned
+PASS copy-over BAT runs A16 gate
+PASS package exposes A16 gate
+PASS current aggregate includes A16
+PASS syntax server/src/xiangqi/xiangqiTypes.ts
+PASS syntax server/src/xiangqi/xiangqiEngine.ts
+PASS syntax server/src/xiangqi/xiangqiPersistenceService.ts
+PASS syntax server/src/xiangqi/xiangqiGameManager.ts
+PASS syntax server/src/xiangqi/xiangqiSocket.ts
+PASS syntax src/types/xiangqiRealtime.ts
+PASS syntax src/services/xiangqi/xiangqiSocketService.ts
+PASS syntax src/app/(xiangqi)/xiangqi-preview.tsx
+Phase 17.9A16 Xiangqi Server Authority: 44 PASS / 0 FAIL
+=== RELEASE ===
+FAMILY BLOOM PHASE 13 RELEASE READINESS
+PASS | Internal tools are Debug-only and exact developer-account gated | Developer Tools must require both the internal build boundary and the dedicated developer email.
+PASS | E2E harness is internal-only | E2E controls are disabled in release.
+PASS | Push token registry wired | Native token registration + private Firestore schema in direct/cloud rule sets.
+PASS | Logout disables device token | Signed-out account must not retain an enabled device token.
+PASS | Diagnostics schema is privacy bounded | No raw stack/form/family content is uploaded.
+PASS | Media lifecycle fields are immutable | Media record cannot be retargeted to another family/entity.
+PASS | Client family deletion is blocked | Avoid orphaned family subcollections.
+PASS | Bloom Supper rounded hero contract | Calendar/Moments can share the Tree lower silhouette.
+PASS | Cloud Functions remains Spark-safe | Blaze-dependent live validation remains deferred.
+PASS | Android release versionCode exists | Required for repeatable Android RC builds.
+PASS | iOS buildNumber prepared | Source readiness only; device validation deferred.
+Overall: PASS (11/11)

@@ -2,7 +2,7 @@ import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
@@ -138,6 +138,59 @@ function DashboardMomentCard({ post, onPress }: { post: MomentPost; onPress: () 
   );
 }
 
+function HomeSectionSkeleton({ kind = "rows" }: { kind?: "rows" | "grid" | "members" }) {
+  const opacity = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.9, duration: 620, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.55, duration: 620, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  if (kind === "grid") {
+    return (
+      <Animated.View style={[styles.skeletonGrid, { opacity }]}>
+        {[0, 1, 2, 3].map((index) => (
+          <View key={index} style={styles.skeletonMoment}>
+            <View style={styles.skeletonMomentMedia} />
+            <View style={styles.skeletonLineWide} />
+            <View style={styles.skeletonLineShort} />
+          </View>
+        ))}
+      </Animated.View>
+    );
+  }
+
+  if (kind === "members") {
+    return (
+      <Animated.View style={[styles.skeletonCard, styles.skeletonMembers, { opacity }]}>
+        {[0, 1, 2].map((index) => (
+          <View key={index} style={styles.skeletonMember}>
+            <View style={styles.skeletonAvatar} />
+            <View style={styles.skeletonMemberLine} />
+          </View>
+        ))}
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View style={[styles.skeletonCard, { opacity }]}>
+      {[0, 1, 2].map((index) => (
+        <View key={index} style={[styles.skeletonRow, index > 0 && styles.skeletonRowBorder]}>
+          <View style={styles.skeletonSquare} />
+          <View style={styles.skeletonCopy}>
+            <View style={styles.skeletonLineWide} />
+            <View style={styles.skeletonLineShort} />
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
 export default function HomeScreen() {
   useTabStartupTask("home");
   useTabRuntime("home");
@@ -158,7 +211,9 @@ export default function HomeScreen() {
     upcomingHasMore,
     recentMoments,
     momentsHaveMore,
-    loading,
+    membersLoading,
+    eventsLoading,
+    momentsLoading,
   } = useFamilyDashboard(activeFamilyId);
 
   const badgeRequestRef = useRef(0);
@@ -228,8 +283,12 @@ export default function HomeScreen() {
   }, [recentMomentHeadId, upcomingEventHeadId, refreshActivityBadge, user?.uid]);
 
   const visibleMembers = members.slice(0, DATA_LIMITS.dashboard.visibleMembers);
-  const summaryEvents = `${Math.min(upcomingEvents.length, DATA_LIMITS.dashboard.upcomingEvents)}${upcomingHasMore ? "+" : ""}`;
-  const summaryMoments = `${Math.min(recentMoments.length, DATA_LIMITS.dashboard.recentMoments)}${momentsHaveMore ? "+" : ""}`;
+  const summaryEvents = eventsLoading && !upcomingEvents.length
+    ? "–"
+    : `${Math.min(upcomingEvents.length, DATA_LIMITS.dashboard.upcomingEvents)}${upcomingHasMore ? "+" : ""}`;
+  const summaryMoments = momentsLoading && !recentMoments.length
+    ? "–"
+    : `${Math.min(recentMoments.length, DATA_LIMITS.dashboard.recentMoments)}${momentsHaveMore ? "+" : ""}`;
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={COLORS.background}>
@@ -347,11 +406,13 @@ export default function HomeScreen() {
                 </Pressable>
               )}
             </BloomCard>
+          ) : eventsLoading ? (
+            <HomeSectionSkeleton />
           ) : (
             <BloomEmptyState
               icon="calendar-outline"
-              title={loading ? "Bloom đang ngó lịch nhà" : "Lịch nhà đang thật thảnh thơi"}
-              description={loading ? "Một chút thôi, những ngày gần nhất sẽ hiện ra đây." : "Gieo một ngày đáng nhớ để cả nhà cùng mong chờ nhé."}
+              title="Lịch nhà đang thật thảnh thơi"
+              description="Gieo một ngày đáng nhớ để cả nhà cùng mong chờ nhé."
               compact
             />
           )}
@@ -390,12 +451,14 @@ export default function HomeScreen() {
                 );
               })}
             </BloomCard>
+          ) : onThisDayLoading ? (
+            <HomeSectionSkeleton />
           ) : (
             <BloomCard style={styles.onThisDayEmpty}>
               <View style={styles.onThisDayEmptyIcon}><Ionicons name="time-outline" size={22} color={COLORS.primary} /></View>
               <View style={styles.onThisDayEmptyCopy}>
-                <Text style={styles.onThisDayEmptyTitle}>{onThisDayLoading ? "Bloom đang tìm trong ký ức…" : "Hôm nay chưa có kỷ niệm cũ"}</Text>
-                <Text style={styles.onThisDayEmptyText}>{onThisDayLoading ? "Chỉ một chút, Bloom đang nhìn lại những năm trước." : "Khi cả nhà từng giữ một kỷ niệm vào ngày này, Bloom sẽ nhẹ nhàng mang nó trở lại đây."}</Text>
+                <Text style={styles.onThisDayEmptyTitle}>Hôm nay chưa có kỷ niệm cũ</Text>
+                <Text style={styles.onThisDayEmptyText}>Khi cả nhà từng giữ một kỷ niệm vào ngày này, Bloom sẽ nhẹ nhàng mang nó trở lại đây.</Text>
               </View>
             </BloomCard>
           )}
@@ -414,11 +477,13 @@ export default function HomeScreen() {
                 <DashboardMomentCard key={post.id} post={post} onPress={() => router.push("/moments")} />
               ))}
             </View>
+          ) : momentsLoading ? (
+            <HomeSectionSkeleton kind="grid" />
           ) : (
             <BloomEmptyState
               icon="images-outline"
-              title={loading ? "Đang gom những điều dễ thương" : "Tường nhà đang chờ chuyện mới"}
-              description={loading ? "Bloom đang lấy vài kỷ niệm gần nhất." : "Một bức ảnh nhỏ cũng đủ làm ngôi nhà ấm hơn đó 🌸"}
+              title="Tường nhà đang chờ chuyện mới"
+              description="Một bức ảnh nhỏ cũng đủ làm ngôi nhà ấm hơn đó 🌸"
               compact
             />
           )}
@@ -455,8 +520,10 @@ export default function HomeScreen() {
                 <Text style={styles.memberExtra}>Và {members.length - visibleMembers.length} người thương khác 🌷</Text>
               )}
             </BloomCard>
+          ) : membersLoading ? (
+            <HomeSectionSkeleton kind="members" />
           ) : (
-            <BloomEmptyState icon="people-outline" title="Bloom đang gọi mọi người về nhà" description="Một chút thôi, Bloom đang gọi những gương mặt thân quen về đây." compact />
+            <BloomEmptyState icon="people-outline" title="Mái nhà đang chờ thêm người thương" description="Khi có thành viên, những gương mặt thân quen sẽ hiện ở đây." compact />
           )}
         </View>
 
@@ -558,6 +625,20 @@ const styles = StyleSheet.create({
   memberMiniName: { marginTop: 6, width: "100%", color: COLORS.primaryText, fontSize: 10.5, fontWeight: "800", textAlign: "center" },
   memberExtra: { marginTop: 13, color: COLORS.secondaryText, fontSize: 10.5, textAlign: "center" },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
+  skeletonCard: { borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, paddingHorizontal: 13, overflow: "hidden" },
+  skeletonRow: { minHeight: 79, flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 12 },
+  skeletonRowBorder: { borderTopWidth: 1, borderTopColor: COLORS.border },
+  skeletonSquare: { width: 48, height: 54, borderRadius: 16, backgroundColor: COLORS.softSurface },
+  skeletonCopy: { flex: 1, gap: 8 },
+  skeletonLineWide: { width: "78%", height: 11, borderRadius: 6, backgroundColor: COLORS.softSurface },
+  skeletonLineShort: { width: "52%", height: 9, borderRadius: 5, backgroundColor: COLORS.softSurface },
+  skeletonGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 11 },
+  skeletonMoment: { width: "48.4%", minHeight: 180, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, overflow: "hidden", paddingBottom: 13 },
+  skeletonMomentMedia: { width: "100%", aspectRatio: 1.35, backgroundColor: COLORS.softSurface, marginBottom: 12 },
+  skeletonMembers: { minHeight: 104, flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 14 },
+  skeletonMember: { width: "30%", alignItems: "center", gap: 8 },
+  skeletonAvatar: { width: 54, height: 54, borderRadius: 20, backgroundColor: COLORS.softSurface },
+  skeletonMemberLine: { width: 58, height: 9, borderRadius: 5, backgroundColor: COLORS.softSurface },
   rowPressed: { opacity: 0.68 },
   bottomSpace: { height: 12 },
 });

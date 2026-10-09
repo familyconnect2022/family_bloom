@@ -35,7 +35,7 @@ check('new bot game treats bot as connected automation',manager.includes('new Se
 check('bot only chooses authoritative legal moves',server.includes('state.legalMoves.map')&&server.includes('chooseTestBotMove'));
 check('bot prefers captures/promotion without engine evaluation',server.includes('fenHasPieceAt(state.fen, move.to)')&&server.includes('if (move.promotion) score += 8'));
 check('bot moves through normal manager.move validation',server.includes('await manager.move(')&&server.includes('latest.revision'));
-check('bot action uses the fixed 1s human-cadence delay',server.includes('const TEST_BOT_MOVE_DELAY_MS = 1_000')&&server.includes('}, TEST_BOT_MOVE_DELAY_MS)'));
+check('bot action uses human-like 3s normal / 5s checking cadence',server.includes('const TEST_BOT_MOVE_DELAY_MS = 3_000')&&server.includes('const TEST_BOT_CHECK_DELAY_MS = 5_000')&&server.includes('planned?.givesCheck ? TEST_BOT_CHECK_DELAY_MS : TEST_BOT_MOVE_DELAY_MS'));
 check('bot scheduling dedupes by authoritative revision',server.includes('existing?.revision === state.revision'));
 check('bot timer clears when game not active',server.includes('state.status !== "active"')&&server.includes('clearBotTimer'));
 check('bot auto rejects draw offer for one-device testing',server.includes('await manager.rejectDraw'));

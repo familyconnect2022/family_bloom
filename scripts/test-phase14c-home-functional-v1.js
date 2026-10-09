@@ -13,8 +13,8 @@ for(const f of req) ck(ex(f),`exists:${f}`);
 const w=rd('src/services/home/homeWhisperService.ts');
 ck(w.includes('const PAGE_SIZE = 20'),'whisper pagination 20');
 ck(w.includes('const RETENTION_DAYS = 60'),'whisper retention 60d');
-ck(w.includes('savedHomeWhispers'),'saved whisper snapshot');
-ck(w.includes('homeInbox'),'direct recipient inbox');
+ck(w.includes('savedHomeWhispers')||w.includes('userSavedHomeWhispers'),'saved whisper snapshot');
+ck(w.includes('homeInbox')||w.includes('userHomeInbox'),'direct recipient inbox');
 const wp=rd('src/features/home/whispers/WhisperFeaturePanel.tsx');
 ck(wp.includes('Gửi cho cả nhà?')&&wp.includes('Người thân'),'whisper family/direct UX');
 ck((wp.match(/\{ value: \"/g)||[]).length===10,'whisper 10 emotions');
@@ -25,7 +25,7 @@ ck(wp.includes('FamilyMemberPicker')&&pp.includes('FamilyMemberPicker'),'members
 ck(memberPicker.includes('FlatList')&&(memberPicker.includes('Tìm theo tên thành viên')||memberPicker.includes('Tìm người thân theo tên'))&&memberPicker.includes('initialNumToRender={14}'),'member picker scalable search + virtualization');
 ck(w.includes('fallbackFetchPage')&&ps.includes('fallbackUnsubscribe'),'missing-index fallback');
 ck(ps.includes('POLL_RETENTION_DAYS = 30'),'poll retention 30d');
-ck(ps.includes('eligibleUids')&&ps.includes('/ballots/${uid}'),'poll frozen denominator + ballots');
+ck(ps.includes('eligibleUids')&&(ps.includes('/ballots/${uid}')||ps.includes('familyHomePollBallot')),'poll frozen denominator + ballots');
 ck(pp.includes('Nhóm bỏ phiếu phải có ít nhất 3 người'),'poll group min 3');
 ck(pp.includes('Bỏ phiếu ẩn danh')&&pp.includes('kể cả người tạo cũng không thấy'),'poll anonymous UX');
 ck(pp.includes('Hôm nay')&&pp.includes('Ngày mai')&&pp.includes('Chọn ngày'),'poll expiry choices');
@@ -33,7 +33,7 @@ ck(pp.includes('Chưa bỏ phiếu')&&pp.includes('Không bỏ phiếu')&&pp.inc
 const k=rd('src/data/kitchen/bloomRecipesV1.ts'), ks=rd('src/services/home/homeKitchenService.ts');
 ck((k.match(/"id":\s*"bloom-v1-/g)||[]).length===100,'kitchen 100 recipes');
 ck(ks.includes('dailyMenu')&&ks.includes('rotationStride'),'kitchen daily rotation');
-ck(ks.includes('homeKitchenPreferences'),'kitchen membership-user preferences');
+ck(ks.includes('homeKitchenPreferences')||ks.includes('familyHomeKitchenPreferences'),'kitchen membership-user preferences');
 const rules=rd('firestore.rules');
 ck(rules.includes('match /savedHomeWhispers/{whisperId}')&&rules.includes('match /homeInbox/{eventId}'),'rules user private data');
 ck(rules.includes('match /ballots/{uid}')&&rules.includes('match /homeKitchenPreferences/{uid}'),'rules polls/kitchen');

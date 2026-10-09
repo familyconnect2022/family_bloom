@@ -17,6 +17,7 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
   activeSignal,
   runtimeActive = true,
   actions,
+  onTenSeconds,
 }: {
   state: ChessGameState;
   color: ChessColor;
@@ -27,6 +28,7 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
   activeSignal: SharedValue<number>;
   runtimeActive?: boolean;
   actions?: ReactNode;
+  onTenSeconds?: () => void;
 }) {
   const focus = useDerivedValue(() => withTiming(activeSignal.value, { duration: 150 }));
   const railStyle = useAnimatedStyle(() => ({
@@ -45,7 +47,7 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
         <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
       </View>
       <View style={styles.rightSide}>
-        <ChessClock state={state} color={color} activeSignal={activeSignal} runtimeActive={runtimeActive} />
+        <ChessClock state={state} color={color} activeSignal={activeSignal} runtimeActive={runtimeActive} onTenSeconds={onTenSeconds} />
         {actions ? <View style={styles.actions}>{actions}</View> : null}
       </View>
     </Animated.View>

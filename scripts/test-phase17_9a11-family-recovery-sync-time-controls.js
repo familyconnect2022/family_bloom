@@ -221,7 +221,7 @@ async function main() {
   check('full surface explains authoritative sync without blanking board', surface.includes('Đang đồng bộ ván cờ…') && surface.includes('game.connectionPhase !== "connected"'));
   check('finished unseen recovery can reclaim root Chess surface', globalHost.includes('realtime.activeGameId ?? realtime.pendingResultGameId') && globalHost.includes('"recovered_result"'));
   check('lobby also returns recovered finished result to root surface', lobby.includes('lobby.pendingResultGameId || lobby.activeGameId'));
-  check('result dismissal uses durable server ack for every finish reason', realtime.includes('CHESS_EVENTS.gameResultAck') && surface.includes('realtimeActions.acknowledgeResult(surface.gameId)'));
+  check('result dismissal uses durable server ack for every finish reason', realtime.includes('CHESS_EVENTS.gameResultAck') && surface.includes('realtimeActions.acknowledgeResult(finishedGameId)'));
 
   check('all five time-control presets still share one typed model', (types.match(/kind: "clocked"/g) || []).length >= 4 && types.includes('kind: "unlimited"'));
   check('time-control UI uses human Bloom labels without changing wire values', types.includes('Siêu nhanh · 3+2') && types.includes('Nhanh +5 · 10+5'));

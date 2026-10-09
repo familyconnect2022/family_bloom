@@ -200,14 +200,22 @@ export function isXiangqiInCheck(pieces: readonly XiangqiPieceModel[], color: Xi
     .some((piece) => pseudoMovesForPiece(pieces, piece).some((target) => target.col === general.col && target.row === general.row));
 }
 
-export function getXiangqiLegalMoves(state: Pick<XiangqiGameState, "pieces" | "turn" | "gameOver">, pieceId: string): Square[] {
+export function getXiangqiLegalMovesForColor(
+  state: Pick<XiangqiGameState, "pieces" | "gameOver">,
+  pieceId: string,
+  color: XiangqiColor,
+): Square[] {
   if (state.gameOver) return [];
   const piece = state.pieces.find((item) => item.id === pieceId);
-  if (!piece || piece.color !== state.turn) return [];
+  if (!piece || piece.color !== color) return [];
   return pseudoMovesForPiece(state.pieces, piece).filter((to) => {
     const next = applyUnchecked(state.pieces, piece.id, to).pieces;
     return !isXiangqiInCheck(next, piece.color);
   });
+}
+
+export function getXiangqiLegalMoves(state: Pick<XiangqiGameState, "pieces" | "turn" | "gameOver">, pieceId: string): Square[] {
+  return getXiangqiLegalMovesForColor(state, pieceId, state.turn);
 }
 
 export function getAllXiangqiLegalMoves(state: Pick<XiangqiGameState, "pieces" | "turn" | "gameOver">): XiangqiMove[] {
@@ -281,22 +289,30 @@ export function timeoutXiangqi(state: XiangqiGameState, color: XiangqiColor): Xi
   return { ...state, winner: otherColor(color), finishReason: "timeout", gameOver: true };
 }
 
-export function chooseXiangqiBotMove(state: XiangqiGameState): XiangqiMove | null {
+export type XiangqiBotPlan = { move: XiangqiMove; givesCheck: boolean };
+
+export function chooseXiangqiBotMovePlan(state: XiangqiGameState): XiangqiBotPlan | null {
   if (state.gameOver || state.turn !== "black") return null;
   const moves = getAllXiangqiLegalMoves(state);
   if (!moves.length) return null;
   const scored = moves.map((move) => {
     const captured = move.capturedId ? state.pieces.find((piece) => piece.id === move.capturedId) : null;
     const after = playXiangqiMove(state, move.pieceId, move.to);
+    const givesCheck = after.inCheck === "red";
     let score = captured ? PIECE_VALUE[captured.type] * 100 : 0;
     if (after.gameOver && after.winner === "black") score += 100_000;
-    else if (after.inCheck === "red") score += 35;
+    else if (givesCheck) score += 35;
     score += 4 - Math.abs(4 - move.to.col) * 0.15;
     score -= move.to.row * 0.001;
-    return { move, score };
+    return { move, score, givesCheck };
   });
   scored.sort((a, b) => b.score - a.score || a.move.pieceId.localeCompare(b.move.pieceId) || a.move.to.row - b.move.to.row || a.move.to.col - b.move.to.col);
-  return scored[0]?.move ?? null;
+  const top = scored[0];
+  return top ? { move: top.move, givesCheck: top.givesCheck } : null;
+}
+
+export function chooseXiangqiBotMove(state: XiangqiGameState): XiangqiMove | null {
+  return chooseXiangqiBotMovePlan(state)?.move ?? null;
 }
 
 export function xiangqiFinishCopy(state: XiangqiGameState) {

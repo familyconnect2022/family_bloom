@@ -127,6 +127,36 @@ export default function PlayScreen() {
         />
 
         <View style={styles.pageBody}>
+          <BloomSectionHeader
+            title="Góc Nhà Mình"
+            subtitle="Tin tức, trò chơi và quỹ chung — ba nơi cả nhà ghé thường xuyên nhất."
+          />
+          <View style={styles.list}>
+            <HubCard
+              icon="notifications-outline"
+              title="Bảng tin Nhà Mình"
+              description="Thông báo, lời nhắc và những chuyện cả nhà cần cùng để ý."
+              accent="#FFF0F4"
+              badge="Xem ngay"
+              onPress={() => router.push("/home-board" as never)}
+            />
+            <HubCard
+              icon="game-controller-outline"
+              title="Trò chơi Nhà Mình"
+              description="6 trò turn-based: hiểu nhau, đoán người, ký ức, thật/bịa, nối chuyện và Bingo."
+              accent="#FFF0D9"
+              badge="Chơi ngay"
+              onPress={() => router.push("/home-games" as never)}
+            />
+            <HubCard
+              icon="wallet-outline"
+              title="Quỹ gia đình"
+              description="Thủ quỹ, nhóm giữ quỹ, thu chi, dấu chân và thống kê Ngày/Tháng/Năm."
+              accent="#E8F7F2"
+              badge="Dùng ngay"
+              onPress={() => router.push("/home-fund" as never)}
+            />
+          </View>
           <BloomCard style={styles.welcomeCard}>
             <View style={styles.welcomeIcon}><Ionicons name="home" size={25} color={COLORS.primaryText} /></View>
             <View style={styles.welcomeCopy}>
@@ -180,27 +210,6 @@ export default function PlayScreen() {
             />
           </View>
 
-          <BloomSectionHeader title="Chơi và cùng quản lý Nhà Mình" subtitle="Cùng chơi, cùng chăm quỹ chung và ghé những góc nhỏ khiến Nhà Mình vui hơn mỗi ngày" />
-          <View style={styles.grid}>
-            <BloomCard style={styles.miniCard} onPress={() => router.push("/home-games" as never)}>
-              <View style={[styles.miniIcon, { backgroundColor: "#FFF0D9" }]}><Ionicons name="game-controller-outline" size={22} color={COLORS.primaryText} /></View>
-              <Text style={styles.miniTitle}>Trò chơi Nhà Mình</Text>
-              <Text style={styles.miniText}>6 trò turn-based: hiểu nhau, đoán người, ký ức, thật/bịa, nối chuyện và Bingo.</Text>
-              <Text style={styles.soon}>CHƠI NGAY</Text>
-            </BloomCard>
-            <BloomCard style={styles.miniCard} onPress={() => router.push("/home-fund" as never)}>
-              <View style={[styles.miniIcon, { backgroundColor: "#E8F7F2" }]}><Ionicons name="wallet-outline" size={22} color={COLORS.primaryText} /></View>
-              <Text style={styles.miniTitle}>Quỹ gia đình</Text>
-              <Text style={styles.miniText}>Thủ quỹ, nhóm giữ quỹ, thu chi, dấu chân và thống kê Ngày/Tháng/Năm.</Text>
-              <Text style={styles.soon}>DÙNG NGAY</Text>
-            </BloomCard>
-            <BloomCard style={styles.miniCard} onPress={() => router.push("/home-board" as never)}>
-              <View style={[styles.miniIcon, { backgroundColor: "#FFF0F4" }]}><Ionicons name="notifications-outline" size={22} color={COLORS.primaryText} /></View>
-              <Text style={styles.miniTitle}>Bảng tin Nhà Mình</Text>
-              <Text style={styles.miniText}>Thông báo, lời nhắc và những chuyện cả nhà cần cùng để ý.</Text>
-              <Text style={styles.soon}>XEM GIAO DIỆN</Text>
-            </BloomCard>
-          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -234,10 +243,4 @@ const styles = StyleSheet.create({
   badgeAttention: { backgroundColor: "#D9577D" },
   badgeText: { color: COLORS.primary, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.35 },
   badgeTextAttention: { color: COLORS.white },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  miniCard: { width: "48.5%", minHeight: 170, padding: 14 },
-  miniIcon: { width: 43, height: 43, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  miniTitle: { marginTop: 12, color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
-  miniText: { marginTop: 5, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15.5 },
-  soon: { marginTop: "auto", paddingTop: 10, color: COLORS.primary, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.7 },
 });

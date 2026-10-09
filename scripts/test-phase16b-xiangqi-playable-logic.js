@@ -105,7 +105,7 @@ const debugBuild = fs.readFileSync(debugBuildPath, 'utf8');
 const releaseBuild = fs.readFileSync(releaseBuildPath, 'utf8');
 check('Xiangqi page uses chess-like player rails', screen.includes('PlayerRail') && screen.includes('Bloom Bot') && screen.includes('Đầu hàng'));
 check('Xiangqi rail uses focused 10-minute clock UI', screen.includes('600_000') && screen.includes('clockActive') && screen.includes('clockTextActive'));
-check('Xiangqi page is playable, not gallery-only', screen.includes('playXiangqiMove') && screen.includes('chooseXiangqiBotMove'));
+check('Xiangqi page is playable, not gallery-only', (screen.includes('playXiangqiMove') && screen.includes('chooseXiangqiBotMove')) || (screen.includes('XIANGQI_EVENTS.gameMove') && screen.includes('XiangqiRealtimeState')));
 check('board uses native RNGH tap surface inside ScrollView', board.includes('GestureDetector') && board.includes('Gesture.Tap()') && board.includes('.runOnJS(true)') && board.includes('handleBoardTap(event.x, event.y)'));
 check('piece box uses user-approved 1.3x scale', board.includes('step * 1.3') && board.includes('Math.min(72'));
 const internalStyleBlock = chessBoard.split('const styles=StyleSheet.create({')[1] || '';

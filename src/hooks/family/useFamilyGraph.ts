@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from "react";
+import { getFamilyGraphWarmRecord, primeFamilyGraphWarmCache } from "../../components/familyGraph/familyGraphWarmCache";
 import { familyGraphService } from "../../services/familyGraph/familyGraphService";
 import type { FamilyGraphSnapshot } from "../../types/familyGraph";
 
 const EMPTY: FamilyGraphSnapshot = { familyId: "", persons: [], relationships: [] };
 
 /**
- * Bounded realtime Family Graph hook.
- * `enabled=false` explicitly releases Firestore listeners while a graph screen is
- * behind another full-screen route. This prevents multiple hidden graph screens
- * from recomputing the same snapshot during admin/editor navigation.
+ * Realtime Family Graph hook with A14 cache-first entry.
+ *
+ * The linked current Person is derived from the already-loaded persons snapshot;
+ * no extra personLinks -> person document round trip is opened during normal entry.
  */
 export const useFamilyGraph = (
   familyId: string | null | undefined,
   currentUid?: string | null,
   enabled = true,
 ) => {
-  const [snapshot, setSnapshot] = useState<FamilyGraphSnapshot>(EMPTY);
-  const [defaultFocusId, setDefaultFocusId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!!familyId && enabled);
+  const warmAtRender = getFamilyGraphWarmRecord(familyId);
+  const [snapshot, setSnapshot] = useState<FamilyGraphSnapshot>(() => warmAtRender?.snapshot ?? EMPTY);
+  const [defaultFocusId, setDefaultFocusId] = useState<string | null>(() => warmAtRender?.defaultFocusId ?? null);
+  const [loading, setLoading] = useState(!!familyId && enabled && !warmAtRender);
   const [error, setError] = useState<unknown>(null);
-  const loadedFamilyRef = useRef<string | null>(null);
+  const loadedFamilyRef = useRef<string | null>(warmAtRender?.familyId ?? null);
 
   useEffect(() => {
     setError(null);
@@ -35,11 +37,23 @@ export const useFamilyGraph = (
       return;
     }
 
+    const warm = getFamilyGraphWarmRecord(familyId);
     const familyChanged = loadedFamilyRef.current !== familyId;
     if (familyChanged) {
-      setSnapshot({ familyId, persons: [], relationships: [] });
-      setDefaultFocusId(null);
-      setLoading(true);
+      if (warm) {
+        loadedFamilyRef.current = familyId;
+        setSnapshot(warm.snapshot);
+        setDefaultFocusId(
+          warm.snapshot.persons.find((person) => person.linkedUid === currentUid)?.id
+          ?? warm.defaultFocusId
+          ?? null,
+        );
+        setLoading(false);
+      } else {
+        setSnapshot({ familyId, persons: [], relationships: [] });
+        setDefaultFocusId(null);
+        setLoading(true);
+      }
     }
 
     const stop = familyGraphService.watchSnapshot(
@@ -47,6 +61,9 @@ export const useFamilyGraph = (
       (next) => {
         loadedFamilyRef.current = familyId;
         setSnapshot(next);
+        const linked = currentUid ? next.persons.find((person) => person.linkedUid === currentUid) : null;
+        setDefaultFocusId(linked?.id ?? null);
+        primeFamilyGraphWarmCache(next, currentUid);
         setLoading(false);
       },
       (nextError) => {
@@ -55,24 +72,6 @@ export const useFamilyGraph = (
       },
     );
     return stop;
-  }, [enabled, familyId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!enabled || !familyId || !currentUid) {
-      if (!enabled || !currentUid) setDefaultFocusId(null);
-      return;
-    }
-
-    familyGraphService.getDefaultFocusPerson(familyId, currentUid)
-      .then((person) => {
-        if (!cancelled) setDefaultFocusId(person?.id ?? null);
-      })
-      .catch((nextError) => {
-        if (!cancelled) setError(nextError);
-      });
-
-    return () => { cancelled = true; };
   }, [currentUid, enabled, familyId]);
 
   useEffect(() => {
@@ -82,9 +81,8 @@ export const useFamilyGraph = (
       return;
     }
     const linked = snapshot.persons.find((person) => person.linkedUid === currentUid);
-    if (linked) setDefaultFocusId(linked.id);
-    else if (snapshot.familyId) setDefaultFocusId(null);
-  }, [currentUid, enabled, snapshot.familyId, snapshot.persons]);
+    setDefaultFocusId(linked?.id ?? null);
+  }, [currentUid, enabled, snapshot.persons]);
 
   return {
     snapshot,

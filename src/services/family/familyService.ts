@@ -154,7 +154,7 @@ export const familyService = {
   },
 
   async listForUser(uid: string): Promise<UserFamilyMembership[]> {
-    const s = await getDocs(collection(getFirestore(), `users/${uid}/memberships`));
+    const s = await getDocs(collection(getFirestore(), FIRESTORE_PATHS.userMemberships(uid)));
     return s.docs.map(d => d.data() as UserFamilyMembership);
   },
 
@@ -164,7 +164,7 @@ export const familyService = {
    */
   watchForUser(uid: string, onChange: (items: UserFamilyMembership[]) => void, onError?: (error: unknown) => void) {
     return onSnapshot(
-      collection(getFirestore(), `users/${uid}/memberships`),
+      collection(getFirestore(), FIRESTORE_PATHS.userMemberships(uid)),
       snap => onChange(snap.docs.map(d => d.data() as UserFamilyMembership)),
       onError,
     );
@@ -176,7 +176,7 @@ export const familyService = {
   },
 
   async listMembers(familyId: string): Promise<FamilyMember[]> {
-    const s = await getDocs(collection(getFirestore(), `families/${familyId}/members`));
+    const s = await getDocs(collection(getFirestore(), FIRESTORE_PATHS.familyMembers(familyId)));
     return s.docs.map(d => d.data() as FamilyMember);
   },
 
@@ -184,7 +184,7 @@ export const familyService = {
   /** Realtime member list for the active family UI. */
   watchMembers(familyId: string, onChange: (members: FamilyMember[]) => void, onError?: (error: unknown) => void) {
     return onSnapshot(
-      collection(getFirestore(), `families/${familyId}/members`),
+      collection(getFirestore(), FIRESTORE_PATHS.familyMembers(familyId)),
       snap => onChange(snap.docs.map(d => d.data() as FamilyMember)),
       onError,
     );

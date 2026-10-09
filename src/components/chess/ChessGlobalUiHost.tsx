@@ -6,6 +6,7 @@ import { useChessRealtime } from "../../context/ChessRealtimeContext";
 import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
 import { activateChessSurface, getChessSurfaceState, prepareChessSurface, showChessSurfaceFull } from "../../services/chess/chessSurfaceStore";
 import { subscribeChessUiEvents } from "../../services/chess/chessUiEventStore";
+import { publishChessSoundUiEvent } from "../../services/chess/chessSoundEventBus";
 import { CHESS_ERROR_COPY } from "../../types/chess";
 
 /**
@@ -69,7 +70,9 @@ export function ChessGlobalUiHost() {
                 title: "Chưa vào được ván",
                 message: CHESS_ERROR_COPY[response.errorCode],
               });
+              return;
             }
+            publishChessSoundUiEvent("challenge_accepted");
           })
           .finally(() => setBusy(false));
       }}

@@ -23,14 +23,15 @@ import type {
   HomeWhisperFeedMode,
   SavedHomeWhisper,
 } from "@/types/homeLiving";
+import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 
 const PAGE_SIZE = 20;
 const RETENTION_DAYS = 60;
 const nowIso = () => new Date().toISOString();
-const whisperCollection = (familyId: string) => `families/${familyId}/homeWhispers`;
-const whisperPath = (familyId: string, whisperId: string) => `${whisperCollection(familyId)}/${whisperId}`;
-const savedCollection = (uid: string) => `users/${uid}/savedHomeWhispers`;
-const inboxCollection = (uid: string) => `users/${uid}/homeInbox`;
+const whisperCollection = FIRESTORE_PATHS.familyHomeWhispers;
+const whisperPath = FIRESTORE_PATHS.familyHomeWhisper;
+const savedCollection = FIRESTORE_PATHS.userSavedHomeWhispers;
+const inboxCollection = FIRESTORE_PATHS.userHomeInbox;
 
 export type WhisperPageCursor = unknown | null;
 

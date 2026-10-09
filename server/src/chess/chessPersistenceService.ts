@@ -13,8 +13,8 @@ export class ChessPersistenceService {
       const [w, b] = await Promise.all([tx.get(whiteLock), tx.get(blackLock)]);
       if (w.exists || b.exists) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
       tx.create(this.gameRef(game.familyId, game.id), game);
-      tx.create(whiteLock, { uid: game.whiteUid, familyId: game.familyId, gameId: game.id, createdAt: game.createdAt });
-      tx.create(blackLock, { uid: game.blackUid, familyId: game.familyId, gameId: game.id, createdAt: game.createdAt });
+      tx.create(whiteLock, { uid: game.whiteUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt });
+      tx.create(blackLock, { uid: game.blackUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt });
     });
   }
 
@@ -34,7 +34,7 @@ export class ChessPersistenceService {
   }
   async getActiveForUid(uid: string) {
     const snap = await this.lockRef(uid).get();
-    return snap.exists ? snap.data() as { familyId: string; gameId: string } : null;
+    return snap.exists ? snap.data() as { familyId: string; gameId: string; gameKind?: "chess" | "xiangqi" } : null;
   }
   async getUnseenResult(uid: string, familyId: string) {
     const snap = await this.recoveryRef(uid, familyId).get();
