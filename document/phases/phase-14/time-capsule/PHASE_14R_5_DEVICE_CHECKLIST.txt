@@ -1,0 +1,46 @@
+FAMILY BLOOM — PHASE 14R.5 DEVICE CHECKLIST
+
+PREP
+[ ] Patch is applied over 14R.4G (or FULL source is used).
+[ ] Firestore rules deployed.
+[ ] Family Bloom Release and Family Bloom Dev still coexist on the phone.
+[ ] Recipient Android notification permission is allowed.
+[ ] Use two different authenticated family member accounts for sender/recipient testing.
+
+A. DIRECT WHISPER — RECIPIENT APP FOREGROUND
+[ ] Sender chooses “Người thân” and exactly one recipient.
+[ ] Recipient gets a Bloom toast without opening Lời thì thầm first.
+[ ] Toast identifies a new private whisper but does not expose the whisper message itself.
+[ ] Tapping toast opens Lời thì thầm.
+[ ] No other family member receives that alert.
+
+B. DIRECT WHISPER — RECIPIENT APP BACKGROUND
+[ ] Put recipient app in background (do not force-stop).
+[ ] Sender sends another direct whisper.
+[ ] Android notification appears.
+[ ] Tapping it opens Lời thì thầm in the correct family.
+
+C. FAMILY WHISPER
+[ ] Sender chooses “Cả nhà” and confirms.
+[ ] Whisper appears according to existing family visibility rules.
+[ ] No targeted homeInbox / OS notification is generated for every member.
+
+D. RELEASE + DEV DEDUPE
+[ ] If the same recipient account is signed in to Release + DEV, one inbox event is not alerted twice.
+[ ] Both package IDs remain installed: com.familybloom.android and com.familybloom.android.dev.
+
+E. KILLED APP (ONLY IF FUNCTIONS DEPLOYED)
+[ ] Force-close recipient app.
+[ ] Sender sends a direct whisper.
+[ ] Remote notification arrives via Cloud Function/FCM.
+[ ] Tap opens Lời thì thầm.
+
+F. TIME CAPSULE REGRESSION
+[ ] Hộp dành cho tôi / Hộp tôi gửi realtime still works.
+[ ] Opening a capsule updates sender-side box state.
+[ ] Ready unopened capsule attention/shake rules remain unchanged.
+
+G. BUILD UPDATE
+[ ] DEV build installs over existing Family Bloom Dev, not Release.
+[ ] RELEASE build installs as an update over Family Bloom without uninstalling.
+[ ] Existing Release local data/session is preserved after update.

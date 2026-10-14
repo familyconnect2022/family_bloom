@@ -1,0 +1,24 @@
+Family Bloom Phase 11.2B - Firebase E2E Sender + Cleanup
+Date: 2026-09-27
+Base: Phase 11.2B AUTOMATED_REGRESSION_FULL
+
+Added:
+- DEV-only Firebase E2E runner in Performance Lab.
+- Automatically discovers an existing "Bloom E2E" family for the signed-in test account or creates one without switching activeFamilyId.
+- Hard safety boundary rejects any target family whose name does not start with "Bloom E2E".
+- Creates a real Event and Moment through the existing production services/Auth/Firestore Security Rules.
+- Reads both documents back and verifies payload identity.
+- Cleans up Event/Moment after the run.
+- Produces PASS/FAIL/SKIP step report and copyable text report.
+- Receiver Activity/notification/deep-link is deliberately SKIP until a real receiver account/device is connected; sender-only checks never fake PASS.
+
+Safety:
+- No Auth bypass.
+- No Firestore Rules bypass.
+- No writes to normal family names.
+- Harness remains __DEV__ only.
+- Test family is persistent; per-run Event/Moment documents are removed.
+
+Contract tests:
+- npm run test:phase112b:e2e
+- node scripts/test-phase112b-harness.js

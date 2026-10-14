@@ -1,0 +1,48 @@
+PHASE 14C — REAL DEVICE TEST CHECKLIST
+
+PREP
+[ ] Deploy firestore.rules
+[ ] Deploy firestore.indexes.json (Family_Bloom_Deploy_Firestore_Indexes.bat)
+[ ] Restart Metro: npx expo start --dev-client --clear
+
+LỜI THÌ THẦM
+[ ] Cả nhà: confirmation appears before send
+[ ] Cả nhà: family members can see; no family-wide push is expected on Spark
+[ ] Người thân: selectable list is real family users, not genealogy Persons
+[ ] Direct: sender + selected recipient see it; a third family account cannot query/read it
+[ ] 10 emotions selectable
+[ ] Recipient/family reader can heart/unheart
+[ ] Tất cả / Gửi đến tôi / Tôi đã gửi / Cả nhà filters work
+[ ] Lưu creates item in Lời đã lưu; saved item survives source removal
+[ ] Pagination/load-more remains smooth around 100/200/500 synthetic/real items where available
+
+CÙNG QUYẾT ĐỊNH
+[ ] Whole-family poll denominator equals membership snapshot at creation
+[ ] Group cannot create with 1 or 2 users; 3+ works
+[ ] Non-selected family user cannot see a group poll
+[ ] Description/rules text persists
+[ ] Today / Tomorrow / custom date work
+[ ] Anonymous: creator and other voters cannot see voter names
+[ ] Named: eligible users can view names for cast ballots
+[ ] Percentages use total eligible count and total 100%
+[ ] Active shows Chưa bỏ phiếu; expired shows Không bỏ phiếu
+[ ] Expired poll has no vote buttons and appears in Đã kết thúc
+
+BẾP
+[ ] 100-item local catalog loads without recipe API
+[ ] Daily breakfast/lunch/dinner suggestions appear
+[ ] Save dietary preference per account
+[ ] Different users' preferences affect household suggestions
+[ ] Đổi món changes current slot
+[ ] Search and recipe detail work
+[ ] No medical-safety claim shown
+
+REGRESSION
+[ ] Phòng nhạc UI remains Phase 14B.1 shell
+[ ] Nhà Mình hub routes all cards correctly
+[ ] Switch family isolates all Home data/preferences
+[ ] tabs.navigator=1 and previous performance gate not visibly regressed
+[ ] Moments / Planner / Graph / Activity still open normally
+
+PUSH NOTE
+Remote OS push for a direct whisper is source-ready in Cloud Functions but requires Functions deployment/Blaze. On Spark, core whisper privacy/data flow can be tested without Functions.

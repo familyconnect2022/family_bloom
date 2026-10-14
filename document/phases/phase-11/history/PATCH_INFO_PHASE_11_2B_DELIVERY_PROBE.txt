@@ -1,0 +1,14 @@
+Family Bloom Phase 11.2B - E2E Delivery Probe
+2026-09-27
+
+Adds a DEV-only real Event delivery probe:
+- Uses/creates only a Bloom E2E-prefixed Test Family.
+- Creates a real Firestore Event through normal Auth/Security Rules.
+- Schedules one Android local notification 60 seconds later linked to that Event.
+- Keeps the Event after scheduling so tapping the notification can open a valid Event.
+- No auth bypass, no Firestore rule bypass, no writes to a non-E2E family.
+- Existing Firebase smoke test and cleanup behavior remain unchanged.
+
+Manual checkpoint:
+Performance Lab -> Firebase E2E -> "Tạo Event + gửi notification sau 60 giây".
+Background/lock the device and report only: "đã nhận" or "không nhận".

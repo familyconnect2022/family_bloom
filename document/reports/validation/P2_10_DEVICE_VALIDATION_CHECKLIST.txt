@@ -1,0 +1,14 @@
+FAMILY BLOOM P2.10 - REAL DEVICE CHECKLIST
+
+[ ] Genealogy large branch: loading card is centered inside graph viewport, not header.
+[ ] Genealogy large branch: initial camera shows readable nearby nodes, not whole-tree fit.
+[ ] Genealogy: pan/zoom reveals off-screen branch nodes without blank/re-fit jump.
+[ ] Chess ellipsis: Cầu hòa / Xin thua panel is fully above board.
+[ ] Chess action panel: outside tap closes cleanly; Promotion/Result still appears above it.
+[ ] Chess normal move audio plays from the beginning of piece motion.
+[ ] Chess capture/check audio plays.
+[ ] Chess second/new game audio still works without another preload cycle.
+[ ] Games hub: Xiangqi red General icon is visible.
+[ ] Exit Chess: persistent tabbar still reveals without second startup paint.
+
+After copy-over: run Family_Bloom_CLEAN_APPLY_FULL.bat, then first Metro run use `npx expo start -c`.

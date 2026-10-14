@@ -1,0 +1,87 @@
+FAMILY BLOOM — PHASE 14V.2D ONE-DEVICE CHESS TEST BOT
+Date: 2026-10-03
+Status before device test: IMPLEMENTED / STATIC PASS / RUNTIME NOT CERTIFIED
+
+PURPOSE
+- Test Chess with one Android phone before a second real device is available.
+- Bloom Bot is a test harness only. It is NOT Stockfish, not ranked AI, not a real family member.
+- It uses the same authoritative server game/clock/persistence path as a real opponent.
+
+A. ENABLE TEST BOT — SERVER IS AUTHORITATIVE
+1) Root app .env only needs:
+   EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+2) Render -> family-bloom-chess -> Environment:
+   CHESS_TEST_BOT_ENABLED=true
+3) Save and redeploy Render latest source.
+4) Restart Metro:
+   npx expo start --dev-client --clear
+5) No expo run:android is required only for this phase.
+
+B. SERVER HEALTH / CAPABILITY
+[ ] Open https://family-bloom-chess.onrender.com/health
+[ ] Expect {"ok":true,"chessTestBotEnabled":true}
+[ ] Metro logs [ChessDebug] prewake:response ... chessTestBotEnabled:true
+[ ] Metro logs server:capabilities or lobby:capabilities with testBotEnabled:true
+
+C. DELAYED GLOBAL CHALLENGE OVERLAY — ONE PHONE
+[ ] Open Chess Lobby.
+[ ] Card "Bloom Bot · Đối thủ thử nghiệm" is visible.
+[ ] Choose a time control.
+[ ] Tap "Test thách đấu 5s".
+[ ] App exits the Chess Lobby automatically.
+[ ] About 5 seconds later, centered challenge overlay appears on the other Family Bloom screen.
+[ ] Overlay shows Bloom Bot / chess knight / time control / countdown / Accept / Reject.
+[ ] Reject once -> overlay closes and gentle Bloom Bot message appears.
+[ ] Repeat -> Accept -> app navigates directly to exact Chess board.
+
+D. GAMEPLAY WITH BOT
+[ ] White/Black is assigned by server, not fixed by client.
+[ ] If Bloom Bot is White, it makes the opening move automatically after ~0.7–1.35s.
+[ ] If user is White, make one legal move; Bloom Bot replies automatically.
+[ ] Bot never makes an illegal move.
+[ ] Board state/turn/revision stay synchronized after repeated moves.
+[ ] Server clock continues authoritatively.
+[ ] Legal destination hints still work for the human.
+
+E. GLOBAL TURN TOAST
+[ ] Make a move, immediately navigate away from Chess board before Bot replies.
+[ ] When Bot replies and it becomes your turn, normal Bloom toast appears.
+[ ] Copy includes "Đến lượt bạn • Nước N" or check-specific copy.
+[ ] Tap toast -> returns to exact active Chess game.
+
+F. BATTLE FX
+[ ] Capture -> lightweight capture FX/copy.
+[ ] Major capture -> stronger FX.
+[ ] Check -> "CHIẾU!" treatment.
+[ ] Promotion if reached -> promotion FX.
+[ ] Checkmate -> finale FX.
+[ ] Effect selector Full / Light / Off works.
+
+G. DRAW / RESIGN / REMATCH
+[ ] Offer draw -> Bloom Bot rejects after a short delay; game remains valid.
+[ ] Resign -> authoritative result saved normally.
+[ ] Finished game -> Chơi lại before 22:00 creates a NEW test game.
+[ ] Outside 06:00–<22:00, new bot challenge/rematch is blocked.
+
+H. BACKGROUND / RECOVERY
+[ ] During active timed bot game, background app briefly.
+[ ] App is no longer challenge-online while backgrounded.
+[ ] Timed clock is not paused just because phone backgrounded.
+[ ] Foreground again -> reconnect/resync returns authoritative game state.
+
+I. HISTORY
+[ ] Finish a bot game.
+[ ] Open Chess History with no red screen.
+[ ] History shows "Bloom Bot" and "Thử nghiệm".
+[ ] If an index/query problem exists, UI shows retry card and Metro logs [ChessDebug] history:load_failed instead of uncaught promise.
+
+J. DISABLE AFTER TESTING
+1) Render Environment:
+   CHESS_TEST_BOT_ENABLED=false
+2) Redeploy Render.
+3) Restart/refresh Metro if the app is already open.
+[ ] /health reports chessTestBotEnabled:false.
+[ ] Bloom Bot card disappears from Chess Lobby.
+[ ] Normal human-vs-human Chess behavior is unchanged.
+
+DO NOT CALL RUNTIME PASS UNTIL THE RELEVANT BOXES ABOVE ARE VERIFIED ON DEVICE + RENDER.

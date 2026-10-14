@@ -1,0 +1,69 @@
+FAMILY BLOOM — CLEAN PROJECT ROOT STANDARD
+Effective: 2026-10-11
+
+PRINCIPLE
+The project root is reserved for runtime/build configuration, required service config, top-level source folders, and the two copy-over entrypoint BAT files.
+All project documentation .md/.txt belongs under document/.
+
+ROOT DIRECTORIES
+- assets/
+- document/
+- functions/
+- plugins/
+- public/
+- scripts/
+- server/
+- src/
+
+ROOT CONFIG / ENTRYPOINT FILES
+- .env.example
+- .gitignore
+- .prettierrc
+- LICENSE
+- app.config.js
+- app.json
+- firebase.json
+- firestore.rules / firestore.cloud.rules / firestore.indexes.json
+- google-services.json
+- metro.config.js
+- package.json / package-lock.json when present
+- tsconfig.json
+- vercel.json
+- Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat
+- Family_Bloom_CLEAN_APPLY_FULL.bat
+
+DOCUMENTATION
+- document/architecture/
+- document/phases/phase-XX/
+- document/releases/
+- document/verification/
+- document/reports/device/
+- document/reports/validation/
+- document/web/
+- document/firebase/
+- document/handoff/
+- document/guides/
+- document/history/
+- document/legacy-import/: copy-over safety archive for unknown/manual legacy notes
+
+TOOLING
+- scripts/android/: Android build/install BAT helpers
+- scripts/firebase/: the single canonical home for Firebase deploy helpers
+- scripts/maintenance/: maintenance and structure gates
+- scripts/setup/: copy-over/setup cleanup logic
+- scripts/windows/web/: Windows Web preview/export BAT helpers
+- scripts/music/state/: machine state for catalog tooling
+- scripts/music/reports/: machine-generated music audit output
+
+ANDROID/WEB ONLY
+- GoogleService-Info.plist is not shipped.
+- app.json has no active iOS Firebase/bundle config.
+- package.json has no ios run script.
+- android/ and ios/ generated native folders remain ignored because CNG generates native Android when needed.
+
+RULES
+1. No .md or .txt files at root.
+2. Do not create a parallel documents/ directory or top-level reports/.
+3. Do not place helper BAT files at root unless they are copy-over entrypoints.
+4. Do not move Expo/Metro/Firebase config files away from their expected root locations merely for aesthetics.
+5. Run npm run structure:check before shipping every FULL build.

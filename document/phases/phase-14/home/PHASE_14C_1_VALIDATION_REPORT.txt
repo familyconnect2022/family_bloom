@@ -1,0 +1,21 @@
+FAMILY BLOOM PHASE 14C.1 VALIDATION — 2026-09-29
+
+Static/source validation:
+- Phase14C functional V1: 44 PASS / 0 FAIL
+- TS/TSX transpile: 192 / 192 PASS
+- Phase 14B.1 UI shell: 27 / 27 PASS
+- Phase 13 release readiness: 11 / 11 PASS
+- home-music.tsx SHA-256 unchanged from Phase 14C base
+
+Validated contracts:
+- FamilyMemberPicker is shared by Whisper single-recipient and Poll multi-group flows.
+- Picker uses search + virtualized FlatList.
+- Membership source remains family members, not genealogy Persons.
+- Whisper horizontal feed tabs removed; compact filter + bookmark saved entry used.
+- Missing composite-index fallback exists in Whisper/Poll services.
+- Optimized composite indexes remain in firestore.indexes.json and still need deployment.
+
+Not certified in this environment:
+- Android native runtime/visual on the user's real device.
+- Actual Firebase composite-index deployment state.
+- Firestore emulator integration for this hotfix.

@@ -1,0 +1,13 @@
+FAMILY BLOOM — PHASE 10 PERFORMANCE LAB HOTFIX
+Base: Family_Bloom_Phase_10_RELIABILITY_OFFLINE_PERFORMANCE_FULL_2026-09-26.zip
+
+Fixes from Android device testing:
+- Fix React warning caused by performance metric emit inside render/useMemo.
+- Guard Timeline SectionList keyExtractor/renderItem against non-row tokens.
+- Correct stress trace duration: initial readiness, not time spent on screen.
+- Filter SectionList headers from initial visible batch measurement.
+- Add separate jump-to-end frame metric.
+- Replace invisible 1x1 white stress media with visible local JPEG thumbnails.
+- Prefer explicit video thumbnail when supplied (also improves real Moment cards).
+
+No Firestore/Cloudinary writes were added. Runtime singleton/listener/Graph architecture is unchanged.

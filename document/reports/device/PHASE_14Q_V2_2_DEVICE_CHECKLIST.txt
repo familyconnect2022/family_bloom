@@ -1,0 +1,30 @@
+FAMILY BLOOM PHASE 14Q V2.2 — THREE REVEAL THEMES DEVICE CHECKLIST
+
+No Firebase deploy is required.
+
+[ ] Open Nhà Mình -> Hộp thời gian.
+[ ] Confirm three selectors exist: Ấm áp / Trang trọng / Rộn ràng.
+
+Ấm áp
+[ ] Pink/cream/gold visual reads warm immediately.
+[ ] Petals + soft spark language is visible.
+[ ] Lid -> letter scale 0/opacity 0 -> full reveal remains smooth.
+
+Trang trọng
+[ ] Blue is clearly dominant; silver/white light is visible.
+[ ] Box/card geometry feels cleaner and more formal than Ấm áp.
+[ ] Particles are sparse light points, not floral/confetti-heavy.
+[ ] Motion feels slower/steady with no obvious letter bounce.
+
+Rộn ràng
+[ ] Pale yellow/butter-gold plus pink is clearly dominant.
+[ ] Confetti/spark/petal burst is clearly more celebratory.
+[ ] Motion feels faster with a visible but controlled pop.
+
+Cross-theme guards
+[ ] You can distinguish all three before reading their theme labels.
+[ ] Theme cannot change while animation is running.
+[ ] Switching theme after finish resets to unopened state.
+[ ] No letter is visible behind the box before its reveal beat.
+[ ] Letter is always above the box once it starts appearing.
+[ ] No obvious Android frame hitch during lid/glow/letter transition.

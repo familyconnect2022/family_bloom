@@ -1,0 +1,40 @@
+Family Bloom Phase 14J validation — 2026-09-30
+
+Phase14J Full-screen Focus + Smooth Point Animation: 18 PASS / 0 FAIL
+- native Modal portal preserved
+- Focus target = 80% x 80% of full window
+- tapped-node origin converted to window coordinates
+- distance-normalized 520–630ms open animation
+- point-to-card scale 0 -> 1
+- opacity fades only near scale 0
+- close reaches scale 0 before Modal unmount
+- duplicate close guarded
+- ordinary light dim overlay only; no blur/filter
+- single header close action: “Trở về”; duplicate X removed
+- Locate recenters the currently focused Person
+- A -> B reuses one Focus overlay
+- pan/pinch preserved
+- 3/5/Toàn disabled while Focus is open
+- background Canvas frozen and touch-disabled
+- delayed branch loading shell preserved
+- TS/TSX syntax transpile 198/198 PASS
+
+Regression checks:
+- Phase14F Graph Focus Isolation + Default 3 Gen: 21 PASS / 0 FAIL
+- Phase14D Nhà Mình Music+TODO: 47 PASS / 0 FAIL
+- Phase14C Functional V1: 44 PASS / 0 FAIL
+- Phase 6.4 viewport/progressive: PASS
+- Family Graph dense layout: PASS
+- Phase 8.2C tab regression: PASS
+- Phase 6.3 synthetic graph benchmark: PASS
+  * 50 Person adapter ~1.93ms
+  * 100 Person adapter ~0.69ms
+  * 300 Person adapter ~2.96ms
+  * 500 Person adapter ~2.60ms
+
+Historical Phase14G/14H/14I visual-spec tests contain expected failures because Phase14J intentionally supersedes their old assertions (80%-of-canvas sizing, frosted layer, always-visible card, duplicate Back/X controls, older animation constants). These are not treated as regressions.
+
+Full `tsc --noEmit` was not run successfully in this packaging workspace because node_modules/Expo tsconfig base is not included in the source ZIP. Static TS/TSX transpile validation is 198/198 PASS.
+
+Not claimed:
+- Android real-device animation/gesture PASS until user tests this build.

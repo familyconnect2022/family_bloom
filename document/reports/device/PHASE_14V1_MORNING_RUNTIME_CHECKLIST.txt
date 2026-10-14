@@ -1,0 +1,86 @@
+FAMILY BLOOM — PHASE 14V.1 DEVICE / RUNTIME CHECKLIST
+Scope: all game-room decisions made during the 2026-10-03 morning session.
+Use 2 physical phones / 2 real accounts in the same family whenever possible.
+
+A. PREP / DEPLOY
+[ ] Render family-bloom-chess redeployed from this FULL source.
+[ ] https://family-bloom-chess.onrender.com/health returns {"ok":true}.
+[ ] Root .env has EXPO_PUBLIC_CHESS_SOCKET_URL=https://family-bloom-chess.onrender.com
+[ ] Metro restarted: npx expo start --dev-client --clear
+[ ] Firestore Rules from Phase 14V already deployed for the six family games.
+
+B. SIX FAMILY GAMES — FAMILY-WIDE POLICY
+[ ] Create each of the six games without any participant picker.
+[ ] All real current family membership accounts are eligible automatically.
+[ ] Subject-based games do NOT keep selecting the creator as the subject.
+[ ] Across repeated rounds, Family Rotation distributes subjects across different family members.
+[ ] No game waits forever for every family member to answer.
+[ ] Timed session closes by its deadline even if some members never answer.
+[ ] Round duration never exceeds 4 hours and never extends past 22:00 VN time.
+[ ] Same game type can have 4 active sessions concurrently.
+[ ] Attempting the 5th concurrent session shows gentle “đang rộn ràng / quay lại sau” feedback.
+[ ] When an active session ends, its slot becomes reusable.
+[ ] Before 06:00 / from 22:00 onward, new game creation is blocked with gentle sleep-protection copy.
+
+C. CHESS GLOBAL ONLINE PRESENCE
+[ ] Phone A stays on Home (not Chess). Phone B opens Chess Lobby: A appears online/sẵn sàng.
+[ ] A switches Home -> Moments -> Graph -> Nhà Mình while foreground: A never becomes offline merely due to tab switching.
+[ ] A backgrounds Family Bloom: B can no longer successfully challenge A (server authority).
+[ ] A foregrounds Family Bloom again: presence returns after reconnect.
+[ ] If A has an active Chess game and leaves the board for another tab, B sees A as in_game, not challengeable.
+[ ] One UID still cannot start/accept a second active realtime Chess game.
+
+D. GLOBAL CHALLENGE OVERLAY
+[ ] A stays on a non-Chess tab; B challenges A.
+[ ] A receives the large centered Bloom Chess card with B avatar/name + time control + countdown.
+[ ] A taps Reject: overlay closes; B gets gentle “chưa tiện chơi lúc này” toast.
+[ ] Repeat; A taps Accept: server creates game and A navigates directly to the exact board.
+[ ] B is also taken/notified into the newly active game without creating a duplicate game.
+[ ] Let an invite expire: both sides clear pending UI.
+[ ] Challenge near/outside quiet hours remains rejected by the server even if UI state is stale.
+
+E. ACTIVE GAME OUTSIDE BOARD
+[ ] Start a timed game; A navigates from board to Home while app stays foreground.
+[ ] B makes a legal move. A receives normal toast: “Đến lượt bạn • Nước N”.
+[ ] Tap the toast: A returns to the exact active board.
+[ ] Put A in check while A is on another tab: toast uses the distinct “Vua của bạn đang bị chiếu • Nước N” copy.
+[ ] Draw offer/reject state changes do NOT create a fake “Đến lượt bạn” toast.
+[ ] While already looking at the Chess board, duplicate turn toast is not shown.
+
+F. BLOOM CHESS BATTLE FX
+[ ] Normal pawn/minor-piece capture: subtle capture effect + light haptic/copy.
+[ ] Capture a Rook or Queen: stronger “Một đòn nặng!” treatment.
+[ ] Give check: distinct CHIẾU effect.
+[ ] Capture while giving check: combined “ĂN QUÂN · CHIẾU!” treatment.
+[ ] Promote a pawn to Queen; also test Rook/Bishop/Knight selection is still legal and server-authoritative.
+[ ] Promotion produces its own dramatic effect after server acceptance, never before ACK/state.
+[ ] Checkmate produces the strongest finale effect.
+[ ] Timeout produces “HẾT GIỜ” treatment, distinct from checkmate.
+[ ] Resignation produces respectful end copy.
+[ ] Draw produces “BẤT PHÂN THẮNG BẠI” treatment.
+[ ] Cycle Hiệu ứng: Đầy đủ -> Nhẹ -> Tắt -> Đầy đủ.
+[ ] With FX on, board taps, legal hints, promotion selector and clock remain smooth and readable.
+[ ] No effect permanently moves a piece before server authoritative state arrives.
+
+G. CHESS NETWORK / CLOCK REGRESSION
+[ ] 3+2 increment behaves correctly on both phones.
+[ ] 5+0 and 10+5 start with correct server-authoritative clocks.
+[ ] Background one phone during timed game: its clock continues server-side.
+[ ] Foreground it: board/turn/clock authoritative resync is correct.
+[ ] Temporary network loss -> reconnect -> exact board state restored.
+[ ] Kill/reopen app -> active game can be restored when returning to the correct family.
+[ ] Restart Render during an active game: recovery is fairness-first (paused checkpoint, resume after both reconnect).
+[ ] Checkmate / resign / draw / timeout releases active UID locks so a later challenge is possible.
+[ ] After 22:00 an already-running game may finish, but no new challenge/rematch can start.
+
+H. FAMILY BLOOM REGRESSION
+[ ] Auth / Google login / logout.
+[ ] Family Gateway / activeFamilyId / family switching.
+[ ] Moments / Events / Calendar.
+[ ] Family Graph / Person Detail.
+[ ] Nhà Mình six async games.
+[ ] Family Fund.
+[ ] No duplicate global Chess challenge overlay and no duplicate turn toast.
+
+RUNTIME PASS RULE
+Only mark Phase 14V.1 PASS after the two-device tests above are observed. Static gates alone are not runtime certification.

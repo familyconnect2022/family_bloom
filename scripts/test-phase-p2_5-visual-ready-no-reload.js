@@ -1,0 +1,44 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.join(__dirname, '..');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+let pass = 0; let fail = 0;
+const check = (label, ok) => { if (ok) { console.log(`PASS ${++pass} - ${label}`); } else { fail++; console.error(`FAIL ${pass + fail} - ${label}`); } };
+
+const rootLayout = read('src/app/_layout.tsx');
+const tabs = read('src/app/(tabs)/_layout.tsx');
+const startup = read('src/context/TabStartupContext.tsx');
+const home = read('src/app/(tabs)/index.tsx');
+const capsules = read('src/app/(home)/(time-capsule)/home-time-capsules.tsx');
+const capsuleDetail = read('src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx');
+const notifications = read('src/app/(activity)/(notifications)/notifications.tsx');
+const graphHook = read('src/hooks/family/useFamilyGraph.ts');
+const capsuleService = read('src/services/home/homeTimeCapsuleService.ts');
+const pkg = JSON.parse(read('package.json'));
+const cleanBat = read('Family_Bloom_CLEAN_APPLY_FULL.bat');
+const debugBat = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+
+check('Root preloads Ionicons through expo-font', rootLayout.includes('useFonts(Ionicons.font)'));
+check('Splash release waits for visual assets, active surface and successor tab chrome first-frame readiness', (rootLayout.includes('firstVisualReady = nativeBootReady && criticalVisualAssetsReady && activeSurfaceReady') || (rootLayout.includes('firstVisualReady = nativeBootReady') && rootLayout.includes('&& criticalVisualAssetsReady') && rootLayout.includes('&& activeSurfaceReady') && rootLayout.includes('&& tabBarVisualReady'))) && rootLayout.includes('if (!firstVisualReady) return;'));
+check('Session-keyed startup provider prevents cross-family readiness reuse', rootLayout.includes('<TabStartupProvider key={sessionKey}') && rootLayout.includes('enabled={!!user && !!activeFamilyId}'));
+check('Startup provider no longer imports root feature realtime caches', !startup.includes('FamilyRealtimeContext'));
+check('Startup readiness releases from first mounted/active surface', startup.includes('if (ready) setReleased(true)') && !startup.includes('REQUIRED.every'));
+check('Startup has bounded safety timeout without 8-second all-tab wait', startup.includes('2500') && !startup.includes('8000'));
+check('Cold start mounts only active tab', tabs.includes('lazy: true'));
+check('Visited/preloaded tabs remain attached and frozen', tabs.includes('detachInactiveScreens={false}') && tabs.includes('freezeOnBlur: true'));
+check('Hidden tabs prewarm only through IDLE scheduler', tabs.includes('tabs:idle-prewarm:') && tabs.includes('priority: "IDLE"') && tabs.includes('navigationRef.current.preload?.'));
+check('Home cache-miss skeletons are static instead of animation loops', !home.includes('Animated.loop(') && !home.includes('useRef(new Animated.Value'));
+check('Time Capsule list does not reload on focus/back', !capsules.includes('useFocusEffect') && capsules.includes('useEffect(() => { void load(false); }, [load]);'));
+check('Time Capsule detail focus revalidates only on dirty version or TTL', capsuleDetail.includes('getMutationVersion') && capsuleDetail.includes('mutationVersion !== loadedMutationVersionRef.current || stale'));
+check('Time Capsule mutations bump local version', capsuleService.includes('bumpCapsuleMutationVersion') && capsuleService.includes('getMutationVersion'));
+check('Notifications keep a short cache across detail round trips', notifications.includes('notificationsMemoryCache') && notifications.includes('NOTIFICATIONS_FOCUS_TTL_MS'));
+check('Notification focus no longer unconditionally loads', notifications.includes('if (stale) void load({ blocking: itemsRef.current.length === 0 });') && !notifications.includes('useFocusEffect(useCallback(() => {\n    void load();'));
+check('Graph identical resubscribe snapshot does not rebuild UI', graphHook.includes('nextFingerprint === snapshotFingerprintRef.current') && graphHook.includes('fingerprintFamilyGraphSnapshot'));
+check('P2.5 gate registered in package scripts', pkg.scripts?.['phaseP2_5:check'] === 'node ./scripts/test-phase-p2_5-visual-ready-no-reload.js');
+check('Post-copy updater runs P2.5 gate', cleanBat.includes('test-phase-p2_5-visual-ready-no-reload.js'));
+check('Android Debug runs P2.5 gate', debugBat.includes('phaseP2_5:check'));
+check('Android Release runs P2.5 gate', releaseBat.includes('phaseP2_5:check'));
+
+console.log(`\nFamily Bloom P2.5 Visual-Ready + No-Reload: ${pass}/${pass + fail} PASS`);
+process.exit(fail ? 1 : 0);

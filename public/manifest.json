@@ -1,0 +1,13 @@
+{
+  "name": "Family Bloom",
+  "short_name": "Family Bloom",
+  "description": "Không gian gia đình Family Bloom trên web",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff9f7",
+  "theme_color": "#fff9f7",
+  "icons": [
+    {"src":"/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}

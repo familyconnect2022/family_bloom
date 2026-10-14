@@ -1,0 +1,35 @@
+FAMILY BLOOM · PHASE 12 · BLOOM SUPPER TRUE FULL-BLEED HEADER
+Date: 2026-09-28
+Base: Family_Bloom_Phase_12_BLOOM_SUPPER_HEADER_FIX_FULL_2026-09-28
+
+Mục tiêu
+- Header Bloom Supper thật sự phủ đủ 3 cạnh: trái, phải và phía sau status bar.
+- Không dùng negative-margin shim để giả full-width.
+- Tách lớp artwork full-bleed khỏi lớp nội dung có padding để chữ/nút vẫn dễ đọc.
+- Giảm cảm giác artwork bị "ghép" lên trang; illustration giờ là một phần của nền hero.
+
+Thay đổi chính
+1) BloomHeroHeader
+- Root 100% chiều ngang, không còn padding ngang ở lớp nền.
+- Artwork/decor dùng absolute-fill toàn hero.
+- Text/back/right action nằm trong inner container padding 22px.
+- Artwork được mở rộng vượt nhẹ mép phải + thêm ribbon/wash nền để hòa vào hero.
+- Title/subtitle native text; không dùng screenshot-derived art chứa chữ.
+
+2) Main tabs
+- Kỷ niệm, Lịch, Góc chơi dùng ScreenContainer edgeToEdgeHorizontal thật.
+- Bỏ heroBleed marginHorizontal -16.
+- Nội dung phía dưới được inset riêng 16px; hero vẫn chạm mép vật lý.
+- Feed/Event cards được bọc inset riêng để không dính cạnh.
+
+3) Regression guard
+- scripts/test-phase12-bloom-supper-fullbleed.js
+- Kiểm tra mọi ScreenContainer edgeToEdgeTop đều có edgeToEdgeHorizontal.
+- Kiểm tra 3 tab không còn heroBleed shim.
+- Kiểm tra BloomHeroHeader tách artwork full-bleed và inner readable padding.
+
+Không thay đổi
+- package.json / package-lock.json / app.json
+- Firebase schema/rules
+- Notification/E2E logic
+- Phase 11 Graph performance architecture

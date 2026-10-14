@@ -1,0 +1,43 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const read = p => fs.readFileSync(path.join(root, p), 'utf8');
+const checks = [];
+const check = (name, ok) => { checks.push([name, !!ok]); console.log(`${ok ? 'PASS' : 'FAIL'} ${name}`); };
+
+const board = read('src/components/chess/ChessBoard.tsx');
+const fx = read('src/components/chess/ChessBattleEffects.tsx');
+const screen = read('src/app/(chess)/chess-game/[gameId].tsx');
+const socket = read('src/services/chess/chessSocketService.ts');
+const realtime = read('src/context/ChessRealtimeContext.tsx');
+const hook = read('src/hooks/chess/useChessGame.ts');
+const history = read('src/app/(chess)/chess-history.tsx');
+const pkg = JSON.parse(read('package.json'));
+const debug = read('scripts/android/Family_Bloom_Android_Debug_Build_And_Run.bat');
+const release = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat');
+
+check('board exposes motion lifecycle callback', board.includes('onMotionChange?: (moving: boolean) => void') && board.includes('setMotionActive(true)') && board.includes('setMotionActive(false)'));
+check('board publishes visual revision after settled commit', board.includes('onVisualRevisionChange?: (revision: number) => void') && board.includes('publishVisualRevision(confirmedState.revision)'));
+check('screen uses latest battle event instead of backlog queue', screen.includes('const[battleEvent,setBattleEvent]') && !screen.includes('battleQueue') && !screen.includes('fxTimersRef'));
+check('FX is hidden while a piece is moving', (screen.includes('visibleBattleEvent=!boardMoving') || screen.includes('visibleBattleEvent=fxEnabled&&!boardMoving')) && screen.includes('onMotionChange={setBoardMoving}'));
+check('FX waits until visual board revision catches server event', screen.includes('battleEvent.revision<=visualRevision') && screen.includes('onVisualRevisionChange={setVisualRevision}'));
+check('reconnect/coalesced state cannot manufacture stale battle FX', fx.includes('current.ply === previous.ply + 1'));
+check('battle event carries revision and mover ownership', fx.includes('revision: number;') && fx.includes('mine: boolean;'));
+check('heavy spring scale animation removed from battle overlay', !fx.includes('Animated.spring(') && !fx.includes('const scale = useRef'));
+check('FX hold times are bounded below one second', fx.includes('finale" ? 900') && fx.includes('dramatic" ? 700') && fx.includes('active" ? 590') && fx.includes(': 480'));
+check('new move can cancel current FX immediately', fx.includes('if (!event || mode === "off")') && fx.includes('opacity.stopAnimation()') && fx.includes('clearTimeout(timer)'));
+check('opponent bot bursts do not haptic every move', fx.includes('(event.mine || event.intensity === "finale")'));
+check('animated overlay opts into Android hardware texture', fx.includes('renderToHardwareTextureAndroid'));
+check('socket realtime console serialization disabled', socket.includes('const debug = (..._args: unknown[]) => {};') && socket.includes('const debugWarn = (..._args: unknown[]) => {};') && !socket.includes('console.log("[ChessDebug]"'));
+check('realtime provider console serialization disabled', realtime.includes('const chessDebugError = (_label: string, _error: unknown) => {};') && realtime.includes('const chessDebug = (_label: string, _payload?: unknown) => {};'));
+check('game hot path has no ChessPerf console output', !hook.includes('[ChessPerf]') && !board.includes('[ChessPerf]'));
+check('history has no ChessDebug console output', !history.includes('[ChessDebug]'));
+check('hybrid instant motion remains intact', board.includes('const submitHybridMove = async') && board.includes('startSlide({') && board.indexOf('startSlide({', board.indexOf('const submitHybridMove = async')) < board.indexOf('const confirmedState = await onMove', board.indexOf('const submitHybridMove = async')));
+check('legacy rollback remains absent', !board.includes('ROLLBACK_ANIMATION_MS') && !board.includes('rollbackVisualMove'));
+check('phase14v3l script wired', pkg.scripts['phase14v3l:check'] === 'node ./scripts/test-phase14v3l-chess-fx-frame-pacing.js');
+check('DEBUG build runs frame pacing gate', debug.includes('phase14v3l:check'));
+check('RELEASE build runs frame pacing gate', release.includes('phase14v3l:check'));
+
+const fail = checks.filter(([, ok]) => !ok).length;
+console.log(`Phase 14V.3L Chess FX Frame Pacing: ${checks.length - fail} PASS / ${fail} FAIL`);
+process.exit(fail ? 1 : 0);

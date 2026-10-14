@@ -1,0 +1,15 @@
+Family Bloom Phase 6.4 Visual Compatibility Hotfix
+
+Static TypeScript transpile:
+- src/components/familyGraph/FamilyGraphPrototype.tsx: PASS
+- src/components/familyGraph/familyGraphPrototypeData.ts: PASS
+- src/constants/appConfiguration.ts: PASS
+
+Key invariants checked in source:
+- generationStep = 216
+- connectorGridCellSize = 128
+- partner viewport closure enabled
+- connector endpoint mount guards enabled
+- planned connector route uses rounded corners
+
+Runtime/device validation is still required before Phase 6.4 can close.

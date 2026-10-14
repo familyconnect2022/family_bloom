@@ -1,0 +1,12 @@
+FAMILY BLOOM — PHASE 11.0 ACTIVITY PERFORMANCE OPTIMIZATION
+Base: Family_Bloom_Phase_11_0_ACTIVITY_NAVIGATION_HOTFIX_FULL_2026-09-26.zip
+
+Highlights:
+- lightweight Firestore badge summaries instead of loading Activity pages for the Home bell
+- one debounced Home badge refresh instead of two delayed refreshes
+- 12s in-memory badge cache
+- self-authored family notifications remain excluded from the author's badge
+- Moment deep-link exact fetch runs in parallel with navigation/family switching and is reused in-flight
+- no new realtime listener
+
+IMPORTANT: publish updated firestore.rules before device testing.

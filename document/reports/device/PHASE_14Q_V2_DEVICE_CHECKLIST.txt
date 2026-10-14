@@ -1,0 +1,25 @@
+FAMILY BLOOM PHASE 14Q V2 — BLOOM TIME REVEAL DEVICE CHECKLIST
+Date: 2026-10-01
+
+No Firebase deploy is required.
+No Rules / Functions / indexes change is required.
+
+Recommended Android test
+[ ] Restart Metro/dev client before testing the new source.
+[ ] Nhà Mình -> Hộp thời gian -> open prototype.
+[ ] Before tapping: gift box looks dimensional (lid thickness, body shading, ribbon/bow/seal), not like two flat rectangles.
+[ ] Tap “Mở hộp”.
+[ ] Motion from seal -> lid -> glow is continuous, with no visible pose jump.
+[ ] Bright white/gold light clearly appears at the seam of the box first.
+[ ] Glow expands outward without reading as one brown/flat circle.
+[ ] Letter rises from behind/inside the box instead of appearing as a modal/card pop.
+[ ] Letter settles smoothly with no abrupt scale/rotation jump.
+[ ] Petals/sparks feel supportive and do not cause frame drops.
+[ ] Final letter remains readable; box is lower/secondary in the composition.
+[ ] Tap “Xem lại hiệu ứng” 3 times; each run should feel identical and remain smooth.
+[ ] Back out during/after a run; no delayed haptic should fire after leaving the screen.
+
+What to send back if anything still feels wrong
+- a short screen recording;
+- where the hitch occurs: before lid / lid / glow / letter rise / letter settle;
+- whether the box itself still looks too flat or the light still feels weak.

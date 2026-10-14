@@ -1,0 +1,30 @@
+FAMILY BLOOM · PHASE 11 FINAL PERFORMANCE GATE
+Build/check date: 2026-09-27
+Base: Family_Bloom_Phase_11_2B_BACKGROUND_DELIVERY_HOTFIX_FULL_2026-09-27.zip
+
+IMPLEMENTED
+- One-tap Final Performance Gate from Performance Lab.
+- Automatic real render sequence: Family Graph 50/100/200/300/500 Person.
+- Automatic stress render sequence: Moments / Timeline / Planner-Event / Memory Book at 100/200 rows.
+- Stress screens automatically wait for first paint + visible batch, jump to the end, measure frame response, then advance.
+- JS event-loop stall probe spans the entire automated matrix.
+- Strict completeness checks prevent incomplete runs from reporting PASS.
+- Per-step 25s Graph / 15s stress timeout prevents a hung route from blocking the suite forever.
+- Abort path returns safely to Performance Lab.
+- Final report can be copied in one tap.
+- Final performance matrix is RAM-only: no Firebase writes, no Cloudinary uploads, no active-Family switch.
+
+CHECKS PASSED
+1) node scripts/test-phase11-final-performance-gate.js
+   PASS Phase 11 Final Performance Gate automation + safety + coverage contracts
+2) node scripts/test-phase112b-harness.js
+   PASS Phase 11.2B harness safety + automated regression + report contracts
+3) node scripts/test-phase112b-firebase-e2e.js
+   PASS Phase 11.2B Firebase E2E sender + cleanup safety contracts
+4) node scripts/test-phase10-performance-lab-hotfix.js
+   Phase 10 Performance Lab hotfix contracts PASS
+5) TypeScript parser/transpile check on all 5 changed TS/TSX runtime files
+   PASS
+
+NOTE
+A full Expo project typecheck was not run in this packaging environment because node_modules is intentionally not included in the source ZIP. The modified runtime TS/TSX files were syntax/transpile checked with TypeScript 6 and all project contract checks above passed.

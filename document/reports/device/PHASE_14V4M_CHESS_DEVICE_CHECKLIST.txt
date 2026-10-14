@@ -1,0 +1,12 @@
+PHASE 14V4M DEVICE CHECKLIST
+
+1. Deploy/restart Render chess server from this V4M source.
+2. Build/run Android app from the same V4M source.
+3. Start Bloom Bot game and play at least 10 moves including 2-3 checks.
+4. Observe whether bot response feels consistent. Artificial server wait is fixed at 120 ms.
+5. If a pause is repeatedly much longer than 120 ms, record video; remaining delay is not random bot think-time.
+6. Finish by checkmate: result toast must appear centered OVER the board and must not move/push board or bottom player rail.
+7. Tap Đồng ý: toast disappears and final board remains.
+8. Tap Chơi ván mới: rematch flow still starts.
+9. Test a capture-heavy position: Lợi thế +X stays on its own row ABOVE captured pieces.
+10. Test promotion: centered image-only Queen/Rook/Bishop/Knight overlay remains functional.

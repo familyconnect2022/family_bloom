@@ -1,0 +1,21 @@
+FAMILY BLOOM PHASE 14E — DEVICE CHECKLIST
+
+MUSIC
+[ ] Nhạc Nhà Mình appears as one Bloom Supper card; no detached list/cards extending the whole page.
+[ ] Track area has fixed height and scrolls inside the music card.
+[ ] Playlist shows max 20 rows per page; Favorites/Bài hát Nhà Mình page without making the parent page long.
+[ ] Search remains smooth while typing; old requests do not flash late results.
+[ ] Star/Unstar, Thêm/Đã thêm and Play/Pause/Next/Previous work.
+[ ] Playback continues while scrolling/switching music tabs.
+[ ] Firestore/network failures show friendly Bloom copy, not raw [firestore/permission-denied].
+
+GRAPH FOCUS OVERLAY
+[ ] From 3 thế hệ: enable Nhánh and tap a Person -> 80% Focus View opens.
+[ ] Close -> background returns at exactly the same pan/zoom and still in 3 thế hệ.
+[ ] Repeat from 5 thế hệ.
+[ ] Repeat from Toàn phả hệ.
+[ ] Pan/pinch inside Focus View only; the background graph never moves.
+[ ] Tap Person B inside Focus A -> same overlay transitions to B; no second overlay/card stacks.
+[ ] Dense same-generation branch is re-laid-out independently and auto-fits better than the full graph.
+[ ] Repeated open/switch/close remains smooth on the real Android device.
+[ ] Graph performance regression lab remains within the current accepted baseline.

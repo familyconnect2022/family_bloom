@@ -1,0 +1,26 @@
+const fs=require('fs'),path=require('path'),ts=require('typescript');
+const root=path.resolve(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const exists=p=>fs.existsSync(path.join(root,p));let pass=0,fail=0;const check=(name,ok,detail='')=>{const n=String(pass+fail+1).padStart(2,'0');if(ok){pass++;console.log(`PASS ${n} - ${name}`)}else{fail++;console.log(`FAIL ${n} - ${name}${detail?` :: ${detail}`:''}`)}};
+const firebase=read('src/web/firebaseWeb.ts'),css=read('src/web/styles/WebGlobalStyles.tsx'),shell=read('src/web/components/WebTabShell.tsx'),home=read('src/web/pages/HomeWebPage.tsx');
+check('Firestore uses stable memory cache',firebase.includes('memoryLocalCache()'));
+check('Firestore multi-tab IndexedDB lease removed',!firebase.includes('persistentMultipleTabManager')&&!firebase.includes('persistentLocalCache'));
+check('Auth local persistence retained',firebase.includes('browserLocalPersistence'));
+check('Web shell uses real Ionicons navigation',shell.includes('Ionicons')&&shell.includes('name={tab.icon}'));
+check('Web shell exposes dedicated scroll root',shell.includes('id="bloom-scroll-root"'));
+check('Body is independently scrollable',/\.bloom-body\{[\s\S]{0,260}overflow-y:auto/.test(css));
+check('Shell prevents nested body scroll fights',css.includes('body{overflow:hidden'));
+check('Momentum scrolling enabled for iOS',css.includes('-webkit-overflow-scrolling:touch'));
+check('Phone bottom navigation retained',css.includes('.bloom-nav{position:fixed'));
+check('iPad rail breakpoint retained',css.includes('@media (min-width:768px)'));
+check('Desktop rail breakpoint retained',css.includes('@media (min-width:1180px)'));
+check('Home has rich Bloom hero',home.includes('bloom-home-hero')&&home.includes('bloom-hero-collage'));
+check('Home has horizontal memory strip',home.includes('bloom-memory-strip'));
+check('Home has upcoming schedule',home.includes('bloom-schedule-row'));
+check('Home has family overview',home.includes('bloom-family-overview'));
+check('Home has quick Nhà Mình actions',home.includes('bloom-quick-grid'));
+check('Home creates enough vertical sections for scroll',(home.match(/bloom-section-title/g)||[]).length>=3);
+check('User-facing Home copy avoids technical Firestore wording',!home.includes('Firestore'));
+for(const p of ['src/web/pages/MomentsWebPage.tsx','src/web/pages/PlannerWebPage.tsx','src/web/pages/GraphWebPage.tsx','src/web/pages/PlayWebPage.tsx'])check(`Warm user copy ${p}`,!read(p).includes('cùng Firestore với Android')&&!read(p).includes('persons/relationships'));
+const webFiles=[];function walk(dir){for(const n of fs.readdirSync(path.join(root,dir))){const rel=path.join(dir,n).replace(/\\/g,'/'),st=fs.statSync(path.join(root,rel));if(st.isDirectory())walk(rel);else if(/\.(ts|tsx)$/.test(rel))webFiles.push(rel)}}walk('src/web');const combined=webFiles.map(read).join('\n');check('No native Firebase in web graph',!/@react-native-firebase\//.test(combined));check('No web notifications by product decision',!/expo-notifications/.test(combined));check('No web haptics by product decision',!/expo-haptics/.test(combined));
+for(const p of ['src/web/firebaseWeb.ts','src/web/components/WebTabShell.tsx','src/web/components/WebPrimitives.tsx','src/web/styles/WebGlobalStyles.tsx','src/web/pages/HomeWebPage.tsx']){const out=ts.transpileModule(read(p),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX},reportDiagnostics:true,fileName:p});check(`Syntax clean ${p}`,!(out.diagnostics||[]).some(d=>d.category===ts.DiagnosticCategory.Error));}
+const pkg=JSON.parse(read('package.json')),post=read('Family_Bloom_CLEAN_APPLY_FULL.bat'),preview=read('scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat'),exp=read('scripts/windows/web/Family_Bloom_WEB_EXPORT.bat');check('W3 package gate registered',pkg.scripts?.['phase17_9w3:check']==='node ./scripts/test-phase17_9w3-web-stability-visual-rebuild.js');check('Post-copy updater runs W3',post.includes('test-phase17_9w3-web-stability-visual-rebuild.js'));check('Preview BAT runs W3',preview.includes('test-phase17_9w3-web-stability-visual-rebuild.js'));check('Export BAT runs W3',exp.includes('test-phase17_9w3-web-stability-visual-rebuild.js'));
+console.log(`\nPhase 17.9W3 Web Stability + Visual Rebuild: ${pass}/${pass+fail} PASS`);process.exit(fail?1:0);

@@ -1,0 +1,15 @@
+FAMILY BLOOM — PHASE 11.0 ACTIVITY CENTER
+Base: Family_Bloom_Phase_10_STRESS_MEDIA_RUNTIME_HOTFIX_FULL_2026-09-26.zip
+Status: IMPLEMENTED / AWAITING DEVICE TEST
+
+Main changes:
+- Chuyện trong nhà in-app Activity Center (one-shot, no new realtime listener).
+- Multi-family source label + switch-family-before-deep-link.
+- Moment notification semantics: self silent; tagged Person targeted; whole-family quiet by default; explicit notify-family toggle.
+- Event types expanded (birthday, memorial, anniversary, gathering, wedding, travel) + notification levels normal/notable/important.
+- Graph admin opt-in notification with single-change specific copy and multi-change grouped copy.
+- Per-user/per-family last-seen state + Home aggregate badge excluding self-authored activity.
+- Direct and Cloud Firestore Rules updated for activity collections and Phase 10 full Moment edit/event notification fields.
+- iOS bundleIdentifier remains com.family.ios.
+
+Important: publish updated firestore.rules before device-testing activity creation/read.

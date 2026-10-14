@@ -1,0 +1,15 @@
+FAMILY BLOOM — PHASE 8.7A BLOOM TIMELINE FOUNDATION
+Baseline: Family_Bloom_Phase_8_5B_RUNTIME_SINGLETON_OPTIMIZED_FULL_2026-09-25
+
+Adds:
+- Moment timelineAudience: self | family | persons
+- Composer Timeline ownership selector
+- Family Timeline screen
+- Person Timeline projection from birth/death + Moments + events + manual milestones
+- Circular media thumbnails, 50% overlap, tap-to-view gallery
+- Conservative exact media-reference dedupe (publicId / secureUrl)
+- Firestore rule validation for timelineAudience
+
+Does NOT enable perceptual image dedupe yet.
+Does NOT enable cross-family Moment publishing in UI.
+Does NOT add listeners to the 8.5B active-family baseline provider.

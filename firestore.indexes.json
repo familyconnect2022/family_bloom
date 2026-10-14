@@ -1,0 +1,137 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "homeWhispers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "viewerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homeWhispers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "viewerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "audience",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homeWhispers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "viewerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "audience",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "recipientUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homeWhispers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "viewerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "authorUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homePolls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eligibleUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homeWhispers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "viewerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "expireAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "homePolls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eligibleUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "deleteAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "chessGames",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "playerUids",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "endedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

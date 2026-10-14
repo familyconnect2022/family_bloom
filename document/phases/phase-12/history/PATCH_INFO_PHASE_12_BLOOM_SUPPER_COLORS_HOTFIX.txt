@@ -1,0 +1,14 @@
+Family Bloom - Phase 12 Bloom Supper Reliability COLORS Hotfix
+Date: 2026-09-28
+
+Fix:
+- Restores missing `COLORS` import in `src/app/(family)/(membership)/family-gateway.tsx`.
+- This fixes the runtime crash: `Property 'COLORS' doesn't exist` at the Family Gateway input style.
+- No dependency, app.json, Firebase, notification, Graph, or product behavior changes.
+
+Validation:
+- Repository-wide static scan found no remaining TS/TSX files using COLORS/SPACING without an import/definition.
+- Phase 12 Bloom Supper + Reliability contract: PASS 15/15.
+- Phase 12 full-screen UI contract: PASS 25/25.
+- Phase 11 Final Performance Gate contract: PASS.
+- Phase 11.2B Harness and Firebase E2E safety contracts: PASS.

@@ -1,0 +1,36 @@
+FAMILY BLOOM · PHASE 12 · FULL-SCREEN FLOW UI
+Date: 2026-09-28
+Base: Family_Bloom_Phase_11_PERFORMANCE_HOTFIX_3_FULL_2026-09-28.zip (Phase 11 CLOSED/PASS)
+
+Mục tiêu
+- Loại bỏ kiểu bottom-sheet/modal ~70% + drag handle cho các luồng tạo/sửa/quản lý có nội dung dài.
+- Dùng trang full-screen với Back rõ ràng, header nhất quán và lời dẫn ấm áp.
+- Giữ modal nhỏ cho menu, picker ngắn, cảnh báo và xác nhận vì đây là micro-interaction chứ không phải một trang làm việc.
+
+Đã chuyển sang full-screen flow
+- Event: tạo sự kiện; kiểm duyệt sự kiện ẩn.
+- Moment: tạo, sửa, kiểm duyệt bài ẩn; fallback editor trong MomentCard.
+- Profile: chỉnh sửa hồ sơ.
+- Family: chuyển nhà/family.
+- Family Graph: trang chi tiết thành viên; thêm/sửa dấu mốc; liên kết thành viên; đề xuất thay đổi; chọn quan hệ; duyệt đề xuất; picker người liên quan.
+- Router: create-profile/profile/notifications/family-join-requests không còn ép presentation=modal.
+
+UX chung
+- Component mới: src/components/ui/BloomFullScreenFlow.tsx
+- Back button rõ ràng, header có eyebrow/title/subtitle.
+- Event/Moment/Profile/Timeline có guard khi Back để tránh mất nội dung chưa lưu.
+- Nội dung header dùng giọng Bloom gần gũi, ngắn và ấm áp.
+
+Giữ nguyên modal nhỏ có chủ đích
+- Confirm/delete/logout dialogs.
+- Date/time picker.
+- Reaction/post action menu.
+- Media viewer / trạng thái loading ngắn.
+- Quick graph search.
+
+Regression safety
+- Không đổi package.json/package-lock.json/app.json.
+- Không đổi Firebase/notification/performance/Graph production logic.
+- Phase 11 Final Performance Gate contract: PASS.
+- Phase 11.2B harness/E2E safety contracts: PASS.
+- Phase 12 full-screen UI contract: PASS 15/15.

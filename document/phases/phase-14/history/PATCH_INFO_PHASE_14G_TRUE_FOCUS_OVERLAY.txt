@@ -1,0 +1,28 @@
+Family Bloom Phase 14G — TRUE FOCUS OVERLAY
+Date: 2026-09-30
+Base required: Family_Bloom_Phase_14F_GRAPH_FOCUS_ISOLATION_DEFAULT3_FULL_2026-09-29
+
+Changed:
+- src/components/familyGraph/FamilyGraphPrototype.tsx
+- src/app/(family)/(graph)/family-graph.tsx
+- scripts/test-phase14e-music-card-graph-focus.js (updated regression assertions)
+- scripts/test-phase14f-graph-focus-isolation.js (updated regression assertions)
+- scripts/test-phase14g-true-focus-overlay.js
+- package.json (phase14g:check script only)
+- document/phases/phase-14/home/PHASE_14G_TRUE_FOCUS_OVERLAY.md
+- PHASE_14G_DEVICE_CHECKLIST.txt
+- document/phases/phase-14/home/PHASE_14G_VALIDATION_REPORT.txt
+
+No Firestore Rules/index/schema changes.
+No Cloud Functions changes.
+No new native dependency.
+No music data/provider schema changes; Phase 14F music-assignment preparation remains intact.
+
+Validation summary:
+- Phase14G 30/30 PASS
+- Phase14F 21/21 PASS
+- Phase14E 24/24 PASS
+- Phase14D 47/47 PASS
+- Phase14C 44/44 PASS
+- TS/TSX syntax 198/198 PASS
+- Graph query/layout/viewport and Phase8 reliability regressions PASS

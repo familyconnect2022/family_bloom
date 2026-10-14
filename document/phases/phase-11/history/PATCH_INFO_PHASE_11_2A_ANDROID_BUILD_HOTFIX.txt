@@ -1,0 +1,25 @@
+Family Bloom Phase 11.2A Android Build Hotfix
+
+Problem corrected:
+- The local-notification/no-functions build still carried @react-native-firebase/messaging and its Expo config plugin from the earlier remote-FCM candidate.
+- Phase 11.2A does not use remote FCM at runtime, so the native messaging module is removed to reduce Gradle/native configuration and keep the build aligned with local-only notifications.
+
+Removed:
+- dependency @react-native-firebase/messaging
+- Expo plugin @react-native-firebase/messaging
+- src/services/push/pushBackground.ts
+- src/services/push/pushNotificationService.ts
+- legacy remote-push contract script
+
+Preserved:
+- @react-native-firebase/app/auth/firestore
+- expo-notifications local scheduling
+- Bloom notification channels
+- Activity Center + Smart Reminders
+- Bloom Time Picker
+- no Cloud Functions required
+
+Recommended rebuild on Windows after replacing with FULL code:
+  npm install
+  npx expo prebuild --clean --platform android
+  npx expo run:android

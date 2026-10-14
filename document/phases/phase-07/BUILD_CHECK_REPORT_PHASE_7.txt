@@ -1,0 +1,44 @@
+FAMILY BLOOM — BUILD CHECK REPORT PHASE 7
+Date: 2026-09-25
+
+STATUS
+- Phase 6.5: CLOSED by user after real Android device acceptance.
+- Phase 7.1–7.4: IMPLEMENTED, OPEN, AWAITING USER DEVICE TEST.
+
+STATIC / SYNTHETIC CHECKS RUN IN HANDOFF ENVIRONMENT
+- scripts/phase2-static-check.js: PASS — 136 TS/TSX transpiled.
+- Relative import scan: PASS — 482 relative imports, 0 missing.
+- scripts/test-phase7-multifamily.js: PASS.
+- Membership ordering synthetic 10,000 items: PASS (~10–20ms observed across runs).
+- scripts/test-tabStartup.js: PASS.
+- scripts/test-tabWarmup.js: PASS.
+- scripts/test-familyGraphPhase65.js: PASS.
+- scripts/test-familyGraphPhase64.js: PASS.
+- scripts/test-familyGraphQueryEngine.js: PASS.
+- scripts/test-familyGraphBatchRelationships.js: PASS.
+- scripts/test-familyGraphLayout.js: PASS.
+- scripts/benchmark-familyGraphPhase63.js: PASS (50/100/300/500).
+- functions/test-familyGraphCore.js: PASS.
+- node --check functions/index.js: PASS.
+- node --check functions/proposalApproval.js: PASS.
+
+PERFORMANCE ARCHITECTURE
+- Exactly one user-membership reverse-index realtime listener added.
+- No realtime fan-out over inactive families.
+- Active family retains bounded shared members/Moments/Events caches only.
+- Family Scope remount keyed by uid + activeFamilyId prevents stale cross-family state.
+- Moment upload provider remains outside Family Scope and uses captured task.familyId.
+- Family switcher list is virtualized/batched.
+
+NOT CERTIFIED IN THIS ENVIRONMENT
+- Native Android/iOS build for Phase 7.
+- React Native frame-time / JS-thread / memory profiling on device.
+- Firestore emulator suite after Phase 7 Rules delta (firebase-tools unavailable in handoff container).
+- Full project tsc --noEmit with project node_modules (ZIP does not contain node_modules).
+
+DEPLOY IMPACT
+- firestore.rules changed: YES.
+- firestore.cloud.rules synchronized: YES (future Cloud path).
+- Functions deploy required: NO for Direct Mode.
+- New npm/native dependency: NO.
+- Data migration: NO.
