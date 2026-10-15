@@ -19,7 +19,8 @@ import {
   useTabRuntimeController,
   type MainTabId,
 } from "../../context/TabRuntimeContext";
-import { getBloomSurfaceRailState, subscribeBloomSurfaceRail } from "../../services/presentation/bloomSurfaceRailStore";
+import { getChessSurfaceState, subscribeChessSurface } from "../../services/chess/chessSurfaceStore";
+import { getXiangqiSurfaceState, subscribeXiangqiSurface } from "../../services/xiangqi/xiangqiSurfaceStore";
 import { bloomTaskScheduler } from "../../services/performance/bloomTaskScheduler";
 import { beginUiCriticalWindow, TAB_UI_CRITICAL_WINDOW_MS } from "../../services/performance/uiFrameBudget";
 import { useTabStartup } from "../../context/TabStartupContext";
@@ -203,7 +204,9 @@ function PersistentBloomTabBarHost() {
   const initialIndex = persistentTabBarController.getCommittedIndex();
   const indicatorIndex = useSharedValue(initialIndex);
   const visualTargetIndex = useSharedValue(initialIndex);
-  const chromeVisibility = useSharedValue(getBloomSurfaceRailState().visibleSurface ? 0 : 1);
+  const chromeVisibility = useSharedValue(
+    getChessSurfaceState().mode === "full" || getXiangqiSurfaceState().mode === "full" ? 0 : 1,
+  );
   const optimisticIndexRef = useRef(initialIndex);
   const latestRequestedIndexRef = useRef<number | null>(null);
   const commitGenerationRef = useRef(0);
@@ -256,22 +259,28 @@ function PersistentBloomTabBarHost() {
     indicatorIndex.value = index;
   }), [indicatorIndex, visualTargetIndex]);
 
-  useEffect(() => subscribeBloomSurfaceRail(() => {
-    // Root Stack may freeze the whole Tabs React tree while a root rail surface is on top.
-    // Drive chrome visibility directly from the single presentation store into a
-    // SharedValue so Focus/Chess/Xiangqi cannot disagree about tab chrome.
-    const next = getBloomSurfaceRailState().visibleSurface ? 0 : 1;
-    // Reveal is immediate: when the Chess route pops, the already-mounted tabbar
-    // must be fully painted on that same frame, never replay a 2nd entrance/fade.
-    if (next) {
-      chromeVisibility.value = 1;
-      return;
-    }
-    chromeVisibility.value = withTiming(0, {
-      duration: 45,
-      easing: ReanimatedEasing.out(ReanimatedEasing.quad),
-    });
-  }), [chromeVisibility]);
+  useEffect(() => {
+    const syncChromeVisibility = () => {
+      // The tab chrome observes the two game-owned surface stores independently.
+      // It does not own, synchronize or arbitrate either game's lifecycle.
+      const hasFullGameSurface = getChessSurfaceState().mode === "full" || getXiangqiSurfaceState().mode === "full";
+      if (!hasFullGameSurface) {
+        chromeVisibility.value = 1;
+        return;
+      }
+      chromeVisibility.value = withTiming(0, {
+        duration: 45,
+        easing: ReanimatedEasing.out(ReanimatedEasing.quad),
+      });
+    };
+    const stopChess = subscribeChessSurface(syncChromeVisibility);
+    const stopXiangqi = subscribeXiangqiSurface(syncChromeVisibility);
+    syncChromeVisibility();
+    return () => {
+      stopChess();
+      stopXiangqi();
+    };
+  }, [chromeVisibility]);
 
   const hostVisibilityStyle = useAnimatedStyle(() => ({
     opacity: chromeVisibility.value,

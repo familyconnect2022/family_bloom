@@ -43,7 +43,7 @@ const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.b
 // 1) Finished game receipts can never become active presentation owners again.
 check('Chess root auto-route listens only to activeGameId', globalUi.includes('const gameId = realtime.activeGameId;') && !globalUi.includes('activeGameId ?? realtime.pendingResultGameId'));
 check('Chess lobby cannot resurrect result and no longer competes for active-game navigation', !lobby.includes('pendingResultGameId') && lobby.includes('ChessGlobalUiHost is the single navigation owner') && !lobby.includes('const gameId = lobby.activeGameId;'));
-check('Xiangqi route never redirects to a finished Chess receipt', xiangqiRoute.includes('if (chess.activeGameId)') && !xiangqiRoute.includes('chess.activeGameId || chess.pendingResultGameId'));
+check('Xiangqi route never redirects to Chess or consumes Chess realtime state', !xiangqiRoute.includes('useChessRealtime') && !xiangqiRoute.includes('/chess-game') && xiangqiRoute.includes('resolveOrCreateXiangqiSession'));
 check('Successor Game Hub has no finished-result cleanup path because terminal teardown already ran', !homeGames.includes('pendingResultGameId') && !homeGames.includes('acknowledgeResult') && homeGames.includes('beginLocalBoardGameReservation("chess"'));
 check('Chess route does not use pendingResultGameId as authoritative id', chessRoute.includes('const authoritativeChessId = chess.activeGameId;') && !chessRoute.includes('activeGameId ?? chess.pendingResultGameId'));
 check('Chess route sends stale non-active routes back to Game Hub', chessRoute.includes('router.replace("/home-games" as never)'));
@@ -58,7 +58,7 @@ check('Chess finished_unseen normalizes recovery to none', chessFinishedTail.inc
 const xqFinishedAt = xiangqiBootstrap.indexOf('recovered.data.kind === "finished_unseen"');
 const xqFinishedTail = xqFinishedAt >= 0 ? xiangqiBootstrap.slice(xqFinishedAt, xiangqiBootstrap.indexOf('if (getPendingBoardGameReservation()', xqFinishedAt)) : '';
 check('Xiangqi finished_unseen is ACKed instead of joined', xqFinishedAt >= 0 && xqFinishedTail.includes('XIANGQI_EVENTS.gameResultAck') && !xqFinishedTail.includes('XIANGQI_EVENTS.gameJoin'));
-check('Xiangqi stale-result branch falls through to fresh session creation', xqFinishedTail.includes('never rejoin a finished Xiangqi room'));
+check('Xiangqi stale-result branch deletes local lease then falls through to fresh creation', xqFinishedTail.includes('discardStaleLocalXiangqiSession()') && xqFinishedTail.includes('gameResultAck') && xiangqiBootstrap.indexOf('XIANGQI_EVENTS.testBotInvite', xqFinishedAt) > xqFinishedAt);
 const webChessRecoverAt = webGames.indexOf('const result = await net.emitAck<any>(CHESS_EVENTS.sessionRecover');
 const webChessRecoverTail = webChessRecoverAt >= 0 ? webGames.slice(webChessRecoverAt, webGames.indexOf('useEffect(() => { if (net.connected', webChessRecoverAt)) : '';
 check('Web Chess ACKs finished receipt without joining old room', webChessRecoverTail.includes('result.data.kind === "finished_unseen"') && webChessRecoverTail.includes('CHESS_EVENTS.gameResultAck') && webChessRecoverTail.indexOf('CHESS_EVENTS.gameJoin') > webChessRecoverTail.indexOf('result.data.kind !== "active"'));
@@ -77,7 +77,7 @@ check('Focus target ratio is exactly 85%', focus.includes('const FOCUS_OVERLAY_S
 check('Focus reads physical window dimensions', focus.includes('useWindowDimensions()'));
 check('Focus geometry centers width at 85% of window', focus.includes('windowWidth * FOCUS_OVERLAY_SCREEN_RATIO') && focus.includes('x: (windowWidth - focusWidth) / 2'));
 check('Focus geometry centers height at 85% of window', focus.includes('windowHeight * FOCUS_OVERLAY_SCREEN_RATIO') && focus.includes('y: (windowHeight - focusHeight) / 2'));
-check('Native Focus Modal root is a GestureHandlerRootView', focus.includes('<GestureHandlerRootView onLayout={handleShellLayout} style={styles.focusOverlayModalRoot}>'));
+check('Focus Modal uses a valid successor input path', (focus.includes('PanResponder.create({') && !focus.includes('unstable_forceActive')) || (focus.includes('Gesture.Simultaneous(focusPanGesture, focusPinchGesture)') && /GestureHandlerRootView[\s\S]{0,180}unstable_forceActive/.test(focus)));
 check('Focus background no longer installs full-screen Pressable responders', focus.includes('surfaceMode === "standard" ? (\n                <Pressable style={StyleSheet.absoluteFill}'));
 check('Focus still uses UI-thread Pan gesture', focus.includes('const panGesture = useMemo(() => Gesture.Pan()') && focus.includes('applyFocusPanDelta('));
 check('Focus still uses simultaneous pinch + pan camera gestures', focus.includes('Gesture.Simultaneous(panGesture, pinchGesture)'));
@@ -137,7 +137,7 @@ try {
 
 check('package registers P2.20 gate', pkg.scripts?.['phaseP2_20:check'] === 'node ./scripts/test-phase-p2_20-clean-game-lifecycle-focus-pan.js');
 check('copy-over updater runs P2.20 gate', cleanApply.includes('test-phase-p2_20-clean-game-lifecycle-focus-pan.js'));
-check('pre-copy cleanup identifies P2.20 or terminal-first successor release', /Performance Architecture P2\.(?:20|21|22|23)/.test(preCopy));
+check('pre-copy cleanup identifies P2.20 or terminal-first successor release', /Performance Architecture P2\.(?:20|21|22|23|24|25|26|27)/.test(preCopy));
 check('Debug Android build runs P2.20 gate', debugBat.includes('phaseP2_20:check'));
 check('Release Android build runs P2.20 gate', releaseBat.includes('phaseP2_20:check'));
 

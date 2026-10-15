@@ -5,13 +5,10 @@ import { useBloomToast } from "../ui/BloomToast";
 import { ChessChallengeOverlay } from "./ChessChallengeOverlay";
 import { useChessRealtime } from "../../context/ChessRealtimeContext";
 import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
-import { prepareChessSurface } from "../../services/chess/chessSurfaceStore";
+import { activateChessSurface, getChessSurfaceState, prepareChessSurface, showChessSurfaceFull } from "../../services/chess/chessSurfaceStore";
 import { subscribeChessUiEvents } from "../../services/chess/chessUiEventStore";
 import { publishChessSoundUiEvent, subscribeChessSoundUiEvents } from "../../services/chess/chessSoundEventBus";
 import { CHESS_ERROR_COPY } from "../../types/chess";
-import { useAuth } from "../../context/AuthContext";
-import { getBloomSurfaceRailState } from "../../services/presentation/bloomSurfaceRailStore";
-import { claimAndPresentBoardGame } from "../../services/presentation/boardGamePresentationCoordinator";
 import { useChessSoundscape } from "./useChessSoundscape";
 
 /**
@@ -27,7 +24,6 @@ export const ChessGlobalUiHost = React.memo(function ChessGlobalUiHost({
 }) {
   const router = useRouter();
   const realtime = useChessRealtime();
-  const { activeFamilyId } = useAuth();
   const routedGameRef = useRef<string | null>(null);
   const members = useFamilyMembersRealtime();
   const { showToast } = useBloomToast();
@@ -45,19 +41,10 @@ export const ChessGlobalUiHost = React.memo(function ChessGlobalUiHost({
     }
     if (routedGameRef.current === gameId) return;
 
-    const presented = claimAndPresentBoardGame({
-      kind: "chess",
-      gameId,
-      familyId: activeFamilyId,
-      source: "server",
-      presentation: "full",
-      reason: "active_game",
-    });
-    if (!presented) return;
-
+    activateChessSurface(gameId, "full");
     routedGameRef.current = gameId;
     router.navigate({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId } } as never);
-  }, [activeFamilyId, realtime.activeGameId, router]);
+  }, [realtime.activeGameId, router]);
 
 
   // One process-root listener owns invitation UI sounds. It stays alive before a
@@ -75,8 +62,8 @@ export const ChessGlobalUiHost = React.memo(function ChessGlobalUiHost({
 
   useEffect(() => subscribeChessUiEvents((event) => {
     if (event.suppressWhenGameVisible && event.gameId) {
-      const rail = getBloomSurfaceRailState();
-      if (rail.gameKind === "chess" && rail.gameId === event.gameId && rail.gamePresentation !== "hidden") return;
+      const surface = getChessSurfaceState();
+      if (surface.gameId === event.gameId && surface.mode !== "hidden") return;
     }
     showToast({
       type: event.type,
@@ -84,18 +71,11 @@ export const ChessGlobalUiHost = React.memo(function ChessGlobalUiHost({
       message: event.message,
       duration: event.duration,
       onPress: event.gameId && !suspendedByHigherSurface ? () => {
-        claimAndPresentBoardGame({
-          kind: "chess",
-          gameId: event.gameId!,
-          familyId: activeFamilyId,
-          source: "server",
-          presentation: "full",
-          reason: "active_game",
-        });
+        showChessSurfaceFull(event.gameId!);
         router.navigate({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId: event.gameId! } } as never);
       } : undefined,
     });
-  }), [activeFamilyId, router, showToast, suspendedByHigherSurface]);
+  }), [router, showToast, suspendedByHigherSurface]);
 
   return (
     <ChessChallengeOverlay
@@ -118,14 +98,7 @@ export const ChessGlobalUiHost = React.memo(function ChessGlobalUiHost({
             }
             publishChessSoundUiEvent("challenge_accepted");
             const gameId = response.data.gameId;
-            claimAndPresentBoardGame({
-              kind: "chess",
-              gameId,
-              familyId: activeFamilyId,
-              source: "server",
-              presentation: "full",
-              reason: "active_game",
-            });
+            activateChessSurface(gameId, "full");
             routedGameRef.current = gameId;
             router.navigate({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId } } as never);
           })

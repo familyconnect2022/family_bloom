@@ -10,8 +10,9 @@ import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 import {
   getPendingBoardGameReservation,
   pendingReservationPublicShape,
-  releasePendingBoardGameReservation,
+  releasePendingBoardGameInvite,
   reservePendingBoardGame,
+  reservePendingBoardGameParticipants,
 } from "../games/boardGamePendingReservation.js";
 
 const E = {
@@ -44,6 +45,7 @@ const E = {
   sessionRecover: "chess:session:recover",
   gameResultAck: "chess:game:resultAck",
   testBotInvite: "chess:test:bot:invite",
+  testBotChallenge: "chess:test:bot:challenge",
 } as const;
 
 function toClientGameState(state: PublicGameState): ClientGameState {
@@ -62,6 +64,8 @@ type Invite = {
   expiresAt: number;
   isTestBot?: boolean;
   fromDisplayName?: string;
+  testBotDirection?: "bot_to_user" | "user_to_bot";
+  testCycleStep?: 1 | 2 | 3;
 };
 
 type Bucket = { count: number; resetAt: number };
@@ -81,6 +85,15 @@ const TEST_BOT_NAME = "Bloom Bot";
 // slightly longer think pause so both board games feel closer to a person.
 const TEST_BOT_MOVE_DELAY_MS = 3_000;
 const TEST_BOT_CHECK_DELAY_MS = 5_000;
+const INVITE_TTL_MS = 120_000;
+const TEST_BOT_INVITE_RESPONSE_DELAY_MS = 1_200;
+const outgoingTestBotCycleByUid = new Map<string, number>();
+
+function nextOutgoingTestBotCycleStep(uid: string): 1 | 2 | 3 {
+  const next = ((outgoingTestBotCycleByUid.get(uid) ?? 0) % 3) + 1 as 1 | 2 | 3;
+  outgoingTestBotCycleByUid.set(uid, next);
+  return next;
+}
 
 function testBotUidFor(uid: string) {
   return `${TEST_BOT_UID_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0, 24)}`;
@@ -344,8 +357,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     const invite = invites.get(inviteId);
     if (!invite || invite.expiresAt > Date.now()) return;
     invites.delete(inviteId);
-    const reservationUid = invite.isTestBot ? invite.toUid : invite.fromUid;
-    releasePendingBoardGameReservation(reservationUid, { gameKind: "chess", inviteId: invite.inviteId });
+    releasePendingBoardGameInvite(invite.inviteId, "chess");
     for (const uid of [invite.fromUid, invite.toUid]) {
       for (const socket of socketsForUidInFamily(uid, invite.familyId)) socket.emit(E.inviteExpired, { inviteId });
     }
@@ -503,9 +515,10 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         fromUid: botUid,
         toUid: uid,
         timeControl,
-        expiresAt: Date.now() + delayMs + 45_000,
+        expiresAt: Date.now() + delayMs + INVITE_TTL_MS,
         isTestBot: true,
         fromDisplayName: TEST_BOT_NAME,
+        testBotDirection: "bot_to_user",
       };
       const reserved = reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt });
       if (!reserved) {
@@ -523,7 +536,97 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         for (const targetSocket of socketsForUidInFamily(uid, familyId)) targetSocket.emit(E.inviteReceived, current);
       }, delayMs);
       deliver.unref();
-      setTimeout(() => void expireInvite(invite.inviteId), delayMs + 45_100).unref();
+      setTimeout(() => void expireInvite(invite.inviteId), delayMs + INVITE_TTL_MS + 100).unref();
+      return invite;
+    }));
+
+    socket.on(E.testBotChallenge, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`testbot-outgoing:${uid}`, 6, 30_000);
+      if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+      const payload = asRecord(raw);
+      const clientRequestId = asRequestId(payload.requestId);
+      const familyId = asId(payload.familyId, "familyId");
+      const timeControl = asTimeControl(payload.timeControl);
+      await requireMember(uid, familyId);
+      if (await persistence.getActiveForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (getPendingBoardGameReservation(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+
+      const botUid = testBotUidFor(uid);
+      const cycleStep = nextOutgoingTestBotCycleStep(uid);
+      const invite: Invite = {
+        inviteId: randomUUID(),
+        familyId,
+        fromUid: uid,
+        toUid: botUid,
+        timeControl,
+        expiresAt: Date.now() + INVITE_TTL_MS,
+        isTestBot: true,
+        fromDisplayName: undefined,
+        testBotDirection: "user_to_bot",
+        testCycleStep: cycleStep,
+      };
+      const reserved = reservePendingBoardGame({
+        uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt,
+      });
+      if (!reserved) {
+        const pending = getPendingBoardGameReservation(uid);
+        throw new ChessDomainError(
+          "CHESS_ALREADY_IN_GAME",
+          pending?.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS",
+        );
+      }
+      invites.set(invite.inviteId, invite);
+      await emitPresence(familyId);
+
+      const resolveTimer = setTimeout(() => {
+        void (async () => {
+          const current = invites.get(invite.inviteId);
+          if (!current || current.expiresAt <= Date.now()) return;
+          if (cycleStep === 3) {
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.emit(E.inviteRejected, { inviteId: invite.inviteId, byUid: botUid, isTestBot: true, testCycleStep: cycleStep });
+            }
+            await emitPresence(familyId);
+            return;
+          }
+          try {
+            if (await persistence.getActiveForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+            const pending = getPendingBoardGameReservation(uid);
+            if (!pending || pending.gameKind !== "chess" || pending.inviteId !== invite.inviteId) {
+              throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+            }
+            const state = await manager.create(
+              familyId,
+              uid,
+              botUid,
+              timeControl,
+              `${clientRequestId}:bot-accept`,
+              { testBotUid: botUid, whiteUid: uid, blackUid: botUid },
+            );
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.data.gameId = state.gameId;
+              targetSocket.data.gameFamilyId = familyId;
+              await targetSocket.join(`chess:game:${state.gameId}`);
+              targetSocket.emit(E.gameState, toClientGameState(state));
+            }
+            scheduleTestBotAction(state);
+            await emitPresence(familyId);
+          } catch (error) {
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+            }
+            await emitPresence(familyId);
+          }
+        })();
+      }, TEST_BOT_INVITE_RESPONSE_DELAY_MS);
+      resolveTimer.unref();
+      setTimeout(() => void expireInvite(invite.inviteId), INVITE_TTL_MS + 100).unref();
       return invite;
     }));
 
@@ -556,9 +659,16 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       }
 
       const invite: Invite = {
-        inviteId: randomUUID(), familyId, fromUid: uid, toUid, timeControl, expiresAt: Date.now() + 45_000,
+        inviteId: randomUUID(), familyId, fromUid: uid, toUid, timeControl, expiresAt: Date.now() + INVITE_TTL_MS,
       };
-      const reserved = reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt });
+      const reserved = reservePendingBoardGameParticipants({
+        uids: [uid, toUid],
+        gameKind: "chess",
+        familyId,
+        inviteId: invite.inviteId,
+        createdAt: Date.now(),
+        expiresAt: invite.expiresAt,
+      });
       if (!reserved) {
         const pending = getPendingBoardGameReservation(uid);
         throw new ChessDomainError(
@@ -569,7 +679,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       invites.set(invite.inviteId, invite);
       await emitPresence(familyId);
       for (const targetSocket of socketsForUidInFamily(toUid, familyId)) targetSocket.emit(E.inviteReceived, invite);
-      setTimeout(() => void expireInvite(invite.inviteId), 45_100).unref();
+      setTimeout(() => void expireInvite(invite.inviteId), INVITE_TTL_MS + 100).unref();
       return invite;
     }));
 
@@ -577,11 +687,13 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const payload = asRecord(raw);
       const inviteId = asId(payload.inviteId, "inviteId");
       const invite = invites.get(inviteId);
-      if (!invite || invite.expiresAt <= Date.now()) throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
       if (invite.toUid !== uid) invalid();
       invites.delete(invite.inviteId);
-      const reservationUid = invite.isTestBot ? invite.toUid : invite.fromUid;
-      releasePendingBoardGameReservation(reservationUid, { gameKind: "chess", inviteId: invite.inviteId });
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
       for (const targetSocket of socketsForUidInFamily(invite.toUid, invite.familyId)) {
         targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
       }
@@ -596,10 +708,20 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       const payload = asRecord(raw);
       const inviteId = asId(payload.inviteId, "inviteId");
       const invite = invites.get(inviteId);
-      if (!invite || invite.expiresAt <= Date.now()) throw new ChessDomainError("CHESS_INVITE_EXPIRED");
-      if ((!invite.isTestBot && invite.fromUid !== uid) || (invite.isTestBot && invite.toUid !== uid)) invalid();
+      if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
+      const canCancel = !invite.isTestBot
+        ? invite.fromUid === uid
+        : invite.testBotDirection === "bot_to_user"
+          ? invite.toUid === uid
+          : invite.testBotDirection === "user_to_bot"
+            ? invite.fromUid === uid
+            : false;
+      if (!canCancel) invalid();
       invites.delete(invite.inviteId);
-      releasePendingBoardGameReservation(uid, { gameKind: "chess", inviteId: invite.inviteId });
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
       for (const targetSocket of socketsForUidInFamily(invite.toUid, invite.familyId)) {
         targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
       }
@@ -617,6 +739,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       // If the accept ACK was lost, the invite may already be gone. Resolve the
       // durable active lock and return the same game when requestId matches.
       if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
         const active = await persistence.getActiveForUid(uid);
         if (active) {
           const stored = await persistence.load(active.familyId, active.gameId);
@@ -638,8 +761,11 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       if (!ownerPending || ownerPending.gameKind !== "chess" || ownerPending.inviteId !== invite.inviteId) {
         throw new ChessDomainError("CHESS_INVITE_EXPIRED");
       }
-      if (!invite.isTestBot && getPendingBoardGameReservation(uid)) {
-        throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (!invite.isTestBot) {
+        const inviteePending = getPendingBoardGameReservation(uid);
+        if (!inviteePending || inviteePending.gameKind !== "chess" || inviteePending.inviteId !== invite.inviteId) {
+          throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+        }
       }
 
       const state = await manager.create(
@@ -651,8 +777,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         invite.isTestBot ? { testBotUid: invite.fromUid } : undefined,
       );
       invites.delete(invite.inviteId);
-      const reservationUid = invite.isTestBot ? invite.toUid : invite.fromUid;
-      releasePendingBoardGameReservation(reservationUid, { gameKind: "chess", inviteId: invite.inviteId });
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
 
       for (const playerUid of [invite.fromUid, invite.toUid]) {
         for (const playerSocket of socketsForUidInFamily(playerUid, invite.familyId)) {

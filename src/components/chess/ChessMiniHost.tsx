@@ -10,11 +10,10 @@ import { getChessGameStoreSnapshot, subscribeChessGameStore } from "../../servic
 import {
   getChessMiniPosition,
   setChessMiniPosition,
+  showChessSurfaceFull,
   useChessSurfaceState,
 } from "../../services/chess/chessSurfaceStore";
 import type { ChessColor } from "../../types/chess";
-import { useBloomSurfaceRailState } from "../../services/presentation/bloomSurfaceRailStore";
-import { presentClaimedBoardGame } from "../../services/presentation/boardGamePresentationCoordinator";
 
 const MINI_PIECE_IMAGES = {
   wp: require("../../../assets/images/chess/pieces-png-default/wp.png"),
@@ -75,14 +74,10 @@ export const ChessMiniHost = React.memo(function ChessMiniHost({
 }) {
   const router = useRouter();
   const surface = useChessSurfaceState();
-  const rail = useBloomSurfaceRailState();
   const { user } = useAuth();
   const gameId = surface.gameId;
   const me = user?.uid || "";
-  const visible = !!gameId
-    && rail.gameKind === "chess"
-    && rail.gameId === gameId
-    && rail.gamePresentation === "mini";
+  const visible = !!gameId && surface.mode === "mini";
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -155,7 +150,7 @@ export const ChessMiniHost = React.memo(function ChessMiniHost({
     // than push(): Expo Router will unwind to an existing command route instead
     // of stacking another route for the same gameId. Session/socket identity is
     // untouched; this is strictly MINI -> FULL presentation.
-    presentClaimedBoardGame("chess", gameId, "full", "route");
+    showChessSurfaceFull(gameId);
     router.navigate({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId } } as never);
   }, [gameId, router]);
 

@@ -172,6 +172,14 @@ call npm run phaseP2_22:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_23:check
 if errorlevel 1 goto :fail
+call npm run phaseP2_24:check
+if errorlevel 1 goto :fail
+call npm run phaseP2_25:check
+if errorlevel 1 goto :fail
+call npm run phaseP2_26:check
+if errorlevel 1 goto :fail
+call npm run phaseP2_27:check
+if errorlevel 1 goto :fail
 call npm run phaseP2_17_1:check
 if errorlevel 1 goto :fail
 if errorlevel 1 goto :fail

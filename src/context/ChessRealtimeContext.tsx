@@ -5,25 +5,16 @@ import { cacheChessGameSnapshot, clearCachedChessGameSnapshot } from "../service
 import { clearChessGameStore, getChessGameStoreSnapshot, publishChessGameNetwork, publishChessGameSnapshot, publishChessMoveDelta } from "../services/chess/chessGameStore";
 import { chessDiagnostics } from "../services/chess/chessDiagnostics";
 import { publishChessUiEvent } from "../services/chess/chessUiEventStore";
-import { resetChessSurfaceSession } from "../services/chess/chessSurfaceStore";
+import { finishChessSurfaceGame, isChessSurfaceGameTerminal, resetChessSurfaceSession } from "../services/chess/chessSurfaceStore";
 import { clearChessPresence, publishChessPresence } from "../services/chess/chessPresenceStore";
 import { publishChessTerminalResult } from "../services/games/boardGameTerminalResultStore";
-import { isActiveBoardGameSessionTerminal } from "../services/games/activeBoardGameSessionStore";
-import { finishClaimedBoardGame } from "../services/presentation/boardGamePresentationCoordinator";
-import {
-  beginLocalBoardGameReservation,
-  clearPendingBoardGameReservation,
-  finishLocalBoardGameReservation,
-  isLocalBoardGameCancellationRequested,
-  promoteLocalBoardGameReservation,
-  setPendingBoardGameReservation,
-} from "../services/games/pendingBoardGameReservationStore";
 import {
   CHESS_EVENTS,
   type ChessAck,
   type ChessGameState,
   type ChessInvite,
   type ChessMoveCommandAck,
+  type ChessOutgoingChallengeTerminal,
   type ChessPromotionPiece,
   type ChessSessionRecovery,
   type ChessTimeControl,
@@ -38,9 +29,9 @@ type ChessRealtimeValue = {
   connection: ChessConnectionState;
   incomingInvite: ChessInvite | null;
   outgoingInvite: ChessInvite | null;
+  outgoingChallengeTerminal: ChessOutgoingChallengeTerminal | null;
   activeGameId: string | null;
   recoveryKind: ChessSessionRecovery["kind"] | null;
-  busyOtherGame: { gameKind: "xiangqi"; gameId: string; familyId: string } | null;
   challenge: (toUid: string, timeControl: ChessTimeControl) => Promise<ChessAck<ChessInvite>>;
   cancelInvite: (inviteId: string) => Promise<ChessAck>;
   acceptInvite: (inviteId: string) => Promise<ChessAck<{ gameId: string; state: ChessGameState }>>;
@@ -50,6 +41,8 @@ type ChessRealtimeValue = {
   reconnect: () => Promise<void>;
   testBotEnabled: boolean;
   requestTestBotChallenge: (timeControl: ChessTimeControl, delayMs?: number) => Promise<ChessAck<ChessInvite>>;
+  challengeTestBot: (timeControl: ChessTimeControl) => Promise<ChessAck<ChessInvite>>;
+  acknowledgeOutgoingChallengeTerminal: () => void;
 };
 
 const ChessRealtimeContext = createContext<ChessRealtimeValue | null>(null);
@@ -94,12 +87,12 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
   const [connection, setConnection] = useState<ChessConnectionState>("idle");
   const [incomingInvite, setIncomingInvite] = useState<ChessInvite | null>(null);
   const [outgoingInvite, setOutgoingInvite] = useState<ChessInvite | null>(null);
+  const [outgoingChallengeTerminal, setOutgoingChallengeTerminal] = useState<ChessOutgoingChallengeTerminal | null>(null);
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
-  // P2.19: null means session recovery has not authoritatively completed for the
-  // current foreground/family pass. BoardGameSessionBridge must never interpret
-  // transient empty ids during connect/appJoin as an authoritative “none”.
+  // Null means session recovery has not authoritatively completed for the
+  // current foreground/family pass. Game-owned UI must not interpret a transient
+  // empty id during connect/appJoin as an authoritative “none”.
   const [recoveryKind, setRecoveryKind] = useState<ChessSessionRecovery["kind"] | null>(null);
-  const [busyOtherGame, setBusyOtherGame] = useState<{ gameKind: "xiangqi"; gameId: string; familyId: string } | null>(null);
   const [testBotEnabled, setTestBotEnabled] = useState(false);
 
   const familyIdRef = useRef<string | null>(activeFamilyId);
@@ -157,7 +150,7 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
   const handleState = useCallback((next: ChessGameState) => {
     // Once a game reaches terminal state its id is poisoned client-side. Ignore
     // every late packet for that id so it cannot overwrite a newer match.
-    if (isActiveBoardGameSessionTerminal("chess", next.gameId)) return;
+    if (isChessSurfaceGameTerminal(next.gameId)) return;
     // A socket can briefly receive a stale room packet while a family switch is
     // crossing native/JS boundaries. Never let another family's state enter the
     // canonical client store.
@@ -170,11 +163,9 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
       // and destroy every realtime/presentation identity in the same callback.
       // The terminal state never becomes a resumable ChessGameStore snapshot.
       publishChessTerminalResult(next);
-      finishClaimedBoardGame("chess", next.gameId);
-      clearPendingBoardGameReservation({ gameKind: "chess" });
+      finishChessSurfaceGame(next.gameId);
       setActiveGameId(null);
       setRecoveryKind("none");
-      setBusyOtherGame(null);
       boardPresenceRef.current = { gameId: null, visible: false };
       stateRef.current = null;
       clearCachedChessGameSnapshot(next.gameId);
@@ -200,6 +191,7 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     cacheChessGameSnapshot(next);
     stateRef.current = next;
     setActiveGameId((current) => current === next.gameId ? current : next.gameId);
+    setOutgoingChallengeTerminal(null);
     setIncomingInvite((current) => current && (next.whiteUid === current.fromUid || next.blackUid === current.fromUid) ? null : current);
     showGameStateToast(next, previous);
 
@@ -253,6 +245,16 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
         updateConnection("ready");
 
         const localGameId = stateRef.current?.familyId === familyId ? stateRef.current.gameId : null;
+        const dropRetainedChessSession = (gameId = localGameId) => {
+          if (gameId) {
+            clearCachedChessGameSnapshot(gameId);
+            clearChessGameStore(gameId);
+          }
+          stateRef.current = null;
+          setActiveGameId(null);
+          boardPresenceRef.current = { gameId: null, visible: false };
+          gameSyncInFlightRef.current = false;
+        };
         if (localGameId) {
           gameSyncInFlightRef.current = true;
           publishChessGameNetwork(localGameId, { connectionPhase: "synchronizing", error: null });
@@ -297,29 +299,30 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
         setRecoveryKind(recovery.data.kind);
 
         if (recovery.data.kind === "busy_other_game") {
-          gameSyncInFlightRef.current = false;
-          clearPendingBoardGameReservation();
-          setActiveGameId(null);
-          setBusyOtherGame({ gameKind: recovery.data.gameKind, gameId: recovery.data.gameId, familyId: recovery.data.familyId });
+          // P2.26: Chess recovery never retains or publishes Xiangqi identity.
+          // For Chess, busy_other_game simply means “no Chess session is recoverable”.
+          // Server mutations remain authoritative if the user later attempts a Chess action.
+          dropRetainedChessSession();
+          setRecoveryKind("none");
         } else if (recovery.data.kind === "pending") {
-          gameSyncInFlightRef.current = false;
-          setActiveGameId(null);
-          setBusyOtherGame(null);
-          setPendingBoardGameReservation({
-            gameKind: recovery.data.gameKind,
-            familyId: recovery.data.familyId,
-            inviteId: recovery.data.inviteId,
-            expiresAt: recovery.data.expiresAt,
-            source: "server",
-          });
+          // The server owns cross-game pending eligibility. Chess keeps only the
+          // recovery fact here; it must not mirror that reservation into a shared
+          // client store that can accidentally lock Xiangqi (or vice versa).
+          dropRetainedChessSession();
         } else if (recovery.data.kind === "active") {
-          setBusyOtherGame(null);
-          clearPendingBoardGameReservation();
-          gameSyncInFlightRef.current = true;
+              gameSyncInFlightRef.current = true;
           publishChessGameNetwork(recovery.data.gameId, { connectionPhase: "synchronizing", error: null });
           const game = await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameJoin, { familyId, gameId: recovery.data.gameId }, 20_000);
           if (!isCurrentFamily()) return;
-          if (!game.ok) throw new Error(game.errorCode);
+          if (!game.ok) {
+            if (game.errorCode === "CHESS_GAME_NOT_FOUND" || game.errorCode === "CHESS_GAME_FINISHED") {
+              // Server lifetime wins over any retained client snapshot.
+              dropRetainedChessSession(recovery.data.gameId);
+              setRecoveryKind("none");
+                  return;
+            }
+            throw new Error(game.errorCode);
+          }
           handleState(game.data);
           gameSyncInFlightRef.current = false;
           publishChessGameNetwork(game.data.gameId, { connectionPhase: "connected", error: null });
@@ -328,15 +331,9 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
             chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId: game.data.gameId, visible: true });
           }
         } else if (recovery.data.kind === "finished_unseen") {
-          // P2.20: a finished game is a receipt/history item, never a resumable
-          // realtime session. Acknowledge it without joining the old room or
-          // raising the board. This removes the stale-result resurrection seen
-          // when opening the other game after a previous match.
-          gameSyncInFlightRef.current = false;
-          if (stateRef.current?.gameId === recovery.data.gameId) stateRef.current = null;
-          setActiveGameId(null);
-          setBusyOtherGame(null);
-          clearPendingBoardGameReservation();
+              // Finished is history, not a resumable session. Server truth deletes
+          // retained Chess state before the receipt is acknowledged.
+          dropRetainedChessSession(recovery.data.gameId);
           setRecoveryKind("none");
           void chessSocketService.emitAck<{ acknowledged: boolean }>(
             CHESS_EVENTS.gameResultAck,
@@ -344,11 +341,7 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
             12_000,
           );
         } else {
-          gameSyncInFlightRef.current = false;
-          if (stateRef.current?.familyId === familyId) stateRef.current = null;
-          setActiveGameId(null);
-          setBusyOtherGame(null);
-          clearPendingBoardGameReservation();
+              dropRetainedChessSession();
         }
       } catch (error) {
         gameSyncInFlightRef.current = false;
@@ -373,19 +366,37 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     });
     const stopPresence = chessSocketService.on("presence", (items) => publishChessPresence(items));
     const stopExpired = chessSocketService.on("inviteExpired", ({ inviteId }) => {
-      clearPendingBoardGameReservation({ gameKind: "chess", inviteId });
-      setIncomingInvite((current) => current?.inviteId === inviteId ? null : current);
+      setIncomingInvite((current) => {
+        if (current?.inviteId !== inviteId) return current;
+        publishChessUiEvent({
+          type: "info",
+          title: "Lời mời đã khép lại 🌿",
+          message: "Lời mời này không còn khả dụng nữa. Khi muốn chơi, mình có thể bắt đầu một lời mời mới.",
+        });
+        return null;
+      });
       setOutgoingInvite((current) => {
         if (current?.inviteId !== inviteId) return current;
-        publishChessUiEvent({ type: "info", title: "Lời thách đấu vừa khép lại", message: "Có lẽ mình sẽ gặp nhau ở một ván khác nhé." });
+        setOutgoingChallengeTerminal({
+          inviteId,
+          reason: "expired",
+          opponentUid: current.toUid,
+          opponentName: memberName(current.toUid),
+          at: Date.now(),
+        });
         return null;
       });
     });
     const stopRejected = chessSocketService.on("inviteRejected", ({ inviteId, byUid }) => {
-      clearPendingBoardGameReservation({ gameKind: "chess", inviteId });
       setOutgoingInvite((current) => {
         if (current?.inviteId !== inviteId) return current;
-        publishChessUiEvent({ type: "info", title: `${memberName(byUid)} chưa tiện chơi lúc này 🌿`, message: "Mình có thể thách đấu lại vào một lúc khác." });
+        setOutgoingChallengeTerminal({
+          inviteId,
+          reason: "rejected",
+          opponentUid: byUid || current.toUid,
+          opponentName: memberName(byUid || current.toUid),
+          at: Date.now(),
+        });
         return null;
       });
     });
@@ -458,6 +469,7 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     clearChessPresence();
     setIncomingInvite(null);
     setOutgoingInvite(null);
+    setOutgoingChallengeTerminal(null);
     setActiveGameId(null);
     setRecoveryKind(null);
     if (!bootReady || !user || profileStatus !== "ready" || !activeFamilyId) {
@@ -551,34 +563,16 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
 
   const challenge = useCallback(async (toUid: string, timeControl: ChessTimeControl) => {
     const familyId = familyIdRef.current;
+    setOutgoingChallengeTerminal(null);
     if (!familyId) return { ok: false, errorCode: "CHESS_INVALID_REQUEST" } as ChessAck<ChessInvite>;
-    const localToken = beginLocalBoardGameReservation("chess", familyId, "requesting");
-    if (!localToken) return { ok: false, errorCode: "CHESS_ALREADY_IN_GAME" } as ChessAck<ChessInvite>;
 
-    const response = await chessSocketService.emitAck<ChessInvite>(CHESS_EVENTS.inviteCreate, { requestId: requestId(), familyId, toUid, timeControl });
-    if (!response.ok) {
-      finishLocalBoardGameReservation(localToken, true);
-      return response;
-    }
-
-    if (isLocalBoardGameCancellationRequested(localToken)) {
-      const cancelled = await chessSocketService.emitAck(CHESS_EVENTS.inviteCancel, { inviteId: response.data.inviteId });
-      finishLocalBoardGameReservation(localToken, cancelled.ok || cancelled.errorCode === "CHESS_INVITE_EXPIRED");
-      return { ok: false, errorCode: "CHESS_INVITE_EXPIRED" } as ChessAck<ChessInvite>;
-    }
-
-    const promoted = promoteLocalBoardGameReservation({
-      token: localToken,
-      inviteId: response.data.inviteId,
-      expiresAt: response.data.expiresAt,
-      familyId,
-    });
-    if (!promoted) {
-      await chessSocketService.emitAck(CHESS_EVENTS.inviteCancel, { inviteId: response.data.inviteId });
-      finishLocalBoardGameReservation(localToken, true);
-      return { ok: false, errorCode: "CHESS_ALREADY_IN_GAME" } as ChessAck<ChessInvite>;
-    }
-    setOutgoingInvite(response.data);
+    // Cross-game eligibility is server-authoritative. Do not create a mirrored
+    // local reservation: a stale client store must never block the other game.
+    const response = await chessSocketService.emitAck<ChessInvite>(
+      CHESS_EVENTS.inviteCreate,
+      { requestId: requestId(), familyId, toUid, timeControl },
+    );
+    if (response.ok) setOutgoingInvite(response.data);
     return response;
   }, []);
 
@@ -586,7 +580,7 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     const response = await chessSocketService.emitAck(CHESS_EVENTS.inviteCancel, { inviteId });
     if (response.ok) {
       setOutgoingInvite(null);
-      clearPendingBoardGameReservation({ gameKind: "chess", inviteId });
+      setOutgoingChallengeTerminal(null);
     }
     return response;
   }, []);
@@ -596,7 +590,6 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     if (response.ok) {
       setIncomingInvite(null);
       setOutgoingInvite(null);
-      clearPendingBoardGameReservation({ gameKind: "chess" });
       cacheChessGameSnapshot(response.data.state);
       handleState(response.data.state);
     }
@@ -608,7 +601,6 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     const response = await chessSocketService.emitAck(CHESS_EVENTS.inviteReject, { inviteId });
     if (response.ok) {
       setIncomingInvite(null);
-      if (rejecting?.isTestBot) clearPendingBoardGameReservation({ gameKind: "chess", inviteId });
       if (rejecting?.isTestBot) publishChessUiEvent({ type: "info", title: "Bloom Bot sẽ chờ bạn ♟️", message: "Khi muốn thử lại, mở Sảnh Cờ vua và gọi đối thủ thử nghiệm nhé." });
     }
     return response;
@@ -670,39 +662,39 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
   const requestTestBotChallenge = useCallback(async (timeControl: ChessTimeControl, delayMs = 0) => {
     const familyId = familyIdRef.current;
     if (!familyId) return { ok: false, errorCode: "CHESS_INVALID_REQUEST" } as ChessAck<ChessInvite>;
-    const localToken = beginLocalBoardGameReservation("chess", familyId, "requesting");
-    if (!localToken) return { ok: false, errorCode: "CHESS_ALREADY_IN_GAME" } as ChessAck<ChessInvite>;
 
-    // Server-authoritative by design: never let stale client capability state suppress
-    // a DEV Bloom Bot request. Render's CHESS_TEST_BOT_ENABLED is the only switch.
+    // Server-authoritative by design: Render's CHESS_TEST_BOT_ENABLED is the
+    // only capability switch, and the server owns the reservation.
     const response = await chessSocketService.emitAck<ChessInvite>(CHESS_EVENTS.testBotInvite, {
       requestId: requestId(), familyId, timeControl, delayMs,
     });
     if (!response.ok) {
-      finishLocalBoardGameReservation(localToken, true);
       if (response.errorCode === "CHESS_TEST_BOT_DISABLED") setTestBotEnabled(false);
       return response;
     }
-
-    if (response.ok) setTestBotEnabled(true);
-    if (isLocalBoardGameCancellationRequested(localToken)) {
-      const cancelled = await chessSocketService.emitAck(CHESS_EVENTS.inviteCancel, { inviteId: response.data.inviteId });
-      finishLocalBoardGameReservation(localToken, cancelled.ok || cancelled.errorCode === "CHESS_INVITE_EXPIRED");
-      return { ok: false, errorCode: "CHESS_INVITE_EXPIRED" } as ChessAck<ChessInvite>;
-    }
-
-    const promoted = promoteLocalBoardGameReservation({
-      token: localToken,
-      inviteId: response.data.inviteId,
-      expiresAt: response.data.expiresAt,
-      familyId,
-    });
-    if (!promoted) {
-      await chessSocketService.emitAck(CHESS_EVENTS.inviteCancel, { inviteId: response.data.inviteId });
-      finishLocalBoardGameReservation(localToken, true);
-      return { ok: false, errorCode: "CHESS_ALREADY_IN_GAME" } as ChessAck<ChessInvite>;
-    }
+    setTestBotEnabled(true);
     return response;
+  }, []);
+
+  const challengeTestBot = useCallback(async (timeControl: ChessTimeControl) => {
+    const familyId = familyIdRef.current;
+    setOutgoingChallengeTerminal(null);
+    if (!familyId) return { ok: false, errorCode: "CHESS_INVALID_REQUEST" } as ChessAck<ChessInvite>;
+
+    const response = await chessSocketService.emitAck<ChessInvite>(CHESS_EVENTS.testBotChallenge, {
+      requestId: requestId(), familyId, timeControl,
+    });
+    if (!response.ok) {
+      if (response.errorCode === "CHESS_TEST_BOT_DISABLED") setTestBotEnabled(false);
+      return response;
+    }
+    setTestBotEnabled(true);
+    setOutgoingInvite(response.data);
+    return response;
+  }, []);
+
+  const acknowledgeOutgoingChallengeTerminal = useCallback(() => {
+    setOutgoingChallengeTerminal(null);
   }, []);
 
   const setBoardPresence = useCallback((gameId: string | null, visible: boolean) => {
@@ -801,9 +793,9 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     connection,
     incomingInvite,
     outgoingInvite,
+    outgoingChallengeTerminal,
     activeGameId,
     recoveryKind,
-    busyOtherGame,
     challenge,
     cancelInvite,
     acceptInvite,
@@ -813,9 +805,11 @@ export function ChessRealtimeProvider({ children, bootReady = true }: { children
     reconnect: joinForeground,
     testBotEnabled,
     requestTestBotChallenge,
+    challengeTestBot,
+    acknowledgeOutgoingChallengeTerminal,
   }), [
-    connection, incomingInvite, outgoingInvite, activeGameId, recoveryKind, busyOtherGame,
-    challenge, cancelInvite, acceptInvite, rejectInvite, enterLobby, leaveLobby, joinForeground, testBotEnabled, requestTestBotChallenge,
+    connection, incomingInvite, outgoingInvite, outgoingChallengeTerminal, activeGameId, recoveryKind,
+    challenge, cancelInvite, acceptInvite, rejectInvite, enterLobby, leaveLobby, joinForeground, testBotEnabled, requestTestBotChallenge, challengeTestBot, acknowledgeOutgoingChallengeTerminal,
   ]);
 
   const actionsValue = useMemo<ChessRealtimeActionsValue>(() => ({

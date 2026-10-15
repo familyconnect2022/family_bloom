@@ -12,6 +12,7 @@ import { useChessGame } from "../../hooks/chess/useChessGame";
 import { getCachedChessGameSnapshot } from "../../services/chess/chessGameSnapshotCache";
 import {
   markChessSurfacePrepared,
+  minimizeChessSurface,
   useChessSurfaceState,
 } from "../../services/chess/chessSurfaceStore";
 import { emptyChessCaptureSummary, type ChessAppliedMove, type ChessColor, type ChessGameState, type ChessMoveDelta, type ChessPromotionPiece } from "../../types/chess";
@@ -22,10 +23,6 @@ import { ChessPlayerRail } from "./ChessPlayerRail";
 import { useChessSoundscape } from "./useChessSoundscape";
 import { capturePoints, ChessMaterialStrip } from "./ChessMaterialStrip";
 import { resolveBoardMoveSound } from "../../games/shared/boardGameFramework";
-import { useBloomSurfaceRailState } from "../../services/presentation/bloomSurfaceRailStore";
-import {
-  minimizeClaimedBoardGame,
-} from "../../services/presentation/boardGamePresentationCoordinator";
 
 const CHESS_START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 type SurfaceEntryPhase = "preparing" | "playing";
@@ -94,10 +91,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
 }) {
   const router = useRouter();
   const surface = useChessSurfaceState();
-  const rail = useBloomSurfaceRailState();
-  const presentationMode = rail.gameKind === "chess" && rail.gameId === surface.gameId
-    ? rail.gamePresentation
-    : "hidden";
+  const presentationMode = surface.mode;
   const presentationReady = surface.presentationReady;
   const { user, activeFamilyId } = useAuth();
   const members = useFamilyMembersRealtime();
@@ -105,6 +99,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
   const { confirm } = useBloomDialog();
   const { showToast } = useBloomToast();
   const {
+    criticalAudioReady,
     playMoveKind,
     playPremove,
     playIllegal,
@@ -391,7 +386,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
 
   useEffect(() => {
     const gameId = surface.gameId;
-    if (!gameId || !actualGame || presentationMode !== "full" || !warmReady || !sessionSynced || state.status !== "waiting" || game.connectionPhase !== "connected") return undefined;
+    if (!gameId || !actualGame || presentationMode !== "full" || !warmReady || !criticalAudioReady || !sessionSynced || state.status !== "waiting" || game.connectionPhase !== "connected") return undefined;
     // Asset/layout warmness is process-wide, but a NEW game must not start its
     // server clock until the new authoritative FEN/revision is actually painted.
     // ChessBoard reports visual revision only after its persistent native slots
@@ -425,7 +420,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
       cancelAnimationFrame(firstFrame);
       if (secondFrame) cancelAnimationFrame(secondFrame);
     };
-  }, [actualGame, game.connectionPhase, readyRetryNonce, realtimeActions, sessionSynced, showToast, state.revision, state.status, surface.gameId, presentationMode, visualRevision, warmReady]);
+  }, [actualGame, criticalAudioReady, game.connectionPhase, readyRetryNonce, realtimeActions, sessionSynced, showToast, state.revision, state.status, surface.gameId, presentationMode, visualRevision, warmReady]);
 
   useEffect(() => {
     if (state.status === "active" || state.status === "finished" || state.status === "cancelled") setReadyAwaitingOpponent(false);
@@ -465,7 +460,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
     // lightweight mini sibling, then return to the route underneath.
     fullSurfaceX.value = offscreenX;
     requestAnimationFrame(() => {
-      minimizeClaimedBoardGame("chess", gameId);
+      minimizeChessSurface();
       router.back();
     });
   }, [fullSurfaceX, offscreenX, router, surface.gameId]);
@@ -730,7 +725,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
           {showPreparing ? (
             <View style={styles.prepareCard}>
               {readyAwaitingOpponent ? <Ionicons name="checkmark-circle" size={24} color="#4E9B72" /> : <ActivityIndicator size="small" color={COLORS.primary} />}
-              <Text style={styles.prepareTitle}>{readyAwaitingOpponent && state.status === "waiting" ? "Bạn đã sẵn sàng" : warmReady ? "Đang đồng bộ ván cờ…" : "Đang vẽ bàn cờ…"}</Text>
+              <Text style={styles.prepareTitle}>{readyAwaitingOpponent && state.status === "waiting" ? "Bạn đã sẵn sàng" : !warmReady ? "Đang vẽ bàn cờ…" : !criticalAudioReady ? "Đang chuẩn bị âm thanh…" : "Đang đồng bộ ván cờ…"}</Text>
               <Text style={styles.prepareText}>{readyAwaitingOpponent && state.status === "waiting" ? "Đồng hồ chưa chạy. Bloom đang chờ người thân sẵn sàng trên bàn cờ của họ." : "Bloom đang hoàn tất bàn cờ để bạn có thể chơi ngay."}</Text>
             </View>
           ) : null}

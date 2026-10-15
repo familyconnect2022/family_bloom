@@ -40,6 +40,47 @@ export function reservePendingBoardGame(input: BoardGamePendingReservation) {
   return input;
 }
 
+/**
+ * Atomically reserve every real participant in one pending challenge.
+ * Existing reservations for the same challenge are treated as idempotent,
+ * while any conflicting Chess/Xiangqi reservation aborts the whole claim.
+ */
+export function reservePendingBoardGameParticipants(input: {
+  uids: string[];
+  gameKind: BoardGameKind;
+  familyId: string;
+  inviteId: string;
+  createdAt: number;
+  expiresAt: number;
+}) {
+  const uids = [...new Set(input.uids.filter(Boolean))];
+  const now = Date.now();
+  for (const uid of uids) sweepUid(uid, now);
+
+  for (const uid of uids) {
+    const current = reservations.get(uid);
+    if (!current) continue;
+    const sameChallenge = current.gameKind === input.gameKind
+      && current.familyId === input.familyId
+      && current.inviteId === input.inviteId;
+    if (!sameChallenge) return null;
+  }
+
+  for (const uid of uids) {
+    if (reservations.has(uid)) continue;
+    reservations.set(uid, {
+      uid,
+      gameKind: input.gameKind,
+      familyId: input.familyId,
+      inviteId: input.inviteId,
+      createdAt: input.createdAt,
+      expiresAt: input.expiresAt,
+    });
+  }
+
+  return uids.map((uid) => reservations.get(uid)!).filter(Boolean);
+}
+
 export function updatePendingBoardGameInviteId(
   uid: string,
   expectedInviteId: string,
@@ -64,6 +105,21 @@ export function releasePendingBoardGameReservation(
   if (match?.inviteId && current.inviteId !== match.inviteId) return false;
   reservations.delete(uid);
   return true;
+}
+
+/** Release every participant reserved by one terminal challenge. */
+export function releasePendingBoardGameInvite(
+  inviteId: string,
+  gameKind?: BoardGameKind,
+) {
+  let released = 0;
+  for (const [uid, current] of reservations) {
+    if (current.inviteId !== inviteId) continue;
+    if (gameKind && current.gameKind !== gameKind) continue;
+    reservations.delete(uid);
+    released += 1;
+  }
+  return released;
 }
 
 export function pendingReservationPublicShape(uid: string) {

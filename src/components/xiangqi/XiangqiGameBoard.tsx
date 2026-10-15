@@ -40,6 +40,7 @@ type Props = {
   runtimeActive?: boolean;
   onReady?: () => void;
   readyEpoch?: number;
+  orientation?: "red" | "black";
 };
 
 type HintSlotController = {
@@ -48,6 +49,9 @@ type HintSlotController = {
 };
 
 const MAX_XIANGQI_HINT_SLOTS = 20;
+
+const orientCol = (col: number, orientation: "red" | "black") => orientation === "black" ? 8 - col : col;
+const orientRow = (row: number, orientation: "red" | "black") => orientation === "black" ? 9 - row : row;
 
 const XiangqiHintSlot = React.memo(forwardRef<HintSlotController, { size: number }>(function XiangqiHintSlot({ size }, ref) {
   const x = useSharedValue(0);
@@ -103,7 +107,7 @@ const XiangqiHintSlot = React.memo(forwardRef<HintSlotController, { size: number
 }));
 
 function XiangqiHintPool({
-  source, legalTargets, pieceBySquare, selectedColor, padding, step, runtimeActive,
+  source, legalTargets, pieceBySquare, selectedColor, padding, step, runtimeActive, orientation,
 }: {
   source: { col: number; row: number } | null;
   legalTargets: readonly { col: number; row: number }[];
@@ -112,6 +116,7 @@ function XiangqiHintPool({
   padding: number;
   step: number;
   runtimeActive: boolean;
+  orientation: "red" | "black";
 }) {
   const slotsRef = useRef<Array<HintSlotController | null>>(Array(MAX_XIANGQI_HINT_SLOTS).fill(null));
 
@@ -132,13 +137,13 @@ function XiangqiHintPool({
       if (!slot) continue;
       if (!target) { slot.hide(); continue; }
       slot.show(
-        padding + target.col * step,
-        padding + target.row * step,
+        padding + orientCol(target.col, orientation) * step,
+        padding + orientRow(target.row, orientation) * step,
         target.capture,
         delays.get(`${target.col}:${target.row}`) ?? 0,
       );
     }
-  }, [legalTargets, padding, pieceBySquare, runtimeActive, selectedColor, source, step]);
+  }, [legalTargets, orientation, padding, pieceBySquare, runtimeActive, selectedColor, source, step]);
 
   return (
     <View pointerEvents="none" style={styles.hintPlane}>
@@ -234,7 +239,7 @@ const XiangqiPieceSprite = React.memo(function XiangqiPieceSprite({ piece, left,
   );
 });
 
-export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, selectedId, legalTargets, lastMove, checkedColor = null, premove = null, onTap, onMoveLanded, runtimeActive = true, onReady, readyEpoch = 0 }: Props) {
+export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, selectedId, legalTargets, lastMove, checkedColor = null, premove = null, onTap, onMoveLanded, runtimeActive = true, onReady, readyEpoch = 0, orientation = "red" }: Props) {
   const { width: screenWidth } = useWindowDimensions();
   useEffect(() => { gameRuntimePerf.markRender("xiangqi"); });
   useEffect(() => {
@@ -306,14 +311,14 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
   }, [maybeReportReady, readyEpoch, runtimeActive]);
 
   const handleBoardTap = useCallback((x: number, y: number) => {
-    const col = Math.round((x - padding) / step);
-    const row = Math.round((y - padding) / step);
-    if (col < 0 || col > 8 || row < 0 || row > 9) return;
-    const centerX = padding + col * step;
-    const centerY = padding + row * step;
+    const viewCol = Math.round((x - padding) / step);
+    const viewRow = Math.round((y - padding) / step);
+    if (viewCol < 0 || viewCol > 8 || viewRow < 0 || viewRow > 9) return;
+    const centerX = padding + viewCol * step;
+    const centerY = padding + viewRow * step;
     if (Math.abs(x - centerX) > step * 0.48 || Math.abs(y - centerY) > step * 0.48) return;
-    onTap(col, row);
-  }, [onTap, step]);
+    onTap(orientCol(viewCol, orientation), orientRow(viewRow, orientation));
+  }, [onTap, orientation, step]);
 
   const tapGesture = useMemo(() => Gesture.Tap()
     // Xiangqi tap handling mutates React game state, so make the execution
@@ -347,19 +352,19 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
 
           <View pointerEvents="none" style={styles.markerPlane}>
             {lastMove ? [lastMove.from, lastMove.to].map((square, index) => (
-              <View key={`last-${index}`} style={[styles.lastMarker, { left: padding + square.col * step - step * 0.33, top: padding + square.row * step - step * 0.33, width: step * 0.66, height: step * 0.66, borderRadius: step * 0.33 }]} />
+              <View key={`last-${index}`} style={[styles.lastMarker, { left: padding + orientCol(square.col, orientation) * step - step * 0.33, top: padding + orientRow(square.row, orientation) * step - step * 0.33, width: step * 0.66, height: step * 0.66, borderRadius: step * 0.33 }]} />
             )) : null}
-            {selected ? <View style={[styles.selectedMarker, { left: padding + selected.col * step - step * 0.38, top: padding + selected.row * step - step * 0.38, width: step * 0.76, height: step * 0.76, borderRadius: step * 0.38 }]} /> : null}
+            {selected ? <View style={[styles.selectedMarker, { left: padding + orientCol(selected.col, orientation) * step - step * 0.38, top: padding + orientRow(selected.row, orientation) * step - step * 0.38, width: step * 0.76, height: step * 0.76, borderRadius: step * 0.38 }]} /> : null}
             {premove ? [premove.from, premove.to].map((square, index) => (
-              <View key={`premove-${index}`} style={[styles.premoveMarker, { left: padding + square.col * step - step * 0.36, top: padding + square.row * step - step * 0.36, width: step * 0.72, height: step * 0.72, borderRadius: step * 0.36 }]} />
+              <View key={`premove-${index}`} style={[styles.premoveMarker, { left: padding + orientCol(square.col, orientation) * step - step * 0.36, top: padding + orientRow(square.row, orientation) * step - step * 0.36, width: step * 0.72, height: step * 0.72, borderRadius: step * 0.36 }]} />
             )) : null}
-            {checkedGeneral ? <View style={[styles.checkMarker, { left: padding + checkedGeneral.col * step - step * 0.4, top: padding + checkedGeneral.row * step - step * 0.4, width: step * 0.8, height: step * 0.8, borderRadius: step * 0.4 }]} /> : null}
+            {checkedGeneral ? <View style={[styles.checkMarker, { left: padding + orientCol(checkedGeneral.col, orientation) * step - step * 0.4, top: padding + orientRow(checkedGeneral.row, orientation) * step - step * 0.4, width: step * 0.8, height: step * 0.8, borderRadius: step * 0.4 }]} /> : null}
           </View>
 
           <View pointerEvents="none" style={styles.piecePlane}>
             {pieces.map((piece) => {
-              const left = padding + piece.col * step - pieceSize / 2;
-              const top = padding + piece.row * step - pieceSize / 2;
+              const left = padding + orientCol(piece.col, orientation) * step - pieceSize / 2;
+              const top = padding + orientRow(piece.row, orientation) * step - pieceSize / 2;
               const state = piece.id === selectedId ? "selected" : checkedGeneral?.id === piece.id ? "hint" : "normal";
               const justMoved = lastMove?.pieceId === piece.id;
               return (
@@ -387,6 +392,7 @@ export const XiangqiGameBoard = React.memo(function XiangqiGameBoard({ pieces, s
             padding={padding}
             step={step}
             runtimeActive={runtimeActive}
+            orientation={orientation}
           />
         </View>
       </GestureDetector>

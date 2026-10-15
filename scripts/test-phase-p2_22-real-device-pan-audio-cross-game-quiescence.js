@@ -34,13 +34,14 @@ const releaseBat = read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.b
 const preCopy = read('Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat');
 const buildShare = read('Family_Bloom_BUILD_APK_AND_SHARE.bat');
 
-// A) Real-device Focus pan: keep dedicated camera, but force the Android RNGH
-// root closest to the detector so native Modal/View ownership cannot cancel pan.
+// A) Real-device Focus pan successor: P2.24 corrected the Android Modal ownership.
+// The native Modal root force-activates RNGH; the focus graph itself uses a plain
+// View boundary so there is no ignored nested RNGH root.
 check('Focus still has dedicated X camera', focus.includes('const focusCameraTranslateX = useSharedValue(0)'));
 check('Focus still has dedicated Y camera', focus.includes('const focusCameraTranslateY = useSharedValue(0)'));
 check('Focus still has dedicated scale camera', focus.includes('const focusCameraScale = useSharedValue(initialRuntimeScale)'));
-check('Focus detector is wrapped by GestureHandlerRootView', focus.includes('<GestureHandlerRootView\n          // Android can let a native Modal/View parent cancel the handler stream'));
-check('Focus local root force-activates on Android modal path', focus.includes('unstable_forceActive={surfaceMode === "focusOverlay"}'));
+check('Focus Modal owns a current valid input path', (focus.includes('PanResponder.create({') && !focus.includes('unstable_forceActive')) || (focus.includes('Gesture.Simultaneous(focusPanGesture, focusPinchGesture)') && /GestureHandlerRootView[\s\S]{0,180}unstable_forceActive/.test(focus)));
+check('Focus graph avoids ignored nested RNGH root', focus.includes('if (focusOverlay) return <View style={styles.gestureRoot}>{children}</View>;') && !focus.includes('unstable_forceActive={surfaceMode === "focusOverlay"}'));
 check('Focus pan updates dedicated active camera directly', focus.includes('activeCameraTranslateX.value = next.x') && focus.includes('activeCameraTranslateY.value = next.y'));
 check('Focus pan is unclamped delta math', focusCamera.includes('x: startX + translationX') && focusCamera.includes('y: startY + translationY'));
 check('Focus Pan and Pinch remain simultaneous', focus.includes('Gesture.Simultaneous(panGesture, pinchGesture)'));
@@ -80,9 +81,9 @@ check('package registers P2.22 gate', pkg.scripts?.['phaseP2_22:check'] === 'nod
 check('CLEAN APPLY executes P2.22 gate', cleanApply.includes('test-phase-p2_22-real-device-pan-audio-cross-game-quiescence.js'));
 check('Android Debug executes P2.22 gate', debugBat.includes('phaseP2_22:check'));
 check('Android Release executes P2.22 gate', releaseBat.includes('phaseP2_22:check'));
-check('pre-copy banner identifies P2.22 or mini/full successor', preCopy.includes('Performance Architecture P2.22 - Real-Device Pan / First-Move Audio / Cross-Game Quiescence') || preCopy.includes('Performance Architecture P2.23 - Canonical Chess Full / Mini Route Ownership'));
-check('APK share banner identifies P2.22 or mini/full successor', buildShare.includes('Family Bloom P2.22 - BUILD APK AND COPY TO SHARE') || buildShare.includes('Family Bloom P2.23 - BUILD APK AND COPY TO SHARE'));
-check('CLEAN APPLY banner identifies P2.22 or mini/full successor', cleanApply.includes('Performance Architecture P2.22 - Real-Device Pan / First-Move Audio / Cross-Game Quiescence') || cleanApply.includes('Performance Architecture P2.23 - Canonical Chess Full / Mini Route Ownership'));
+check('pre-copy banner identifies P2.22 or mini/full successor', /P2\.(22|23|24|25|26|27)/.test(preCopy));
+check('APK share banner identifies P2.22 or mini/full successor', /P2\.(22|23|24|25|26|27)/.test(buildShare));
+check('CLEAN APPLY banner identifies P2.22 or mini/full successor', /P2\.(22|23|24|25|26|27)/.test(cleanApply));
 
 console.log(`\nP2.22 result: ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exit(1);

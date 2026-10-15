@@ -7,6 +7,7 @@ import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { BloomButton } from "../../../components/ui/BloomButtonComponents";
 import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
 import { FamilyGraphPrototype } from "../../../components/familyGraph/FamilyGraphPrototype";
+import { FamilyGraphFocusHost } from "../../../components/familyGraph/FamilyGraphFocusHost";
 import { getFamilyGraphWarmRecord, updateFamilyGraphViewState } from "../../../components/familyGraph/familyGraphWarmCache";
 import {
   buildFamilyGraphRenderSceneInterruptible,
@@ -39,6 +40,7 @@ export default function FamilyGraphScreen() {
   const [screenFocused, setScreenFocused] = useState(true);
   const [graphActivitySession, setGraphActivitySession] = useState<GraphActivitySession | null>(null);
   const [notifyingGraph, setNotifyingGraph] = useState(false);
+  const [focusOverlayPersonId, setFocusOverlayPersonId] = useState<string | null>(null);
   useFocusEffect(useCallback(() => {
     setScreenFocused(true);
     setGraphActivitySession(graphActivitySessionService.get(familyId));
@@ -166,26 +168,6 @@ export default function FamilyGraphScreen() {
       requestedMaxPeople: subgraph.requestedMaxPeople,
     };
   }, [queryEngine]);
-
-  const getCachedFocusBranchVisual = useCallback((focusPersonId: string) => (
-    peekFamilyGraphRenderSceneIdentity(snapshot, {
-      mode: "focusBranch",
-      focusPersonId,
-    })
-  ), [snapshot]);
-
-  const getFocusBranchVisual = useCallback((
-    focusPersonId: string,
-    cancellation?: FamilyGraphBuildCancellation,
-  ) => {
-    if (!queryEngine || !visual) return Promise.resolve(null);
-    // P2.11.3 cancel-first Focus: keep the same BSH Model/Layout/Scene stages and
-    // caches, but yield between stages so Back can invalidate an in-flight build.
-    return buildFamilyGraphRenderSceneInterruptible(snapshot, {
-      mode: "focusBranch",
-      focusPersonId,
-    }, cancellation, visual, queryEngine);
-  }, [queryEngine, snapshot, visual]);
 
   const deletePerson = async (personId: string) => {
     if (!familyId || !isAdmin) return;
@@ -357,13 +339,18 @@ export default function FamilyGraphScreen() {
               onDeleteRelationship={deleteRelationship}
               resolveRelationship={resolveRelationship}
               getFocusSubgraphPreview={getFocusSubgraphPreview}
-              getFocusBranchVisual={getFocusBranchVisual}
-              getCachedFocusBranchVisual={getCachedFocusBranchVisual}
+              onOpenFocus={setFocusOverlayPersonId}
               initialDetailPersonId={requestedDetailPersonId || null}
               headerMode="controls"
             />
           )}
         </View>
+
+        <FamilyGraphFocusHost
+          snapshot={snapshot}
+          personId={focusOverlayPersonId}
+          onYieldBack={() => setFocusOverlayPersonId(null)}
+        />
       </View>
     </ScreenContainer>
   );

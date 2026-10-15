@@ -15,9 +15,6 @@ import { useChessLobby } from "../../hooks/chess/useChessLobby";
 import { CHESS_ERROR_COPY, CHESS_TIME_CONTROLS, type ChessTimeControl } from "../../types/chess";
 import { getHomeGamePlayWindow } from "../../services/games/gameRoomPolicy";
 import { safeRouterBack } from "../../utils/safeRouterBack";
-import { useActiveBoardGameSession } from "../../services/games/activeBoardGameSessionStore";
-import { clearPendingBoardGameReservation, usePendingBoardGameReservation } from "../../services/games/pendingBoardGameReservationStore";
-import { cancelPendingBoardGameReservation } from "../../services/games/pendingBoardGameReservationActions";
 import { publishChessSoundUiEvent } from "../../services/chess/chessSoundEventBus";
 
 export default function ChessLobbyScreen() {
@@ -29,9 +26,6 @@ export default function ChessLobbyScreen() {
   const [clockNow, setClockNow] = useState(Date.now());
   const playWindow = useMemo(() => getHomeGamePlayWindow(clockNow), [clockNow]);
   const lobby = useChessLobby(activeFamilyId);
-  const activeBoardGame = useActiveBoardGameSession();
-  const pendingBoardGame = usePendingBoardGameReservation();
-  const [cancellingPending, setCancellingPending] = useState(false);
   const presence = useMemo(() => new Map(lobby.presence.map((item) => [item.uid, item.status])), [lobby.presence]);
   const members = membersRealtime?.familyId === activeFamilyId ? membersRealtime.members : [];
   const outgoingMember = lobby.outgoingInvite ? members.find((member) => member.uid === lobby.outgoingInvite?.toUid) : null;
@@ -44,52 +38,14 @@ export default function ChessLobbyScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (lobby.connection !== "ready") return;
-    if (pendingBoardGame?.gameKind !== "chess" || pendingBoardGame.source !== "local" || pendingBoardGame.phase !== "connecting") return;
-    clearPendingBoardGameReservation({ gameKind: "chess", inviteId: pendingBoardGame.inviteId });
-  }, [lobby.connection, pendingBoardGame?.gameKind, pendingBoardGame?.inviteId, pendingBoardGame?.phase, pendingBoardGame?.source]);
-
   // P2.23: ChessGlobalUiHost is the single navigation owner for an authoritative
   // active Chess game. The lobby deliberately does NOT push/replace the game
   // route when activeGameId appears; two navigation writers can stack duplicate
   // command routes for the same gameId, causing a mini request to back into a
   // second Chess route that instantly raises the board to full again.
 
-  useEffect(() => {
-    if (activeBoardGame?.kind !== "xiangqi") return;
-    router.replace("/(xiangqi)/xiangqi-preview" as never);
-  }, [activeBoardGame?.kind, router]);
-
-  useEffect(() => {
-    if (lobby.busyOtherGame?.gameKind !== "xiangqi") return;
-    // Durable server lock is authoritative: entering Chess while this uid owns
-    // a Xiangqi game returns the player to that one active board-game session.
-    if (lobby.busyOtherGame.familyId === activeFamilyId) {
-      router.replace("/(xiangqi)/xiangqi-preview" as never);
-      return;
-    }
-    showToast({
-      type: "info",
-      title: "Bạn đang có một ván Cờ tướng",
-      message: "Ván đó nằm ở Nhà khác. Hãy quay lại ván đang chơi trước khi mở Cờ vua.",
-    });
-  }, [activeFamilyId, lobby.busyOtherGame, router, showToast]);
 
   const sendChallenge = async (uid: string) => {
-    if (pendingBoardGame) {
-      showToast({
-        type: "info",
-        title: `Bạn đang chờ một ván ${pendingBoardGame.gameKind === "chess" ? "Cờ vua" : "Cờ tướng"}`,
-        message: "Hãy tiếp tục chờ hoặc hủy phiên đang chờ trước khi gửi lời thách đấu mới.",
-      });
-      return;
-    }
-    if (activeBoardGame?.kind === "xiangqi") {
-      showToast({ type: "info", title: "Bạn đang có một ván Cờ tướng", message: "Hãy quay lại ván đang chơi trước khi mở Cờ vua." });
-      router.replace("/(xiangqi)/xiangqi-preview" as never);
-      return;
-    }
     const latest = getHomeGamePlayWindow();
     if (!latest.canCreate) {
       showToast({ type: "info", title: "Nhà mình nghỉ ngơi nhé 🌙", message: "Lời thách đấu mới sẽ mở lại từ 6:00 sáng." });
@@ -98,27 +54,31 @@ export default function ChessLobbyScreen() {
     const response = await lobby.challenge(uid, timeControl);
     if (response.ok) {
       publishChessSoundUiEvent("challenge_sent");
-      showToast({ type: "success", title: "Đã gửi lời thách đấu", message: "Lời mời tự hết hạn sau 45 giây." });
+      router.push({ pathname: "/(chess)/chess-challenge/[inviteId]", params: { inviteId: response.data.inviteId } } as never);
     } else {
       showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
     }
   };
 
+  const challengeBot = async () => {
+    const response = await lobby.challengeTestBot(timeControl);
+    if (!response.ok) {
+      showToast({ type: "warning", message: CHESS_ERROR_COPY[response.errorCode] });
+      return;
+    }
+    const step = response.data.testCycleStep ?? 1;
+    showToast({
+      type: "info",
+      title: `Test Bạn mời Bot · lượt ${step}/3`,
+      message: step === 3
+        ? "Lượt này Bloom Bot sẽ từ chối để bạn kiểm tra luồng terminal."
+        : "Lượt này Bloom Bot sẽ đồng ý sau một nhịp ngắn.",
+      duration: 1800,
+    });
+    router.push({ pathname: "/(chess)/chess-challenge/[inviteId]", params: { inviteId: response.data.inviteId } } as never);
+  };
 
   const summonTestBot = async () => {
-    if (pendingBoardGame) {
-      showToast({
-        type: "info",
-        title: `Bạn đang chờ một ván ${pendingBoardGame.gameKind === "chess" ? "Cờ vua" : "Cờ tướng"}`,
-        message: "Hãy tiếp tục chờ hoặc hủy phiên đang chờ trước khi gọi Bloom Bot.",
-      });
-      return;
-    }
-    if (activeBoardGame?.kind === "xiangqi") {
-      showToast({ type: "info", title: "Bạn đang có một ván Cờ tướng", message: "Hãy quay lại ván đang chơi trước khi mở Cờ vua." });
-      router.replace("/(xiangqi)/xiangqi-preview" as never);
-      return;
-    }
     // Bloom Bot is intentionally available outside the family 06:00–22:00 play window.
     const response = await lobby.requestTestBotChallenge(timeControl, 5_000);
     if (!response.ok) {
@@ -176,7 +136,7 @@ export default function ChessLobbyScreen() {
               <View style={styles.waitingIcon}><Ionicons name="hourglass-outline" size={21} color={COLORS.primary} /></View>
               <View style={styles.memberCopy}>
                 <Text style={styles.memberName}>Đang chờ {outgoingMember?.shortName || outgoingMember?.displayName || "người thân"}</Text>
-                <Text style={styles.memberStatus}>Lời thách đấu sẽ tự hết hạn sau 45 giây.</Text>
+                <Text style={styles.memberStatus}>{lobby.outgoingInvite.isTestBot && lobby.outgoingInvite.testCycleStep ? `Test Bạn mời Bot · lượt ${lobby.outgoingInvite.testCycleStep}/3 · ` : ""}Lời thách đấu sẽ tự khép lại sau 2 phút.</Text>
               </View>
               <Pressable
                 style={styles.cancelInvite}
@@ -186,29 +146,6 @@ export default function ChessLobbyScreen() {
                 }}
               >
                 <Text style={styles.cancelInviteText}>Hủy</Text>
-              </Pressable>
-            </BloomCard>
-          ) : null}
-
-          {pendingBoardGame && !lobby.outgoingInvite ? (
-            <BloomCard style={styles.waitingCard}>
-              <View style={styles.waitingIcon}><Ionicons name="hourglass-outline" size={21} color={COLORS.primary} /></View>
-              <View style={styles.memberCopy}>
-                <Text style={styles.memberName}>Đang chờ một ván {pendingBoardGame.gameKind === "chess" ? "Cờ vua" : "Cờ tướng"}</Text>
-                <Text style={styles.memberStatus}>Bloom sẽ không mở một game khác cho tới khi phiên này được hủy hoặc kết thúc chờ.</Text>
-              </View>
-              <Pressable
-                disabled={cancellingPending}
-                style={[styles.cancelInvite, cancellingPending && styles.cardUnavailable]}
-                onPress={async () => {
-                  if (cancellingPending) return;
-                  setCancellingPending(true);
-                  const result = await cancelPendingBoardGameReservation(pendingBoardGame.gameKind);
-                  setCancellingPending(false);
-                  if (!result.ok) showToast({ type: "warning", message: result.message ?? "Bloom chưa hủy được phiên đang chờ." });
-                }}
-              >
-                <Text style={styles.cancelInviteText}>{cancellingPending ? "Đang hủy…" : "Hủy"}</Text>
               </Pressable>
             </BloomCard>
           ) : null}
@@ -226,22 +163,23 @@ export default function ChessLobbyScreen() {
           </ScrollView>
 
           {showBotCard ? (() => {
-            const botReady = lobby.connection === "ready" && !pendingBoardGame && !lobby.outgoingInvite && !lobby.invite;
+            const botReady = lobby.connection === "ready" && !lobby.outgoingInvite && !lobby.invite;
             return (
-              <BloomCard
-                tone="soft"
-                style={[styles.botCard, !botReady && styles.cardUnavailable]}
-                onPress={botReady ? () => void summonTestBot() : undefined}
-              >
+              <BloomCard tone="soft" style={[styles.botCard, !botReady && styles.cardUnavailable]}>
                 <View style={styles.botAvatar}><Text style={styles.botPiece}>♞</Text></View>
                 <View style={styles.memberCopy}>
-                  <Text style={styles.memberName}>Bloom Bot</Text>
+                  <Text style={styles.memberName}>Bloom Bot · kiểm tra 2 chiều</Text>
                   <Text style={styles.memberStatus}>{lobby.testBotEnabled
-                    ? "Dành cho lúc bạn chỉ có 1 máy. Bot chơi được 24/7; các ván với người thân vẫn giữ khung 06:00–22:00."
-                    : "Đang xác nhận Bloom Bot với máy chủ. Trong DEV bạn vẫn có thể gọi bot; chính server sẽ quyết định bật hay tắt."}</Text>
-                </View>
-                <View pointerEvents="none" style={[styles.challenge, !botReady && styles.disabled]}>
-                  <Text style={styles.challengeText}>Thách đấu</Text>
+                    ? "Bạn → Bot chạy chu kỳ Đồng ý · Đồng ý · Từ chối. Bot → Bạn giúp kiểm tra luồng nhận lời mời từ màn hình khác."
+                    : "Đang xác nhận Bloom Bot với máy chủ. Trong DEV bạn vẫn có thể thử; server là nơi quyết định bật hay tắt."}</Text>
+                  <View style={styles.botActions}>
+                    <Pressable disabled={!botReady} style={[styles.botAction, !botReady && styles.disabled]} onPress={() => void challengeBot()}>
+                      <Text style={styles.challengeText}>Tôi mời Bot</Text>
+                    </Pressable>
+                    <Pressable disabled={!botReady} style={[styles.botActionSecondary, !botReady && styles.disabled]} onPress={() => void summonTestBot()}>
+                      <Text style={styles.botActionSecondaryText}>Bot mời tôi</Text>
+                    </Pressable>
+                  </View>
                 </View>
               </BloomCard>
             );
@@ -259,7 +197,7 @@ export default function ChessLobbyScreen() {
               const status = presence.get(member.uid) ?? "offline";
               const ready = (status === "in_lobby" || status === "online_app") && playWindow.canCreate;
               const statusCopy = status === "in_game" ? "Đang chơi" : status === "busy" ? "Đang bận ở một ván khác" : (status === "in_lobby" || status === "online_app") && !playWindow.canCreate ? "Hẹn từ 6:00 sáng" : ready ? (status === "in_lobby" ? "Đang ở sảnh · Sẵn sàng" : "Đang online · Sẵn sàng") : "Ngoại tuyến";
-              const cardReady = ready && lobby.connection === "ready" && !pendingBoardGame && !lobby.outgoingInvite;
+              const cardReady = ready && lobby.connection === "ready" && !lobby.outgoingInvite;
               return (
                 <BloomCard
                   key={member.uid}
@@ -321,6 +259,10 @@ const styles = StyleSheet.create({
   memberCopy: { flex: 1 },
   memberName: { color: COLORS.primaryText, fontSize: 13.5, fontWeight: "900" },
   memberStatus: { marginTop: 4, color: COLORS.secondaryText, fontSize: 10.5 },
+  botActions: { flexDirection: "row", gap: 8, marginTop: 10, flexWrap: "wrap" },
+  botAction: { minHeight: 38, paddingHorizontal: 13, borderRadius: 15, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
+  botActionSecondary: { minHeight: 38, paddingHorizontal: 13, borderRadius: 15, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
+  botActionSecondaryText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "900" },
   challenge: { minHeight: 40, paddingHorizontal: 13, borderRadius: 15, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
   challengeText: { color: COLORS.white, fontSize: 10.5, fontWeight: "900" },
   disabled: { opacity: 0.38 },

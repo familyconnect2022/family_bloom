@@ -2,57 +2,40 @@ import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ChessGlobalUiHost } from "../chess/ChessGlobalUiHost";
+import { ChessChallengeMiniHost } from "../chess/ChessChallengeMiniHost";
 import { ChessMiniHost } from "../chess/ChessMiniHost";
-import { BoardGameSessionBridge } from "./BoardGameSessionBridge";
+import { XiangqiGlobalUiHost } from "../xiangqi/XiangqiGlobalUiHost";
+import { XiangqiChallengeMiniHost } from "../xiangqi/XiangqiChallengeMiniHost";
+import { XiangqiMiniHost } from "../xiangqi/XiangqiMiniHost";
 import { BoardGameTerminalResultHost } from "./BoardGameTerminalResultHost";
-import { GameBoardHost } from "./GameBoardHost";
-import { useActiveBoardGameSession } from "../../services/games/activeBoardGameSessionStore";
-import { useBloomSurfaceRailState } from "../../services/presentation/bloomSurfaceRailStore";
 
 /**
- * P2.18 app-root game presentation shell.
+ * Root presentation contains only lightweight global projections:
+ * invitation UI, pending challenge mini and active-game mini.
  *
- * Focus View no longer belongs here: it is route-local inside Phả hệ. The only
- * heavy root pixels are board-game layers, both owned by one lazy GameBoardHost.
+ * Full Chess/Xiangqi boards are route-owned and never live in this root stack.
+ * There is deliberately no shared board host, shared session bridge, or shared
+ * presentation rail between the two games.
  */
 export const BloomSurfaceStack = memo(function BloomSurfaceStack({
   backgroundWarmReady: _backgroundWarmReady,
 }: {
   backgroundWarmReady: boolean;
 }) {
-  const session = useActiveBoardGameSession();
-  const rail = useBloomSurfaceRailState();
-
-  const chessMiniVisible = session?.kind === "chess"
-    && rail.gameKind === "chess"
-    && rail.gameId === session.gameId
-    && rail.gamePresentation === "mini";
-  const xiangqiFullVisible = session?.kind === "xiangqi"
-    && rail.gameKind === "xiangqi"
-    && rail.gameId === session.gameId
-    && rail.gamePresentation === "full"
-    && rail.visibleSurface === "xiangqi";
-
   return (
-    <View pointerEvents="box-none" style={styles.root} testID="bloom-presentation-rail">
-      <BoardGameSessionBridge />
-      <GameBoardHost />
+    <View pointerEvents="box-none" style={styles.root} testID="bloom-global-game-projections">
       <BoardGameTerminalResultHost />
 
-      <View
-        pointerEvents={chessMiniVisible ? "box-none" : "none"}
-        accessibilityElementsHidden={!chessMiniVisible}
-        importantForAccessibility={chessMiniVisible ? "auto" : "no-hide-descendants"}
-        style={[styles.fullLayer, styles.miniLayer, !chessMiniVisible && styles.parkedLayer]}
-        testID="bloom-rail-mini-slot"
-      >
-        {session?.kind === "chess" ? (
-          <ChessMiniHost occludedByHigherSurface={!chessMiniVisible} />
-        ) : null}
+      <View pointerEvents="box-none" style={styles.miniLayer}>
+        <ChessChallengeMiniHost />
+        <XiangqiChallengeMiniHost />
+        <ChessMiniHost />
+        <XiangqiMiniHost />
       </View>
 
-      <View pointerEvents="box-none" style={[styles.fullLayer, styles.globalSystemLayer]}>
-        <ChessGlobalUiHost suspendedByHigherSurface={xiangqiFullVisible} />
+      <View pointerEvents="box-none" style={styles.globalSystemLayer}>
+        <ChessGlobalUiHost />
+        <XiangqiGlobalUiHost />
       </View>
     </View>
   );
@@ -65,17 +48,13 @@ const styles = StyleSheet.create({
     elevation: 80,
     pointerEvents: "box-none",
   },
-  fullLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  parkedLayer: {
-    opacity: 0,
-  },
   miniLayer: {
+    ...StyleSheet.absoluteFillObject,
     zIndex: 120,
     elevation: 26,
   },
   globalSystemLayer: {
+    ...StyleSheet.absoluteFillObject,
     zIndex: 300,
     elevation: 60,
   },

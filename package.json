@@ -239,7 +239,12 @@
     "phaseP2_20:check": "node ./scripts/test-phase-p2_20-clean-game-lifecycle-focus-pan.js",
     "phaseP2_21:check": "node ./scripts/test-phase-p2_21-terminal-teardown-focus-camera.js",
     "phaseP2_22:check": "node ./scripts/test-phase-p2_22-real-device-pan-audio-cross-game-quiescence.js",
-    "phaseP2_23:check": "node ./scripts/test-phase-p2_23-chess-full-mini-route-ownership.js"
+    "phaseP2_23:check": "node ./scripts/test-phase-p2_23-chess-full-mini-route-ownership.js",
+    "phaseP2_24:check": "node ./scripts/test-phase-p2_24-focus-modal-gesture-xiangqi-identity.js",
+    "phaseP2_25:check": "node ./scripts/test-phase-p2_25-server-owned-session-focus-panresponder.js",
+    "phaseP2_26:check": "node ./scripts/test-phase-p2_26-dedicated-focus-camera-chess-only-realtime.js",
+    "phaseP2_27:check": "node ./scripts/test-phase-p2_27-focus-ui-thread-chess-ready.js",
+    "phaseP2_28:check": "node ./scripts/test-phase-p2_28-independent-focus-board-game-lifecycle.js"
   },
   "private": true
 }

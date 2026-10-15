@@ -43,8 +43,8 @@ check('Chess context exposes explicit recoveryKind', chessContext.includes('reco
 check('recoveryKind is reset before each foreground recovery pass', chessContext.includes('setRecoveryKind(null);\n      try {'));
 check('recoveryKind is published only after successful sessionRecover ACK', chessContext.includes('if (!recovery.ok) throw new Error(recovery.errorCode);\n        setRecoveryKind(recovery.data.kind);'));
 check('background transition invalidates prior recovery authority', chessContext.includes('updateConnection("idle");\n        setRecoveryKind(null);'));
-check('session bridge does not interpret transient empty ids as recovered none', bridge.includes('if (chess.recoveryKind !== "none") return;'));
-check('session bridge recoveryKind participates in effect reconciliation', bridge.includes('chess.busyOtherGame, chess.recoveryKind]'));
+check('session bridge does not interpret transient empty ids as recovered none', bridge.includes('if (chess.recoveryKind == null) return;') && bridge.includes('const current = getActiveBoardGameSession();'));
+check('session bridge recoveryKind participates in effect reconciliation without cross-game state', bridge.includes('chess.activeGameId, chess.recoveryKind]') && !bridge.includes('busyOtherGame'));
 
 // 2) Route presentation has a real owner token, not only a game id.
 check('coordinator stores route presentation owner token', coordinator.includes('let routePresentationOwner: RouteBoardGamePresentationOwner | null = null'));
@@ -57,7 +57,7 @@ check('Chess route blur releases only its own owner token', chessRoute.includes(
 check('Chess focus follows active-session gameId/rematch changes', chessRoute.includes('activeBoardSession?.gameId'));
 check('Xiangqi route owns a stable route token', xiangqiRoute.includes('routeOwnerTokenRef = useRef(`xiangqi-route:'));
 check('Xiangqi route acquires through owner API', xiangqiRoute.includes('acquireRouteBoardGamePresentation("xiangqi"'));
-check('Xiangqi route blur parks only its own owner token', xiangqiRoute.includes('releaseRouteBoardGamePresentation("xiangqi", ownedGameId, ownerToken, "hidden")'));
+check('Xiangqi route blur parks only its own owner token', xiangqiRoute.includes('releaseRouteBoardGamePresentation("xiangqi", exactOwnedGameId, ownerToken, "hidden")'));
 check('Xiangqi focus follows active-session gameId/rematch changes', xiangqiRoute.includes('activeBoardSession?.gameId'));
 check('stale latest-session cleanup pattern removed from Chess route', !chessRoute.includes('minimizeClaimedBoardGame("chess", latest.gameId)'));
 check('stale latest-session cleanup pattern removed from Xiangqi route', !xiangqiRoute.includes('parkClaimedBoardGame("xiangqi", latest.gameId)'));
@@ -69,8 +69,8 @@ check('Game Hub resolves Xiangqi before normal route push', resolveAt >= 0 && no
 check('resolved Xiangqi state is cached before navigation', homeGames.indexOf('cacheXiangqiBootstrapState(result.state)') > resolveAt && homeGames.indexOf('cacheXiangqiBootstrapState(result.state)') < normalPushAt);
 check('resolved Xiangqi board is claimed parked/hidden before navigation', homeGames.includes('presentation: "hidden"') && homeGames.indexOf('presentation: "hidden"') < normalPushAt);
 check('route push waits one frame after root board claim', homeGames.includes('requestAnimationFrame(() => router.push("/xiangqi-preview"'));
-check('successor terminal result never participates in explicit Xiangqi start', !homeGames.includes('pendingResultGameId') && !homeGames.includes('finishClaimedBoardGame("chess"') && homeGames.includes('const activeChessGameId = activeBoardGame?.kind === "chess"'));
-check('truly active Chess still blocks Xiangqi', homeGames.includes('const activeChessGameId = activeBoardGame?.kind === "chess"') && homeGames.includes('Cờ vua vẫn đang tiếp tục'));
+check('successor terminal result never participates in explicit Xiangqi start', !homeGames.includes('pendingResultGameId') && !homeGames.includes('finishClaimedBoardGame("chess"') && homeGames.includes('const activeChessGameId = chessRealtime.activeGameId'));
+check('truly active Chess still blocks Xiangqi', homeGames.includes('const activeChessGameId = chessRealtime.activeGameId') && homeGames.includes('Cờ vua vẫn đang tiếp tục'));
 check('normal Xiangqi pending result stays on Game Hub instead of blank command route', homeGames.includes('if (result.kind === "pending")') && homeGames.includes('Stay on Game Hub'));
 check('Xiangqi local reservation is released on appJoin failure', /if \(!joined\.ok\) \{\s*finishLocalBoardGameReservation\(localToken, true\)/m.test(xiangqiBootstrap));
 check('Xiangqi local reservation is released on sessionRecover failure', /if \(!recovered\.ok\) \{\s*finishLocalBoardGameReservation\(localToken, true\)/m.test(xiangqiBootstrap));
@@ -150,7 +150,7 @@ try {
 
 check('package registers P2.19 gate', pkg.scripts?.['phaseP2_19:check'] === 'node ./scripts/test-phase-p2_19-route-owned-handoff-native-focus.js');
 check('copy-over updater runs P2.19 gate', cleanApply.includes('test-phase-p2_19-route-owned-handoff-native-focus.js'));
-check('pre-copy cleanup identifies P2.19+ release', /Performance Architecture P2\.(?:19|20|21|22|23)/.test(preCopy));
+check('pre-copy cleanup identifies P2.19+ release', /Performance Architecture P2\.(?:19|20|21|22|23|24|25|26|27)/.test(preCopy));
 check('Debug Android build runs P2.19 gate', debugBat.includes('phaseP2_19:check'));
 check('Release Android build runs P2.19 gate', releaseBat.includes('phaseP2_19:check'));
 

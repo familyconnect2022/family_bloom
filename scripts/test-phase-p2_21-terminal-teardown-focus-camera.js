@@ -91,8 +91,8 @@ check('Focus has dedicated X camera SharedValue', focus.includes('const focusCam
 check('Focus has dedicated Y camera SharedValue', focus.includes('const focusCameraTranslateY = useSharedValue(0)'));
 check('Focus has dedicated scale SharedValue', focus.includes('const focusCameraScale = useSharedValue(initialRuntimeScale)'));
 check('focus mode selects dedicated camera', focus.includes('surfaceMode === "focusOverlay" ? focusCameraTranslateX : canvasTranslateX'));
-check('Focus native Modal owns outer GestureHandlerRootView', focus.includes('<GestureHandlerRootView onLayout={handleShellLayout} style={styles.focusOverlayModalRoot}>'));
-check('Focus detector owns an Android-safe local gesture root', focus.includes('unstable_forceActive={surfaceMode === "focusOverlay"}') && focus.includes('<GestureHandlerRootView'));
+check('Focus native Modal uses a valid successor input path', (focus.includes('PanResponder.create({') && !focus.includes('unstable_forceActive')) || (focus.includes('Gesture.Simultaneous(focusPanGesture, focusPinchGesture)') && /GestureHandlerRootView[\s\S]{0,180}unstable_forceActive/.test(focus)));
+check('Focus detector avoids ignored nested root under native Modal', focus.includes('if (focusOverlay) return <View style={styles.gestureRoot}>{children}</View>;') && focus.includes('<FamilyGraphGestureBoundary focusOverlay={surfaceMode === "focusOverlay"}>'));
 check('Pan update uses pure Focus camera delta helper', focus.includes('applyFocusPanDelta('));
 check('Pinch update uses pure Focus scale helper', focus.includes('applyFocusPinchScale('));
 check('Focus pan helper applies translation without clamp', focusCamera.includes('x: startX + translationX') && focusCamera.includes('y: startY + translationY'));
@@ -182,8 +182,8 @@ check('package registers P2.21 gate', pkg.scripts?.['phaseP2_21:check'] === 'nod
 check('CLEAN APPLY executes P2.21 successor gate', cleanApply.includes('test-phase-p2_21-terminal-teardown-focus-camera.js'));
 check('Android Debug executes P2.21 successor gate', debugBat.includes('phaseP2_21:check'));
 check('Android Release executes P2.21 successor gate', releaseBat.includes('phaseP2_21:check'));
-check('pre-copy package banner identifies P2.21 or real-device successor', /Performance Architecture P2\.(?:21|22|23)/.test(preCopy));
-check('APK share entrypoint identifies P2.21 or real-device successor', /Family Bloom P2\.(?:21|22|23) - BUILD APK AND COPY TO SHARE/.test(buildShareBat));
+check('pre-copy package banner identifies P2.21 or real-device successor', /Performance Architecture P2\.(?:21|22|23|24|25|26|27)/.test(preCopy));
+check('APK share entrypoint identifies P2.21 or real-device successor', /Family Bloom P2\.(?:21|22|23|24|25|26|27) - BUILD APK AND COPY TO SHARE/.test(buildShareBat));
 
 console.log(`\nFamily Bloom P2.21: ${pass} PASS / ${fail} FAIL`);
 if (fail) process.exit(1);

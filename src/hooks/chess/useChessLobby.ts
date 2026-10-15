@@ -26,9 +26,13 @@ export function useChessLobby(familyId: string | null) {
   const accept = useCallback((inviteId: string): Promise<ChessAck<{ gameId: string; state: ChessGameState }>> => realtime.acceptInvite(inviteId), [realtime.acceptInvite]);
   const reject = useCallback((inviteId: string): Promise<ChessAck> => realtime.rejectInvite(inviteId), [realtime.rejectInvite]);
   const requestTestBotChallenge = useCallback((timeControl: ChessTimeControl, delayMs = 0) => {
-    prepareChessSurface("outgoing_challenge");
+    prepareChessSurface("incoming_challenge_test");
     return realtime.requestTestBotChallenge(timeControl, delayMs);
   }, [realtime.requestTestBotChallenge]);
+  const challengeTestBot = useCallback((timeControl: ChessTimeControl) => {
+    prepareChessSurface("outgoing_challenge");
+    return realtime.challengeTestBot(timeControl);
+  }, [realtime.challengeTestBot]);
 
   return {
     connection: realtime.connection,
@@ -36,12 +40,12 @@ export function useChessLobby(familyId: string | null) {
     invite: realtime.incomingInvite,
     outgoingInvite: realtime.outgoingInvite as ChessInvite | null,
     activeGameId: realtime.activeGameId,
-    busyOtherGame: realtime.busyOtherGame,
     challenge,
     cancel,
     accept,
     reject,
     testBotEnabled: realtime.testBotEnabled,
     requestTestBotChallenge,
+    challengeTestBot,
   };
 }

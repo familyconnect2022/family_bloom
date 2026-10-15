@@ -12,22 +12,22 @@ import { XiangqiGameBoard } from "./XiangqiGameBoard";
 import { XiangqiPiece } from "./XiangqiPiece";
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
+import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
 import {
   cacheXiangqiBootstrapState,
+  finishXiangqiSurfaceGame,
   getCachedXiangqiBootstrapState,
+  isXiangqiSurfaceGameTerminal,
   markXiangqiSurfacePrepared,
   useXiangqiSurfaceState,
 } from "../../services/xiangqi/xiangqiSurfaceStore";
 import { gameRuntimePerf } from "../../services/games/gameRuntimePerf";
 import { publishXiangqiTerminalResult } from "../../services/games/boardGameTerminalResultStore";
-import { isActiveBoardGameSessionTerminal } from "../../services/games/activeBoardGameSessionStore";
 import { xiangqiSocketService } from "../../services/xiangqi/xiangqiSocketService";
 import { XIANGQI_EVENTS, type XiangqiRealtimeState, type XiangqiMoveDelta } from "../../types/xiangqiRealtime";
 import { useBoardGameSoundscape } from "../games/useBoardGameSoundscape";
 import { resolveBoardMoveSound, type BoardGamePremove, type RealtimeBoardRoundPhase } from "../../games/shared/boardGameFramework";
 import { isBoardGameSurfacePresented } from "../../services/games/boardGameSurfaceLifecycle";
-import { useBloomSurfaceRailState } from "../../services/presentation/bloomSurfaceRailStore";
-import { finishClaimedBoardGame } from "../../services/presentation/boardGamePresentationCoordinator";
 import {
   createInitialXiangqiState,
   getXiangqiLegalMoves,
@@ -140,13 +140,17 @@ function XiangqiPreparedSurface({
 }) {
   const router = useRouter();
   const surface = useXiangqiSurfaceState();
-  const rail = useBloomSurfaceRailState();
-  const presentationMode = rail.gameKind === "xiangqi" && rail.gameId === surface.gameId
-    ? rail.gamePresentation
-    : "hidden";
+  const presentationMode = surface.mode;
   const { width: windowWidth } = useWindowDimensions();
   const { user, userProfile, activeFamilyId } = useAuth();
-  const { playMoveKind, playPremove, playIllegal, playTenSeconds, playGameStart } = useBoardGameSoundscape();
+  const membersRealtime = useFamilyMembersRealtime();
+  // P2.24: player identity is derived inside the prepared surface that renders
+  // the rail. Never rely on a route/local variable that is outside this scope.
+  const myName = userProfile?.shortName?.trim()
+    || userProfile?.displayName?.trim()
+    || user?.displayName?.trim()
+    || "Bạn";
+  const { criticalAudioReady, playMoveKind, playPremove, playIllegal, playTenSeconds, playGameStart } = useBoardGameSoundscape();
   // P2.17: only the root Presentation Rail owns Xiangqi pixels. A parked
   // surface is translated out and non-interactive; no route can force it visible.
   const screenFocused = isBoardGameSurfacePresented(surface.presentationReady, presentationMode)
@@ -160,6 +164,15 @@ function XiangqiPreparedSurface({
   // concrete server game has been resolved by the lightweight route bootstrap.
   const warmBoard = useMemo(() => createInitialXiangqiState(), []);
   const game = serverState?.board ?? warmBoard;
+  const mySide: "red" | "black" = serverState?.blackUid === user?.uid ? "black" : "red";
+  const opponentSide: "red" | "black" = mySide === "red" ? "black" : "red";
+  const opponentUid = serverState ? (mySide === "red" ? serverState.blackUid : serverState.redUid) : null;
+  const opponentMember = opponentUid ? membersRealtime?.memberByUid.get(opponentUid) : null;
+  const opponentIsBot = !!opponentUid && !!serverState?.testBotUid && opponentUid === serverState.testBotUid;
+  const opponentName = opponentIsBot
+    ? "Bloom Bot"
+    : opponentMember?.shortName?.trim() || opponentMember?.displayName?.trim() || "Người thân";
+  const opponentAvatar = opponentIsBot ? null : opponentMember?.avatarUrl;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [premove, setPremove] = useState<BoardGamePremove<{ col: number; row: number }, { col: number; row: number }, never> & { pieceId: string } | null>(null);
   const premoveRef = useRef<typeof premove>(null);
@@ -194,7 +207,7 @@ function XiangqiPreparedSurface({
 
   const terminateAuthoritativeGame = React.useCallback((terminalState: XiangqiRealtimeState) => {
     publishXiangqiTerminalResult(terminalState);
-    finishClaimedBoardGame("xiangqi", terminalState.gameId);
+    finishXiangqiSurfaceGame(terminalState.gameId);
     // The result receipt is history-only. ACK immediately so server recovery can
     // never return this finished game as a blocker for the next Chess/Xiangqi.
     void xiangqiSocketService.emitAck(
@@ -212,9 +225,9 @@ function XiangqiPreparedSurface({
   }, []);
 
   const applyState = React.useCallback((next: XiangqiRealtimeState) => {
-    if (isActiveBoardGameSessionTerminal("xiangqi", next.gameId)) return;
+    if (isXiangqiSurfaceGameTerminal(next.gameId)) return;
     if (surface.gameId && next.gameId !== surface.gameId) return;
-    if (next.status === "finished") {
+    if (next.status === "finished" || next.status === "cancelled") {
       terminateAuthoritativeGame(next);
       return;
     }
@@ -230,7 +243,7 @@ function XiangqiPreparedSurface({
   }, [surface.gameId, terminateAuthoritativeGame]);
 
   const applyDelta = React.useCallback((delta: XiangqiMoveDelta) => {
-    if (isActiveBoardGameSessionTerminal("xiangqi", delta.gameId)) return;
+    if (isXiangqiSurfaceGameTerminal(delta.gameId)) return;
     if (surface.gameId && delta.gameId !== surface.gameId) return;
     const current = serverStateRef.current;
     if (!current || current.gameId !== delta.gameId) return;
@@ -239,7 +252,7 @@ function XiangqiPreparedSurface({
       blackRemainingMs: delta.blackRemainingMs, status: delta.status, result: delta.result,
       finishReason: delta.finishReason, serverNowMs: delta.serverNowMs, endedAt: delta.endedAt,
     };
-    if (next.status === "finished") {
+    if (next.status === "finished" || next.status === "cancelled") {
       terminateAuthoritativeGame(next);
       return;
     }
@@ -261,7 +274,23 @@ function XiangqiPreparedSurface({
       const joined = await xiangqiSocketService.emitAck<{ ready: boolean; testBotEnabled: boolean }>(XIANGQI_EVENTS.appJoin, { familyId: activeFamilyId });
       if (!joined.ok) throw new Error(joined.message ?? joined.errorCode);
       const gameAck = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameJoin, { familyId: activeFamilyId, gameId });
-      if (!gameAck.ok) throw new Error(gameAck.message ?? gameAck.errorCode);
+      if (!gameAck.ok) {
+        if (gameAck.errorCode === "XIANGQI_GAME_NOT_FOUND" || gameAck.errorCode === "XIANGQI_GAME_FINISHED") {
+          // Server lifetime always wins. A retained surface/gameId is only a
+          // cache; when the server says it is gone, delete the local session
+          // immediately instead of retrying the dead id forever.
+          finishXiangqiSurfaceGame(gameId);
+          serverStateRef.current = null;
+          setServerState(null);
+          setSelectedId(null);
+          setPremove(null);
+          setBoardReady(false);
+          setRoundPhase("preparing");
+          readySentForGameRef.current = null;
+          return;
+        }
+        throw new Error(gameAck.message ?? gameAck.errorCode);
+      }
       applyState(gameAck.data);
     } catch (error) {
       setServerError(error instanceof Error ? error.message : String(error));
@@ -317,22 +346,31 @@ function XiangqiPreparedSurface({
 
   const legalTargets = useMemo(() => {
     if (!selectedId || !serverState) return [];
-    return game.turn === "red" ? getXiangqiLegalMoves(game, selectedId) : getXiangqiLegalMovesForColor(game, selectedId, "red");
-  }, [game, selectedId, serverState]);
+    return game.turn === mySide
+      ? getXiangqiLegalMoves(game, selectedId)
+      : getXiangqiLegalMovesForColor(game, selectedId, mySide);
+  }, [game, mySide, selectedId, serverState]);
 
 
   useEffect(() => {
     if (!screenFocused) return undefined;
     if (!serverState || !boardReady) { setRoundPhase("preparing"); return undefined; }
+    // Reconnect to an already-active game must never be held behind audio, but a
+    // waiting game may only announce Ready after both the native board scene and
+    // critical sound bank are actually usable.
     if (serverState.status === "active") { setRoundPhase("playing"); return undefined; }
     if (serverState.status === "finished") return undefined;
+    if (!criticalAudioReady) { setRoundPhase("preparing"); return undefined; }
     setRoundPhase("ready");
     if (readySentForGameRef.current !== serverState.gameId) {
       readySentForGameRef.current = serverState.gameId;
-      void xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameReady, { gameId: serverState.gameId, requestId: reqId("xq-ready") }).then((ack) => { if (ack.ok) applyState(ack.data); });
+      void xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameReady, { gameId: serverState.gameId, requestId: reqId("xq-ready") }).then((ack) => {
+        if (ack.ok) applyState(ack.data);
+        else if (readySentForGameRef.current === serverState.gameId) readySentForGameRef.current = null;
+      });
     }
     return undefined;
-  }, [applyState, boardReady, screenFocused, serverState]);
+  }, [applyState, boardReady, criticalAudioReady, screenFocused, serverState]);
 
   useEffect(() => { gameRuntimePerf.markSurface("xiangqi", surface.prepared); }, [surface.prepared]);
   useEffect(() => { if (!screenFocused) { setSelectedId(null); setPremove(null); } }, [screenFocused]);
@@ -354,20 +392,20 @@ function XiangqiPreparedSurface({
     if (!screenFocused || landedSoundMoveRef.current === game.moveNumber) return;
     landedSoundMoveRef.current = game.moveNumber;
     const mover = game.pieces.find((piece) => piece.id === move.pieceId);
-    playMoveKind(resolveBoardMoveSound({ isSelf: mover?.color === "red", captured: !!move.capturedId, check: !!game.inCheck }));
+    playMoveKind(resolveBoardMoveSound({ isSelf: mover?.color === mySide, captured: !!move.capturedId, check: !!game.inCheck }));
     const queued = premoveRef.current;
-    if (!queued || mover?.color !== "black" || game.turn !== "red" || game.gameOver) return;
+    if (!queued || mover?.color === mySide || game.turn !== mySide || game.gameOver) return;
     const legal = getXiangqiLegalMoves(game, queued.pieceId);
     const stillLegal = legal.some((target) => target.col === queued.to.col && target.row === queued.to.row);
     setPremove(null);
     if (!stillLegal) { playIllegal(); return; }
     requestAnimationFrame(() => { void sendMove(queued.pieceId, queued.to); });
-  }, [game, playIllegal, playMoveKind, screenFocused, sendMove]);
+  }, [game, mySide, playIllegal, playMoveKind, screenFocused, sendMove]);
 
   const onBoardTap = (col: number, row: number) => {
     if (!screenFocused || !boardReady || roundPhase !== "playing" || game.gameOver || !serverState) return;
     const tapped = game.pieces.find((piece) => piece.col === col && piece.row === row);
-    const premoveMode = game.turn === "black";
+    const premoveMode = game.turn !== mySide;
     if (selectedId) {
       const selectedPiece = game.pieces.find((piece) => piece.id === selectedId);
       const legal = legalTargets.some((target) => target.col === col && target.row === row);
@@ -375,34 +413,36 @@ function XiangqiPreparedSurface({
         if (premoveMode) { setPremove({ pieceId:selectedId, from:{col:selectedPiece.col,row:selectedPiece.row}, to:{col,row}, queuedAtRevision:serverState.revision }); playPremove(); setSelectedId(null); return; }
         void sendMove(selectedId,{col,row}); setSelectedId(null); return;
       }
-      if (tapped?.color === "red") { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); return; }
+      if (tapped?.color === mySide) { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); return; }
       playIllegal(); setSelectedId(null); return;
     }
     if (premove && ((premove.from.col===col&&premove.from.row===row)||(premove.to.col===col&&premove.to.row===row))) { setPremove(null); return; }
-    if (tapped?.color === "red") { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); }
+    if (tapped?.color === mySide) { if (premoveMode && premoveRef.current) setPremove(null); setSelectedId(tapped.id); }
   };
 
   const resign = async () => { const current=serverStateRef.current;if(!current)return;const ack=await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameResign,{gameId:current.gameId,requestId:reqId("xq-resign")});if(ack.ok)applyState(ack.data); };
-  const botThinking = serverState?.status === "active" && game.turn === "black";
+  const opponentThinking = opponentIsBot && serverState?.status === "active" && game.turn === opponentSide;
   const clockMs = { red: serverState?.redRemainingMs ?? null, black: serverState?.blackRemainingMs ?? null };
+  const myClockMs = mySide === "red" ? clockMs.red : clockMs.black;
+  const opponentClockMs = opponentSide === "red" ? clockMs.red : clockMs.black;
   const statusCopy = serverError
     ? `Máy chủ Cờ tướng: ${serverError}`
     : roundPhase === "preparing"
     ? "Đang chuẩn bị ván đấu…"
     : roundPhase === "ready"
-      ? "Sẵn sàng • Đỏ đi trước"
+      ? `Bạn đã sẵn sàng • đang chờ ${opponentName}`
       : game.inCheck
-          ? game.inCheck === "red" ? "Bạn đang bị chiếu Tướng" : "Bloom Bot đang bị chiếu Tướng"
-          : game.turn === "red"
+          ? game.inCheck === mySide ? "Bạn đang bị chiếu Tướng" : `${opponentName} đang bị chiếu Tướng`
+          : game.turn === mySide
             ? "Đến lượt bạn"
-            : botThinking
+            : opponentThinking
               ? "Bloom Bot đang tính nước…"
-              : "Đến lượt Bloom Bot";
+              : `Đến lượt ${opponentName}`;
 
   const readyPhase = roundPhase === "ready";
-  const phaseTitle = readyPhase ? "Sẵn sàng • Đỏ đi trước" : "Đang chuẩn bị bàn cờ";
+  const phaseTitle = readyPhase ? `Bạn đã sẵn sàng • đang chờ ${opponentName}` : "Đang chuẩn bị bàn cờ";
   const phaseText = readyPhase
-    ? "Bàn cờ đã ổn định. Bloom sẽ tự thu thẻ xuống để bạn bắt đầu nước đầu tiên."
+    ? "Đồng hồ chưa chạy. Ván chỉ bắt đầu khi bàn cờ và âm thanh của cả hai bên đều sẵn sàng."
     : "Bloom đang xếp quân, đồng bộ đồng hồ và khóa thao tác để tránh chạm nhầm.";
   const playing = roundPhase === "playing";
   // The entry shield is already visible on the route first frame. The board is
@@ -431,7 +471,7 @@ function XiangqiPreparedSurface({
         />
 
         <View style={styles.body}>
-          <PlayerRail side="black" name="Bloom Bot" active={playing && game.turn === "black" && !game.gameOver} thinking={botThinking} clockMs={clockMs.black} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} />
+          <PlayerRail side={opponentSide} name={opponentName} avatarUrl={opponentAvatar} active={playing && game.turn === opponentSide && !game.gameOver} thinking={opponentThinking} clockMs={opponentClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} />
 
           <View style={[styles.statusRow, roundPhase === "ready" && styles.statusRowReady, roundPhase === "preparing" && styles.statusRowPreparing, game.inCheck && playing && styles.statusRowAlert]}>
             <View style={[styles.statusDot, roundPhase === "preparing" && styles.statusDotPreparing, roundPhase === "ready" && styles.statusDotReady, game.inCheck && playing && styles.statusDotAlert]} />
@@ -453,6 +493,7 @@ function XiangqiPreparedSurface({
                   runtimeActive={screenFocused && boardSurfaceVisible}
                   readyEpoch={roundEpoch}
                   onReady={handleBoardReady}
+                  orientation={mySide}
                 />
               </>
             ) : (
@@ -463,7 +504,7 @@ function XiangqiPreparedSurface({
             )}
           </View>
 
-          <PlayerRail side="red" name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === "red" && !game.gameOver} clockMs={clockMs.red} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} onTenSeconds={playTenSeconds} />
+          <PlayerRail side={mySide} name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === mySide && !game.gameOver} clockMs={myClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} onTenSeconds={playTenSeconds} />
 
           <View style={styles.actions}>
             <Pressable disabled={game.gameOver || !playing} onPress={() => { void resign(); }} style={[styles.actionPrimary, (game.gameOver || !playing) && styles.disabled]}>
@@ -492,7 +533,7 @@ function XiangqiPreparedSurface({
         <View style={styles.flowStatusRow}>
           <View style={[styles.flowStatusDot, readyPhase && styles.flowStatusDotReady]} />
           <View style={styles.flowStatusCopy}>
-            <Text style={styles.flowStatusTitle}>{readyPhase ? "Bàn cờ sẵn sàng • Đỏ đi trước" : "Đang khóa thao tác trên bàn cờ"}</Text>
+            <Text style={styles.flowStatusTitle}>{readyPhase ? `Bàn cờ sẵn sàng • ${game.turn === mySide ? "Bạn" : opponentName} đi trước` : "Đang khóa thao tác trên bàn cờ"}</Text>
             <Text style={styles.flowStatusText}>{readyPhase ? "Thẻ sẽ tự trượt xuống, sau đó bạn có thể chọn quân ngay." : "Không cần chạm gì thêm — Bloom sẽ tự mở bàn cờ khi trạng thái ổn định."}</Text>
           </View>
           {!readyPhase ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="checkmark-circle" size={24} color="#4E9B72" />}

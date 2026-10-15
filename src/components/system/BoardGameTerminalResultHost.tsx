@@ -11,8 +11,8 @@ import {
   useBoardGameTerminalResult,
 } from "../../services/games/boardGameTerminalResultStore";
 import { getHomeGamePlayWindow } from "../../services/games/gameRoomPolicy";
-import { claimAndPresentBoardGame } from "../../services/presentation/boardGamePresentationCoordinator";
-import { cacheXiangqiBootstrapState } from "../../services/xiangqi/xiangqiSurfaceStore";
+import { activateChessSurface } from "../../services/chess/chessSurfaceStore";
+import { activateXiangqiSurface, cacheXiangqiBootstrapState } from "../../services/xiangqi/xiangqiSurfaceStore";
 import { xiangqiSocketService } from "../../services/xiangqi/xiangqiSocketService";
 import type { ChessGameState } from "../../types/chess";
 import { XIANGQI_EVENTS, type XiangqiRealtimeState } from "../../types/xiangqiRealtime";
@@ -41,7 +41,7 @@ function xiangqiReason(state: XiangqiRealtimeState) {
 }
 
 /**
- * P2.21 terminal presentation is deliberately outside GameBoardHost.
+ * Terminal presentation is independent from both game-owned board surfaces.
  * A result can stay visible while the realtime lease, rail identity and board
  * surface have already been destroyed/reset. Result UI therefore cannot keep a
  * dead game alive or block the other board game.
@@ -201,18 +201,9 @@ export const BoardGameTerminalResultHost = memo(function BoardGameTerminalResult
           return;
         }
         rematchRequestIdRef.current = null;
-        const claimed = claimAndPresentBoardGame({
-          kind: "chess",
-          gameId: ack.data.gameId,
-          familyId,
-          source: "server",
-          presentation: "full",
-          reason: "rematch",
-        });
-        if (!claimed) {
-          showToast({ type: "warning", message: "Ván mới đã được tạo nhưng Bloom chưa thể mở bàn cờ." });
-          return;
-        }
+        // Chess owns its presentation directly; no shared cross-game
+        // coordinator is allowed to claim or lock the Xiangqi runtime.
+        activateChessSurface(ack.data.gameId, "full");
         clearBoardGameTerminalResult({ kind: "chess", gameId: result.gameId });
         requestAnimationFrame(() => router.replace({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId: ack.data.gameId! } } as never));
         return;
@@ -227,18 +218,9 @@ export const BoardGameTerminalResultHost = memo(function BoardGameTerminalResult
         return;
       }
       cacheXiangqiBootstrapState(ack.data.state);
-      const claimed = claimAndPresentBoardGame({
-        kind: "xiangqi",
-        gameId: ack.data.gameId,
-        familyId,
-        source: "server",
-        presentation: "full",
-        reason: "rematch",
-      });
-      if (!claimed) {
-        showToast({ type: "warning", message: "Ván mới đã được tạo nhưng Bloom chưa thể mở bàn Cờ tướng." });
-        return;
-      }
+      // Xiangqi owns its own board lifecycle and never claims a shared board
+      // session/presentation identity.
+      activateXiangqiSurface(ack.data.gameId, "full", "rematch");
       clearBoardGameTerminalResult({ kind: "xiangqi", gameId: result.gameId });
       requestAnimationFrame(() => router.replace("/xiangqi-preview" as never));
     } finally {

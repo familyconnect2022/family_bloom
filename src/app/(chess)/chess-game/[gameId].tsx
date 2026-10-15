@@ -1,107 +1,61 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { COLORS } from "../../../constants/theme";
-import { useAuth } from "../../../context/AuthContext";
+import { ChessSurfaceHost } from "../../../components/chess/ChessSurfaceHost";
 import { useChessRealtime } from "../../../context/ChessRealtimeContext";
-import { getActiveBoardGameSession, useActiveBoardGameSession } from "../../../services/games/activeBoardGameSessionStore";
 import {
-  acquireRouteBoardGamePresentation,
-  claimAndPresentBoardGame,
-  releaseRouteBoardGamePresentation,
-} from "../../../services/presentation/boardGamePresentationCoordinator";
+  activateChessSurface,
+  minimizeChessSurface,
+  showChessSurfaceFull,
+} from "../../../services/chess/chessSurfaceStore";
 
 /**
- * P2.17 command-only route.
+ * Chess owns its full board inside its own route.
  *
- * The route owns zero Chess pixels and never manipulates Xiangqi. It submits one
- * presentation request to the root coordinator. Blurring the route changes the
- * same active Chess session from full -> mini; no board/session is recreated.
+ * There is no shared Chess/Xiangqi board host or presentation rail here. The
+ * server-confirmed Chess game id is copied only into ChessSurfaceStore. When
+ * this route yields, Chess alone decides whether its lightweight mini remains.
  */
-export default function ChessGameRouteController() {
+export default function ChessGameRoute() {
   const { gameId: rawGameId } = useLocalSearchParams<{ gameId: string }>();
-  const gameId = typeof rawGameId === "string" ? rawGameId.trim() : "";
+  const requestedGameId = typeof rawGameId === "string" ? rawGameId.trim() : "";
   const router = useRouter();
-  const { activeFamilyId } = useAuth();
   const chess = useChessRealtime();
-  const activeBoardSession = useActiveBoardGameSession();
-  // Route cleanup must only release the exact game this route presented. Using
-  // "whatever game is active now" lets an old route blur minimize a newer
-  // rematch/session after navigation has already advanced.
-  const ownedGameIdRef = useRef<string | null>(null);
-  const routeOwnerTokenRef = useRef(`chess-route:${Date.now()}:${Math.random().toString(36).slice(2, 9)}`);
+  const ownerRef = useRef(`chess-route:${Date.now()}:${Math.random().toString(36).slice(2, 9)}`);
 
   useEffect(() => {
-    if (!gameId) return;
-
-    if (chess.busyOtherGame?.gameKind === "xiangqi") {
-      router.replace("/xiangqi-preview" as never);
+    const authoritativeGameId = chess.activeGameId;
+    if (!authoritativeGameId) {
+      router.replace("/home-games" as never);
       return;
     }
-
-    const authoritativeChessId = chess.activeGameId;
-    const current = getActiveBoardGameSession();
-
-    // P2.21: a terminal result never owns a command route. Once the realtime
-    // provider clears activeGameId, this stale route leaves immediately while
-    // the independent root Result Host may remain visible above Game Hub.
-    if (!authoritativeChessId) {
-      if (current?.kind === "xiangqi") router.replace("/xiangqi-preview" as never);
-      else router.replace("/home-games" as never);
+    if (requestedGameId && requestedGameId !== authoritativeGameId) {
+      router.replace({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId: authoritativeGameId } } as never);
       return;
     }
-
-    const presented = claimAndPresentBoardGame({
-      kind: "chess",
-      gameId: authoritativeChessId,
-      familyId: activeFamilyId,
-      source: "server",
-      presentation: "full",
-      reason: "route",
-    });
-
-    if (presented) {
-      ownedGameIdRef.current = authoritativeChessId;
-    } else if (current?.kind === "xiangqi") {
-      router.replace("/xiangqi-preview" as never);
-    }
-  }, [activeFamilyId, chess.activeGameId, chess.busyOtherGame, gameId, router]);
+    activateChessSurface(authoritativeGameId, "full", ownerRef.current);
+  }, [chess.activeGameId, requestedGameId, router]);
 
   useFocusEffect(useCallback(() => {
+    const gameId = chess.activeGameId;
     if (!gameId) return undefined;
-    const session = getActiveBoardGameSession();
-    if (session?.kind !== "chess") return undefined;
-
-    const ownedGameId = session.gameId;
-    ownedGameIdRef.current = ownedGameId;
-    const ownerToken = routeOwnerTokenRef.current;
-    acquireRouteBoardGamePresentation("chess", ownedGameId, ownerToken);
+    const ownerId = ownerRef.current;
+    showChessSurfaceFull(gameId, ownerId);
     return () => {
-      // Token + exact id are both required. This also protects the same-gameId
-      // duplicate-route race: an older route cannot minimize a newer owner.
-      releaseRouteBoardGamePresentation("chess", ownedGameId, ownerToken, "mini");
+      // Yield presentation only. Socket/game identity remains alive and the
+      // global mini may represent this same Chess game while this route is away.
+      minimizeChessSurface(ownerId);
     };
-  }, [activeBoardSession?.gameId, activeBoardSession?.kind, chess.activeGameId, gameId]));
+  }, [chess.activeGameId]));
 
   return (
-    <View pointerEvents="none" style={styles.route} testID="chess-presentation-command-route">
-      <ActivityIndicator size="small" color={COLORS.primary} />
-      <Text style={styles.title}>Đang mở ván Cờ vua…</Text>
-      <Text style={styles.text}>Bloom đang kết nối đúng ván đang hoạt động.</Text>
+    <View style={styles.root} testID="chess-owned-game-route">
+      <ChessSurfaceHost />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  route: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 28,
-    backgroundColor: "#FFF8FB",
-  },
-  title: { color: COLORS.primaryText, fontSize: 15, fontWeight: "900" },
-  text: { maxWidth: 310, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17, textAlign: "center", fontWeight: "700" },
+  root: { flex: 1, backgroundColor: "#FFF8FB" },
 });

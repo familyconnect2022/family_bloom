@@ -3,7 +3,7 @@ import { canReleaseBoardGameSurface } from "../games/boardGameSurfaceLifecycle";
 import type { XiangqiRealtimeState } from "../../types/xiangqiRealtime";
 
 export type XiangqiSurfaceMode = "hidden" | "full" | "mini";
-export type XiangqiSurfacePrepareReason = "route" | "active_game" | "rematch";
+export type XiangqiSurfacePrepareReason = "route" | "outgoing_challenge" | "accept_invite" | "active_game" | "rematch";
 
 export type XiangqiSurfaceState = {
   prepared: boolean;
@@ -27,6 +27,28 @@ let state: XiangqiSurfaceState = {
   ownerId: null,
 };
 let bootstrapState: XiangqiRealtimeState | null = null;
+const terminalGameIds: string[] = [];
+const terminalGameIdSet = new Set<string>();
+const TERMINAL_GAME_LIMIT = 64;
+
+export type XiangqiMiniPosition = { x: number; y: number };
+let miniPosition: XiangqiMiniPosition | null = null;
+
+export function markXiangqiSurfaceGameTerminal(gameIdInput: string) {
+  const gameId = gameIdInput.trim();
+  if (!gameId || terminalGameIdSet.has(gameId)) return;
+  terminalGameIdSet.add(gameId);
+  terminalGameIds.push(gameId);
+  while (terminalGameIds.length > TERMINAL_GAME_LIMIT) {
+    const oldest = terminalGameIds.shift();
+    if (oldest) terminalGameIdSet.delete(oldest);
+  }
+}
+
+export function isXiangqiSurfaceGameTerminal(gameId: string) {
+  return terminalGameIdSet.has(gameId.trim());
+}
+
 const listeners = new Set<() => void>();
 
 function emit(next: XiangqiSurfaceState) {
@@ -36,6 +58,8 @@ function emit(next: XiangqiSurfaceState) {
 }
 
 export function getXiangqiSurfaceState() { return state; }
+export function getXiangqiMiniPosition() { return miniPosition; }
+export function setXiangqiMiniPosition(position: XiangqiMiniPosition) { miniPosition = position; }
 export function subscribeXiangqiSurface(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -116,6 +140,7 @@ export function hideXiangqiSurface(ownerId?: string) {
 }
 
 export function finishXiangqiSurfaceGame(gameId?: string | null) {
+  if (gameId) markXiangqiSurfaceGameTerminal(gameId);
   if (gameId && state.gameId && state.gameId !== gameId) return;
   if (!gameId || bootstrapState?.gameId === gameId) bootstrapState = null;
   emit({
@@ -130,6 +155,8 @@ export function finishXiangqiSurfaceGame(gameId?: string | null) {
 
 export function resetXiangqiSurfaceSession() {
   bootstrapState = null;
+  terminalGameIds.length = 0;
+  terminalGameIdSet.clear();
   emit({
     ...state,
     mode: "hidden",

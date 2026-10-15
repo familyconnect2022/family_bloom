@@ -12,10 +12,12 @@ export type XiangqiRealtimeState={
 };
 export type XiangqiMoveDelta={gameId:string;clientMoveId:string;version:number;move:XiangqiMove;board:XiangqiGameState;redRemainingMs:number|null;blackRemainingMs:number|null;status:XiangqiRealtimeStatus;result:XiangqiRealtimeResult;finishReason:XiangqiRealtimeFinishReason;serverNowMs:number;endedAt:string|null};
 export type XiangqiAck<T=undefined>=T extends undefined?{ok:true}|{ok:false;errorCode:string;message?:string}:{ok:true;data:T}|{ok:false;errorCode:string;message?:string};
+export type XiangqiInvite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3};
+export type XiangqiOutgoingChallengeTerminal={inviteId:string;reason:"rejected"|"expired";opponentUid:string;opponentName:string;at:number};
 export const XIANGQI_EVENTS={
  appJoin:"xiangqi:app:join",appLeave:"xiangqi:app:leave",lobbyJoin:"xiangqi:lobby:join",lobbyLeave:"xiangqi:lobby:leave",presenceUpdate:"xiangqi:presence:update",
  inviteCreate:"xiangqi:invite:create",inviteReceived:"xiangqi:invite:received",inviteAccept:"xiangqi:invite:accept",inviteReject:"xiangqi:invite:reject",inviteCancel:"xiangqi:invite:cancel",inviteExpired:"xiangqi:invite:expired",inviteRejected:"xiangqi:invite:rejected",
- testBotInvite:"xiangqi:test:bot:invite",gameJoin:"xiangqi:game:join",gameState:"xiangqi:game:state",gameMove:"xiangqi:game:move",gameMoveApplied:"xiangqi:game:moveApplied",gameReady:"xiangqi:game:ready",gameResign:"xiangqi:game:resign",gameBoardPresence:"xiangqi:game:boardPresence",gameResync:"xiangqi:game:resync",gameRematch:"xiangqi:game:rematch",sessionRecover:"xiangqi:session:recover",gameResultAck:"xiangqi:game:resultAck",
+ testBotInvite:"xiangqi:test:bot:invite",testBotChallenge:"xiangqi:test:bot:challenge",gameJoin:"xiangqi:game:join",gameState:"xiangqi:game:state",gameMove:"xiangqi:game:move",gameMoveApplied:"xiangqi:game:moveApplied",gameReady:"xiangqi:game:ready",gameResign:"xiangqi:game:resign",gameBoardPresence:"xiangqi:game:boardPresence",gameResync:"xiangqi:game:resync",gameRematch:"xiangqi:game:rematch",sessionRecover:"xiangqi:session:recover",gameResultAck:"xiangqi:game:resultAck",
 } as const;
 export const XIANGQI_TIME_CONTROLS=[
  {id:"3+2",label:"Siêu nhanh · 3+2",value:{kind:"clocked",initialMs:180000,incrementMs:2000} as XiangqiTimeControl},

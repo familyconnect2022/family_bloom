@@ -246,6 +246,14 @@ export const ChessBoard = React.memo(function ChessBoard({
     maybeReportBoardReady();
   }, [maybeReportBoardReady]);
 
+  // P2.27: readiness callbacks can all complete while the persistent board is
+  // asleep. Re-run the gate on every false -> true runtime activation so a
+  // previously completed layout/controller/asset set cannot miss readiness.
+  useEffect(() => {
+    if (!runtimeActive) return;
+    maybeReportBoardReady();
+  }, [maybeReportBoardReady, runtimeActive]);
+
   const findPieceAt = useCallback((square: string, color?: ChessColor, type?: string) => {
     for (const [id, piece] of runtimeRef.current) {
       if (!piece.alive || piece.square !== square) continue;

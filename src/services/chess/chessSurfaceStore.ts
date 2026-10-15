@@ -31,6 +31,25 @@ const initialState: ChessSurfaceState = {
 
 let state = initialState;
 let miniPosition: MiniPosition | null = null;
+const terminalGameIds: string[] = [];
+const terminalGameIdSet = new Set<string>();
+const TERMINAL_GAME_LIMIT = 64;
+
+export function markChessSurfaceGameTerminal(gameIdInput: string) {
+  const gameId = gameIdInput.trim();
+  if (!gameId || terminalGameIdSet.has(gameId)) return;
+  terminalGameIdSet.add(gameId);
+  terminalGameIds.push(gameId);
+  while (terminalGameIds.length > TERMINAL_GAME_LIMIT) {
+    const oldest = terminalGameIds.shift();
+    if (oldest) terminalGameIdSet.delete(oldest);
+  }
+}
+
+export function isChessSurfaceGameTerminal(gameId: string) {
+  return terminalGameIdSet.has(gameId.trim());
+}
+
 const listeners = new Set<() => void>();
 
 function emit(next: ChessSurfaceState) {
@@ -104,10 +123,16 @@ export function markChessSurfacePrepared() {
 
 export function activateChessSurface(gameId: string, mode: ChessSurfaceMode = "full", ownerId?: string) {
   if (!gameId) return;
+  // P2.27: assigning a server game id is NOT proof that the native board has
+  // painted. Keep a cold/preparing surface in preparation until ChessBoard
+  // reports layout + controllers + assets + two painted frames. Otherwise the
+  // first game can clear `preparing` before its snapshot arrives and sleep the
+  // board exactly while its ready callbacks are being registered.
+  const coldActivation = !state.prepared;
   emit({
     ...state,
     prepared: true,
-    preparing: false,
+    preparing: state.preparing || coldActivation,
     prepareReason: state.prepareReason ?? "active_game",
     gameId,
     mode,
@@ -134,6 +159,7 @@ export function hideChessSurface(ownerId: string) {
 }
 
 export function finishChessSurfaceGame(gameId?: string | null) {
+  if (gameId) markChessSurfaceGameTerminal(gameId);
   if (gameId && state.gameId && gameId !== state.gameId) return;
   emit({ ...state, mode: "hidden", gameId: null, preparing: false, prepareReason: null, ownerId: null });
 }
@@ -145,6 +171,8 @@ export function finishChessSurfaceGame(gameId?: string | null) {
  */
 export function resetChessSurfaceSession() {
   miniPosition = null;
+  terminalGameIds.length = 0;
+  terminalGameIdSet.clear();
   emit({
     ...state,
     mode: "hidden",

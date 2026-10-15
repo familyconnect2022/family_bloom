@@ -16,6 +16,7 @@ import { BLOOM_MOTION } from "../constants/motion";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
 import { ChessRealtimeProvider } from "../context/ChessRealtimeContext";
+import { XiangqiRealtimeProvider } from "../context/XiangqiRealtimeContext";
 import { setChessSurfacePresentationReady } from "../services/chess/chessSurfaceStore";
 import { setXiangqiSurfacePresentationReady } from "../services/xiangqi/xiangqiSurfaceStore";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
@@ -222,7 +223,10 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
       <Stack.Screen name="(home)/(board)/home-board" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(chess)/chess-lobby" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(chess)/chess-history" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(chess)/chess-challenge/[inviteId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(chess)/chess-game/[gameId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(xiangqi)/xiangqi-lobby" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(xiangqi)/xiangqi-challenge/[inviteId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(xiangqi)/xiangqi-preview" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(memories)/memory-book" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(internal)/performance-graph-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
@@ -289,6 +293,7 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
   return (
     <FamilyRealtimeProvider key={sessionKey} liveReady={backgroundWarmReady}>
       <ChessRealtimeProvider bootReady={backgroundWarmReady}>
+        <XiangqiRealtimeProvider bootReady={backgroundWarmReady}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <BoardGameAudioProvider enabled={backgroundWarmReady}>
             <TabStartupProvider key={sessionKey} enabled={!!user && !!activeFamilyId}>
@@ -298,6 +303,7 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
             <BloomSurfaceStack backgroundWarmReady={backgroundWarmReady} />
           </BoardGameAudioProvider>
         </GestureHandlerRootView>
+        </XiangqiRealtimeProvider>
       </ChessRealtimeProvider>
     </FamilyRealtimeProvider>
   );

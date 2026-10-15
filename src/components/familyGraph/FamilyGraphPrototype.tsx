@@ -2,11 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  BackHandler,
   LayoutChangeEvent,
   Modal,
   Pressable,
-  useWindowDimensions,
   StyleSheet,
   Text,
   View,
@@ -20,8 +18,8 @@ import { getColorByName } from "../../utils";
 import { BloomChipButton } from "../ui/BloomButtonComponents";
 import { BloomTextInput } from "../ui/BloomInputComponents";
 import { FamilyGraphPersonSheet } from "./FamilyGraphPersonSheet";
-import { applyFocusPanDelta, applyFocusPinchScale } from "./familyGraphFocusCamera";
-import type { FamilyGraphBuildCancellation, FamilyGraphRenderScene } from "./familyGraphSceneBuilder";
+import { applyMainFamilyGraphPanDelta, applyMainFamilyGraphPinchScale } from "./familyGraphMainCamera";
+import type { FamilyGraphRenderScene } from "./familyGraphSceneBuilder";
 import {
   FAMILY_GRAPH_NODE_CARD_HEIGHT,
   FAMILY_GRAPH_NODE_CARD_WIDTH,
@@ -65,34 +63,9 @@ type ViewMode = FamilyGraphViewMode;
 
 type Point = { x: number; y: number };
 
-type FocusRelationKind =
-  | "partner"
-  | "father"
-  | "mother"
-  | "son"
-  | "daughter"
-  | "sibling"
-  | "grandfather"
-  | "grandmother"
-  | "grandchild"
-  | "bac"
-  | "co"
-  | "chu"
-  | "di"
-  | "cau"
-  | "relative";
-
-type FocusRelationMeta = {
-  kind: FocusRelationKind;
-  label: string;
-};
-
 const MIN_SAFE_SCALE = 0.02;
 // P2.11: Focus View is a readable camera, never fit-all. The 0.95 entry
 // scale intentionally feels slightly larger than P2.10 while preserving pan room.
-const FOCUS_BRANCH_ENTRY_SCALE = 0.95;
-const FOCUS_BRANCH_ANCHOR_SCREEN_Y = 0.42;
-const FOCUS_OVERLAY_SCREEN_RATIO = 0.85;
 const SCALE_STEP = 0.1;
 const INITIAL_SCALE = 0.86;
 const AVATAR_SIZE = 58;
@@ -112,7 +85,6 @@ const ACTIVE_PARENT_COLOR = "#DABDC8";
 const FADED_PARENT_COLOR = "#F0EAEC";
 const PARTNER_DASH_COLOR = "#E9E1E4";
 const ACTIVE_LINE_THICKNESS = 1.7;
-const FOCUS_LINE_THICKNESS = ACTIVE_LINE_THICKNESS + 1;
 const FADED_LINE_THICKNESS = 1.05;
 const ACTIVE_ENDPOINT_SIZE = 4.6;
 const FADED_ENDPOINT_SIZE = 3.8;
@@ -156,22 +128,6 @@ type FamilyGraphSubgraphPreview = {
   requestedMaxPeople: number;
 };
 
-type FamilyGraphFocusBranchVisual = FamilyGraphRenderScene;
-
-export type FamilyGraphFocusOverlayState = {
-  personId: string;
-  personName: string;
-  visual: FamilyGraphFocusBranchVisual | null;
-  visualReady: boolean;
-  loadFailed: boolean;
-  targetFrame: { x: number; y: number; width: number; height: number };
-  hostFrame: { x: number; y: number; width: number; height: number };
-  durationMs: number;
-  requestId: number;
-};
-
-type FamilyGraphSurfaceMode = "standard" | "focusOverlay";
-
 type FamilyGraphPrototypeProps = {
   familyName: string;
   familyId?: string | null;
@@ -189,12 +145,8 @@ type FamilyGraphPrototypeProps = {
   canvasHeight?: number;
   resolveRelationship?: (sourcePersonId: string, targetPersonId: string) => FamilyGraphVietnameseRelationship | null;
   getFocusSubgraphPreview?: (viewAnchorPersonId: string, mode: "3" | "5") => FamilyGraphSubgraphPreview | null;
-  getFocusBranchVisual?: (
-    viewAnchorPersonId: string,
-    cancellation?: FamilyGraphBuildCancellation,
-  ) => FamilyGraphFocusBranchVisual | null | Promise<FamilyGraphFocusBranchVisual | null>;
-  /** P2.13: zero-work revisit path. Must only return revision-safe prepared scenes. */
-  getCachedFocusBranchVisual?: (viewAnchorPersonId: string) => FamilyGraphFocusBranchVisual | null;
+  /** Route-owned Focus intent. When provided, Main Tree never mounts its legacy Focus overlay. */
+  onOpenFocus?: (personId: string) => void;
   initialDetailPersonId?: string | null;
   initialViewMode?: FamilyGraphViewMode;
   initialCameraSnapshot?: FamilyGraphCameraSnapshot | null;
@@ -206,10 +158,6 @@ type FamilyGraphPrototypeProps = {
   onRenderedCountChange?: (rendered: number, total: number) => void;
   /** Bloom Supper: route-level hero can own title/copy while graph keeps only actions. */
   headerMode?: "full" | "controls" | "none";
-  /** Internal graph surface used by the single focus overlay. It never opens another overlay. */
-  surfaceMode?: FamilyGraphSurfaceMode;
-  /** Focus-overlay graph uses this to move to another Person without stacking overlays. */
-  onFocusPersonRequest?: (personId: string) => void;
   /** Fit the whole bounded branch into the viewport on first paint. */
   autoFitOnMount?: boolean;
   /** P2.7: fired only after layout, progressive mount, camera fit and two paint frames. */
@@ -232,16 +180,13 @@ export function FamilyGraphPrototype({
   canvasHeight,
   resolveRelationship,
   getFocusSubgraphPreview,
-  getFocusBranchVisual,
-  getCachedFocusBranchVisual,
+  onOpenFocus,
   initialDetailPersonId,
   initialViewMode,
   initialCameraSnapshot,
   onViewStateChange,
   onRenderedCountChange,
   headerMode = "full",
-  surfaceMode = "standard",
-  onFocusPersonRequest,
   autoFitOnMount = false,
   onVisualReady,
 }: FamilyGraphPrototypeProps) {
@@ -257,7 +202,6 @@ export function FamilyGraphPrototype({
     }));
   }, [people, scene]);
   const sourceConnections = scene?.connections ?? connections ?? FAMILY_GRAPH_PROTOTYPE_CONNECTIONS;
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const effectiveCanvasWidth = scene?.canvasWidth ?? canvasWidth ?? FAMILY_GRAPH_CANVAS.width;
   const effectiveCanvasHeight = scene?.canvasHeight ?? canvasHeight ?? FAMILY_GRAPH_CANVAS.height;
   const isLiveGraph = scene !== undefined || people !== undefined;
@@ -287,10 +231,6 @@ export function FamilyGraphPrototype({
   const [viewAnchorPersonId, setViewAnchorPersonId] = useState<string | null>(initialFocusId);
   const [highlightedPersonId, setHighlightedPersonId] = useState<string | null>(initialFocusId);
   const [branchMode, setBranchMode] = useState(false);
-  const [focusOverlay, setFocusOverlay] = useState<FamilyGraphFocusOverlayState | null>(null);
-  // P2.12.3 Recovery: Focus session lifetime is independent from native presentation.
-  // The retained BSH Scene can stay alive while the Modal is hidden.
-  const [focusOverlayVisible, setFocusOverlayVisible] = useState(false);
   const [detailPersonId, setDetailPersonId] = useState<string | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -315,15 +255,11 @@ export function FamilyGraphPrototype({
   const canvasScale = useSharedValue(initialRuntimeScale);
   const canvasTranslateX = useSharedValue(0);
   const canvasTranslateY = useSharedValue(0);
-  // P2.21: Focus owns a dedicated camera. It never shares mutable transform
-  // state with the normal Family Graph camera, even though both use the same
-  // renderer/culling pipeline.
-  const focusCameraScale = useSharedValue(initialRuntimeScale);
-  const focusCameraTranslateX = useSharedValue(0);
-  const focusCameraTranslateY = useSharedValue(0);
-  const activeCameraScale = surfaceMode === "focusOverlay" ? focusCameraScale : canvasScale;
-  const activeCameraTranslateX = surfaceMode === "focusOverlay" ? focusCameraTranslateX : canvasTranslateX;
-  const activeCameraTranslateY = surfaceMode === "focusOverlay" ? focusCameraTranslateY : canvasTranslateY;
+  // Main Tree owns this camera exclusively. Focus View has a different component,
+  // SharedValues and runtime cache.
+  const activeCameraScale = canvasScale;
+  const activeCameraTranslateX = canvasTranslateX;
+  const activeCameraTranslateY = canvasTranslateY;
   const panStartX = useSharedValue(0);
   const panStartY = useSharedValue(0);
   const pinchActive = useSharedValue(0);
@@ -331,42 +267,10 @@ export function FamilyGraphPrototype({
   const pinchStartScale = useSharedValue(initialRuntimeScale);
   const pinchAnchorCanvasX = useSharedValue(0);
   const pinchAnchorCanvasY = useSharedValue(0);
-  const focusOverlayProgress = useSharedValue(0);
-  const focusOverlayContentProgress = useSharedValue(1);
-  const focusOverlayStartTranslateX = useSharedValue(0);
-  const focusOverlayStartTranslateY = useSharedValue(0);
-  const focusVisualRequestRef = useRef(0);
-  // P2.16.2: retain every prepared Focus branch for this mounted Family Graph
-  // route. Switching A -> B -> A must never throw A away just because B became
-  // the current overlay. The route-level BSH identity cache backs this up across
-  // component state changes while the immutable graph snapshot is unchanged.
-  const focusVisualCacheRef = useRef<Map<string, FamilyGraphFocusBranchVisual>>(new Map());
-  const focusOverlayHydrationStartedRef = useRef<number | null>(null);
-  const focusOverlayClosingRef = useRef(false);
-  const focusBuildTokenRef = useRef<{ requestId: number; cancelled: boolean } | null>(null);
-  const focusScheduledFramesRef = useRef<Set<number>>(new Set());
-  const focusScheduledTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const pendingDetailFocusHandoffRef = useRef<{
-    personId: string;
-    hostFrame: { x: number; y: number; width: number; height: number };
-  } | null>(null);
-  const detailFocusHandoffFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [detailFocusHandoffPending, setDetailFocusHandoffPending] = useState(false);
   const visualReadyFiredRef = useRef(false);
   const userCameraInteractedRef = useRef(runtimeHydrationRef.current?.userCameraValid ?? false);
-  const focusRelationCacheRef = useRef<{ anchorId: string | null; values: Map<string, FocusRelationMeta> }>({ anchorId: null, values: new Map() });
-  const lastPressedPersonFrameRef = useRef<{ personId: string; centerX: number; centerY: number; nodeWidth: number; nodeHeight: number } | null>(null);
   const rootRef = useRef<View>(null);
-  const rootWindowFrameRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
-  // P2.16.1 route-local Focus must never depend on measureInWindow. Native
-  // screen wrappers can transiently report a zero window frame even though the
-  // Family Graph route itself is fully laid out. Keep the route-local geometry
-  // synchronously from onLayout and open Focus from that.
-  const rootLocalFrameRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const hasCenteredInitially = useRef(false);
-  // Focus overlay is intentionally isolated from the background camera/layout.
-  // Opening/closing it must not mutate pan, zoom, branch dimming or selection.
-
   const peopleById = useMemo(
     () => new Map(sourcePeople.map((person) => [person.id, person])),
     [sourcePeople],
@@ -475,7 +379,7 @@ export function FamilyGraphPrototype({
       }
     }
     return ids;
-  }, [initialFocusId, peopleById, scene, sourceConnections, surfaceMode, viewAnchorPersonId]);
+  }, [initialFocusId, peopleById, scene, sourceConnections, viewAnchorPersonId]);
 
   const progressivePeople = useMemo(
     () => viewMode === "all"
@@ -521,9 +425,7 @@ export function FamilyGraphPrototype({
       viewport,
       canvasWidth: effectiveCanvasWidth,
       canvasHeight: effectiveCanvasHeight,
-      overscanScreens: surfaceMode === "focusOverlay"
-        ? FAMILY_GRAPH_RENDER_CONFIG.focusViewportOverscanScreens
-        : FAMILY_GRAPH_RENDER_CONFIG.viewportOverscanScreens,
+      overscanScreens: FAMILY_GRAPH_RENDER_CONFIG.viewportOverscanScreens,
     });
     const ids = new Set<string>();
     if (viewport.width <= 0 || viewport.height <= 0) {
@@ -552,7 +454,7 @@ export function FamilyGraphPrototype({
       }
     }
     return ids;
-  }, [detailPersonId, effectiveCanvasHeight, effectiveCanvasWidth, focusBootstrapPersonIds, highlightedPersonId, partnerIdsByPerson, renderedIds, renderedPeople, selectedPersonId, surfaceMode, viewAnchorPersonId, viewport, viewportSpatialGrid]);
+  }, [detailPersonId, effectiveCanvasHeight, effectiveCanvasWidth, focusBootstrapPersonIds, highlightedPersonId, partnerIdsByPerson, renderedIds, renderedPeople, selectedPersonId, viewAnchorPersonId, viewport, viewportSpatialGrid]);
 
   const visibleNowPersonIds = useMemo(
     () => collectPersonIdsForCamera(cameraSnapshot),
@@ -638,7 +540,6 @@ export function FamilyGraphPrototype({
     if (!onVisualReady || visualReadyFiredRef.current) return;
     if (viewport.width <= 0 || viewport.height <= 0) return;
     if (!hasCenteredInitially.current) return;
-    if (surfaceMode === "focusOverlay" && (!scene || !scene.focusPersonId)) return;
 
     let cancelled = false;
     let secondFrame = 0;
@@ -659,40 +560,9 @@ export function FamilyGraphPrototype({
   }, [
     onVisualReady,
     scene?.sceneKey,
-    scene?.focusPersonId,
-    surfaceMode,
     viewport.height,
     viewport.width,
   ]);
-
-  // P2.8: kinship resolution is viewport-scoped. The previous Focus View called
-  // getRelationshipBetween() for every Person in a large branch during mount,
-  // turning a visual overlay into N graph traversals before the first useful frame.
-  // Off-screen cards do not need a label yet, so resolve only the cards React is
-  // actually about to paint; pan/zoom recomputes the small visible set on demand.
-  const focusRelations = useMemo(() => {
-    if (surfaceMode !== "focusOverlay" || !viewAnchorPersonId) return new Map<string, FocusRelationMeta>();
-
-    if (resolveRelationship) {
-      if (focusRelationCacheRef.current.anchorId !== viewAnchorPersonId) {
-        focusRelationCacheRef.current = { anchorId: viewAnchorPersonId, values: new Map() };
-      }
-      const relations = focusRelationCacheRef.current.values;
-      for (const person of viewportPeople) {
-        if (person.id === viewAnchorPersonId || relations.has(person.id)) continue;
-        const resolved = resolveRelationship(person.id, viewAnchorPersonId);
-        if (!resolved || resolved.kind === "unrelated" || resolved.kind === "self") continue;
-        relations.set(person.id, toFocusRelationMeta(resolved, person));
-      }
-      return relations;
-    }
-
-    return getRelationshipMetaAroundFocus(
-      viewAnchorPersonId,
-      sourcePeople,
-      sourceConnections,
-    );
-  }, [resolveRelationship, sourceConnections, sourcePeople, surfaceMode, viewAnchorPersonId, viewportPeople]);
 
   const filteredPeople = useMemo(() => {
     const normalized = searchText.trim().toLocaleLowerCase("vi");
@@ -718,12 +588,7 @@ export function FamilyGraphPrototype({
 
   const commitCameraSnapshot = useCallback((centerX: number, centerY: number, scale: number) => {
     const next = { centerX, centerY, scale };
-    // P2.11.2: camera snapshots are needed for culling regardless of origin,
-    // but BSH Runtime may persist a camera only after explicit user interaction.
-    // Bootstrap/layout/animated-reaction camera values must never poison reopen.
-    if (scene && surfaceMode === "focusOverlay" && userCameraInteractedRef.current) {
-      updateFamilyGraphRuntimeCamera(scene.sceneKey, next);
-    }
+    if (scene && userCameraInteractedRef.current) updateFamilyGraphRuntimeCamera(scene.sceneKey, next);
     setCameraSnapshot((current) => {
       if (
         Math.abs(current.centerX - centerX) < 0.5
@@ -732,15 +597,15 @@ export function FamilyGraphPrototype({
       ) return current;
       return next;
     });
-  }, [scene, surfaceMode]);
+  }, [scene]);
 
   const markUserCameraInteraction = useCallback(() => {
-    if (surfaceMode === "focusOverlay") userCameraInteractedRef.current = true;
-  }, [surfaceMode]);
+    userCameraInteractedRef.current = true;
+  }, []);
 
   const commitUserCameraTransform = useCallback((translateX: number, translateY: number, scale: number) => {
     if (viewport.width <= 0 || viewport.height <= 0) return;
-    if (surfaceMode === "focusOverlay") userCameraInteractedRef.current = true;
+    userCameraInteractedRef.current = true;
     const camera = getFamilyGraphCameraSnapshotFromTransform({
       transform: { translateX, translateY, scale: Math.max(MIN_SAFE_SCALE, scale) },
       viewport,
@@ -748,16 +613,16 @@ export function FamilyGraphPrototype({
       canvasHeight: effectiveCanvasHeight,
     });
     commitCameraSnapshot(camera.centerX, camera.centerY, camera.scale);
-  }, [commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, surfaceMode, viewport]);
+  }, [commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, viewport]);
 
   useEffect(() => {
-    if (!onViewStateChange || surfaceMode !== "standard") return;
+    if (!onViewStateChange) return;
     onViewStateChange({
       viewMode,
       viewAnchorPersonId,
       camera: cameraSnapshot,
     });
-  }, [cameraSnapshot, onViewStateChange, surfaceMode, viewAnchorPersonId, viewMode]);
+  }, [cameraSnapshot, onViewStateChange, viewAnchorPersonId, viewMode]);
 
   // Viewport-aware rendering must not send every pan/pinch frame through React.
   // The UI thread tracks the camera continuously, but JS is notified only after
@@ -872,7 +737,7 @@ export function FamilyGraphPrototype({
     .onUpdate((event) => {
       "worklet";
       if (pinchActive.value !== 0 || panSessionValid.value === 0) return;
-      const next = applyFocusPanDelta(
+      const next = applyMainFamilyGraphPanDelta(
         panStartX.value,
         panStartY.value,
         event.translationX,
@@ -930,7 +795,7 @@ export function FamilyGraphPrototype({
 
       // Zoom trực tiếp theo scale từ đầu gesture: tay đi bao nhiêu, canvas đi bấy nhiêu.
       // Phase 6.0 chưa áp giới hạn UX; chỉ có guard kỹ thuật rất rộng.
-      const nextScale = applyFocusPinchScale(
+      const nextScale = applyMainFamilyGraphPinchScale(
         pinchStartScale.value,
         event.scale,
         MIN_SAFE_SCALE,
@@ -987,43 +852,10 @@ export function FamilyGraphPrototype({
     transform: [{ scale: activeCameraScale.value }],
   }));
 
-  const focusOverlayAnimatedStyle = useAnimatedStyle(() => ({
-    // P2.11.2: the Focus graph surface is geometrically stable for its entire
-    // persistent-session lifetime. Back/dismiss must not translate or scale the graph,
-    // otherwise the frozen base tree underneath looks like the branch "sinks"
-    // and "rises" during teardown.
-    opacity: 1,
-    transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
-  }));
-
-  const focusOverlayContentStyle = useAnimatedStyle(() => ({
-    // P2.11.1: never hide the prepared graph behind readiness. Readiness only
-    // controls the tiny progress indicator. If a future readiness regression
-    // occurs, the graph remains visible and fully pannable/zoomable.
-    opacity: 1,
-    transform: [{ scale: 1 }],
-  }));
-
-  const focusOverlayPreparingStyle = useAnimatedStyle(() => ({
-    opacity: 1 - focusOverlayContentProgress.value,
-  }));
-
-  const measureRootInWindow = useCallback(() => {
-    requestAnimationFrame(() => {
-      rootRef.current?.measureInWindow((x, y, width, height) => {
-        if (width <= 0 || height <= 0) return;
-        rootWindowFrameRef.current = { x, y, width, height };
-      });
-    });
+  const handleRootLayout = useCallback((_event: LayoutChangeEvent) => {
+    // Main Tree no longer measures window geometry for Focus. Focus is a route
+    // sibling with its own native layout and camera.
   }, []);
-
-  const handleRootLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0) rootLocalFrameRef.current = { x: 0, y: 0, width, height };
-    // Window measurement remains diagnostic/legacy only. Focus opening never
-    // waits for it anymore.
-    measureRootInWindow();
-  }, [measureRootInWindow]);
 
   const handleViewportLayout = useCallback((event: LayoutChangeEvent) => {
     const next = {
@@ -1033,8 +865,6 @@ export function FamilyGraphPrototype({
       height: event.nativeEvent.layout.height,
     };
     setViewport(next);
-    measureRootInWindow();
-
     if (!hasCenteredInitially.current && next.width > 0 && next.height > 0) {
       hasCenteredInitially.current = true;
       const person = peopleById.get(initialFocusId ?? "");
@@ -1071,21 +901,6 @@ export function FamilyGraphPrototype({
         return;
       }
 
-      // BSH Stage 4 runtime hydration: a revisited Focus scene may restore the
-      // last camera without rebuilding topology/layout. sceneKey already carries
-      // revision/version identity, so stale runtime state cannot cross scenes.
-      const hydratedRuntimeCamera = scene && surfaceMode === "focusOverlay"
-        ? hydratedUserCamera
-        : null;
-      if (hydratedRuntimeCamera) {
-        applyAnchorCamera(
-          { x: hydratedRuntimeCamera.centerX, y: hydratedRuntimeCamera.centerY },
-          { x: next.width / 2, y: next.height / 2 },
-          Math.max(MIN_SAFE_SCALE, hydratedRuntimeCamera.scale),
-        );
-        return;
-      }
-
       // Production BSH scene owns the entry camera. Renderer only maps the
       // precomputed canvas point to the measured viewport; it never fit-alls a
       // Focus branch or re-derives coordinates while drawing.
@@ -1103,25 +918,6 @@ export function FamilyGraphPrototype({
 
       if (autoFitOnMount && visiblePeople.length) {
         const focusPerson = peopleById.get(viewAnchorPersonId ?? initialFocusId ?? "");
-
-        if (surfaceMode === "focusOverlay") {
-          // P2.11 invariant: Focus never fit-all. Layout and camera both consume
-          // the same canvas coordinates, and the selected Person is anchored at
-          // 42% viewport height at a readable ~95% entry zoom.
-          const targetCenter = focusPerson
-            ? {
-                x: focusPerson.x + FAMILY_GRAPH_CANVAS.nodeWidth / 2,
-                y: focusPerson.y + NODE_CARD_HEIGHT / 2,
-              }
-            : overviewCenter;
-          const focusScale = Math.max(INITIAL_SCALE, FOCUS_BRANCH_ENTRY_SCALE);
-          applyAnchorCamera(
-            targetCenter,
-            { x: next.width / 2, y: next.height * FOCUS_BRANCH_ANCHOR_SCREEN_Y },
-            focusScale,
-          );
-          return;
-        }
 
         const minX = Math.min(...visiblePeople.map((item) => item.x));
         const maxX = Math.max(...visiblePeople.map((item) => item.x + FAMILY_GRAPH_CANVAS.nodeWidth));
@@ -1163,476 +959,29 @@ export function FamilyGraphPrototype({
         INITIAL_SCALE,
       );
     }
-  }, [autoFitOnMount, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, hydratedUserCamera, initialCameraSnapshot, initialFocusId, measureRootInWindow, peopleById, scene, setPan, setScaleValue, overviewCenter, surfaceMode, viewAnchorPersonId, visiblePeople]);
-
-  const cancelFocusScheduledWork = useCallback(() => {
-    for (const frameId of focusScheduledFramesRef.current) cancelAnimationFrame(frameId);
-    focusScheduledFramesRef.current.clear();
-    for (const timerId of focusScheduledTimersRef.current) clearTimeout(timerId);
-    focusScheduledTimersRef.current.clear();
-
-    const token = focusBuildTokenRef.current;
-    if (token) token.cancelled = true;
-    focusBuildTokenRef.current = null;
-  }, []);
-
-  const scheduleFocusFrame = useCallback((task: () => void) => {
-    let frameId = 0;
-    frameId = requestAnimationFrame(() => {
-      focusScheduledFramesRef.current.delete(frameId);
-      task();
-    });
-    focusScheduledFramesRef.current.add(frameId);
-    return frameId;
-  }, []);
-
-  const scheduleFocusTimer = useCallback((task: () => void, delayMs: number) => {
-    let timerId: ReturnType<typeof setTimeout>;
-    timerId = setTimeout(() => {
-      focusScheduledTimersRef.current.delete(timerId);
-      task();
-    }, delayMs);
-    focusScheduledTimersRef.current.add(timerId);
-    return timerId;
-  }, []);
-
-  const getPersonScreenFrame = useCallback((personId: string) => {
-    const cached = lastPressedPersonFrameRef.current;
-    if (cached?.personId === personId) return cached;
-    const person = peopleById.get(personId);
-    if (!person || viewport.width <= 0 || viewport.height <= 0) return null;
-
-    const scale = Math.max(MIN_SAFE_SCALE, activeCameraScale.value);
-    const mapped = mapFamilyGraphCanvasPointToViewport({
-      point: {
-        x: person.x + FAMILY_GRAPH_CANVAS.nodeWidth / 2,
-        y: person.y + NODE_CARD_HEIGHT / 2,
-      },
-      transform: {
-        translateX: activeCameraTranslateX.value,
-        translateY: activeCameraTranslateY.value,
-        scale,
-      },
-      canvasWidth: effectiveCanvasWidth,
-      canvasHeight: effectiveCanvasHeight,
-    });
-    const centerX = viewport.x + mapped.x;
-    const centerY = viewport.y + mapped.y;
-    return {
-      personId,
-      centerX,
-      centerY,
-      nodeWidth: FAMILY_GRAPH_CANVAS.nodeWidth * scale,
-      nodeHeight: NODE_CARD_HEIGHT * scale,
-    };
-  }, [activeCameraScale, activeCameraTranslateX, activeCameraTranslateY, effectiveCanvasHeight, effectiveCanvasWidth, peopleById, viewport.height, viewport.width, viewport.x, viewport.y]);
-
-  const buildFocusOverlayGeometry = useCallback((
-    personId: string,
-    hostFrame: { x: number; y: number; width: number; height: number },
-  ) => {
-    const source = getPersonScreenFrame(personId);
-    // P2.20: Focus is route-owned, but its native Modal is a WINDOW presentation.
-    // Size from the physical window, not from the Family tab/root canvas. This keeps
-    // the shell at the requested 85% x 85% even when the tab content is shorter.
-    const focusWidth = Math.max(1, windowWidth * FOCUS_OVERLAY_SCREEN_RATIO);
-    const focusHeight = Math.max(1, windowHeight * FOCUS_OVERLAY_SCREEN_RATIO);
-    const targetFrame = {
-      x: (windowWidth - focusWidth) / 2,
-      y: (windowHeight - focusHeight) / 2,
-      width: focusWidth,
-      height: focusHeight,
-    };
-    const targetCenterX = targetFrame.x + targetFrame.width / 2;
-    const targetCenterY = targetFrame.y + targetFrame.height / 2;
-    const sourceCenterX = source ? source.centerX : targetCenterX;
-    const sourceCenterY = source ? source.centerY : targetCenterY;
-    const dx = sourceCenterX - targetCenterX;
-    const dy = sourceCenterY - targetCenterY;
-    const targetDiagonal = Math.max(1, Math.hypot(targetFrame.width, targetFrame.height));
-    const travelRatio = Math.min(1, Math.hypot(dx, dy) / (targetDiagonal * 0.72));
-    // P2.7 uses only a small card offset, so distance affects timing gently; the
-    // full surface no longer flies from/to the tapped node or collapses to zero.
-    const durationMs = Math.round(230 + travelRatio * 50);
-    return { targetFrame, dx, dy, durationMs };
-  }, [getPersonScreenFrame, windowHeight, windowWidth]);
-
-  const closeFocusOverlay = useCallback(() => {
-    if (!focusOverlay || !focusOverlayVisible || focusOverlayClosingRef.current) return;
-
-    // P2.12.3 Recovery: Back only hides the native presentation. Keep the Focus
-    // session/retained Scene alive in React state so closing never deliberately
-    // tears down hundreds of nodes/lines on the interaction path. If a Scene is
-    // still being built, cancel that request; an already prepared Scene remains.
-    focusOverlayClosingRef.current = true;
-    if (!focusOverlay.visual) {
-      focusVisualRequestRef.current += 1;
-      cancelFocusScheduledWork();
-    }
-    cancelAnimation(focusOverlayProgress);
-    cancelAnimation(focusOverlayContentProgress);
-    focusOverlayProgress.value = 1;
-    focusOverlayContentProgress.value = 1;
-    setFocusOverlayVisible(false);
-  }, [cancelFocusScheduledWork, focusOverlay, focusOverlayContentProgress, focusOverlayProgress, focusOverlayVisible]);
-
-  useEffect(() => {
-    if (surfaceMode !== "standard" || !focusOverlay || !focusOverlayVisible) return;
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      // Once the native Focus presentation is already hiding, a second Back must be allowed to
-      // reach the route navigator even if the deferred owner-state transition
-      // has not committed yet.
-      if (focusOverlayClosingRef.current) return false;
-      closeFocusOverlay();
-      return true;
-    });
-    return () => subscription.remove();
-  }, [closeFocusOverlay, focusOverlay, focusOverlayVisible, surfaceMode]);
-
-  useEffect(() => () => {
-    // Route/unmount is cancellation too. Focus is route-local, so Back/unmount
-    // invalidates in-flight work without touching the global game host.
-    cancelFocusScheduledWork();
-    if (detailFocusHandoffFallbackRef.current) clearTimeout(detailFocusHandoffFallbackRef.current);
-  }, [cancelFocusScheduledWork]);
-
-  const getHotFocusVisual = useCallback((personId: string): FamilyGraphFocusBranchVisual | null => {
-    const local = focusVisualCacheRef.current.get(personId) ?? null;
-    // Cache is an accelerator only. A full-tree revision change invalidates any
-    // local branch Scene even if that branch happens to have the same person id.
-    if (local && (!scene || local.visualRevision === scene.visualRevision)) return local;
-    if (local) focusVisualCacheRef.current.delete(personId);
-
-    // This callback is intentionally wired to an identity-only BSH probe. It is
-    // safe on the press path: O(1), no fingerprint and no layout/topology work.
-    const cached = getCachedFocusBranchVisual?.(personId) ?? null;
-    if (cached && (!scene || cached.visualRevision === scene.visualRevision)) {
-      focusVisualCacheRef.current.set(personId, cached);
-      return cached;
-    }
-    return null;
-  }, [getCachedFocusBranchVisual, scene]);
-
-  const hydrateFocusOverlayVisual = useCallback(async (personId: string, requestId: number) => {
-    if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-
-    const previousToken = focusBuildTokenRef.current;
-    if (previousToken) previousToken.cancelled = true;
-    const token = { requestId, cancelled: false };
-    focusBuildTokenRef.current = token;
-    const cancellation: FamilyGraphBuildCancellation = {
-      isCancelled: () => token.cancelled
-        || focusVisualRequestRef.current !== requestId
-        || focusOverlayClosingRef.current,
-    };
-
-    let branchVisual: FamilyGraphFocusBranchVisual | null = null;
-    try {
-      branchVisual = await Promise.resolve(getFocusBranchVisual?.(personId, cancellation) ?? null);
-    } catch {
-      branchVisual = null;
-    }
-
-    if (focusBuildTokenRef.current === token) focusBuildTokenRef.current = null;
-    if (cancellation.isCancelled()) return;
-    if (branchVisual) focusVisualCacheRef.current.set(personId, branchVisual);
-
-    // Mounting a large prepared Scene is non-urgent presentation work. Keep it
-    // interruptible so an urgent Back update can discard this render immediately.
-    startTransition(() => {
-      setFocusOverlay((current) => {
-        if (!current || current.personId !== personId || current.requestId !== requestId) return current;
-        return { ...current, visual: branchVisual, visualReady: false, loadFailed: !branchVisual };
-      });
-    });
-    if (branchVisual) focusOverlayContentProgress.value = 0;
-  }, [focusOverlayContentProgress, getFocusBranchVisual]);
-
-  const handleFocusOverlayVisualReady = useCallback((requestId: number) => {
-    if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-    setFocusOverlay((current) => {
-      if (!current || current.requestId !== requestId || !current.visual || current.loadFailed || current.visualReady) return current;
-      return { ...current, visualReady: true };
-    });
-    focusOverlayContentProgress.value = withTiming(1, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [focusOverlayContentProgress]);
-
-  const mountFocusOverlay = useCallback((
-    personId: string,
-    hostFrame: { x: number; y: number; width: number; height: number },
-    presentImmediately = true,
-  ) => {
-    const geometry = buildFocusOverlayGeometry(personId, hostFrame);
-    if (!geometry) return;
-    cancelFocusScheduledWork();
-    setSearchVisible(false);
-
-    // Reopening the same retained Scene is a pure native presentation attach.
-    // Do not change requestId/key and therefore do not remount its node/line tree.
-    if (focusOverlay?.personId === personId && focusOverlay.visual) {
-      focusOverlayClosingRef.current = false;
-      focusVisualRequestRef.current = focusOverlay.requestId;
-      focusOverlayHydrationStartedRef.current = focusOverlay.requestId;
-      focusOverlayProgress.value = 1;
-      focusOverlayContentProgress.value = 1;
-      setFocusOverlay((current) => current ? {
-        ...current,
-        targetFrame: geometry.targetFrame,
-        hostFrame,
-        durationMs: geometry.durationMs,
-      } : current);
-      if (presentImmediately) setFocusOverlayVisible(true);
-      return;
-    }
-
-    const personName = peopleById.get(personId)?.displayName ?? "Nhánh gia đình";
-    const requestId = focusVisualRequestRef.current + 1;
-    focusVisualRequestRef.current = requestId;
-    focusOverlayStartTranslateX.value = geometry.dx;
-    focusOverlayStartTranslateY.value = geometry.dy;
-    focusOverlayClosingRef.current = false;
-
-    // P2.16.2 hot revisit: consume an already prepared renderer-ready Scene
-    // synchronously. Unlike the old revision peek this is O(1) identity/local
-    // lookup, so it cannot create the very press-path hitch shell-first was built
-    // to prevent. Only a genuinely cold/new branch goes through shell hydration.
-    const hotVisual = getHotFocusVisual(personId);
-    if (hotVisual) {
-      focusOverlayContentProgress.value = 1;
-      focusOverlayProgress.value = 1;
-      focusOverlayHydrationStartedRef.current = requestId;
-      setFocusOverlay({
-        personId,
-        personName,
-        visual: hotVisual,
-        visualReady: true,
-        loadFailed: false,
-        targetFrame: geometry.targetFrame,
-        hostFrame,
-        durationMs: geometry.durationMs,
-        requestId,
-      });
-      if (presentImmediately) setFocusOverlayVisible(true);
-      return;
-    }
-
-    // Cold/new branch remains shell-first and cancellable. No fingerprint, query,
-    // topology or layout work runs until the visible Focus shell has painted.
-    focusOverlayContentProgress.value = 0;
-    focusOverlayProgress.value = 0;
-    focusOverlayHydrationStartedRef.current = null;
-    setFocusOverlay({
-      personId,
-      personName,
-      visual: null,
-      visualReady: false,
-      loadFailed: false,
-      targetFrame: geometry.targetFrame,
-      hostFrame,
-      durationMs: geometry.durationMs,
-      requestId,
-    });
-    if (presentImmediately) setFocusOverlayVisible(true);
-  }, [buildFocusOverlayGeometry, cancelFocusScheduledWork, focusOverlay, focusOverlayContentProgress, focusOverlayProgress, focusOverlayStartTranslateX, focusOverlayStartTranslateY, getHotFocusVisual, peopleById]);
-
-  const handleFocusOverlayShown = useCallback(() => {
-    if (!focusOverlay || focusOverlayClosingRef.current) return;
-    const { requestId, personId } = focusOverlay;
-    if (focusVisualRequestRef.current !== requestId) return;
-
-    // P2.12.3: native Focus Modal visibility is the hard boundary between shell and
-    // branch data. The Focus shell must become visible first, even if extracting
-    // or laying out a large branch blocks the JS thread afterwards.
-    // P2.11.2: the Focus surface no longer flies/scales from the tapped card. Keep
-    // it stable, paint the shell first, then begin BSH hydration on the next frame.
-    focusOverlayProgress.value = 1;
-    if (focusOverlay.visual) {
-      focusOverlayHydrationStartedRef.current = requestId;
-      focusOverlayContentProgress.value = 1;
-      // Recovery edge case: the user may have hidden the Modal after Scene build
-      // but before the child first-paint callback committed `visualReady`. Re-show
-      // the retained Scene without remounting it and re-establish readiness after
-      // two native presentation frames.
-      if (!focusOverlay.visualReady) {
-        scheduleFocusFrame(() => {
-          if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-          scheduleFocusFrame(() => {
-            if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-            handleFocusOverlayVisualReady(requestId);
-          });
-        });
-      }
-      return;
-    }
-
-    if (focusOverlayHydrationStartedRef.current === requestId) return;
-    focusOverlayHydrationStartedRef.current = requestId;
-
-    // Give the Focus shell + Back affordance two real frames before any graph
-    // fingerprint/topology/layout work starts. This is deliberately opposite to
-    // P2.15 detail prewarm: a first-open branch may show a short loader, but the
-    // user can always see/close Focus before expensive BSH work begins.
-    scheduleFocusFrame(() => {
-      if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-      scheduleFocusFrame(() => {
-        if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-        void hydrateFocusOverlayVisual(personId, requestId);
-      });
-    });
-  }, [focusOverlay, focusOverlayContentProgress, focusOverlayProgress, handleFocusOverlayVisualReady, hydrateFocusOverlayVisual, scheduleFocusFrame]);
-
-  // P2.16.1: hydration is driven by the visible route request, not by onLayout
-  // paint ACK. Android can delay/drop a layout callback during native-screen
-  // transitions; the shell remains cancellable while BSH begins after two frames.
-  useEffect(() => {
-    if (surfaceMode !== "standard" || !focusOverlay || !focusOverlayVisible || focusOverlayClosingRef.current) return undefined;
-    const requestId = focusOverlay.requestId;
-    const frame = requestAnimationFrame(() => {
-      if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-      handleFocusOverlayShown();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [focusOverlay?.requestId, focusOverlayVisible, handleFocusOverlayShown, surfaceMode]);
-
-  // P2.15.1: intentionally no Detail-screen Focus prewarm. Large ancestor
-  // branches (for example Đôn/Lan) must never steal the JS thread before the
-  // user taps "Mở nhánh". Cold preparation belongs inside the already-visible
-  // Focus shell where it is cancellable by Back.
-
-  const handoffPersonSheetToFocus = useCallback((
-    personId: string,
-    hostFrame: { x: number; y: number; width: number; height: number },
-  ) => {
-    // P2.19 Android native-window handoff: prime the route-local Focus session
-    // first, but do NOT show its native Modal in the same commit that dismisses
-    // Person Detail. Two competing Modal windows are exactly the race that could
-    // leave the graph visible with no Focus surface after tapping “Mở nhánh”.
-    cancelFocusScheduledWork();
-    pendingDetailFocusHandoffRef.current = { personId, hostFrame };
-    setDetailFocusHandoffPending(true);
-    setSelectedPersonId(null);
-    setSearchVisible(false);
-    mountFocusOverlay(personId, hostFrame, false);
-
-    // Detail is dismissed with animationType="none" while handoffPending=true.
-    // Give Android two native frames to remove that window, then attach Focus.
-    // onDismiss is only an acceleration/cleanup signal; Android correctness does
-    // not depend on the callback being delivered.
-    scheduleFocusFrame(() => {
-      scheduleFocusFrame(() => {
-        const pending = pendingDetailFocusHandoffRef.current;
-        if (!pending || pending.personId !== personId) return;
-        focusOverlayClosingRef.current = false;
-        setFocusOverlayVisible(true);
-        pendingDetailFocusHandoffRef.current = null;
-        setDetailPersonId(null);
-        setDetailFocusHandoffPending(false);
-      });
-    });
-
-    if (detailFocusHandoffFallbackRef.current) clearTimeout(detailFocusHandoffFallbackRef.current);
-    detailFocusHandoffFallbackRef.current = setTimeout(() => {
-      detailFocusHandoffFallbackRef.current = null;
-      const pending = pendingDetailFocusHandoffRef.current;
-      if (pending?.personId === personId) {
-        focusOverlayClosingRef.current = false;
-        setFocusOverlayVisible(true);
-        pendingDetailFocusHandoffRef.current = null;
-      }
-      setDetailPersonId(null);
-      setDetailFocusHandoffPending(false);
-    }, 140);
-  }, [cancelFocusScheduledWork, mountFocusOverlay, scheduleFocusFrame]);
+  }, [autoFitOnMount, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, peopleById, scene, setPan, setScaleValue, overviewCenter, viewAnchorPersonId, visiblePeople]);
 
   const handlePersonSheetDismiss = useCallback(() => {
-    if (detailFocusHandoffFallbackRef.current) {
-      clearTimeout(detailFocusHandoffFallbackRef.current);
-      detailFocusHandoffFallbackRef.current = null;
-    }
-    // Some Android/RN builds do deliver onDismiss. When they do, use it as the
-    // earliest safe proof that the Detail native window is gone and attach the
-    // already-primed Focus window immediately. The two-frame path remains the
-    // fallback for builds where onDismiss is absent.
-    if (pendingDetailFocusHandoffRef.current) {
-      focusOverlayClosingRef.current = false;
-      setFocusOverlayVisible(true);
-      pendingDetailFocusHandoffRef.current = null;
-    }
     setDetailPersonId(null);
     setDetailFocusHandoffPending(false);
   }, []);
 
   const handleOpenBranch = useCallback((personId: string) => {
-    if (surfaceMode === "focusOverlay") {
-      onFocusPersonRequest?.(personId);
-      return;
-    }
-
-    // Route-owned Focus opens synchronously from route-local geometry. Never
-    // gate the press path on measureInWindow() or a native Modal callback.
-    const localHost = rootLocalFrameRef.current;
-    const hostFrame = localHost.width > 0 && localHost.height > 0
-      ? localHost
-      : {
-          x: 0,
-          y: 0,
-          width: Math.max(1, viewport.width),
-          height: Math.max(1, viewport.y + viewport.height),
-        };
-    handoffPersonSheetToFocus(personId, hostFrame);
-  }, [handoffPersonSheetToFocus, onFocusPersonRequest, surfaceMode, viewport.height, viewport.width, viewport.y]);
-
-  const handleFocusOverlayPersonRequest = useCallback((personId: string) => {
-    if (focusOverlayClosingRef.current || !focusOverlay || !getFocusBranchVisual || personId === focusOverlay.personId) return;
-    cancelFocusScheduledWork();
-    const personName = peopleById.get(personId)?.displayName ?? "Nhánh gia đình";
-    const requestId = focusVisualRequestRef.current + 1;
-    focusVisualRequestRef.current = requestId;
-
-    // P2.16.2 branch revisit: A -> B -> A reuses A immediately. This lookup is
-    // local/identity-only; a cold branch still follows the shell-first path below.
-    const hotVisual = getHotFocusVisual(personId);
-    if (hotVisual) {
-      setFocusOverlay((current) => current ? {
-        ...current,
-        personId,
-        personName,
-        visual: hotVisual,
-        visualReady: true,
-        loadFailed: false,
-        requestId,
-      } : current);
-      focusOverlayContentProgress.value = 1;
-      focusOverlayHydrationStartedRef.current = requestId;
-      return;
-    }
-
-    setFocusOverlay((current) => current ? {
-      ...current,
-      personId,
-      personName,
-      visual: null,
-      visualReady: false,
-      loadFailed: false,
-      requestId,
-    } : current);
-    focusOverlayContentProgress.value = 0;
-    focusOverlayHydrationStartedRef.current = requestId;
-    scheduleFocusFrame(() => {
-      if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-      scheduleFocusFrame(() => {
-        if (focusVisualRequestRef.current !== requestId || focusOverlayClosingRef.current) return;
-        void hydrateFocusOverlayVisual(personId, requestId);
+    if (!onOpenFocus) return;
+    // Main Tree owns only the intent. Yield the Detail sheet first, then let the
+    // route-level Focus sibling mount on a later native frame. No Focus runtime
+    // or native Modal is created inside Main Tree.
+    setSearchVisible(false);
+    setSelectedPersonId(null);
+    setDetailFocusHandoffPending(true);
+    setDetailPersonId(null);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setDetailFocusHandoffPending(false);
+        onOpenFocus(personId);
       });
     });
-  }, [cancelFocusScheduledWork, focusOverlay, focusOverlayContentProgress, getFocusBranchVisual, getHotFocusVisual, hydrateFocusOverlayVisual, peopleById, scheduleFocusFrame]);
-
-  // P2.18: Focus pixels remain inside this Phả hệ route. The prepared branch
-  // scene is rendered below as an absolute sibling of the main graph, so route
-  // Back is immediate and no app-root presentation handoff is involved.
+  }, [onOpenFocus]);
 
   const handleMode = useCallback((mode: ViewMode) => {
     setViewMode(mode);
@@ -1671,19 +1020,13 @@ export function FamilyGraphPrototype({
   }, [centerOnPerson, ensurePersonMounted, viewMode, visiblePeople]);
 
   const handlePersonPress = useCallback((personId: string) => {
-    if (surfaceMode === "focusOverlay") {
-      onFocusPersonRequest?.(personId);
-      return;
-    }
-    const screenFrame = getPersonScreenFrame(personId);
-    if (screenFrame) lastPressedPersonFrameRef.current = screenFrame;
     if (branchMode) {
       void handleOpenBranch(personId);
       return;
     }
     setSelectedPersonId(personId);
     setDetailPersonId(personId);
-  }, [branchMode, getPersonScreenFrame, handleOpenBranch, onFocusPersonRequest, surfaceMode]);
+  }, [branchMode, handleOpenBranch]);
 
   return (
     <View ref={rootRef} onLayout={handleRootLayout} style={styles.root}>
@@ -1729,15 +1072,13 @@ export function FamilyGraphPrototype({
         </View>
       )}
 
-      {surfaceMode === "standard" && (
-        <View style={styles.modeRow}>
-          <BloomChipButton label="3 thế hệ" selected={viewMode === "3"} disabled={focusOverlayVisible} onPress={() => handleMode("3")} customStyle={focusOverlayVisible ? styles.modeChipDisabled : undefined} />
-          <BloomChipButton label="5 thế hệ" selected={viewMode === "5"} disabled={focusOverlayVisible} onPress={() => handleMode("5")} customStyle={focusOverlayVisible ? styles.modeChipDisabled : undefined} />
-          <BloomChipButton label="Toàn phả hệ" selected={viewMode === "all"} disabled={focusOverlayVisible} onPress={() => handleMode("all")} customStyle={focusOverlayVisible ? styles.modeChipDisabled : undefined} />
-        </View>
-      )}
+      <View style={styles.modeRow}>
+        <BloomChipButton label="3 thế hệ" selected={viewMode === "3"} onPress={() => handleMode("3")} />
+        <BloomChipButton label="5 thế hệ" selected={viewMode === "5"} onPress={() => handleMode("5")} />
+        <BloomChipButton label="Toàn phả hệ" selected={viewMode === "all"} onPress={() => handleMode("all")} />
+      </View>
 
-      {surfaceMode === "standard" && focusSubgraphPreview?.truncated && viewMode !== "all" && (
+      {focusSubgraphPreview?.truncated && viewMode !== "all" && (
         <View style={styles.subgraphNotice}>
           <Ionicons name="leaf-outline" size={14} color={COLORS.primary} />
           <Text style={styles.subgraphNoticeText}>
@@ -1746,68 +1087,52 @@ export function FamilyGraphPrototype({
         </View>
       )}
 
-      <View style={[styles.viewport, surfaceMode === "focusOverlay" && styles.viewportFocusOverlay]} onLayout={handleViewportLayout}>
-        <GestureHandlerRootView
-          // Android can let a native Modal/View parent cancel the handler stream before
-          // RNGH activates. Keep the root immediately around the Focus detector and
-          // force it active in Focus mode. Nested roots are otherwise ignored by RNGH,
-          // so this does not create a second gesture coordinator for the normal view.
-          unstable_forceActive={surfaceMode === "focusOverlay"}
-          style={styles.gestureRoot}
-        >
+      <View style={styles.viewport} onLayout={handleViewportLayout}>
+        <GestureHandlerRootView style={styles.gestureRoot}>
           <GestureDetector gesture={canvasGesture}>
             <View collapsable={false} style={StyleSheet.absoluteFill}>
-              {surfaceMode === "standard" ? (
-                <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPersonId(null)} />
-              ) : (
-                <View pointerEvents="none" style={StyleSheet.absoluteFill} />
-              )}
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPersonId(null)} />
 
               <Animated.View style={[styles.canvasPanLayer, { width: effectiveCanvasWidth, height: effectiveCanvasHeight }, canvasPanStyle]}>
                 <Animated.View style={[styles.canvas, { width: effectiveCanvasWidth, height: effectiveCanvasHeight }, canvasScaleStyle]}>
-                  {surfaceMode === "standard" ? (
-                    <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPersonId(null)} />
-                  ) : null}
+                  <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPersonId(null)} />
 
-                {Array.from(new Set(visiblePeople.map((person) => person.generation))).map((generation) => {
-                  const y = visiblePeople.find((person) => person.generation === generation)?.y ?? 0;
-                  return (
-                    <View key={`generation-${generation}`} style={[styles.generationTag, { top: y + 18 }]}>
-                      <Text style={styles.generationTitle} numberOfLines={2}>Thế hệ {generation}</Text>
-                      <Text style={styles.generationCaption} numberOfLines={2}>{generationCaption[generation]}</Text>
-                    </View>
-                  );
-                })}
+                  {Array.from(new Set(visiblePeople.map((person) => person.generation))).map((generation) => {
+                    const y = visiblePeople.find((person) => person.generation === generation)?.y ?? 0;
+                    return (
+                      <View key={`generation-${generation}`} style={[styles.generationTag, { top: y + 18 }]}>
+                        <Text style={styles.generationTitle} numberOfLines={2}>Thế hệ {generation}</Text>
+                        <Text style={styles.generationCaption} numberOfLines={2}>{generationCaption[generation]}</Text>
+                      </View>
+                    );
+                  })}
 
-                <GraphConnectors
-                  people={renderedPeople}
-                  connections={renderedConnections}
-                  geometry={scene?.geometry ?? null}
-                  activeBranchIds={activeBranchIds}
-                  focusMode={false}
-                  canvasWidth={effectiveCanvasWidth}
-                  renderBounds={null}
-                  mountedPersonIds={viewportPersonIds}
-                />
-
-                {viewportPeople.map((person) => (
-                  <PersonNode
-                    key={person.id}
-                    person={person}
-                    selected={selectedPersonId === person.id}
-                    focused={highlightedPersonId === person.id}
-                    inFocusedBranch={activeBranchIds.has(person.id)}
-                    relationMeta={surfaceMode === "focusOverlay" ? focusRelations.get(person.id) ?? null : null}
-                    branchMode={branchMode}
-                    onPressPerson={handlePersonPress}
+                  <GraphConnectors
+                    people={renderedPeople}
+                    connections={renderedConnections}
+                    geometry={scene?.geometry ?? null}
+                    activeBranchIds={activeBranchIds}
+                    canvasWidth={effectiveCanvasWidth}
+                    renderBounds={null}
+                    mountedPersonIds={viewportPersonIds}
                   />
-                ))}
+
+                  {viewportPeople.map((person) => (
+                    <PersonNode
+                      key={person.id}
+                      person={person}
+                      selected={selectedPersonId === person.id}
+                      focused={highlightedPersonId === person.id}
+                      inFocusedBranch={activeBranchIds.has(person.id)}
+                      branchMode={branchMode}
+                      onPressPerson={handlePersonPress}
+                    />
+                  ))}
                 </Animated.View>
               </Animated.View>
             </View>
           </GestureDetector>
 
-        {surfaceMode === "standard" && (
           <Pressable
             accessibilityLabel={branchMode ? "Tắt chế độ mở nhánh" : "Bật chế độ mở nhánh"}
             accessibilityState={{ selected: branchMode }}
@@ -1821,33 +1146,10 @@ export function FamilyGraphPrototype({
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons
-              name="git-network-outline"
-              size={24}
-              color={branchMode ? COLORS.white : COLORS.primaryText}
-            />
-            <Text style={[styles.branchModeButtonText, branchMode && styles.branchModeButtonTextActive]}>
-              Nhánh
-            </Text>
+            <Ionicons name="git-network-outline" size={24} color={branchMode ? COLORS.white : COLORS.primaryText} />
+            <Text style={[styles.branchModeButtonText, branchMode && styles.branchModeButtonTextActive]}>Nhánh</Text>
           </Pressable>
-        )}
 
-        {surfaceMode === "focusOverlay" ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Định vị người đang xem"
-            onPress={() => {
-              const targetId = viewAnchorPersonId ?? initialFocusId;
-              if (!targetId) { centerOverview(); return; }
-              const targetScale = Math.max(0.9, Math.min(1, activeCameraScale.value));
-              setScaleValue(targetScale);
-              requestAnimationFrame(() => centerOnPerson(targetId, targetScale));
-            }}
-            style={({ pressed }) => [styles.focusLocateButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="locate" size={23} color={COLORS.primary} />
-          </Pressable>
-        ) : (
           <View style={styles.zoomControls}>
             <Pressable
               accessibilityLabel="Quay về người đang xem"
@@ -1860,30 +1162,21 @@ export function FamilyGraphPrototype({
               <Ionicons name="locate" size={23} color={COLORS.primary} />
             </Pressable>
           </View>
-        )}
 
-        {surfaceMode === "standard" && (
           <View pointerEvents="none" style={styles.legend}>
             <LegendDot color={COLORS.positive} label="Đang sống" />
             <LegendIcon icon="leaf-outline" label="Đã mất" />
             <LegendIcon icon="link-outline" label="Đã liên kết" />
           </View>
-        )}
         </GestureHandlerRootView>
       </View>
 
       </View>
 
-      {surfaceMode === "standard" ? (
       <FamilyGraphPersonSheet
         person={detailPerson}
         visible={!!detailPerson && !detailFocusHandoffPending}
         onClose={() => {
-          pendingDetailFocusHandoffRef.current = null;
-          if (detailFocusHandoffFallbackRef.current) {
-            clearTimeout(detailFocusHandoffFallbackRef.current);
-            detailFocusHandoffFallbackRef.current = null;
-          }
           setDetailFocusHandoffPending(false);
           setDetailPersonId(null);
           setSelectedPersonId(null);
@@ -1901,33 +1194,7 @@ export function FamilyGraphPrototype({
         focusPersonName={null}
         relationshipToFocus={null}
       />
-      ) : null}
 
-      {surfaceMode === "standard" && focusOverlay ? (
-        <Modal
-          visible={focusOverlayVisible}
-          transparent
-          animationType="none"
-          presentationStyle="overFullScreen"
-          statusBarTranslucent
-          navigationBarTranslucent
-          onShow={handleFocusOverlayShown}
-          onRequestClose={closeFocusOverlay}
-        >
-          <PersistentFocusOverlayPresentation
-            overlay={focusOverlay}
-            familyName={familyName}
-            familyId={familyId}
-            resolveRelationship={resolveRelationship}
-            onClose={closeFocusOverlay}
-            onFocusPersonRequest={handleFocusOverlayPersonRequest}
-            onShellPainted={() => handleFocusOverlayShown()}
-            onVisualReady={handleFocusOverlayVisualReady}
-          />
-        </Modal>
-      ) : null}
-
-      {surfaceMode === "standard" ? (
       <Modal visible={searchVisible} transparent animationType="fade" onRequestClose={() => setSearchVisible(false)}>
         <View style={styles.searchModalRoot}>
           <Pressable style={styles.searchBackdrop} onPress={() => setSearchVisible(false)} />
@@ -1972,173 +1239,17 @@ export function FamilyGraphPrototype({
           </View>
         </View>
       </Modal>
-      ) : null}
     </View>
   );
 }
 
 
-export const PersistentFocusOverlayPresentation = memo(function PersistentFocusOverlayPresentation({
-  overlay,
-  familyName,
-  familyId,
-  resolveRelationship,
-  onClose,
-  onFocusPersonRequest,
-  onShellPainted,
-  onVisualReady,
-}: {
-  overlay: FamilyGraphFocusOverlayState;
-  familyName: string;
-  familyId?: string | null;
-  resolveRelationship?: FamilyGraphPrototypeProps["resolveRelationship"];
-  onClose: () => void;
-  onFocusPersonRequest: (personId: string) => void;
-  onShellPainted: (requestId: number) => void;
-  onVisualReady: (requestId: number) => void;
-}) {
-  const shellAckRef = useRef<number | null>(null);
-  const handleShellLayout = useCallback(() => {
-    if (shellAckRef.current === overlay.requestId) return;
-    shellAckRef.current = overlay.requestId;
-    requestAnimationFrame(() => requestAnimationFrame(() => onShellPainted(overlay.requestId)));
-  }, [onShellPainted, overlay.requestId]);
-  return (
-    <GestureHandlerRootView onLayout={handleShellLayout} style={styles.focusOverlayModalRoot}>
-      <Pressable
-        accessibilityLabel="Đóng chế độ xem nhánh"
-        onPress={onClose}
-        style={styles.focusOverlayShield}
-      />
-
-      <View
-        style={[
-          styles.focusOverlayCard,
-          {
-            left: overlay.targetFrame.x,
-            top: overlay.targetFrame.y,
-            width: overlay.targetFrame.width,
-            height: overlay.targetFrame.height,
-          },
-        ]}
-      >
-        <View style={styles.focusOverlayHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Trở về cây phả hệ"
-            onPress={onClose}
-            style={({ pressed }) => [styles.focusOverlayBack, pressed && styles.focusOverlayBackPressed]}
-          >
-            <Ionicons name="arrow-back" size={18} color={COLORS.primaryText} />
-            <Text style={styles.focusOverlayBackText}>Trở về</Text>
-          </Pressable>
-          <View style={styles.focusOverlayHeaderCopy}>
-            <Text style={styles.focusOverlayEyebrow}>XEM NHÁNH · TOÀN NHÁNH</Text>
-            <Text numberOfLines={1} style={styles.focusOverlayTitle}>Nhánh của {overlay.personName}</Text>
-            <Text numberOfLines={1} style={styles.focusOverlayHint}>Chạm một người để xem nhánh của họ · kéo hoặc chụm để di chuyển</Text>
-          </View>
-        </View>
-
-        <View style={styles.focusOverlayGraph}>
-          {overlay.visual ? (
-            <View style={StyleSheet.absoluteFill}>
-              <PersistentFocusGraphSurface
-                visual={overlay.visual}
-                personId={overlay.personId}
-                requestId={overlay.requestId}
-                familyName={familyName}
-                familyId={familyId}
-                resolveRelationship={resolveRelationship}
-                onFocusPersonRequest={onFocusPersonRequest}
-                onVisualReady={onVisualReady}
-              />
-            </View>
-          ) : null}
-
-          {!overlay.visualReady || overlay.loadFailed ? (
-            <View pointerEvents="none" style={styles.focusOverlayPreparingLayer}>
-              <View style={styles.focusOverlayPreparing}>
-                {overlay.loadFailed ? (
-                  <View style={[styles.focusOverlayPreparingCard, styles.focusOverlayPreparingErrorCard]}>
-                    <Ionicons name="leaf-outline" size={28} color={COLORS.primary} />
-                    <Text style={styles.focusOverlayPreparingTitle}>Chưa dựng được nhánh này</Text>
-                    <Text style={styles.focusOverlayPreparingText}>Cây gốc vẫn được giữ nguyên. Đóng Focus View và thử lại nhé.</Text>
-                  </View>
-                ) : (
-                  <View style={styles.focusOverlayPreparingInline}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                    <Text style={styles.focusOverlayPreparingInlineText}>Đang chuẩn bị cây…</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        {overlay.visualReady && overlay.visual?.truncated ? (
-          <View style={styles.focusOverlayFooter}>
-            <Ionicons name="leaf-outline" size={13} color={COLORS.primary} />
-            <Text style={styles.focusOverlayFooterText}>Nhánh rất lớn nên Bloom đang giữ giới hạn an toàn để thao tác luôn mượt.</Text>
-          </View>
-        ) : null}
-      </View>
-    </GestureHandlerRootView>
-  );
-});
-
-
-const PersistentFocusGraphSurface = memo(function PersistentFocusGraphSurface({
-  visual,
-  personId,
-  requestId,
-  familyName,
-  familyId,
-  resolveRelationship,
-  onFocusPersonRequest,
-  onVisualReady,
-}: {
-  visual: FamilyGraphFocusBranchVisual;
-  personId: string;
-  requestId: number;
-  familyName: string;
-  familyId?: string | null;
-  resolveRelationship?: FamilyGraphPrototypeProps["resolveRelationship"];
-  onFocusPersonRequest: (personId: string) => void;
-  onVisualReady: (requestId: number) => void;
-}) {
-  return (
-    <FamilyGraphPrototype
-      key={visual.sceneKey}
-      familyName={familyName}
-      familyId={familyId}
-      scene={visual}
-      defaultFocusId={personId}
-      resolveRelationship={resolveRelationship}
-      initialViewMode="all"
-      headerMode="none"
-      surfaceMode="focusOverlay"
-      autoFitOnMount
-      onFocusPersonRequest={onFocusPersonRequest}
-      onVisualReady={() => onVisualReady(requestId)}
-    />
-  );
-}, (previous, next) => (
-  previous.visual === next.visual
-  && previous.personId === next.personId
-  && previous.requestId === next.requestId
-  && previous.familyName === next.familyName
-  && previous.familyId === next.familyId
-  && previous.resolveRelationship === next.resolveRelationship
-  && previous.onFocusPersonRequest === next.onFocusPersonRequest
-  && previous.onVisualReady === next.onVisualReady
-));
 
 const PersonNode = memo(function PersonNode({
   person,
   selected,
   focused,
   inFocusedBranch,
-  relationMeta,
   branchMode,
   onPressPerson,
 }: {
@@ -2146,7 +1257,6 @@ const PersonNode = memo(function PersonNode({
   selected: boolean;
   focused: boolean;
   inFocusedBranch: boolean;
-  relationMeta: FocusRelationMeta | null;
   branchMode: boolean;
   onPressPerson: (personId: string) => void;
 }) {
@@ -2170,30 +1280,6 @@ const PersonNode = memo(function PersonNode({
           pressed && styles.nodePressed,
         ]}
       >
-        {relationMeta && (
-          <View
-            style={[
-              styles.relationBadge,
-              { backgroundColor: palette.badgeBackground },
-              dimmed && styles.relationBadgeDimmed,
-            ]}
-          >
-            <Ionicons
-              name={getFocusRelationIcon(relationMeta.kind)}
-              size={12}
-              color={dimmed ? "#B8B2B5" : "#946276"}
-            />
-            <Text
-              allowFontScaling={false}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={[styles.relationBadgeText, dimmed && styles.relationBadgeTextDimmed]}
-            >
-              {relationMeta.label}
-            </Text>
-          </View>
-        )}
-
         {branchMode && (
           <View style={[styles.branchPickBadge, dimmed && styles.branchPickBadgeDimmed]}>
             <Ionicons name="git-network-outline" size={14} color={dimmed ? "#AAA5A7" : COLORS.primary} />
@@ -2275,8 +1361,6 @@ const PersonNode = memo(function PersonNode({
   && previous.inFocusedBranch === next.inFocusedBranch
   && previous.branchMode === next.branchMode
   && previous.onPressPerson === next.onPressPerson
-  && previous.relationMeta?.kind === next.relationMeta?.kind
-  && previous.relationMeta?.label === next.relationMeta?.label
 ));
 
 const GraphConnectors = memo(function GraphConnectors({
@@ -2284,7 +1368,6 @@ const GraphConnectors = memo(function GraphConnectors({
   connections,
   geometry,
   activeBranchIds,
-  focusMode,
   canvasWidth,
   renderBounds,
   mountedPersonIds,
@@ -2293,7 +1376,6 @@ const GraphConnectors = memo(function GraphConnectors({
   connections: FamilyGraphPrototypeConnection[];
   geometry?: FamilyGraphGeometry | null;
   activeBranchIds: Set<string>;
-  focusMode: boolean;
   canvasWidth: number;
   renderBounds?: FamilyGraphSpatialRect | null;
   mountedPersonIds?: Set<string>;
@@ -2306,7 +1388,6 @@ const GraphConnectors = memo(function GraphConnectors({
         people={people}
         geometry={geometry}
         activeBranchIds={activeBranchIds}
-        focusMode={focusMode}
         canvasWidth={canvasWidth}
         mountedPersonIds={mountedPersonIds}
       />
@@ -2317,7 +1398,6 @@ const GraphConnectors = memo(function GraphConnectors({
       people={people}
       connections={connections}
       activeBranchIds={activeBranchIds}
-      focusMode={focusMode}
       canvasWidth={canvasWidth}
       renderBounds={renderBounds}
       mountedPersonIds={mountedPersonIds}
@@ -2329,14 +1409,12 @@ const PreparedRetainedGraphConnectors = memo(function PreparedRetainedGraphConne
   people,
   geometry,
   activeBranchIds,
-  focusMode,
   canvasWidth,
   mountedPersonIds,
 }: {
   people: FamilyGraphPrototypePerson[];
   geometry: FamilyGraphGeometry;
   activeBranchIds: Set<string>;
-  focusMode: boolean;
   canvasWidth: number;
   mountedPersonIds: Set<string>;
 }) {
@@ -2357,15 +1435,13 @@ const PreparedRetainedGraphConnectors = memo(function PreparedRetainedGraphConne
               partnerA={partnerA}
               partnerB={partnerB}
               active={partnerActive}
-              focusMode={focusMode}
-            />
+                  />
             {hasMountedChild ? (
               <PreparedUnionStemConnector
                 partnerA={partnerA}
                 partnerB={partnerB}
                 active={partnerActive}
-                focusMode={focusMode}
-              />
+                      />
             ) : null}
             {unit.sharedChildIds.map((childId) => {
               if (!mountedPersonIds.has(childId)) return null;
@@ -2378,8 +1454,7 @@ const PreparedRetainedGraphConnectors = memo(function PreparedRetainedGraphConne
                   partnerB={partnerB}
                   child={child}
                   active={partnerActive && activeBranchIds.has(childId)}
-                  focusMode={focusMode}
-                  canvasWidth={canvasWidth}
+                            canvasWidth={canvasWidth}
                   laneOffset={geometry.routingPlan.laneOffsetByChildId.get(childId) ?? 0}
                 />
               );
@@ -2398,8 +1473,7 @@ const PreparedRetainedGraphConnectors = memo(function PreparedRetainedGraphConne
             parent={parent}
             child={child}
             active={activeBranchIds.has(parent.id) && activeBranchIds.has(child.id)}
-            focusMode={focusMode}
-            laneOffset={geometry.routingPlan.laneOffsetByConnectionId.get(link.id) ?? 0}
+                laneOffset={geometry.routingPlan.laneOffsetByConnectionId.get(link.id) ?? 0}
             route={geometry.routingPlan.routeByConnectionId.get(link.id)}
             preferDirectVertical={geometry.routingPlan.directVerticalConnectionIds.has(link.id)}
             preferSideAnchor={geometry.routingPlan.sideAnchorConnectionIds.has(link.id)}
@@ -2414,12 +1488,10 @@ const PreparedPartnerConnector = memo(function PreparedPartnerConnector({
   partnerA,
   partnerB,
   active,
-  focusMode,
 }: {
   partnerA: FamilyGraphPrototypePerson;
   partnerB: FamilyGraphPrototypePerson;
   active: boolean;
-  focusMode: boolean;
 }) {
   const aX = nodeCenterX(partnerA);
   const bX = nodeCenterX(partnerB);
@@ -2430,7 +1502,7 @@ const PreparedPartnerConnector = memo(function PreparedPartnerConnector({
   const y = (leftPort.y + rightPort.y) / 2;
   const unionX = (aX + bX) / 2;
   const color = active ? ACTIVE_PARENT_COLOR : FADED_PARENT_COLOR;
-  const thickness = active ? (focusMode ? 3.4 : 2.4) : 1.4;
+  const thickness = active ? 2.4 : 1.4;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       {rightPort.x > leftPort.x ? (
@@ -2445,12 +1517,10 @@ const PreparedUnionStemConnector = memo(function PreparedUnionStemConnector({
   partnerA,
   partnerB,
   active,
-  focusMode,
 }: {
   partnerA: FamilyGraphPrototypePerson;
   partnerB: FamilyGraphPrototypePerson;
   active: boolean;
-  focusMode: boolean;
 }) {
   const aX = nodeCenterX(partnerA);
   const bX = nodeCenterX(partnerB);
@@ -2462,7 +1532,7 @@ const PreparedUnionStemConnector = memo(function PreparedUnionStemConnector({
   const unionX = (aX + bX) / 2;
   const branchStartY = Math.max(nodeConnectorPort(partnerA, "bottom", 0).y, nodeConnectorPort(partnerB, "bottom", 0).y);
   const color = active ? ACTIVE_PARENT_COLOR : FADED_PARENT_COLOR;
-  const thickness = active ? (focusMode ? FOCUS_LINE_THICKNESS : ACTIVE_LINE_THICKNESS) : FADED_LINE_THICKNESS;
+  const thickness = active ? ACTIVE_LINE_THICKNESS : FADED_LINE_THICKNESS;
   return <LineSegment x1={unionX} y1={partnerY + 12} x2={unionX} y2={branchStartY} color={color} thickness={thickness} />;
 });
 
@@ -2471,7 +1541,6 @@ const PreparedUnionChildConnector = memo(function PreparedUnionChildConnector({
   partnerB,
   child,
   active,
-  focusMode,
   canvasWidth,
   laneOffset,
 }: {
@@ -2479,7 +1548,6 @@ const PreparedUnionChildConnector = memo(function PreparedUnionChildConnector({
   partnerB: FamilyGraphPrototypePerson;
   child: FamilyGraphPrototypePerson;
   active: boolean;
-  focusMode: boolean;
   canvasWidth: number;
   laneOffset: number;
 }) {
@@ -2500,7 +1568,7 @@ const PreparedUnionChildConnector = memo(function PreparedUnionChildConnector({
     Math.min(childTopPort.y - 2, branchStartY + verticalGap / 2 + laneOffset + legacyEdgeNudge),
   );
   const color = active ? ACTIVE_PARENT_COLOR : FADED_PARENT_COLOR;
-  const thickness = active ? (focusMode ? FOCUS_LINE_THICKNESS : ACTIVE_LINE_THICKNESS) : FADED_LINE_THICKNESS;
+  const thickness = active ? ACTIVE_LINE_THICKNESS : FADED_LINE_THICKNESS;
   return (
     <RoundedStepPath
       startX={unionX}
@@ -2518,7 +1586,6 @@ const PreparedSingleParentConnector = memo(function PreparedSingleParentConnecto
   parent: FamilyGraphPrototypePerson;
   child: FamilyGraphPrototypePerson;
   active: boolean;
-  focusMode: boolean;
   laneOffset: number;
   route?: FamilyGraphConnectorRoute;
   preferDirectVertical: boolean;
@@ -2531,7 +1598,6 @@ const LegacyGraphConnectors = memo(function LegacyGraphConnectors({
   people,
   connections,
   activeBranchIds,
-  focusMode,
   canvasWidth,
   renderBounds,
   mountedPersonIds,
@@ -2539,7 +1605,6 @@ const LegacyGraphConnectors = memo(function LegacyGraphConnectors({
   people: FamilyGraphPrototypePerson[];
   connections: FamilyGraphPrototypeConnection[];
   activeBranchIds: Set<string>;
-  focusMode: boolean;
   canvasWidth: number;
   renderBounds?: FamilyGraphSpatialRect | null;
   mountedPersonIds?: Set<string>;
@@ -2717,7 +1782,6 @@ const LegacyGraphConnectors = memo(function LegacyGraphConnectors({
       partnerB={union.partnerB}
       children={union.children}
       activeBranchIds={activeBranchIds}
-      focusMode={focusMode}
       renderPass={renderPass}
       canvasWidth={canvasWidth}
       laneOffsetByChildId={routingPlan.laneOffsetByChildId}
@@ -2732,7 +1796,6 @@ const LegacyGraphConnectors = memo(function LegacyGraphConnectors({
       parent={link.parent}
       child={link.child}
       active={isSingleLinkActive(link)}
-      focusMode={focusMode}
       laneOffset={routingPlan.laneOffsetByConnectionId.get(link.id) ?? 0}
       route={routingPlan.routeByConnectionId.get(link.id)}
       preferDirectVertical={routingPlan.directVerticalConnectionIds.has(link.id)}
@@ -2759,7 +1822,6 @@ function UnionConnector({
   partnerB,
   children,
   activeBranchIds,
-  focusMode,
   renderPass,
   canvasWidth,
   laneOffsetByChildId,
@@ -2770,7 +1832,6 @@ function UnionConnector({
   partnerB: FamilyGraphPrototypePerson;
   children: FamilyGraphPrototypePerson[];
   activeBranchIds: Set<string>;
-  focusMode: boolean;
   renderPass: "inactive" | "active";
   canvasWidth: number;
   laneOffsetByChildId: Map<string, number>;
@@ -2827,11 +1888,11 @@ function UnionConnector({
   const passHasChildren = passChildren.length > 0;
   const passRendersPartner = partnerVisible && (renderPass === "active" ? partnerActive : !partnerActive);
   const passLineThickness = renderPass === "active"
-    ? (focusMode ? FOCUS_LINE_THICKNESS : ACTIVE_LINE_THICKNESS)
+    ? ACTIVE_LINE_THICKNESS
     : FADED_LINE_THICKNESS;
   const passLineColor = renderPass === "active" ? ACTIVE_PARENT_COLOR : FADED_PARENT_COLOR;
   const partnerThickness = renderPass === "active"
-    ? (focusMode ? 3.4 : 2.4)
+    ? 2.4
     : 1.4;
 
   if (!passRendersPartner && !passHasChildren && renderPass === "inactive") return null;
@@ -2902,7 +1963,6 @@ function SingleParentConnector({
   parent,
   child,
   active,
-  focusMode,
   laneOffset,
   route,
   preferDirectVertical,
@@ -2911,7 +1971,6 @@ function SingleParentConnector({
   parent: FamilyGraphPrototypePerson;
   child: FamilyGraphPrototypePerson;
   active: boolean;
-  focusMode: boolean;
   laneOffset: number;
   route?: FamilyGraphConnectorRoute;
   preferDirectVertical: boolean;
@@ -2926,7 +1985,7 @@ function SingleParentConnector({
   const availableVerticalGap = endY - parentBottomPort.y;
   const color = active ? ACTIVE_PARENT_COLOR : FADED_PARENT_COLOR;
   const thickness = active
-    ? (focusMode ? FOCUS_LINE_THICKNESS : ACTIVE_LINE_THICKNESS)
+    ? ACTIVE_LINE_THICKNESS
     : FADED_LINE_THICKNESS;
   const centerPortTolerance = 1.5;
 
@@ -3582,215 +2641,6 @@ function nodeCardBottomY(person: FamilyGraphPrototypePerson) {
   return person.y + NODE_CARD_HEIGHT;
 }
 
-function getFocusRelationIcon(kind: FocusRelationKind): keyof typeof Ionicons.glyphMap {
-  switch (kind) {
-    case "partner":
-      return "heart";
-    case "father":
-    case "son":
-    case "chu":
-    case "cau":
-      return "man-outline";
-    case "mother":
-    case "daughter":
-    case "co":
-    case "di":
-      return "woman-outline";
-    case "grandfather":
-    case "grandmother":
-      return "ribbon-outline";
-    case "grandchild":
-      return "happy-outline";
-    case "bac":
-      return "medal-outline";
-    case "relative":
-    case "sibling":
-    default:
-      return "people-outline";
-  }
-}
-
-function toFocusRelationMeta(
-  relationship: FamilyGraphVietnameseRelationship,
-  person: FamilyGraphPrototypePerson,
-): FocusRelationMeta {
-  switch (relationship.kind) {
-    case "partner":
-      return { kind: "partner", label: relationship.label };
-    case "parent":
-      return {
-        kind: person.gender === "female" ? "mother" : person.gender === "male" ? "father" : "relative",
-        label: relationship.label,
-      };
-    case "child":
-      return {
-        kind: person.gender === "female" ? "daughter" : person.gender === "male" ? "son" : "relative",
-        label: relationship.label,
-      };
-    case "sibling":
-    case "cousin":
-      return { kind: "sibling", label: relationship.label };
-    case "grandparent":
-    case "ancestor":
-      return {
-        kind: person.gender === "female" ? "grandmother" : person.gender === "male" ? "grandfather" : "relative",
-        label: relationship.label,
-      };
-    case "grandchild":
-    case "descendant":
-    case "niece_nephew":
-      return { kind: "grandchild", label: relationship.label };
-    case "aunt_uncle": {
-      const lower = relationship.label.toLocaleLowerCase("vi");
-      if (lower.startsWith("bác")) return { kind: "bac", label: relationship.label };
-      if (lower.startsWith("chú")) return { kind: "chu", label: relationship.label };
-      if (lower.startsWith("cô")) return { kind: "co", label: relationship.label };
-      if (lower.startsWith("dì")) return { kind: "di", label: relationship.label };
-      if (lower.startsWith("cậu")) return { kind: "cau", label: relationship.label };
-      return { kind: "relative", label: relationship.label };
-    }
-    default:
-      return { kind: "relative", label: relationship.label };
-  }
-}
-
-function getRelationshipMetaAroundFocus(
-  viewAnchorPersonId: string,
-  people: FamilyGraphPrototypePerson[],
-  connections: FamilyGraphPrototypeConnection[],
-) {
-  const peopleById = new Map(people.map((person) => [person.id, person]));
-  const parentsByChild = new Map<string, Set<string>>();
-  const childrenByParent = new Map<string, Set<string>>();
-  const partnersByPerson = new Map<string, Set<string>>();
-
-  for (const connection of connections) {
-    if (connection.type === "parent_child") {
-      addToAdjacency(parentsByChild, connection.toId, connection.fromId);
-      addToAdjacency(childrenByParent, connection.fromId, connection.toId);
-      continue;
-    }
-    addToAdjacency(partnersByPerson, connection.fromId, connection.toId);
-    addToAdjacency(partnersByPerson, connection.toId, connection.fromId);
-  }
-
-  const relations = new Map<string, FocusRelationMeta>();
-  const focus = peopleById.get(viewAnchorPersonId);
-  if (!focus) return relations;
-
-  const setRelation = (personId: string, meta: FocusRelationMeta) => {
-    if (personId === viewAnchorPersonId || relations.has(personId)) return;
-    relations.set(personId, meta);
-  };
-
-  partnersByPerson.get(viewAnchorPersonId)?.forEach((personId) => {
-    const person = peopleById.get(personId);
-    setRelation(personId, {
-      kind: "partner",
-      label: person?.gender === "female" ? "Vợ" : person?.gender === "male" ? "Chồng" : "Bạn đời",
-    });
-  });
-
-  const parentIds = [...(parentsByChild.get(viewAnchorPersonId) ?? [])];
-  parentIds.forEach((parentId) => {
-    const parent = peopleById.get(parentId);
-    setRelation(parentId, {
-      kind: parent?.gender === "female" ? "mother" : "father",
-      label: parent?.gender === "female" ? "Mẹ" : "Cha",
-    });
-  });
-
-  const childIds = [...(childrenByParent.get(viewAnchorPersonId) ?? [])];
-  childIds.forEach((childId) => {
-    const child = peopleById.get(childId);
-    const female = child?.gender === "female";
-    setRelation(childId, { kind: female ? "daughter" : "son", label: female ? "Con gái" : "Con trai" });
-  });
-
-  const siblingIds = new Set<string>();
-  parentIds.forEach((parentId) => {
-    childrenByParent.get(parentId)?.forEach((childId) => {
-      if (childId !== viewAnchorPersonId) siblingIds.add(childId);
-    });
-  });
-  siblingIds.forEach((siblingId) => {
-    const sibling = peopleById.get(siblingId);
-    if (!sibling) return;
-    const older = sibling.birthYear != null && focus.birthYear != null && sibling.birthYear < focus.birthYear;
-    const younger = sibling.birthYear != null && focus.birthYear != null && sibling.birthYear > focus.birthYear;
-    const label = older
-      ? sibling.gender === "female" ? "Chị" : "Anh"
-      : younger
-        ? "Em"
-        : "Anh/Chị/Em";
-    setRelation(siblingId, { kind: "sibling", label });
-  });
-
-  const grandparentIds = new Set<string>();
-  parentIds.forEach((parentId) => {
-    parentsByChild.get(parentId)?.forEach((grandparentId) => grandparentIds.add(grandparentId));
-  });
-  grandparentIds.forEach((personId) => {
-    const person = peopleById.get(personId);
-    setRelation(personId, {
-      kind: person?.gender === "female" ? "grandmother" : "grandfather",
-      label: person?.gender === "female" ? "Bà" : "Ông",
-    });
-  });
-
-  childIds.forEach((childId) => {
-    childrenByParent.get(childId)?.forEach((grandchildId) => {
-      setRelation(grandchildId, { kind: "grandchild", label: "Cháu" });
-    });
-  });
-
-  // Cô / dì / chú / bác / cậu: sibling của cha hoặc mẹ.
-  // Prototype dùng tuổi + giới tính + lineage để tạo nhãn trực quan; production sẽ do Kinship Resolver quyết định.
-  parentIds.forEach((parentId) => {
-    const parent = peopleById.get(parentId);
-    if (!parent) return;
-    const grandparentOfFocusIds = [...(parentsByChild.get(parentId) ?? [])];
-    const parentSiblingIds = new Set<string>();
-    grandparentOfFocusIds.forEach((grandparentId) => {
-      childrenByParent.get(grandparentId)?.forEach((childId) => {
-        if (childId !== parentId) parentSiblingIds.add(childId);
-      });
-    });
-
-    parentSiblingIds.forEach((relativeId) => {
-      const relative = peopleById.get(relativeId);
-      if (!relative || relations.has(relativeId)) return;
-      setRelation(relativeId, getCollateralRelationMeta(parent, relative));
-    });
-  });
-
-  return relations;
-}
-
-function getCollateralRelationMeta(
-  parent: FamilyGraphPrototypePerson,
-  relative: FamilyGraphPrototypePerson,
-): FocusRelationMeta {
-  const olderThanParent = relative.birthYear != null && parent.birthYear != null && relative.birthYear < parent.birthYear;
-  if (olderThanParent) return { kind: "bac", label: "Bác" };
-
-  if (parent.gender === "female") {
-    return relative.gender === "female"
-      ? { kind: "di", label: "Dì" }
-      : { kind: "cau", label: "Cậu" };
-  }
-
-  return relative.gender === "female"
-    ? { kind: "co", label: "Cô" }
-    : { kind: "chu", label: "Chú" };
-}
-
-function addToAdjacency(map: Map<string, Set<string>>, fromId: string, toId: string) {
-  const values = map.get(fromId) ?? new Set<string>();
-  values.add(toId);
-  map.set(fromId, values);
-}
-
 function getPersonNodePalette(displayName: string, focused: boolean, dimmed: boolean) {
   if (dimmed) {
     return {
@@ -3852,112 +2702,6 @@ function LegendIcon({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; lab
 
 const styles = StyleSheet.create({
   baseGraphLayer: { flex: 1 },
-  // P2.19: Focus still belongs exclusively to the Family Graph route, but its
-  // presentation uses a route-owned native overFullScreen Modal. This avoids the
-  // Android z-order race where the Person Detail full-screen Modal could dismiss
-  // over a newly-mounted absolute sibling and leave Focus visually behind it.
-  // No app-root/global surface rail participates.
-  focusOverlayModalRoot: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 500,
-    elevation: 30,
-    backgroundColor: "transparent",
-  },
-  focusOverlayShield: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    // Ordinary dim overlay only: no BlurView, filter or hardware texture.
-    backgroundColor: "rgba(55,36,45,0.11)",
-  },
-  focusOverlayCard: {
-    position: "absolute",
-    zIndex: 3,
-    flexDirection: "column",
-    overflow: "hidden",
-    borderRadius: 28,
-    backgroundColor: "#FFF9FB",
-    borderWidth: 1.5,
-    borderColor: "rgba(234,184,207,0.96)",
-    shadowColor: "#4E3641",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.22,
-    shadowRadius: 28,
-    elevation: 8,
-  },
-  focusOverlayHeader: {
-    minHeight: 76,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    backgroundColor: "#F4EAF8",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E3D6E8",
-  },
-  focusOverlayHeaderIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  focusOverlayBack: {
-    minHeight: 38,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(218,180,201,0.72)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-  },
-  focusOverlayBackPressed: { transform: [{ scale: 0.97 }], opacity: 0.82 },
-  focusOverlayBackText: { color: COLORS.primaryText, fontSize: 10.4, fontWeight: "900" },
-  focusOverlayHeaderCopy: { flex: 1, minWidth: 0 },
-  focusOverlayEyebrow: { color: "#826A98", fontSize: 8.2, fontWeight: "900", letterSpacing: 0.55 },
-  focusOverlayTitle: { marginTop: 2, color: COLORS.primaryText, fontSize: 13.8, fontWeight: "900" },
-  focusOverlayHint: { marginTop: 2, color: COLORS.secondaryText, fontSize: 8.6, lineHeight: 12 },
-  focusOverlayGraph: { flex: 1, minHeight: 0, position: "relative", overflow: "hidden", backgroundColor: "#FCFBF7" },
-  focusOverlayPreparingLayer: { ...StyleSheet.absoluteFillObject, zIndex: 2 },
-  focusOverlayPreparing: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  focusOverlayPreparingInline: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 14, backgroundColor: "rgba(255,249,251,0.88)" },
-  focusOverlayPreparingInlineText: { color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 14, fontWeight: "800" },
-  focusOverlayPreparingCard: { minWidth: 220, maxWidth: 300, minHeight: 126, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF9FB", borderWidth: 1, borderColor: "#ECD6DF", shadowColor: "#7D5060", shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  focusOverlayPreparingErrorCard: { minWidth: 220, maxWidth: 300 },
-  focusOverlayPreparingTitle: { marginTop: 9, color: COLORS.primaryText, fontSize: 12.5, lineHeight: 17, fontWeight: "900", textAlign: "center" },
-  focusOverlayPreparingText: { marginTop: 7, maxWidth: 270, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, textAlign: "center" },
-  focusOverlayFooter: { minHeight: 32, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFF5F8", borderTopWidth: 1, borderTopColor: "#E9DDE2" },
-  focusOverlayFooterText: { flex: 1, color: COLORS.secondaryText, fontSize: 8.7, lineHeight: 12 },
-  branchPreparingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 120,
-    elevation: 20,
-    backgroundColor: COLORS.background,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  branchPreparingFlower: {
-    width: 72,
-    height: 72,
-    borderRadius: 28,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.focusBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  branchPreparingTitle: { color: COLORS.primaryText, fontSize: 19, fontWeight: "900", textAlign: "center" },
-  branchPreparingPerson: { marginTop: 5, color: COLORS.primary, fontSize: 13, fontWeight: "900", maxWidth: 250 },
-  branchPreparingStageRow: { marginTop: 18, flexDirection: "row", alignItems: "center", gap: 8 },
-  branchPreparingPulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
-  branchPreparingStage: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "800" },
-  branchPreparingHint: { marginTop: 9, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17, textAlign: "center", maxWidth: 290 },
   root: { flex: 1 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 10, paddingHorizontal: 18 },
   titleRowControlsOnly: { minHeight: 54, paddingTop: 8 },
@@ -4024,13 +2768,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCFBF7",
     borderWidth: 1,
     borderColor: COLORS.border,
-  },
-  viewportFocusOverlay: {
-    minHeight: 0,
-    marginTop: 0,
-    marginHorizontal: 0,
-    borderRadius: 0,
-    borderWidth: 0,
   },
   gestureRoot: {
     flex: 1,
@@ -4263,21 +3000,6 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   zoomButton: { width: 46, height: 45, alignItems: "center", justifyContent: "center" },
-  focusLocateButton: {
-    position: "absolute",
-    right: 10,
-    bottom: 10,
-    width: 46,
-    height: 46,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 3,
-    zIndex: 20,
-  },
   zoomDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: 8 },
   legend: {
     position: "absolute",

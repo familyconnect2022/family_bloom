@@ -137,7 +137,14 @@ export type ChessSessionRecovery =
   | { kind: "busy_other_game"; gameKind: "xiangqi"; gameId: string; familyId: string }
   | { kind: "pending"; gameKind: "chess" | "xiangqi"; familyId: string; inviteId: string; expiresAt: number }
   | { kind: "none" };
-export type ChessInviteRejected = { inviteId: string; byUid: string };
+export type ChessInviteRejected = { inviteId: string; byUid: string; isTestBot?: boolean; testCycleStep?: 1 | 2 | 3 };
+export type ChessOutgoingChallengeTerminal = {
+  inviteId: string;
+  reason: "rejected" | "expired";
+  opponentUid: string;
+  opponentName: string;
+  at: number;
+};
 export type ChessInvite = {
   inviteId: string;
   familyId: string;
@@ -147,6 +154,8 @@ export type ChessInvite = {
   expiresAt: number;
   isTestBot?: boolean;
   fromDisplayName?: string;
+  testBotDirection?: "bot_to_user" | "user_to_bot";
+  testCycleStep?: 1 | 2 | 3;
 };
 
 export type ChessErrorCode =
@@ -176,7 +185,7 @@ export const CHESS_ERROR_COPY: Record<ChessErrorCode, string> = {
   CHESS_NOT_YOUR_TURN: "Chưa đến lượt bạn.",
   CHESS_ILLEGAL_MOVE: "Nước đi này không hợp lệ.",
   CHESS_GAME_FINISHED: "Ván cờ đã kết thúc.",
-  CHESS_ALREADY_IN_GAME: "Bạn đang có một ván cờ realtime khác.",
+  CHESS_ALREADY_IN_GAME: "Bạn hoặc người thân đang bận ở một ván Cờ vua/Cờ tướng khác.",
   CHESS_INVITE_EXPIRED: "Lời thách đấu đã hết hạn.",
   CHESS_PLAYER_OFFLINE: "Người thân hiện không online trong Family Bloom.",
   CHESS_INVALID_PROMOTION: "Quân phong cấp không hợp lệ.",
@@ -219,6 +228,7 @@ export const CHESS_EVENTS = {
   sessionRecover: "chess:session:recover",
   gameResultAck: "chess:game:resultAck",
   testBotInvite: "chess:test:bot:invite",
+  testBotChallenge: "chess:test:bot:challenge",
   serverError: "server:error",
 } as const;
 

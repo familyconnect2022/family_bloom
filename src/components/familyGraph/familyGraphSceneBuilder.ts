@@ -19,6 +19,14 @@ import {
   putFamilyGraphBshModel,
   putFamilyGraphBshScene,
 } from "./familyGraphBshCache";
+import {
+  getFamilyGraphFocusBshLayout,
+  getFamilyGraphFocusBshModel,
+  getFamilyGraphFocusBshScene,
+  putFamilyGraphFocusBshLayout,
+  putFamilyGraphFocusBshModel,
+  putFamilyGraphFocusBshScene,
+} from "./familyGraphFocusBshCache";
 
 export const FAMILY_GRAPH_BSH_VERSION = 1;
 export const FAMILY_GRAPH_SCENE_VERSION = 4;
@@ -120,9 +128,16 @@ export type FamilyGraphRenderScene = FamilyGraphVisualData & {
 // recomputing fingerprints or walking Model/Layout/Geometry caches. WeakMap
 // ownership means old snapshots disappear automatically and correctness still
 // comes from snapshot replacement when any graph data changes.
-const snapshotSceneCache = new WeakMap<FamilyGraphSnapshot, Map<string, FamilyGraphRenderScene>>();
+const mainSnapshotSceneCache = new WeakMap<FamilyGraphSnapshot, Map<string, FamilyGraphRenderScene>>();
+const focusSnapshotSceneCache = new WeakMap<FamilyGraphSnapshot, Map<string, FamilyGraphRenderScene>>();
 const REVISION_SCENE_CACHE_LIMIT = 48;
-const revisionSceneCache = new Map<string, FamilyGraphRenderScene>();
+const mainRevisionSceneCache = new Map<string, FamilyGraphRenderScene>();
+const focusRevisionSceneCache = new Map<string, FamilyGraphRenderScene>();
+
+const snapshotSceneCacheFor = (mode: FamilyGraphSceneMode) =>
+  mode === "focusBranch" ? focusSnapshotSceneCache : mainSnapshotSceneCache;
+const revisionSceneCacheFor = (mode: FamilyGraphSceneMode) =>
+  mode === "focusBranch" ? focusRevisionSceneCache : mainRevisionSceneCache;
 
 const snapshotSceneSlot = (options: BuildFamilyGraphRenderSceneOptions) =>
   `${options.mode}:${options.focusPersonId?.trim() || "none"}`;
@@ -140,7 +155,7 @@ export const peekFamilyGraphRenderSceneIdentity = (
   snapshot: FamilyGraphSnapshot,
   options: BuildFamilyGraphRenderSceneOptions,
 ): FamilyGraphRenderScene | null =>
-  snapshotSceneCache.get(snapshot)?.get(snapshotSceneSlot(options)) ?? null;
+  snapshotSceneCacheFor(options.mode).get(snapshot)?.get(snapshotSceneSlot(options)) ?? null;
 
 // Firestore may publish a new immutable snapshot object even when no graph value
 // changed. WeakMap identity alone therefore made a second Focus open look cold.
@@ -150,11 +165,12 @@ const revisionSceneSlot = (
   options: BuildFamilyGraphRenderSceneOptions,
 ) => `${FAMILY_GRAPH_SCENE_VERSION}:${fingerprintFamilyGraphSnapshot(snapshot)}:${snapshotSceneSlot(options)}`;
 
-const touchRevisionScene = (key: string) => {
-  const value = revisionSceneCache.get(key) ?? null;
+const touchRevisionScene = (mode: FamilyGraphSceneMode, key: string) => {
+  const cache = revisionSceneCacheFor(mode);
+  const value = cache.get(key) ?? null;
   if (!value) return null;
-  revisionSceneCache.delete(key);
-  revisionSceneCache.set(key, value);
+  cache.delete(key);
+  cache.set(key, value);
   return value;
 };
 
@@ -162,19 +178,20 @@ export const peekFamilyGraphRenderScene = (
   snapshot: FamilyGraphSnapshot,
   options: BuildFamilyGraphRenderSceneOptions,
 ): FamilyGraphRenderScene | null => {
-  const identityHit = snapshotSceneCache.get(snapshot)?.get(snapshotSceneSlot(options)) ?? null;
+  const identityHit = snapshotSceneCacheFor(options.mode).get(snapshot)?.get(snapshotSceneSlot(options)) ?? null;
   if (identityHit) return identityHit;
 
   const revisionKey = revisionSceneSlot(snapshot, options);
-  const revisionHit = touchRevisionScene(revisionKey);
+  const revisionHit = touchRevisionScene(options.mode, revisionKey);
   if (!revisionHit) return null;
 
   // Rebind the hot revision scene to this new immutable snapshot object so every
   // later lookup in the same render cycle is O(1) by identity again.
-  let bucket = snapshotSceneCache.get(snapshot);
+  const snapshotCache = snapshotSceneCacheFor(options.mode);
+  let bucket = snapshotCache.get(snapshot);
   if (!bucket) {
     bucket = new Map();
-    snapshotSceneCache.set(snapshot, bucket);
+    snapshotCache.set(snapshot, bucket);
   }
   bucket.set(snapshotSceneSlot(options), revisionHit);
   return revisionHit;
@@ -186,20 +203,22 @@ const rememberFamilyGraphRenderScene = (
   scene: FamilyGraphRenderScene | null,
 ) => {
   if (!scene) return scene;
-  let bucket = snapshotSceneCache.get(snapshot);
+  const snapshotCache = snapshotSceneCacheFor(options.mode);
+  let bucket = snapshotCache.get(snapshot);
   if (!bucket) {
     bucket = new Map();
-    snapshotSceneCache.set(snapshot, bucket);
+    snapshotCache.set(snapshot, bucket);
   }
   bucket.set(snapshotSceneSlot(options), scene);
 
   const revisionKey = revisionSceneSlot(snapshot, options);
-  revisionSceneCache.delete(revisionKey);
-  revisionSceneCache.set(revisionKey, scene);
-  while (revisionSceneCache.size > REVISION_SCENE_CACHE_LIMIT) {
-    const oldest = revisionSceneCache.keys().next();
+  const revisionCache = revisionSceneCacheFor(options.mode);
+  revisionCache.delete(revisionKey);
+  revisionCache.set(revisionKey, scene);
+  while (revisionCache.size > REVISION_SCENE_CACHE_LIMIT) {
+    const oldest = revisionCache.keys().next();
     if (oldest.done) break;
-    revisionSceneCache.delete(oldest.value);
+    revisionCache.delete(oldest.value);
   }
   return scene;
 };
@@ -256,7 +275,9 @@ export const buildFamilyGraphModel = (
     options.mode,
     focusPersonId ?? "none",
   ].join(":");
-  const cached = getFamilyGraphBshModel<FamilyGraphModel>(modelKey);
+  const cached = options.mode === "focusBranch"
+    ? getFamilyGraphFocusBshModel<FamilyGraphModel>(modelKey)
+    : getFamilyGraphBshModel<FamilyGraphModel>(modelKey);
   if (cached) return cached;
 
   if (options.mode === "fullTree") {
@@ -311,7 +332,7 @@ export const buildFamilyGraphModel = (
     requestedMaxPeople: subgraph.requestedMaxPeople,
     topologyRevision,
   };
-  putFamilyGraphBshModel(modelKey, model);
+  putFamilyGraphFocusBshModel(modelKey, model);
   return model;
 };
 
@@ -347,7 +368,7 @@ const buildFamilyGraphFocusModelInterruptible = async (
     options.mode,
     focusPersonId,
   ].join(":");
-  const cached = getFamilyGraphBshModel<FamilyGraphModel>(modelKey);
+  const cached = getFamilyGraphFocusBshModel<FamilyGraphModel>(modelKey);
   if (cached) return cached;
 
   const queryEngine = queryEngineHint ?? createFamilyGraphQueryEngine(snapshot);
@@ -397,7 +418,7 @@ const buildFamilyGraphFocusModelInterruptible = async (
     requestedMaxPeople: subgraph.requestedMaxPeople,
     topologyRevision,
   };
-  putFamilyGraphBshModel(modelKey, model);
+  putFamilyGraphFocusBshModel(modelKey, model);
   return model;
 };
 
@@ -413,7 +434,9 @@ export const buildFamilyGraphLayout = (
     model.modelKey,
     layoutRevision,
   ].join(":");
-  const cached = getFamilyGraphBshLayout<FamilyGraphLayout>(layoutKey);
+  const cached = model.mode === "focusBranch"
+    ? getFamilyGraphFocusBshLayout<FamilyGraphLayout>(layoutKey)
+    : getFamilyGraphBshLayout<FamilyGraphLayout>(layoutKey);
   if (cached) return cached;
 
   const visual = adaptFamilyGraphSnapshot(
@@ -444,7 +467,8 @@ export const buildFamilyGraphLayout = (
     modelKey: model.modelKey,
     bounds,
   };
-  putFamilyGraphBshLayout(layoutKey, layout);
+  if (model.mode === "focusBranch") putFamilyGraphFocusBshLayout(layoutKey, layout);
+  else putFamilyGraphBshLayout(layoutKey, layout);
   return layout;
 };
 
@@ -490,7 +514,9 @@ export const buildFamilyGraphScene = (
     geometry.geometryKey,
     visualRevision,
   ].join(":");
-  const cached = getFamilyGraphBshScene<FamilyGraphRenderScene>(sceneKey);
+  const cached = model.mode === "focusBranch"
+    ? getFamilyGraphFocusBshScene<FamilyGraphRenderScene>(sceneKey)
+    : getFamilyGraphBshScene<FamilyGraphRenderScene>(sceneKey);
   if (cached) return cached;
 
   // Profile/avatar/notes changes hydrate onto the already computed coordinates.
@@ -545,7 +571,8 @@ export const buildFamilyGraphScene = (
     layoutRevision: layout.layoutRevision,
     visualRevision,
   };
-  putFamilyGraphBshScene(sceneKey, scene);
+  if (model.mode === "focusBranch") putFamilyGraphFocusBshScene(sceneKey, scene);
+  else putFamilyGraphBshScene(sceneKey, scene);
   return scene;
 };
 
@@ -840,7 +867,7 @@ const buildFamilyGraphFocusProjectionSceneInterruptible = async (
   const visualRevision = shortRevision(`${baseScene.visualRevision}:focus:${model.modelKey}`);
   if (!(await checkpoint(true))) return null;
   const sceneKey = `scene${FAMILY_GRAPH_SCENE_VERSION}:${layoutKey}:${geometryKey}:${visualRevision}`;
-  const cached = getFamilyGraphBshScene<FamilyGraphRenderScene>(sceneKey);
+  const cached = getFamilyGraphFocusBshScene<FamilyGraphRenderScene>(sceneKey);
   if (cached) return rememberFamilyGraphRenderScene(snapshot, options, cached);
 
   const scene: FamilyGraphRenderScene = {
@@ -875,7 +902,7 @@ const buildFamilyGraphFocusProjectionSceneInterruptible = async (
     layoutRevision: `${baseScene.layoutRevision}:focus:${projectionRevision}`,
     visualRevision,
   };
-  putFamilyGraphBshScene(sceneKey, scene);
+  putFamilyGraphFocusBshScene(sceneKey, scene);
   return rememberFamilyGraphRenderScene(snapshot, options, scene);
 };
 

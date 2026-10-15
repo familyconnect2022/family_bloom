@@ -1,5 +1,6 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { ChessDomainError, type PersistedGame } from "./chessTypes.js";
+import { inspectBoardGameActiveLock, resolveLiveBoardGameActiveLock } from "../games/boardGameActiveLock.js";
 
 export class ChessPersistenceService {
   constructor(private db: Firestore) {}
@@ -10,11 +11,15 @@ export class ChessPersistenceService {
   async createWithLocks(game: PersistedGame) {
     await this.db.runTransaction(async (tx) => {
       const whiteLock = this.lockRef(game.whiteUid); const blackLock = this.lockRef(game.blackUid);
-      const [w, b] = await Promise.all([tx.get(whiteLock), tx.get(blackLock)]);
-      if (w.exists || b.exists) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      // Read and validate the referenced authoritative games, not just the lock
+      // documents. A stale lock from an already-finished/deleted game is healed
+      // in this same transaction instead of blocking the next match forever.
+      const white = await inspectBoardGameActiveLock(tx, this.db, whiteLock);
+      const black = await inspectBoardGameActiveLock(tx, this.db, blackLock);
+      if (white.live || black.live) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
       tx.create(this.gameRef(game.familyId, game.id), game);
-      tx.create(whiteLock, { uid: game.whiteUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt });
-      tx.create(blackLock, { uid: game.blackUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt });
+      tx.set(whiteLock, { uid: game.whiteUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt }, { merge: false });
+      tx.set(blackLock, { uid: game.blackUid, familyId: game.familyId, gameId: game.id, gameKind: "chess", createdAt: game.createdAt }, { merge: false });
     });
   }
 
@@ -33,8 +38,7 @@ export class ChessPersistenceService {
     return snap.exists ? snap.data() as PersistedGame : null;
   }
   async getActiveForUid(uid: string) {
-    const snap = await this.lockRef(uid).get();
-    return snap.exists ? snap.data() as { familyId: string; gameId: string; gameKind?: "chess" | "xiangqi" } : null;
+    return resolveLiveBoardGameActiveLock(this.db, uid) as Promise<{ familyId: string; gameId: string; gameKind?: "chess" | "xiangqi" } | null>;
   }
   async getUnseenResult(uid: string, familyId: string) {
     const snap = await this.recoveryRef(uid, familyId).get();

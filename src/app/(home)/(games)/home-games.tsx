@@ -11,15 +11,10 @@ import { COLORS } from "../../../constants/theme";
 import { GAME_COPY } from "../../../data/games/homeGameQuestionBank";
 import { useAuth } from "../../../context/AuthContext";
 import { useChessRealtime } from "../../../context/ChessRealtimeContext";
-import { useActiveBoardGameSession } from "../../../services/games/activeBoardGameSessionStore";
-import { claimAndPresentBoardGame } from "../../../services/presentation/boardGamePresentationCoordinator";
-import { beginLocalBoardGameReservation, usePendingBoardGameReservation } from "../../../services/games/pendingBoardGameReservationStore";
-import { cancelPendingBoardGameReservation } from "../../../services/games/pendingBoardGameReservationActions";
+import { useXiangqiRealtime } from "../../../context/XiangqiRealtimeContext";
 import { homeGameService } from "../../../services/home/homeGameService";
 import { formatHomeGameDeadline, getHomeGamePlayWindow, homeGameStatusLabel } from "../../../services/home/homeGamePolicy";
 import { subscribeSharedRealtime } from "../../../services/realtime/sharedRealtimeRegistry";
-import { resolveOrCreateXiangqiSession } from "../../../services/xiangqi/xiangqiSessionBootstrap";
-import { cacheXiangqiBootstrapState } from "../../../services/xiangqi/xiangqiSurfaceStore";
 import type { HomeGameSession, HomeGameType } from "../../../types/homeLiving";
 
 const TYPES: HomeGameType[] = ["know_each_other", "guess_person", "memory_owner", "truth_lie", "story_chain", "family_bingo"];
@@ -30,9 +25,7 @@ export default function HomeGamesScreen() {
   const { user, userProfile, activeFamilyId } = useAuth();
   const { showToast } = useBloomToast();
   const chessRealtime = useChessRealtime();
-  const activeBoardGame = useActiveBoardGameSession();
-  const pendingBoardGame = usePendingBoardGameReservation();
-  const [cancellingPending, setCancellingPending] = useState(false);
+  const xiangqiRealtime = useXiangqiRealtime();
   const [sessions, setSessions] = useState<HomeGameSession[]>([]);
   const [clockNow, setClockNow] = useState(Date.now());
   const [screenFocused, setScreenFocused] = useState(true);
@@ -79,111 +72,26 @@ export default function HomeGamesScreen() {
     router.push({ pathname: "/home-game-create" as never, params: { type } } as never);
   };
   const open = (id: string) => router.push(`/home-game/${id}` as never);
-  const pendingLabel = pendingBoardGame?.gameKind === "chess" ? "Cờ vua" : "Cờ tướng";
-  const cancelPending = async () => {
-    if (!pendingBoardGame || cancellingPending) return;
-    setCancellingPending(true);
-    const result = await cancelPendingBoardGameReservation(pendingBoardGame.gameKind);
-    setCancellingPending(false);
-    if (result.ok) {
-      showToast({ type: "success", title: `Đã hủy phiên ${pendingLabel}`, message: "Bạn có thể chọn một ván khác ngay bây giờ." });
-    } else {
-      showToast({ type: "warning", title: "Chưa hủy được phiên đang chờ", message: result.message || "Bloom sẽ giữ khóa để tránh tạo hai ván cùng lúc. Bạn thử lại nhé." });
-    }
-  };
-  const blockByPending = (wanted: "chess" | "xiangqi") => {
-    if (!pendingBoardGame || pendingBoardGame.gameKind === wanted) return false;
-    showToast({
-      type: "info",
-      title: `Bạn đang chờ một ván ${pendingLabel}`,
-      message: `Hãy tiếp tục chờ hoặc hủy phiên ${pendingLabel} bên dưới trước khi bắt đầu ${wanted === "chess" ? "Cờ vua" : "Cờ tướng"}.`,
-      duration: 5200,
-    });
-    return true;
-  };
   const openChess = () => {
-    if (blockByPending("chess")) return;
-    if (activeBoardGame?.kind === "xiangqi" || chessRealtime.busyOtherGame?.gameKind === "xiangqi") {
-      router.push("/xiangqi-preview" as never);
-      return;
-    }
-    const gameId = activeBoardGame?.kind === "chess"
-      ? activeBoardGame.gameId
-      : chessRealtime.activeGameId;
+    const gameId = chessRealtime.activeGameId;
     if (gameId) {
       router.navigate({ pathname: "/(chess)/chess-game/[gameId]", params: { gameId } } as never);
       return;
     }
-    beginLocalBoardGameReservation("chess", activeFamilyId, "connecting");
+    // Entering the lobby never creates a cross-game reservation. The server
+    // checks Chess/Xiangqi eligibility only when a challenge is actually sent
+    // or accepted.
     router.push("/chess-lobby" as never);
   };
-  const openXiangqi = async () => {
-    if (blockByPending("xiangqi")) return;
-    if (activeBoardGame?.kind === "xiangqi") {
-      router.push("/xiangqi-preview" as never);
+  const openXiangqi = () => {
+    const gameId = xiangqiRealtime.activeGameId;
+    if (gameId) {
+      router.navigate("/xiangqi-preview" as never);
       return;
     }
-    // P2.21: only a live authoritative Chess id may block Xiangqi. Finished
-    // results live in the independent root result store and never participate in
-    // Game Hub arbitration.
-    const activeChessGameId = activeBoardGame?.kind === "chess"
-      ? activeBoardGame.gameId
-      : chessRealtime.activeGameId;
-    if (activeChessGameId) {
-      showToast({
-        type: "info",
-        title: "Cờ vua vẫn đang tiếp tục",
-        message: "Bloom giữ đúng ván Cờ vua hiện tại. Hãy kết thúc ván đó trước khi mở Cờ tướng.",
-        duration: 4200,
-      });
-      return;
-    }
-    if (!activeFamilyId) {
-      showToast({ type: "warning", title: "Chưa mở được Cờ tướng", message: "Bloom chưa xác định được Nhà đang hoạt động. Bạn thử lại ngay nhé." });
-      return;
-    }
-
-    // P2.19: normal Game Hub entry never navigates to a blank command route and
-    // then asks the server which session exists. Resolve/create while the user
-    // remains on the Hub (the pending card + Cancel path are already visible),
-    // then mount the board only after a concrete authoritative gameId exists.
-    const result = await resolveOrCreateXiangqiSession(activeFamilyId);
-    if (result.kind === "busy_chess") {
-      showToast({
-        type: "info",
-        title: "Cờ vua vẫn đang tiếp tục",
-        message: "Bloom vừa xác nhận máy chủ vẫn giữ ván Cờ vua hiện tại.",
-        duration: 4200,
-      });
-      return;
-    }
-    if (result.kind === "pending") {
-      // Stay on Game Hub. The shared pending card is the explicit waiting/cancel
-      // surface; do not replace the whole phone with a session-check screen.
-      return;
-    }
-    if (result.kind === "error") {
-      showToast({ type: "warning", title: "Chưa mở được Cờ tướng", message: result.message });
-      return;
-    }
-
-    cacheXiangqiBootstrapState(result.state);
-    const claimed = claimAndPresentBoardGame({
-      kind: "xiangqi",
-      gameId: result.state.gameId,
-      familyId: activeFamilyId,
-      source: "server",
-      presentation: "hidden",
-      reason: "active_game",
-    });
-    if (!claimed) {
-      showToast({ type: "warning", title: "Bloom đang giữ một ván khác", message: "Phiên Cờ tướng đã được xác nhận nhưng chưa thể chiếm màn hình. Bạn thử lại nhé." });
-      return;
-    }
-
-    // Give the root GameBoardHost one frame to lazy-mount the now-authoritative
-    // Xiangqi layer while it is still parked. The route then only raises it.
-    requestAnimationFrame(() => router.push("/xiangqi-preview" as never));
+    // Entering a lobby is never cross-game locked. Eligibility is checked only
+    // when a challenge/accept would actually reserve or create a game.
+    router.push("/(xiangqi)/xiangqi-lobby" as never);
   };
 
   return (
@@ -226,7 +134,7 @@ export default function HomeGamesScreen() {
           </BloomCard>
 
           <BloomSectionHeader title="Cờ tướng Nhà Mình" subtitle="Bộ quân đã chốt · luật nền đã chạy · chơi một ván cùng Bloom Bot." />
-          <BloomCard style={styles.chessCard} onPress={() => { void openXiangqi(); }}>
+          <BloomCard style={styles.chessCard} onPress={openXiangqi}>
             <View style={styles.xiangqiIcon}><Image accessibilityLabel="Quân Tướng cờ tướng" source={require("../../../../assets/images/games/xiangqi-general-icon.png")} resizeMode="contain" fadeDuration={0} style={styles.xiangqiPieceIcon} /></View>
             <View style={styles.chessCopy}>
               <Text style={styles.chessTitle}>Cờ tướng Nhà Mình</Text>
@@ -235,19 +143,6 @@ export default function HomeGamesScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </BloomCard>
-
-          {pendingBoardGame ? (
-            <BloomCard tone="soft" style={styles.pendingGameCard}>
-              <View style={styles.pendingGameIcon}><Ionicons name="hourglass-outline" size={20} color={COLORS.primary} /></View>
-              <View style={styles.pendingGameCopy}>
-                <Text style={styles.pendingGameTitle}>Đang chờ một ván {pendingLabel}</Text>
-                <Text style={styles.pendingGameText}>Bloom đang giữ phiên này để không tạo trùng Cờ vua/Cờ tướng. Muốn đổi game, hãy hủy phiên đang chờ trước.</Text>
-              </View>
-              <Pressable disabled={cancellingPending} onPress={() => void cancelPending()} style={[styles.pendingGameCancel, cancellingPending && styles.pendingGameCancelDisabled]}>
-                <Text style={styles.pendingGameCancelText}>{cancellingPending ? "Đang hủy…" : "Hủy"}</Text>
-              </Pressable>
-            </BloomCard>
-          ) : null}
 
           <BloomSectionHeader title="6 trò đã sẵn sàng" subtitle="Không có bảng xếp hạng áp lực. Điểm chỉ để vui, kết quả mới là phần đáng nhớ." />
           <View style={styles.grid}>
