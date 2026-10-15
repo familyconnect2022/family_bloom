@@ -21,7 +21,7 @@ export const XIANGQI_EVENTS={
 } as const;
 type Ack=(response:unknown)=>void;
 type Data={uid:string;xiangqiFamilyId?:string;xiangqiLobbyFamilyId?:string;xiangqiGameId?:string;xiangqiGameFamilyId?:string};
-type Invite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3};
+type Invite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3;redUid?:string;blackUid?:string};
 const invites=new Map<string,Invite>();
 const memberCache=new Map<string,{ok:boolean;expires:number}>();
 const ALLOWED=new Set(["180000:2000","300000:0","600000:0","600000:5000","unlimited"]);
@@ -74,7 +74,7 @@ export function installXiangqiSocket(io:Server<any,any,any,any>){
       return existing;
     }
     const b=botUid(uid);
-    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:b,toUid:uid,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,fromDisplayName:BOT_NAME,testBotDirection:"bot_to_user"};
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:b,toUid:uid,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,fromDisplayName:BOT_NAME,testBotDirection:"bot_to_user",redUid:uid,blackUid:b};
     const reserved=reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
     if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
     invites.set(invite.inviteId,invite);
@@ -90,7 +90,7 @@ export function installXiangqiSocket(io:Server<any,any,any,any>){
     await requireMember(uid,familyId);
     if(await persistence.getAnyActiveForUid(uid)||getPendingBoardGameReservation(uid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
     const b=botUid(uid),cycleStep=nextOutgoingTestBotCycleStep(uid);
-    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid:b,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,testBotDirection:"user_to_bot",testCycleStep:cycleStep};
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid:b,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,testBotDirection:"user_to_bot",testCycleStep:cycleStep,redUid:uid,blackUid:b};
     const reserved=reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
     if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
     invites.set(invite.inviteId,invite);
@@ -125,8 +125,9 @@ export function installXiangqiSocket(io:Server<any,any,any,any>){
       if(!pending)reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:existing.inviteId,createdAt:Date.now(),expiresAt:existing.expiresAt});
       return existing;
     }
-    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid,timeControl,expiresAt:Date.now()+INVITE_TTL_MS};
-    const reserved=reservePendingBoardGameParticipants({uids:[uid,toUid],gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
+    const redUid=Math.random()<.5?uid:toUid,blackUid=redUid===uid?toUid:uid;
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,redUid,blackUid};
+    const reserved=reservePendingBoardGameParticipants({uids:[uid,toUid],inviterUid:uid,inviteeUid:toUid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
     if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
     invites.set(invite.inviteId,invite);
     await emitPresence(familyId);
@@ -142,9 +143,9 @@ export function installXiangqiSocket(io:Server<any,any,any,any>){
     await requireMember(uid,invite.familyId);
     const ownerUid=invite.isTestBot?invite.toUid:invite.fromUid;
     const ownerPending=getPendingBoardGameReservation(ownerUid);
-    if(!ownerPending||ownerPending.gameKind!=="xiangqi"||ownerPending.inviteId!==invite.inviteId)throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");
-    if(!invite.isTestBot){const inviteePending=getPendingBoardGameReservation(uid);if(!inviteePending||inviteePending.gameKind!=="xiangqi"||inviteePending.inviteId!==invite.inviteId)throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
-    const state=await manager.create(invite.familyId,invite.fromUid,invite.toUid,invite.timeControl,rid,invite.isTestBot?{testBotUid:invite.fromUid,redUid:uid,blackUid:invite.fromUid}:undefined);
+    if(!ownerPending||ownerPending.gameKind!=="xiangqi"||ownerPending.inviteId!==invite.inviteId||(!invite.isTestBot&&ownerPending.role!=="inviter"))throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");
+    if(!invite.isTestBot){const inviteePending=getPendingBoardGameReservation(uid);if(!inviteePending||inviteePending.gameKind!=="xiangqi"||inviteePending.inviteId!==invite.inviteId||inviteePending.role!=="invitee")throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
+    const state=await manager.create(invite.familyId,invite.fromUid,invite.toUid,invite.timeControl,rid,invite.isTestBot?{testBotUid:invite.fromUid,redUid:invite.redUid,blackUid:invite.blackUid}:{redUid:invite.redUid,blackUid:invite.blackUid});
     invites.delete(inviteId);
     releasePendingBoardGameInvite(invite.inviteId,"xiangqi");
     for(const playerUid of [invite.fromUid,invite.toUid])for(const s of socketsIn(playerUid,invite.familyId)){s.data.xiangqiGameId=state.gameId;s.data.xiangqiGameFamilyId=invite.familyId;await s.join(`xiangqi:game:${state.gameId}`);s.emit(XIANGQI_EVENTS.gameState,state);}

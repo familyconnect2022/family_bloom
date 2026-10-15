@@ -135,7 +135,7 @@ export type ChessSessionRecovery =
   | { kind: "active"; gameId: string }
   | { kind: "finished_unseen"; gameId: string }
   | { kind: "busy_other_game"; gameKind: "xiangqi"; gameId: string; familyId: string }
-  | { kind: "pending"; gameKind: "chess" | "xiangqi"; familyId: string; inviteId: string; expiresAt: number }
+  | { kind: "pending"; gameKind: "chess" | "xiangqi"; familyId: string; inviteId: string; role?: "inviter" | "invitee" | "participant"; phase?: "waiting_acceptance"; expiresAt: number }
   | { kind: "none" };
 export type ChessInviteRejected = { inviteId: string; byUid: string; isTestBot?: boolean; testCycleStep?: 1 | 2 | 3 };
 export type ChessOutgoingChallengeTerminal = {
@@ -156,6 +156,8 @@ export type ChessInvite = {
   fromDisplayName?: string;
   testBotDirection?: "bot_to_user" | "user_to_bot";
   testCycleStep?: 1 | 2 | 3;
+  whiteUid?: string;
+  blackUid?: string;
 };
 
 export type ChessErrorCode =

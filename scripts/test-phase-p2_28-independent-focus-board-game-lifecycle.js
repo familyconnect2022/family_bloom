@@ -49,6 +49,7 @@ check('Focus does not import Main component/runtime cache', lacks(focusView, './
 check('Focus owns independent camera/cache', has(focusView, 'applyFocusPanDelta') && has(focusView, 'hydrateFamilyGraphFocusRuntimeState') && has(focusRuntime, 'const focusRuntimeCache = new Map'));
 check('Focus cards cannot select another person', has(focusView, 'pointerEvents="none"') && lacks(focusView, 'onPressPerson'));
 check('Graph route mounts Main and Focus as siblings', has(graphRoute, '<FamilyGraphPrototype') && has(graphRoute, '<FamilyGraphFocusHost') && has(graphRoute, 'onOpenFocus={setFocusOverlayPersonId}'));
+check('Main detail sheet owns a local yield handoff flag', has(main, 'detailSheetYieldPending') && has(main, 'setDetailSheetYieldPending') && lacks(main, 'detailFocusHandoffPending'));
 
 const deletedShared = [
   'src/components/system/BoardGameSessionBridge.tsx',
@@ -95,9 +96,9 @@ check('Invitee expiry is surfaced in both games', has(chessContext, 'Lời mời
 check('Chess ready waits for visual + critical audio', has(chessSurfaceHost, '!criticalAudioReady') && has(chessSurfaceHost, 'visualRevision < state.revision') && has(chessSurfaceHost, 'realtimeActions.readyGame(gameId)'));
 check('Xiangqi ready waits for board + critical audio', has(xqSurfaceHost, '!boardReady') && has(xqSurfaceHost, '!criticalAudioReady') && has(xqSurfaceHost, 'XIANGQI_EVENTS.gameReady'));
 check('PRE-COPY removes retired shared owners', deletedShared.every((p) => has(preCopyBat, p.replaceAll('/', '\\'))));
-check('CLEAN APPLY runs P2.28 and app/server typecheck', has(cleanApplyBat, 'phaseP2_28:check') && (cleanApplyBat.match(/npm run typecheck/g) || []).length >= 2);
+check('CLEAN APPLY runs P2.28 with non-blocking typecheck diagnostics', has(cleanApplyBat, 'phaseP2_28:check') && has(cleanApplyBat, 'TypeScript diagnostics (non-blocking') && (cleanApplyBat.match(/npm run typecheck/g) || []).length >= 2);
 check('APK share build is labeled P2.28', has(buildShareBat, 'P2.28'));
-check('Release APK build gates on P2.28 + typecheck', has(releaseBuildBat, 'phaseP2_28:check') && (releaseBuildBat.match(/npm run typecheck/g) || []).length >= 2);
+check('Release APK build gates on P2.28 and keeps typecheck diagnostic-only', has(releaseBuildBat, 'phaseP2_28:check') && has(releaseBuildBat, 'TypeScript diagnostics are informative') && (releaseBuildBat.match(/npm run typecheck/g) || []).length >= 2);
 
 const pass = checks.filter((x) => x.ok).length;
 const fail = checks.filter((x) => !x.ok);

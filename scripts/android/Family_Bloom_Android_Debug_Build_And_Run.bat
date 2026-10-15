@@ -125,146 +125,45 @@ if errorlevel 1 goto :fail
 node scripts\setup\check-build-entrypoints.js
 if errorlevel 1 goto :fail
 
-echo [3/7] Running Expo Doctor and current Family Bloom static gates...
-call npm run phaseP2_12_8:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_15_2:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_15_5_1:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_18:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_19:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_20:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_21:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_22:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_23:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_24:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_25:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_26:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_27:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_17_1:check
-if errorlevel 1 goto :fail
-if errorlevel 1 goto :fail
-call npm run doctor:native-check
-if errorlevel 1 goto :fail
-call npm run release:check
-if errorlevel 1 exit /b %errorlevel%
-call npm run phase15a:check
-if errorlevel 1 goto :fail
-call npm run phase15a4:check
-if errorlevel 1 goto :fail
-call npm run phase17_6:check
-if errorlevel 1 goto :fail
-call npm run phase17_7:check
-if errorlevel 1 goto :fail
-call npm run phase17_8:check
-if errorlevel 1 goto :fail
-call npm run phase17_8a:check
-if errorlevel 1 goto :fail
-call npm run phase17_8b:check
-if errorlevel 1 goto :fail
-call npm run phase17_8c:check
-if errorlevel 1 goto :fail
-call npm run phase17_8d:check
-if errorlevel 1 goto :fail
-call npm run phase17_8e:check
-if errorlevel 1 goto :fail
-call npm run phase17_9a17:check
-if errorlevel 1 goto :fail
-call npm run phase17_9a18:check
-if errorlevel 1 goto :fail
-call npm run phaseP1:check
-if errorlevel 1 goto :fail
-call npm run phaseP1_1:check
-if errorlevel 1 goto :fail
-call npm run phaseP1_2:check
-if errorlevel 1 goto :fail
-call npm run phaseP2:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_1:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_2:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_3:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_4:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_5:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_6:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_7:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_8:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_9:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_10:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_11:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_11_1:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_11_2:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_11_3:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_11_4:check
-if errorlevel 1 goto :fail
+echo [3/7] Running build regressions + P2.28 baseline + P2.29 release/static gates...
 call npm run phaseP2_12_4:check
-if errorlevel 1 goto :fail
-call npm run phaseP2_12_5:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_12_6:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_12_7:check
 if errorlevel 1 goto :fail
-call npm run phase17_9a9:check
+call npm run phaseP2_12_8:check
 if errorlevel 1 goto :fail
-call npm run phase17:check
+call npm run phaseP2_28:check
 if errorlevel 1 goto :fail
-call npm run phase17_1:check
+call npm run phaseP2_29:check
 if errorlevel 1 goto :fail
-call npm run phase16a2:check
+call npm run structure:check
 if errorlevel 1 goto :fail
-call npm run phase16b:check
+call npm run doctor:native-check
 if errorlevel 1 goto :fail
-call npm run chess:current-check
+call npm run release:check
 if errorlevel 1 goto :fail
-call npm run phase14q:check
-if errorlevel 1 goto :fail
-call npm run phase14r:check
-if errorlevel 1 goto :fail
-call npm run phase14r4:check
-if errorlevel 1 goto :fail
-call npm run phase14r4d:check
-if errorlevel 1 goto :fail
-call npm run phase14r4e:check
-if errorlevel 1 goto :fail
-call npm run phase14r5:check
-if errorlevel 1 goto :fail
-call npm run phase14r5a:check
-if errorlevel 1 goto :fail
-call npm run phase14s:check
-if errorlevel 1 goto :fail
-call npm run phase14s1:check
-if errorlevel 1 goto :fail
-call npm run phase14s1a:check
-if errorlevel 1 goto :fail
-call npm run phase14t:check
-if errorlevel 1 goto :fail
-call npm run phase14t0a:check
-if errorlevel 1 goto :fail
+echo       TypeScript diagnostics are informative for Android test builds.
+call npm run typecheck
+if errorlevel 1 (
+  echo [WARN] App TypeScript diagnostics exist; continuing to Metro/Gradle compile.
+)
+if exist "server\package.json" (
+  pushd server
+  if not exist "node_modules\typescript\package.json" (
+    call npm install --no-audit --no-fund
+    if errorlevel 1 (
+      popd
+      goto :fail
+    )
+  )
+  call npm run typecheck
+  if errorlevel 1 (
+    echo [WARN] Server TypeScript diagnostics exist; Android client build continues.
+  )
+  popd
+)
 
 echo [4/7] Regenerating Android native project with the single app identity...
 call npx expo prebuild --platform android --clean

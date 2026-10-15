@@ -1,6 +1,10 @@
 import { useSyncExternalStore } from "react";
-import { canReleaseBoardGameSurface } from "../games/boardGameSurfaceLifecycle";
 import type { XiangqiRealtimeState } from "../../types/xiangqiRealtime";
+function canReleaseXiangqiSurface(currentOwnerId: string | null, requestedOwnerId?: string) {
+  if (!currentOwnerId) return true;
+  return !!requestedOwnerId && currentOwnerId === requestedOwnerId;
+}
+
 
 export type XiangqiSurfaceMode = "hidden" | "full" | "mini";
 export type XiangqiSurfacePrepareReason = "route" | "outgoing_challenge" | "accept_invite" | "active_game" | "rematch";
@@ -129,12 +133,12 @@ export function showXiangqiSurfaceFull(gameId?: string | null, ownerId?: string)
 
 export function minimizeXiangqiSurface(ownerId?: string) {
   if (!state.gameId) return;
-  if (!canReleaseBoardGameSurface(state.ownerId, ownerId)) return;
+  if (!canReleaseXiangqiSurface(state.ownerId, ownerId)) return;
   emit({ ...state, mode: "mini", ownerId: null, preparing: false });
 }
 
 export function hideXiangqiSurface(ownerId?: string) {
-  if (ownerId && !canReleaseBoardGameSurface(state.ownerId, ownerId)) return;
+  if (ownerId && !canReleaseXiangqiSurface(state.ownerId, ownerId)) return;
   if (state.mode === "hidden" && !state.ownerId) return;
   emit({ ...state, mode: "hidden", ownerId: null, preparing: false });
 }

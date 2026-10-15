@@ -1,5 +1,5 @@
 @echo off
-rem Family Bloom Performance Architecture P2.28 - Independent Focus + Independent Chess/Xiangqi Lifecycle - safe copy-over cleanup
+rem Family Bloom P2.29 - Stable Waiting Shell + Independent Games - safe copy-over cleanup (baseline P2.28)
 setlocal EnableExtensions
 chcp 65001 >nul
 
@@ -7,7 +7,7 @@ set "TARGET=%~1"
 if not defined TARGET (
   echo ========================================================
   echo Family Bloom - PRE-COPY CLEAN OLD PROJECT
-  echo Performance Architecture P2.28 - Independent Focus + Independent Chess/Xiangqi Lifecycle
+  echo P2.29 - Stable Waiting Shell + Independent Games ^(baseline P2.28^)
 rem Successor of Phase 17.9A16 - Xiangqi Server Authority Realtime Bot
 rem Successor of Phase 17.9A15 - Shared Board Game Sound Premove Bot Pacing
 rem Successor of Phase 17.9A14 - Instant Home Firebase Data Source Cleanup
@@ -50,7 +50,7 @@ if errorlevel 1 (
     set "NODE_EXE=%ProgramFiles(x86)%\nodejs\node.exe"
   ) else (
     echo [ERROR] Node.js was not found in PATH or Program Files.
-    echo         P2.28 needs Node.js to safeguard manual project notes before overlay.
+    echo         P2.29 ^(baseline P2.28^) needs Node.js to safeguard manual project notes before overlay.
     goto :fail
   )
 )
@@ -200,7 +200,7 @@ for /f "delims=" %%F in ('dir /b "%TARGET%\scripts\test-phase17_*.js" 2^>nul') d
 )
 for /f "delims=" %%F in ('dir /b "%TARGET%\scripts\test-phase15b*.js" 2^>nul') do del /f /q "%TARGET%\scripts\%%F" >nul 2>nul
 
-echo [2/6] Removing superseded native board-game audio before P2.28 overlay...
+echo [2/6] Removing superseded native board-game audio before P2.29 overlay...
 if exist "%TARGET%\assets\audio\board-game" del /f /q "%TARGET%\assets\audio\board-game\*.mp3" >nul 2>nul
 if exist "%TARGET%\assets\audio\board-game" del /f /q "%TARGET%\assets\audio\board-game\*.m4a" >nul 2>nul
 if exist "%TARGET%\assets\audio\board-game" del /f /q "%TARGET%\assets\audio\board-game\*.ogg" >nul 2>nul
@@ -247,7 +247,7 @@ echo.
 echo ========================================================
 echo PRE-COPY CLEAN PASS
 echo ========================================================
-echo Now COPY the entire Performance Architecture P2.28 FULL package over:
+echo Now COPY the entire P2.29 FULL package over:
 echo   %TARGET%
 echo Then run inside the updated project:
 echo   Family_Bloom_CLEAN_APPLY_FULL.bat

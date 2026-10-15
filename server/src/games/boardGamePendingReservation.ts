@@ -1,15 +1,40 @@
 export type BoardGameKind = "chess" | "xiangqi";
+export type BoardGamePendingRole = "inviter" | "invitee" | "participant";
+export type BoardGamePendingPhase = "waiting_acceptance";
 
+/**
+ * Cross-game busy reservation only.
+ *
+ * This record deliberately knows nothing about Chess/Xiangqi gameplay or
+ * presentation lifecycle. It only answers whether one uid is already occupied
+ * by a pending board-game invitation, and which side of that invitation the uid
+ * owns. Chess and Xiangqi keep their own invite/session state independently.
+ */
 export type BoardGamePendingReservation = {
   uid: string;
   gameKind: BoardGameKind;
   familyId: string;
   inviteId: string;
+  role: BoardGamePendingRole;
+  phase: BoardGamePendingPhase;
   createdAt: number;
   expiresAt: number;
 };
 
+type ReservationInput = Omit<BoardGamePendingReservation, "role" | "phase"> & {
+  role?: BoardGamePendingRole;
+  phase?: BoardGamePendingPhase;
+};
+
 const reservations = new Map<string, BoardGamePendingReservation>();
+
+function normalized(input: ReservationInput): BoardGamePendingReservation {
+  return {
+    ...input,
+    role: input.role ?? "participant",
+    phase: input.phase ?? "waiting_acceptance",
+  };
+}
 
 function isExpired(value: BoardGamePendingReservation, now = Date.now()) {
   return value.expiresAt <= now;
@@ -25,19 +50,20 @@ export function getPendingBoardGameReservation(uid: string) {
   return reservations.get(uid) ?? null;
 }
 
-export function reservePendingBoardGame(input: BoardGamePendingReservation) {
-  sweepUid(input.uid);
-  const current = reservations.get(input.uid);
+export function reservePendingBoardGame(input: ReservationInput) {
+  const next = normalized(input);
+  sweepUid(next.uid);
+  const current = reservations.get(next.uid);
   if (current) {
     if (
-      current.gameKind === input.gameKind
-      && current.familyId === input.familyId
-      && current.inviteId === input.inviteId
+      current.gameKind === next.gameKind
+      && current.familyId === next.familyId
+      && current.inviteId === next.inviteId
     ) return current;
     return null;
   }
-  reservations.set(input.uid, input);
-  return input;
+  reservations.set(next.uid, next);
+  return next;
 }
 
 /**
@@ -50,6 +76,8 @@ export function reservePendingBoardGameParticipants(input: {
   gameKind: BoardGameKind;
   familyId: string;
   inviteId: string;
+  inviterUid?: string;
+  inviteeUid?: string;
   createdAt: number;
   expiresAt: number;
 }) {
@@ -68,11 +96,18 @@ export function reservePendingBoardGameParticipants(input: {
 
   for (const uid of uids) {
     if (reservations.has(uid)) continue;
+    const role: BoardGamePendingRole = uid === input.inviterUid
+      ? "inviter"
+      : uid === input.inviteeUid
+        ? "invitee"
+        : "participant";
     reservations.set(uid, {
       uid,
       gameKind: input.gameKind,
       familyId: input.familyId,
       inviteId: input.inviteId,
+      role,
+      phase: "waiting_acceptance",
       createdAt: input.createdAt,
       expiresAt: input.expiresAt,
     });
@@ -130,6 +165,8 @@ export function pendingReservationPublicShape(uid: string) {
     gameKind: current.gameKind,
     familyId: current.familyId,
     inviteId: current.inviteId,
+    role: current.role,
+    phase: current.phase,
     expiresAt: current.expiresAt,
   };
 }

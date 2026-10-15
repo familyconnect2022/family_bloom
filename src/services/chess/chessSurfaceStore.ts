@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from "react";
-import { canReleaseBoardGameSurface } from "../games/boardGameSurfaceLifecycle";
+function canReleaseChessSurface(currentOwnerId: string | null, requestedOwnerId?: string) {
+  if (!currentOwnerId) return true;
+  return !!requestedOwnerId && currentOwnerId === requestedOwnerId;
+}
+
 
 export type ChessSurfaceMode = "hidden" | "full" | "mini";
 export type ChessSurfacePrepareReason = "outgoing_challenge" | "accept_invite" | "active_game" | "route" | "rematch";
@@ -149,12 +153,12 @@ export function showChessSurfaceFull(gameId?: string | null, ownerId?: string) {
 
 export function minimizeChessSurface(ownerId?: string) {
   if (!state.gameId) return;
-  if (!canReleaseBoardGameSurface(state.ownerId, ownerId)) return;
+  if (!canReleaseChessSurface(state.ownerId, ownerId)) return;
   emit({ ...state, mode: "mini", preparing: false, ownerId: null });
 }
 
 export function hideChessSurface(ownerId: string) {
-  if (!canReleaseBoardGameSurface(state.ownerId, ownerId)) return;
+  if (!canReleaseChessSurface(state.ownerId, ownerId)) return;
   emit({ ...state, mode: "hidden", preparing: false, ownerId: null });
 }
 

@@ -12,7 +12,7 @@ export type XiangqiRealtimeState={
 };
 export type XiangqiMoveDelta={gameId:string;clientMoveId:string;version:number;move:XiangqiMove;board:XiangqiGameState;redRemainingMs:number|null;blackRemainingMs:number|null;status:XiangqiRealtimeStatus;result:XiangqiRealtimeResult;finishReason:XiangqiRealtimeFinishReason;serverNowMs:number;endedAt:string|null};
 export type XiangqiAck<T=undefined>=T extends undefined?{ok:true}|{ok:false;errorCode:string;message?:string}:{ok:true;data:T}|{ok:false;errorCode:string;message?:string};
-export type XiangqiInvite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3};
+export type XiangqiInvite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3;redUid?:string;blackUid?:string};
 export type XiangqiOutgoingChallengeTerminal={inviteId:string;reason:"rejected"|"expired";opponentUid:string;opponentName:string;at:number};
 export const XIANGQI_EVENTS={
  appJoin:"xiangqi:app:join",appLeave:"xiangqi:app:leave",lobbyJoin:"xiangqi:lobby:join",lobbyLeave:"xiangqi:lobby:leave",presenceUpdate:"xiangqi:presence:update",

@@ -12,7 +12,7 @@ set "LOCAL_LATEST=%PROJECT_ROOT%\dist\android\Family_Bloom_Release_LATEST.apk"
 echo.
 echo ============================================================
 echo   FAMILY BLOOM - STANDALONE APK BUILD + SHARE
-echo   Phase  : P2.20
+echo   Phase  : P2.29 (P2.28 independent-game baseline)
 echo   Phone  : NOT required during build
 echo   Metro  : NOT required after install
 echo   Share  : %SHARE_DIR%
@@ -36,7 +36,7 @@ if not exist "%SHARE_DIR%" (
   )
 )
 
-echo [1/4] Checking P2.20 share-build contract...
+echo [1/4] Checking P2.28 baseline + P2.29 share-build contract...
 node scripts\test-phase-p2_12_5-remote-apk-share-build.js
 if errorlevel 1 goto :fail
 node scripts\test-phase-p2_12_6-build-dependency-contract.js
@@ -44,6 +44,10 @@ if errorlevel 1 goto :fail
 node scripts\test-phase-p2_12_7-expo-asset-peer-contract.js
 if errorlevel 1 goto :fail
 node scripts\test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
+if errorlevel 1 goto :fail
+node scripts\test-phase-p2_28-independent-focus-board-game-lifecycle.js
+if errorlevel 1 goto :fail
+node scripts\test-phase-p2_29-stable-waiting-independent-games.js
 if errorlevel 1 goto :fail
 
 echo [2/4] Building standalone Release APK - no Android device/ADB required...
@@ -71,7 +75,7 @@ for /f "delims=" %%H in ('powershell -NoProfile -Command "(Get-FileHash -Algorit
 if defined SHA256 (
   >"%SHARE_DIR%\Family_Bloom_LATEST.sha256" echo !SHA256!  Family_Bloom_LATEST.apk
 )
->"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Family Bloom standalone Release APK - P2.20
+>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Family Bloom standalone Release APK - P2.29 (P2.28 independent-game baseline)
 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Built: !BUILD_STAMP!
 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo APK: !SHARE_LATEST!
 if defined SHA256 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo SHA256: !SHA256!

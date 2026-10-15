@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useRouter } from "expo-router";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
@@ -19,6 +20,7 @@ import { emptyChessCaptureSummary, type ChessAppliedMove, type ChessColor, type 
 import { useBloomDialog } from "../ui/BloomDialogProvider";
 import { useBloomToast } from "../ui/BloomToast";
 import { ChessBoard } from "./ChessBoard";
+import { CHESS_GAME_HEADER_BODY_HEIGHT, ChessGameHeader } from "./ChessGameHeader";
 import { ChessPlayerRail } from "./ChessPlayerRail";
 import { useChessSoundscape } from "./useChessSoundscape";
 import { capturePoints, ChessMaterialStrip } from "./ChessMaterialStrip";
@@ -90,6 +92,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
   onContentPainted?: () => void;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const surface = useChessSurfaceState();
   const presentationMode = surface.mode;
   const presentationReady = surface.presentationReady;
@@ -161,7 +164,8 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
     return Math.max(8, Math.floor(raw / 8) * 8);
   }, [windowWidth]);
   const gameStackHeight = CHESS_HUD_HEIGHT * 2 + CHESS_MATERIAL_HEIGHT * 2 + CHESS_CONTENT_GAP * 4 + boardViewportSize;
-  const gameStackTop = Math.max(0, Math.floor((windowHeight - gameStackHeight) / 2));
+  const headerBlockHeight = insets.top + CHESS_GAME_HEADER_BODY_HEIGHT;
+  const gameStackTop = headerBlockHeight + Math.max(0, Math.floor((windowHeight - headerBlockHeight - gameStackHeight) / 2));
   const fullSurfaceStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: fullSurfaceX.value }],
   }));
@@ -499,11 +503,10 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
   // non-blocking board status, not another full-screen ceremony. Interaction is
   // still guarded by `boardInteractive`; this only stops a healthy painted board
   // from being visually covered for tens of seconds by app:join/resync latency.
-  const showPreparing = fullVisible && (!actualGame || !warmReady);
+  const showPreparing = fullVisible && !actualGame && !warmReady;
   const showSyncPill = fullVisible && actualGame && (
     game.connectionPhase !== "connected"
     || !sessionSynced
-    || state.status === "waiting"
     || state.status === "paused"
   );
   const modalVisible = fullVisible && (showPreparing || (!!promotion && actualGame));
@@ -534,6 +537,11 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
           fullSurfaceStyle,
         ]}
       >
+        <ChessGameHeader
+          opponentName={opponentName}
+          subtitle={state.status === "active" ? "đồng hồ đang chạy" : "đang chuẩn bị ván"}
+          onBack={actualGame ? minimize : undefined}
+        />
         <View style={[styles.gameStack, { top: gameStackTop, width: windowWidth, height: gameStackHeight }]}>
         <View style={[styles.hudWrap, { width: boardViewportSize }]}>
           {actualGame ? (
@@ -546,6 +554,7 @@ export const ChessSurfaceHost = React.memo(function ChessSurfaceHost({
               isBot={isBot}
               activeSignal={myColor === "w" ? blackTurn : whiteTurn}
               runtimeActive={fullVisible && state.status === "active"}
+              statusText={state.status === "waiting" ? "chưa sẵn sàng" : null}
               actions={(
                 <View style={styles.topActions}>
                   <>

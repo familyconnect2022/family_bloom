@@ -244,7 +244,8 @@
     "phaseP2_25:check": "node ./scripts/test-phase-p2_25-server-owned-session-focus-panresponder.js",
     "phaseP2_26:check": "node ./scripts/test-phase-p2_26-dedicated-focus-camera-chess-only-realtime.js",
     "phaseP2_27:check": "node ./scripts/test-phase-p2_27-focus-ui-thread-chess-ready.js",
-    "phaseP2_28:check": "node ./scripts/test-phase-p2_28-independent-focus-board-game-lifecycle.js"
+    "phaseP2_28:check": "node ./scripts/test-phase-p2_28-independent-focus-board-game-lifecycle.js",
+    "phaseP2_29:check": "node ./scripts/test-phase-p2_29-stable-waiting-independent-games.js"
   },
   "private": true
 }

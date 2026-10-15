@@ -1,15 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { ScreenContainer } from "../layout/ScreenContainer";
-import { BloomHeroHeader } from "../ui/BloomHeroHeader";
 import { BloomCard } from "../ui/BloomPageComponents";
-import { BloomGameBottomModal } from "../chess/BloomGameBottomModal";
 import { XiangqiGameBoard } from "./XiangqiGameBoard";
-import { XiangqiPiece } from "./XiangqiPiece";
+import { XiangqiGameHeader } from "./XiangqiGameHeader";
+import { XiangqiPlayerRail } from "./XiangqiPlayerRail";
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import { useFamilyMembersRealtime } from "../../context/FamilyRealtimeContext";
@@ -27,7 +25,6 @@ import { xiangqiSocketService } from "../../services/xiangqi/xiangqiSocketServic
 import { XIANGQI_EVENTS, type XiangqiRealtimeState, type XiangqiMoveDelta } from "../../types/xiangqiRealtime";
 import { useBoardGameSoundscape } from "../games/useBoardGameSoundscape";
 import { resolveBoardMoveSound, type BoardGamePremove, type RealtimeBoardRoundPhase } from "../../games/shared/boardGameFramework";
-import { isBoardGameSurfacePresented } from "../../services/games/boardGameSurfaceLifecycle";
 import {
   createInitialXiangqiState,
   getXiangqiLegalMoves,
@@ -35,101 +32,7 @@ import {
   type XiangqiMove,
 } from "../../games/xiangqi/xiangqiEngine";
 
-function formatClock(ms: number) {
-  const safe = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
 const reqId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-function XiangqiClockValue({
-  baseMs,
-  active,
-  startedAtMs,
-  runtimeActive,
-  onTenSeconds,
-}: {
-  baseMs: number | null;
-  active: boolean;
-  startedAtMs: number;
-  runtimeActive: boolean;
-  onTenSeconds?: () => void;
-}) {
-  // Only this tiny text node ticks. The screen/board never re-render every
-  // second just to paint a clock. Server-style truth remains a base snapshot
-  // plus an anchor timestamp.
-  const [now, setNow] = useState(() => Date.now());
-  const finiteBaseMs = baseMs ?? 0;
-  const warnedTurnRef = useRef<number | null>(null);
-  useEffect(() => {
-    setNow(Date.now());
-    if (!runtimeActive || !active) return undefined;
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(timer);
-  }, [active, baseMs, runtimeActive, startedAtMs]);
-
-  const shownMs = active && runtimeActive
-    ? Math.max(0, finiteBaseMs - Math.max(0, now - startedAtMs))
-    : finiteBaseMs;
-  useEffect(() => {
-    if (baseMs == null || !onTenSeconds || !active || !runtimeActive || shownMs <= 0 || shownMs > 10_000) return;
-    if (warnedTurnRef.current === startedAtMs) return;
-    warnedTurnRef.current = startedAtMs;
-    onTenSeconds();
-  }, [active, baseMs, onTenSeconds, runtimeActive, shownMs, startedAtMs]);
-  return <Text style={[styles.clockText, active && styles.clockTextActive]}>{baseMs == null ? "∞" : formatClock(shownMs)}</Text>;
-}
-
-function PlayerRail({
-  side,
-  name,
-  avatarUrl,
-  active,
-  thinking,
-  clockMs,
-  clockStartedAtMs,
-  runtimeActive,
-  phase,
-  onTenSeconds,
-}: {
-  side: "red" | "black";
-  name: string;
-  avatarUrl?: string | null;
-  active: boolean;
-  thinking?: boolean;
-  clockMs: number | null;
-  clockStartedAtMs: number;
-  runtimeActive: boolean;
-  phase: RealtimeBoardRoundPhase;
-  onTenSeconds?: () => void;
-}) {
-  const meta = phase === "preparing"
-    ? "Đang chuẩn bị bàn cờ…"
-    : phase === "ready"
-      ? side === "red" ? "Sẵn sàng đi trước" : "Sẵn sàng"
-      : thinking
-        ? "Bloom đang nghĩ một nước…"
-        : active
-          ? "Đang tới lượt"
-          : "Đang chờ lượt";
-
-  return (
-    <BloomCard style={[styles.playerRail, active && styles.playerRailActive]}>
-      <View style={styles.avatar}>
-        {avatarUrl ? <Image source={{ uri: avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <XiangqiPiece color={side} type="general" size={58} />}
-      </View>
-      <View style={styles.playerCopy}>
-        <Text style={styles.playerName}>{name}</Text>
-        <Text style={styles.playerMeta}>{meta}</Text>
-      </View>
-      <View style={[styles.clock, active && styles.clockActive]}>
-        <XiangqiClockValue baseMs={clockMs} active={active} startedAtMs={clockStartedAtMs} runtimeActive={runtimeActive} onTenSeconds={onTenSeconds} />
-      </View>
-    </BloomCard>
-  );
-}
 
 function XiangqiPreparedSurface({
   occludedByHigherSurface,
@@ -153,8 +56,9 @@ function XiangqiPreparedSurface({
   const { criticalAudioReady, playMoveKind, playPremove, playIllegal, playTenSeconds, playGameStart } = useBoardGameSoundscape();
   // P2.17: only the root Presentation Rail owns Xiangqi pixels. A parked
   // surface is translated out and non-interactive; no route can force it visible.
-  const screenFocused = isBoardGameSurfacePresented(surface.presentationReady, presentationMode)
-    && !occludedByHigherSurface;
+  // Xiangqi owns its presentation decision locally. It no longer depends on a
+  // shared Chess/Xiangqi surface-lifecycle predicate.
+  const screenFocused = presentationMode === "full" && !occludedByHigherSurface;
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   useEffect(() => { const sub = AppState.addEventListener("change", (next) => setAppActive(next === "active")); return () => sub.remove(); }, []);
   const [serverState, setServerState] = useState<XiangqiRealtimeState | null>(() => getCachedXiangqiBootstrapState(surface.gameId));
@@ -425,25 +329,6 @@ function XiangqiPreparedSurface({
   const clockMs = { red: serverState?.redRemainingMs ?? null, black: serverState?.blackRemainingMs ?? null };
   const myClockMs = mySide === "red" ? clockMs.red : clockMs.black;
   const opponentClockMs = opponentSide === "red" ? clockMs.red : clockMs.black;
-  const statusCopy = serverError
-    ? `Máy chủ Cờ tướng: ${serverError}`
-    : roundPhase === "preparing"
-    ? "Đang chuẩn bị ván đấu…"
-    : roundPhase === "ready"
-      ? `Bạn đã sẵn sàng • đang chờ ${opponentName}`
-      : game.inCheck
-          ? game.inCheck === mySide ? "Bạn đang bị chiếu Tướng" : `${opponentName} đang bị chiếu Tướng`
-          : game.turn === mySide
-            ? "Đến lượt bạn"
-            : opponentThinking
-              ? "Bloom Bot đang tính nước…"
-              : `Đến lượt ${opponentName}`;
-
-  const readyPhase = roundPhase === "ready";
-  const phaseTitle = readyPhase ? `Bạn đã sẵn sàng • đang chờ ${opponentName}` : "Đang chuẩn bị bàn cờ";
-  const phaseText = readyPhase
-    ? "Đồng hồ chưa chạy. Ván chỉ bắt đầu khi bàn cờ và âm thanh của cả hai bên đều sẵn sàng."
-    : "Bloom đang xếp quân, đồng bộ đồng hồ và khóa thao tác để tránh chạm nhầm.";
   const playing = roundPhase === "playing";
   // The entry shield is already visible on the route first frame. The board is
   // mounted independently after navigation interactions settle, so there is no
@@ -459,24 +344,15 @@ function XiangqiPreparedSurface({
     >
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={COLORS.background}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
+      <XiangqiGameHeader
+        opponentName={opponentName}
+        subtitle={serverState?.status === "active" ? "đồng hồ đang chạy" : "đang chuẩn bị ván"}
+        onBack={() => router.back()}
+      />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <BloomHeroHeader
-          eyebrow="CỜ TƯỚNG NHÀ MÌNH"
-          title="Qua sông, giữ Tướng, vui cùng nhà"
-          subtitle="Bàn Cờ tướng nay chạy trên cùng máy chủ realtime với Cờ vua: server giữ luật, đồng hồ, reconnect và Bloom Bot 3s/5s."
-          variant="game"
-          roundedBottom
-          compact
-          onBack={() => router.back()}
-        />
-
         <View style={styles.body}>
-          <PlayerRail side={opponentSide} name={opponentName} avatarUrl={opponentAvatar} active={playing && game.turn === opponentSide && !game.gameOver} thinking={opponentThinking} clockMs={opponentClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} />
+          <XiangqiPlayerRail side={opponentSide} name={opponentName} avatarUrl={opponentAvatar} active={playing && game.turn === opponentSide && !game.gameOver} thinking={opponentThinking} clockMs={opponentClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} waitingStatus={serverState?.status === "waiting" ? "chưa sẵn sàng" : null} />
 
-          <View style={[styles.statusRow, roundPhase === "ready" && styles.statusRowReady, roundPhase === "preparing" && styles.statusRowPreparing, game.inCheck && playing && styles.statusRowAlert]}>
-            <View style={[styles.statusDot, roundPhase === "preparing" && styles.statusDotPreparing, roundPhase === "ready" && styles.statusDotReady, game.inCheck && playing && styles.statusDotAlert]} />
-            <Text style={[styles.statusText, roundPhase === "ready" && styles.statusTextReady, game.inCheck && playing && styles.statusTextAlert]}>{statusCopy}</Text>
-          </View>
 
           <View style={styles.boardWrap}>
             {boardSurfaceVisible ? (
@@ -504,7 +380,7 @@ function XiangqiPreparedSurface({
             )}
           </View>
 
-          <PlayerRail side={mySide} name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === mySide && !game.gameOver} clockMs={myClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} onTenSeconds={playTenSeconds} />
+          <XiangqiPlayerRail side={mySide} name={myName} avatarUrl={userProfile?.avatarUrl} active={playing && game.turn === mySide && !game.gameOver} clockMs={myClockMs} clockStartedAtMs={turnStartedAtMs} runtimeActive={screenFocused && playing && boardSurfaceVisible} phase={roundPhase} onTenSeconds={playTenSeconds} />
 
           <View style={styles.actions}>
             <Pressable disabled={game.gameOver || !playing} onPress={() => { void resign(); }} style={[styles.actionPrimary, (game.gameOver || !playing) && styles.disabled]}>
@@ -520,25 +396,7 @@ function XiangqiPreparedSurface({
         </View>
       </ScrollView>
 
-      <BloomGameBottomModal
-        visible={screenFocused && !playing && !game.gameOver}
-        staticFirstPresentation
-        suspended={!screenFocused}
-        eyebrow={readyPhase ? "BLOOM READY" : "BLOOM ĐANG CHUẨN BỊ"}
-        title={phaseTitle}
-        subtitle={phaseText}
-        icon={readyPhase ? "play" : "sparkles"}
-        accent={readyPhase ? "pink" : "soft"}
-      >
-        <View style={styles.flowStatusRow}>
-          <View style={[styles.flowStatusDot, readyPhase && styles.flowStatusDotReady]} />
-          <View style={styles.flowStatusCopy}>
-            <Text style={styles.flowStatusTitle}>{readyPhase ? `Bàn cờ sẵn sàng • ${game.turn === mySide ? "Bạn" : opponentName} đi trước` : "Đang khóa thao tác trên bàn cờ"}</Text>
-            <Text style={styles.flowStatusText}>{readyPhase ? "Thẻ sẽ tự trượt xuống, sau đó bạn có thể chọn quân ngay." : "Không cần chạm gì thêm — Bloom sẽ tự mở bàn cờ khi trạng thái ổn định."}</Text>
-          </View>
-          {!readyPhase ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="checkmark-circle" size={24} color="#4E9B72" />}
-        </View>
-      </BloomGameBottomModal>
+
 
     </ScreenContainer>
     </View>
@@ -566,47 +424,9 @@ const styles = StyleSheet.create({
   persistentRoot: { ...StyleSheet.absoluteFillObject, zIndex: 2, elevation: 2, backgroundColor: COLORS.background },
   content: { paddingBottom: 42 },
   body: { paddingHorizontal: 12, paddingTop: 16, gap: 12 },
-  playerRail: { minHeight: 104, padding: 13, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#FFF9FC" },
-  playerRailActive: { borderColor: "rgba(218,74,132,0.45)", shadowOpacity: 0.14, elevation: 4 },
-  avatar: { width: 60, height: 60, borderRadius: 22, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "#FBE8EF" },
-  playerCopy: { flex: 1 },
-  playerName: { color: COLORS.primaryText, fontSize: 18, fontWeight: "900" },
-  playerMeta: { marginTop: 4, color: COLORS.secondaryText, fontSize: 11.5, fontWeight: "700" },
-  clock: { minWidth: 104, height: 64, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1.4, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.white },
-  clockActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  clockText: { color: COLORS.primaryText, fontSize: 25, lineHeight: 30, fontWeight: "900", fontVariant: ["tabular-nums"] },
-  clockTextActive: { color: COLORS.white },
-  statusRow: { minHeight: 34, paddingHorizontal: 12, borderRadius: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, alignSelf: "center" },
-  statusRowPreparing: { backgroundColor: "#FFF5DF" },
-  statusRowReady: { backgroundColor: "#ECF8F0" },
-  statusRowAlert: { backgroundColor: "#FFF0F2" },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#79C69B" },
-  statusDotPreparing: { backgroundColor: "#D49B31" },
-  statusDotReady: { backgroundColor: "#58A777" },
-  statusDotAlert: { backgroundColor: "#D65369" },
-  statusText: { color: COLORS.secondaryText, fontSize: 12.5, fontWeight: "900" },
-  statusTextReady: { color: "#4D7E61" },
-  statusTextAlert: { color: "#B13E55" },
   boardWrap: { position: "relative", alignItems: "center", paddingVertical: 4, overflow: "visible" },
   boardPreloadSlot: { width: "100%", maxWidth: 430, minWidth: 314, aspectRatio: 0.89, borderRadius: 24, borderWidth: 1, borderColor: "#E9C9D6", backgroundColor: "#FFF9FC", alignItems: "center", justifyContent: "center", gap: 10, paddingHorizontal: 28 },
   boardPreloadText: { maxWidth: 280, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17, fontWeight: "800", textAlign: "center" },
-  flowStatusRow: {
-    minHeight: 68,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#EFD5DF",
-    backgroundColor: "#FFF7FA",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-  },
-  flowStatusDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#E3A65C" },
-  flowStatusDotReady: { backgroundColor: "#4E9B72" },
-  flowStatusCopy: { flex: 1 },
-  flowStatusTitle: { color: COLORS.primaryText, fontSize: 12.5, lineHeight: 17, fontWeight: "900" },
-  flowStatusText: { marginTop: 3, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, fontWeight: "700" },
   actions: { flexDirection: "row", gap: 10 },
   actionPrimary: { flex: 1, height: 52, borderRadius: 20, backgroundColor: COLORS.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   actionPrimaryText: { color: COLORS.white, fontSize: 13.5, fontWeight: "900" },

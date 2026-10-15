@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -18,21 +18,22 @@ import {
  * route changes Xiangqi presentation to MINI; it does not end the server game.
  */
 export default function XiangqiGameRoute() {
-  const router = useRouter();
   const realtime = useXiangqiRealtime();
+  const retainedGameIdRef = useRef<string | null>(null);
   const ownerRef = useRef(`xiangqi-route:${Date.now()}:${Math.random().toString(36).slice(2, 9)}`);
 
   useEffect(() => {
     const gameId = realtime.activeGameId;
-    if (!gameId) {
-      router.replace("/(xiangqi)/xiangqi-lobby" as never);
-      return;
-    }
+    // A short null during invite -> game handoff/recovery is not terminal proof.
+    // Xiangqi keeps its own last concrete game id until its surface receives an
+    // authoritative terminal teardown. Never park the board because of one null frame.
+    if (!gameId) return;
+    retainedGameIdRef.current = gameId;
     activateXiangqiSurface(gameId, "full", "active_game", ownerRef.current);
-  }, [realtime.activeGameId, router]);
+  }, [realtime.activeGameId]);
 
   useFocusEffect(useCallback(() => {
-    const gameId = realtime.activeGameId;
+    const gameId = realtime.activeGameId ?? retainedGameIdRef.current;
     if (!gameId) return undefined;
     const ownerId = ownerRef.current;
     showXiangqiSurfaceFull(gameId, ownerId);

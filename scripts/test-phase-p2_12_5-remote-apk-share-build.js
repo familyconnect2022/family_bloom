@@ -36,7 +36,7 @@ check('Wrapper writes human-readable metadata', shareBat.includes('Family_Bloom_
 check('Wrapper does not install or launch app itself', !/install\s+-r|shell\s+monkey/i.test(shareBat));
 check('P2.12.5 package script registered', pkg.scripts?.['phaseP2_12_5:check']?.includes('test-phase-p2_12_5-remote-apk-share-build.js'));
 check('Clean apply runs P2.12.5 gate', cleanBat.includes('test-phase-p2_12_5-remote-apk-share-build.js'));
-check('Copy-over header advertises P2.12.5 or successor', /P2\.(?:12\.[5-8]|15\.5\.1|1[6-9]|2[0-1])/.test(preCopy));
+check('Copy-over header advertises P2.12.5 or successor', /P2\.(?:12\.[5-8]|15\.5\.1|1[6-9]|2[0-9])/.test(preCopy));
 check('Release builder supports no-pause chaining', read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat').includes('NO_PAUSE') && read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat').includes('--no-pause'));
 check('Release builder remains responsible for clean prebuild', read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat').includes('expo prebuild --platform android --clean'));
 check('Release builder remains responsible for Gradle Release APK', read('scripts/android/Family_Bloom_Android_Test_App_RELEASE.bat').includes(':app:assembleRelease'));

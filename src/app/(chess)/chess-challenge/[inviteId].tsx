@@ -3,11 +3,13 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
 
 import { ChessBoard } from "../../../components/chess/ChessBoard";
+import { ChessGameHeader } from "../../../components/chess/ChessGameHeader";
+import { ChessPlayerRail } from "../../../components/chess/ChessPlayerRail";
 import { useChessSoundscape } from "../../../components/chess/useChessSoundscape";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
-import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
 import { COLORS } from "../../../constants/theme";
 import { useAuth } from "../../../context/AuthContext";
 import { useChessRealtime } from "../../../context/ChessRealtimeContext";
@@ -18,27 +20,35 @@ import {
   emptyChessCaptureSummary,
   isChessTestBotUid,
   type ChessAck,
+  type ChessColor,
   type ChessGameState,
+  type ChessInvite,
   type ChessMoveCommandAck,
 } from "../../../types/chess";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const CHESS_SCREEN_GUTTER = 5;
+const CHESS_CONTENT_GAP = 5;
+const CHESS_MATERIAL_HEIGHT = 18;
 
-function pendingBoardState(inviteId: string, familyId: string | null): ChessGameState {
+function pendingBoardState(inviteId: string, familyId: string | null, invite: ChessInvite | null, me: string): ChessGameState {
   const now = new Date().toISOString();
+  const initialMs = invite?.timeControl.kind === "clocked" ? invite.timeControl.initialMs : null;
+  const whiteUid = invite?.whiteUid || me || "pending-white";
+  const blackUid = invite?.blackUid || (whiteUid === me ? "pending-opponent" : me || "pending-black");
   return {
     gameId: `pending-${inviteId}`,
     familyId: familyId || "pending",
-    whiteUid: "pending-me",
-    blackUid: "pending-opponent",
+    whiteUid,
+    blackUid,
     status: "waiting",
     fen: START_FEN,
     turn: "w",
     revision: 0,
     ply: 0,
-    whiteRemainingMs: null,
-    blackRemainingMs: null,
-    timeControl: { kind: "unlimited", initialMs: null, incrementMs: 0 },
+    whiteRemainingMs: initialMs,
+    blackRemainingMs: initialMs,
+    timeControl: invite?.timeControl ?? { kind: "unlimited", initialMs: null, incrementMs: 0 },
     result: null,
     finishReason: null,
     lastMove: null,
@@ -60,11 +70,13 @@ export default function ChessChallengeRoom() {
   const { inviteId: rawInviteId } = useLocalSearchParams<{ inviteId: string }>();
   const inviteId = typeof rawInviteId === "string" ? rawInviteId.trim() : "";
   const router = useRouter();
-  const { activeFamilyId } = useAuth();
+  const { activeFamilyId, user, userProfile } = useAuth();
   const members = useFamilyMembersRealtime();
   const realtime = useChessRealtime();
   const { width } = useWindowDimensions();
   const audio = useChessSoundscape(true);
+  const whiteTurn = useSharedValue(0);
+  const blackTurn = useSharedValue(0);
   const [boardReady, setBoardReady] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [yielding, setYielding] = useState(false);
@@ -78,15 +90,19 @@ export default function ChessChallengeRoom() {
     const member = members?.memberByUid.get(invite.toUid);
     return member?.shortName || member?.displayName || "người thân";
   }, [invite, members?.memberByUid, terminal]);
-  const boardState = useMemo(() => pendingBoardState(inviteId || "warming", activeFamilyId), [activeFamilyId, inviteId]);
-  const boardSize = Math.max(8, Math.floor(Math.max(8, width - 20) / 8) * 8);
+  const opponentMember = invite && !isChessTestBotUid(invite.toUid) ? members?.memberByUid.get(invite.toUid) : null;
+  const me = user?.uid || "";
+  const myColor: ChessColor = invite?.blackUid === me ? "b" : "w";
+  const opponentColor: ChessColor = myColor === "w" ? "b" : "w";
+  const boardState = useMemo(() => pendingBoardState(inviteId || "warming", activeFamilyId, invite, me), [activeFamilyId, invite, inviteId, me]);
+  const boardSize = Math.max(8, Math.floor(Math.max(8, width - CHESS_SCREEN_GUTTER * 2) / 8) * 8);
   const remainingMs = Math.max(0, (invite?.expiresAt ?? now) - now);
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   const remainingCopy = `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+  const myName = userProfile?.shortName?.trim() || userProfile?.displayName?.trim() || user?.displayName?.trim() || "Bạn";
+  const waitingSubtitle = boardReady && audio.criticalAudioReady ? `chờ phản hồi · ${remainingCopy}` : "đang chuẩn bị ván";
 
-  useEffect(() => {
-    prepareChessSurface("outgoing_challenge");
-  }, []);
+  useEffect(() => { prepareChessSurface("outgoing_challenge"); }, []);
 
   useEffect(() => {
     if (!invite) return;
@@ -100,10 +116,7 @@ export default function ChessChallengeRoom() {
     });
   }, [invite, opponentName]);
 
-  useEffect(() => {
-    if (terminal) finishChessChallengeMini(inviteId);
-  }, [inviteId, terminal]);
-
+  useEffect(() => { if (terminal) finishChessChallengeMini(inviteId); }, [inviteId, terminal]);
   useEffect(() => {
     if (!invite) return undefined;
     const timer = setInterval(() => setNow(Date.now()), 250);
@@ -115,19 +128,13 @@ export default function ChessChallengeRoom() {
     setYielding(true);
     const id = invite?.inviteId;
     if (id) finishChessChallengeMini(id);
-    // Yield first: navigation is never held by socket cleanup or board/audio work.
     router.replace("/chess-lobby" as never);
-    if (cancelInvite && id) {
-      requestAnimationFrame(() => { void realtime.cancelInvite(id); });
-    }
+    if (cancelInvite && id) requestAnimationFrame(() => { void realtime.cancelInvite(id); });
   }, [invite?.inviteId, realtime, router, yielding]);
 
   useFocusEffect(useCallback(() => {
     if (inviteId) setChessChallengeMiniVisible(inviteId, false);
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      yieldToLobby(!!invite);
-      return true;
-    });
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => { yieldToLobby(!!invite); return true; });
     return () => {
       sub.remove();
       if (inviteId && invite && !terminal && !yielding) setChessChallengeMiniVisible(inviteId, true);
@@ -142,32 +149,28 @@ export default function ChessChallengeRoom() {
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor="#FFF8FB">
       <StatusBar translucent backgroundColor="transparent" style="dark" />
-      <BloomHeroHeader
-        eyebrow="PHÒNG THI ĐẤU"
-        title={`Đang chờ ${opponentName}`}
-        subtitle="Bàn cờ và âm thanh được chuẩn bị ngay trong lúc chờ lời đồng ý."
-        variant="game"
-        compact
-        roundedBottom
-        onBack={() => yieldToLobby(!!invite)}
-      />
+      <ChessGameHeader opponentName={opponentName} subtitle={waitingSubtitle} onBack={() => yieldToLobby(!!invite)} />
 
       <View style={styles.content}>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusPill, boardReady && styles.statusPillReady]}>
-            <Ionicons name={boardReady ? "checkmark-circle" : "grid-outline"} size={15} color={boardReady ? "#287A51" : COLORS.primary} />
-            <Text style={styles.statusText}>{boardReady ? "Bàn cờ sẵn sàng" : "Đang dựng bàn cờ"}</Text>
-          </View>
-          <View style={[styles.statusPill, audio.criticalAudioReady && styles.statusPillReady]}>
-            <Ionicons name={audio.criticalAudioReady ? "checkmark-circle" : "volume-medium-outline"} size={15} color={audio.criticalAudioReady ? "#287A51" : COLORS.primary} />
-            <Text style={styles.statusText}>{audio.criticalAudioReady ? "Âm thanh sẵn sàng" : `Âm thanh ${audio.audioLoadedCount}/${audio.audioExpectedCount}`}</Text>
-          </View>
+        <View style={{ width: boardSize }}>
+          <ChessPlayerRail
+            state={boardState}
+            color={opponentColor}
+            displayName={opponentName}
+            avatarUrl={opponentMember?.avatarUrl}
+            avatarFallback={opponentName.slice(0, 1)}
+            isBot={!!invite && isChessTestBotUid(invite.toUid)}
+            activeSignal={opponentColor === "w" ? whiteTurn : blackTurn}
+            runtimeActive={false}
+            statusText="chưa sẵn sàng"
+          />
         </View>
 
+        <View style={[styles.materialSpacer, { width: boardSize }]} />
         <View style={[styles.boardShell, { width: boardSize, height: boardSize }]}> 
           <ChessBoard
             state={boardState}
-            myColor="w"
+            myColor={myColor}
             moveDeltas={[]}
             snapshotEpoch={0}
             onMove={blockedMove}
@@ -181,8 +184,23 @@ export default function ChessChallengeRoom() {
             boardSize={boardSize}
           />
         </View>
+        <View style={[styles.materialSpacer, { width: boardSize }]} />
 
-        {terminal ? (
+        <View style={{ width: boardSize }}>
+          <ChessPlayerRail
+            state={boardState}
+            color={myColor}
+            displayName={myName}
+            avatarUrl={userProfile?.avatarUrl}
+            avatarFallback={myName.slice(0, 1)}
+            activeSignal={myColor === "w" ? whiteTurn : blackTurn}
+            runtimeActive={false}
+          />
+        </View>
+      </View>
+
+      {terminal ? (
+        <View style={styles.overlay} pointerEvents="auto">
           <View style={styles.terminalCard}>
             <View style={styles.terminalIcon}><Ionicons name="leaf-outline" size={24} color={COLORS.primary} /></View>
             <Text style={styles.terminalTitle}>{terminal.opponentName} chưa sẵn sàng chơi lúc này</Text>
@@ -198,49 +216,21 @@ export default function ChessChallengeRoom() {
               <Text style={styles.primaryButtonText}>Đồng ý</Text>
             </Pressable>
           </View>
-        ) : (
-          <View style={styles.waitCard}>
-            <View style={styles.waitTop}>
-              <View style={styles.waitIcon}><Ionicons name="hourglass-outline" size={19} color={COLORS.primary} /></View>
-              <View style={styles.waitCopy}>
-                <Text style={styles.waitTitle}>Đang chờ {opponentName} đồng ý…</Text>
-                <Text style={styles.waitText}>Lời mời còn {remainingCopy}. Đồng hồ ván cờ chưa chạy.</Text>
-                {invite?.isTestBot && invite.testCycleStep ? (
-                  <Text style={styles.testState}>TEST BOT · lượt {invite.testCycleStep}/3 · {invite.testCycleStep === 3 ? "sẽ từ chối" : "sẽ đồng ý"}</Text>
-                ) : null}
-              </View>
-            </View>
-            <Pressable disabled={yielding} style={[styles.cancelButton, yielding && styles.disabled]} onPress={() => yieldToLobby(true)}>
-              <Text style={styles.cancelButtonText}>{yielding ? "Đang rời phòng…" : "Hủy và về trang game"}</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, alignItems: "center", paddingHorizontal: 10, paddingTop: 12, paddingBottom: 16, gap: 10 },
-  statusRow: { width: "100%", flexDirection: "row", justifyContent: "center", gap: 7, flexWrap: "wrap" },
-  statusPill: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 32, paddingHorizontal: 10, borderRadius: 999, backgroundColor: "#FFF0F6", borderWidth: 1, borderColor: "#F2D8E4" },
-  statusPillReady: { backgroundColor: "#EFFAF4", borderColor: "#CDEBD9" },
-  statusText: { color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "800" },
-  boardShell: { overflow: "hidden", borderRadius: 18, backgroundColor: "#F7D9E6" },
-  waitCard: { width: "100%", borderRadius: 20, padding: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: COLORS.border, gap: 12 },
-  waitTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-  waitIcon: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF0F6" },
-  waitCopy: { flex: 1 },
-  waitTitle: { color: COLORS.primaryText, fontSize: 14, fontWeight: "900" },
-  waitText: { marginTop: 4, color: COLORS.secondaryText, fontSize: 11, lineHeight: 16, fontWeight: "700" },
-  testState: { marginTop: 6, color: COLORS.primary, fontSize: 10.5, fontWeight: "900" },
-  cancelButton: { minHeight: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF7FA", borderWidth: 1, borderColor: COLORS.border },
-  cancelButtonText: { color: COLORS.primary, fontSize: 12, fontWeight: "900" },
-  terminalCard: { width: "100%", borderRadius: 22, padding: 18, alignItems: "center", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: COLORS.border },
+  content: { flex: 1, alignItems: "center", justifyContent: "center", gap: CHESS_CONTENT_GAP, paddingBottom: 8 },
+  materialSpacer: { height: CHESS_MATERIAL_HEIGHT },
+  boardShell: { overflow: "hidden", backgroundColor: "#FFF" },
+  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 50, backgroundColor: "rgba(73,42,54,0.16)", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
+  terminalCard: { width: "100%", maxWidth: 420, borderRadius: 22, padding: 18, alignItems: "center", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: COLORS.border },
   terminalIcon: { width: 48, height: 48, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF0F6", marginBottom: 10 },
   terminalTitle: { color: COLORS.primaryText, fontSize: 16, fontWeight: "900", textAlign: "center" },
   terminalText: { marginTop: 6, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17, fontWeight: "700", textAlign: "center" },
   primaryButton: { marginTop: 16, minWidth: 150, minHeight: 44, borderRadius: 15, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center", paddingHorizontal: 22 },
   primaryButtonText: { color: COLORS.white, fontSize: 12, fontWeight: "900" },
-  disabled: { opacity: 0.55 },
 });

@@ -232,6 +232,9 @@ export function FamilyGraphPrototype({
   const [highlightedPersonId, setHighlightedPersonId] = useState<string | null>(initialFocusId);
   const [branchMode, setBranchMode] = useState(false);
   const [detailPersonId, setDetailPersonId] = useState<string | null>(null);
+  // Main-tree-only handoff flag: dismiss the person sheet immediately before the
+  // route-level Focus sibling mounts. This is not Focus runtime/camera state.
+  const [detailSheetYieldPending, setDetailSheetYieldPending] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [viewport, setViewport] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -963,7 +966,7 @@ export function FamilyGraphPrototype({
 
   const handlePersonSheetDismiss = useCallback(() => {
     setDetailPersonId(null);
-    setDetailFocusHandoffPending(false);
+    setDetailSheetYieldPending(false);
   }, []);
 
   const handleOpenBranch = useCallback((personId: string) => {
@@ -973,11 +976,11 @@ export function FamilyGraphPrototype({
     // or native Modal is created inside Main Tree.
     setSearchVisible(false);
     setSelectedPersonId(null);
-    setDetailFocusHandoffPending(true);
+    setDetailSheetYieldPending(true);
     setDetailPersonId(null);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setDetailFocusHandoffPending(false);
+        setDetailSheetYieldPending(false);
         onOpenFocus(personId);
       });
     });
@@ -1175,14 +1178,14 @@ export function FamilyGraphPrototype({
 
       <FamilyGraphPersonSheet
         person={detailPerson}
-        visible={!!detailPerson && !detailFocusHandoffPending}
+        visible={!!detailPerson && !detailSheetYieldPending}
         onClose={() => {
-          setDetailFocusHandoffPending(false);
+          setDetailSheetYieldPending(false);
           setDetailPersonId(null);
           setSelectedPersonId(null);
         }}
         onDismiss={handlePersonSheetDismiss}
-        dismissImmediately={detailFocusHandoffPending}
+        dismissImmediately={detailSheetYieldPending}
         onOpenBranch={handleOpenBranch}
         canEdit={canEdit}
         onEditPerson={onEditPerson}

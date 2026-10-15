@@ -66,6 +66,8 @@ type Invite = {
   fromDisplayName?: string;
   testBotDirection?: "bot_to_user" | "user_to_bot";
   testCycleStep?: 1 | 2 | 3;
+  whiteUid?: string;
+  blackUid?: string;
 };
 
 type Bucket = { count: number; resetAt: number };
@@ -519,6 +521,8 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         isTestBot: true,
         fromDisplayName: TEST_BOT_NAME,
         testBotDirection: "bot_to_user",
+        whiteUid: uid,
+        blackUid: botUid,
       };
       const reserved = reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt });
       if (!reserved) {
@@ -564,6 +568,8 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         fromDisplayName: undefined,
         testBotDirection: "user_to_bot",
         testCycleStep: cycleStep,
+        whiteUid: uid,
+        blackUid: botUid,
       };
       const reserved = reservePendingBoardGame({
         uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt,
@@ -658,11 +664,15 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         return existing;
       }
 
+      const whiteUid = Math.random() < 0.5 ? uid : toUid;
+      const blackUid = whiteUid === uid ? toUid : uid;
       const invite: Invite = {
-        inviteId: randomUUID(), familyId, fromUid: uid, toUid, timeControl, expiresAt: Date.now() + INVITE_TTL_MS,
+        inviteId: randomUUID(), familyId, fromUid: uid, toUid, timeControl, expiresAt: Date.now() + INVITE_TTL_MS, whiteUid, blackUid,
       };
       const reserved = reservePendingBoardGameParticipants({
         uids: [uid, toUid],
+        inviterUid: uid,
+        inviteeUid: toUid,
         gameKind: "chess",
         familyId,
         inviteId: invite.inviteId,
@@ -758,12 +768,12 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
 
       const ownerUid = invite.isTestBot ? invite.toUid : invite.fromUid;
       const ownerPending = getPendingBoardGameReservation(ownerUid);
-      if (!ownerPending || ownerPending.gameKind !== "chess" || ownerPending.inviteId !== invite.inviteId) {
+      if (!ownerPending || ownerPending.gameKind !== "chess" || ownerPending.inviteId !== invite.inviteId || (!invite.isTestBot && ownerPending.role !== "inviter")) {
         throw new ChessDomainError("CHESS_INVITE_EXPIRED");
       }
       if (!invite.isTestBot) {
         const inviteePending = getPendingBoardGameReservation(uid);
-        if (!inviteePending || inviteePending.gameKind !== "chess" || inviteePending.inviteId !== invite.inviteId) {
+        if (!inviteePending || inviteePending.gameKind !== "chess" || inviteePending.inviteId !== invite.inviteId || inviteePending.role !== "invitee") {
           throw new ChessDomainError("CHESS_INVITE_EXPIRED");
         }
       }
@@ -774,7 +784,9 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
         invite.toUid,
         invite.timeControl,
         requestId,
-        invite.isTestBot ? { testBotUid: invite.fromUid } : undefined,
+        invite.isTestBot
+          ? { testBotUid: invite.fromUid, whiteUid: invite.whiteUid, blackUid: invite.blackUid }
+          : { whiteUid: invite.whiteUid, blackUid: invite.blackUid },
       );
       invites.delete(invite.inviteId);
       releasePendingBoardGameInvite(invite.inviteId, "chess");

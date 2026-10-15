@@ -223,11 +223,11 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
       <Stack.Screen name="(home)/(board)/home-board" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(chess)/chess-lobby" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(chess)/chess-history" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(chess)/chess-challenge/[inviteId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(chess)/chess-game/[gameId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(chess)/chess-challenge/[inviteId]" options={{ animation: "none" }} />
+      <Stack.Screen name="(chess)/chess-game/[gameId]" options={{ animation: "none" }} />
       <Stack.Screen name="(xiangqi)/xiangqi-lobby" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(xiangqi)/xiangqi-challenge/[inviteId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(xiangqi)/xiangqi-preview" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(xiangqi)/xiangqi-challenge/[inviteId]" options={{ animation: "none" }} />
+      <Stack.Screen name="(xiangqi)/xiangqi-preview" options={{ animation: "none" }} />
       <Stack.Screen name="(memories)/memory-book" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(internal)/performance-graph-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(internal)/performance-data-test" options={{ animation: BLOOM_MOTION.screen.animation }} />

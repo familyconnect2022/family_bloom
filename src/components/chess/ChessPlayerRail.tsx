@@ -18,6 +18,7 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
   runtimeActive = true,
   actions,
   onTenSeconds,
+  statusText,
 }: {
   state: ChessGameState;
   color: ChessColor;
@@ -29,6 +30,7 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
   runtimeActive?: boolean;
   actions?: ReactNode;
   onTenSeconds?: () => void;
+  statusText?: string | null;
 }) {
   const focus = useDerivedValue(() => withTiming(activeSignal.value, { duration: 150 }));
   const railStyle = useAnimatedStyle(() => ({
@@ -44,7 +46,10 @@ export const ChessPlayerRail = React.memo(function ChessPlayerRail({
             ? <Image source={{ uri: avatarUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
             : <Text style={[styles.avatarText, isBot && styles.botAvatarText]}>{isBot ? "♞" : avatarFallback}</Text>}
         </View>
-        <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+        <View style={styles.nameLine}>
+          <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+          <Text style={[styles.status, !statusText && styles.statusHidden]} numberOfLines={1}>{statusText || " "}</Text>
+        </View>
       </View>
       <View style={styles.rightSide}>
         <ChessClock state={state} color={color} activeSignal={activeSignal} runtimeActive={runtimeActive} onTenSeconds={onTenSeconds} />
@@ -75,7 +80,10 @@ const styles = StyleSheet.create({
   avatar: { width: 32, height: 32, borderRadius: 11, overflow: "hidden", backgroundColor: "#F9E3EC", alignItems: "center", justifyContent: "center" },
   avatarText: { fontSize: 12, fontWeight: "900", color: COLORS.primary },
   botAvatarText: { fontSize: 22, lineHeight: 24 },
-  name: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 16, fontWeight: "900", color: COLORS.primaryText },
+  nameLine: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 6 },
+  name: { flexShrink: 1, minWidth: 0, fontSize: 13, lineHeight: 16, fontWeight: "900", color: COLORS.primaryText },
+  status: { flexShrink: 1, color: COLORS.secondaryText, opacity: 0.56, fontSize: 9.5, lineHeight: 13, fontWeight: "800" },
+  statusHidden: { opacity: 0 },
   rightSide: { flexDirection: "row", alignItems: "center", gap: 5 },
   actions: { flexDirection: "row", alignItems: "center", gap: 4 },
 });
