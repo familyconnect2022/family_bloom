@@ -1,15 +1,15 @@
 @echo off
 setlocal EnableExtensions
-title Family Bloom - EAS Test Build P2.37R2C-H21
+title Family Bloom - EAS Test Build P2.37R2C-H22R8
 
 for %%I in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fI"
 cd /d "%PROJECT_ROOT%"
 
 echo ============================================================
-echo  FAMILY BLOOM P2.37R2C-H21 - EAS ANDROID TEST BUILD
+echo  FAMILY BLOOM P2.37R2C-H22R8 - EAS ANDROID TEST BUILD
 echo  Profile : family-bloom-test
-echo  EXPECTED: app 1.3.22 / versionCode 143032
-echo  Native   : P2.37R2C-H22-native-1
+echo  EXPECTED: app 1.3.26 / versionCode 143036
+echo  Native   : P2.37R2C-H22R8-native-1
 echo  This helper ALWAYS waits for the new build and clears EAS cache.
 echo ============================================================
 echo.
@@ -71,6 +71,12 @@ node scripts\test-h22r2-cleanup-retention.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22-xiangqi-parity.cjs
 if errorlevel 1 goto :fail
+node scripts\test-h22r6-xiangqi-bloom-motion.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h22r7-royal-bloom-modals.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h22r8-xiangqi-ux-draw.cjs
+if errorlevel 1 goto :fail
 node scripts\test-h22r1-bot-invite-countdown.cjs
 if errorlevel 1 goto :fail
 node scripts\test-phase-p2_37r2-full-copy-integrity.js
@@ -101,9 +107,9 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.22
-echo   versionCode : 143032
-echo   native ID   : P2.37R2C-H22-native-1
+echo   app version : 1.3.26
+echo   versionCode : 143036
+echo   native ID   : P2.37R2C-H22R8-native-1
 echo ------------------------------------------------------------
 echo.
 echo EAS will now build a NEW APK and wait until the build finishes.
@@ -120,9 +126,9 @@ echo ============================================================
 echo [OK] EAS reports the P2.37R2C-H21 build completed successfully.
 echo Install ONLY the APK produced by THIS build.
 echo After install, Game Foundation MUST show:
-echo   ACTUAL versionCode: 143032
+echo   ACTUAL versionCode: 143036
 echo   FamilyBloomOverlay: YES
-echo   native identity: P2.37R2C-H22-native-1
+echo   native identity: P2.37R2C-H22R8-native-1
 echo ============================================================
 echo.
 pause

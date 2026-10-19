@@ -305,7 +305,7 @@ echo   %TARGET%
 echo Then run inside the updated project:
 echo   scripts\android\maintenance\Family_Bloom_CLEAN_APPLY_FULL.bat
 echo.
-pause
+if /I not "%~2"=="--no-pause" pause
 exit /b 0
 
 :CleanJsShadows
@@ -326,6 +326,6 @@ echo ========================================================
 echo PRE-COPY CLEAN FAILED - do not overlay the FULL package yet.
 echo ========================================================
 echo.
-pause
+if /I not "%~2"=="--no-pause" pause
 exit /b 1
 

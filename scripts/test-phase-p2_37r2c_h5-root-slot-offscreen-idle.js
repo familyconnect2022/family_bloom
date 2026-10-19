@@ -20,7 +20,7 @@ check(rootLayout.includes('navigationPlane: { ...StyleSheet.absoluteFillObject')
 check(authLayout.includes('<View style={styles.root} collapsable={false}>') && authLayout.includes('root: { flex: 1'), 'auth Slot has a non-collapsable full-height host');
 check(tabs.includes('<View style={styles.navigatorRoot} collapsable={false}>') && tabs.includes('navigatorRoot: { ...StyleSheet.absoluteFillObject'), 'tabs navigator is pinned to the full workspace');
 check(gameHost.includes('presentation.mode === "idle"') && gameHost.includes('left: -10000') && gameHost.includes('width: 1') && gameHost.includes('opacity: 0'), 'persistent native game host is physically parked offscreen while IDLE');
-check(eas.includes('143032') && eas.includes('P2.37R2C-H22-native-1') && !eas.includes('P2.37R2C-H4-native-1'), 'EAS helper prints exact current binary/native identity');
+check(eas.includes('143036') && eas.includes('P2.37R2C-H22R8-native-1') && !eas.includes('P2.37R2C-H4-native-1'), 'EAS helper prints exact current binary/native identity');
 
 console.log(`\nP2.37R2C-H5 root stability gate: ${fail ? 'FAIL' : 'PASS'} (${pass}/${pass + fail})\n`);
 process.exit(fail ? 1 : 0);

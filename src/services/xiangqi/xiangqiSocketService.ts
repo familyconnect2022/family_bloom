@@ -33,6 +33,17 @@ type ListenerMap = {
  * lifecycle. The only cross-game coordination remains server-side eligibility.
  */
 class XiangqiSocketService {
+  // Preserve the current outgoing invitation across a late-mounted app shell.
+  // This is presentation state only; cancellation/expiry stays server-owned.
+  private lastOutgoingInvite: XiangqiInvite | null = null;
+  private publishOutgoingInvite(invite: XiangqiInvite) {
+    if (invite.isTestBot || invite.expiresAt <= Date.now()) return;
+    this.lastOutgoingInvite = invite;
+    this.listeners.outgoingInvite.forEach(fn => fn(invite));
+  }
+  private clearOutgoingInvite(inviteId: string) {
+    if (this.lastOutgoingInvite?.inviteId === inviteId) this.lastOutgoingInvite = null;
+  }
   private socket: Socket | null = null;
   private connectPromise: Promise<Socket> | null = null;
   private listeners: { [K in keyof ListenerMap]: Set<ListenerMap[K]> } = {
@@ -129,13 +140,22 @@ class XiangqiSocketService {
   private bindCoreListeners(socket: Socket) {
     socket.on("connect", () => this.listeners.connected.forEach((fn) => fn()));
     socket.on("disconnect", () => this.listeners.disconnected.forEach((fn) => fn()));
-    socket.on(XIANGQI_EVENTS.gameState, (state: XiangqiRealtimeState) => this.listeners.state.forEach((fn) => fn(state)));
+    socket.on(XIANGQI_EVENTS.gameState, (state: XiangqiRealtimeState) => {
+      if (state.status === "waiting" || state.status === "active") this.lastOutgoingInvite = null;
+      this.listeners.state.forEach(fn => fn(state));
+    });
     socket.on(XIANGQI_EVENTS.gameMoveApplied, (delta: XiangqiMoveDelta) => this.listeners.move.forEach((fn) => fn(delta)));
     socket.on(XIANGQI_EVENTS.inviteReceived, (invite: XiangqiInvite) => this.listeners.invite.forEach((fn) => fn(invite)));
-    socket.on(XIANGQI_EVENTS.inviteSent, (invite: XiangqiInvite) => this.listeners.outgoingInvite.forEach((fn) => fn(invite)));
+    socket.on(XIANGQI_EVENTS.inviteSent, (invite: XiangqiInvite) => this.publishOutgoingInvite(invite));
     socket.on(XIANGQI_EVENTS.presenceUpdate, (items: XiangqiPresence[]) => this.listeners.presence.forEach((fn) => fn(items)));
-    socket.on(XIANGQI_EVENTS.inviteExpired, (payload: { inviteId: string }) => this.listeners.inviteExpired.forEach((fn) => fn(payload)));
-    socket.on(XIANGQI_EVENTS.inviteRejected, (payload: XiangqiInviteRejected) => this.listeners.inviteRejected.forEach((fn) => fn(payload)));
+    socket.on(XIANGQI_EVENTS.inviteExpired, (payload: { inviteId: string }) => {
+      this.clearOutgoingInvite(payload.inviteId);
+      this.listeners.inviteExpired.forEach(fn => fn(payload));
+    });
+    socket.on(XIANGQI_EVENTS.inviteRejected, (payload: XiangqiInviteRejected) => {
+      this.clearOutgoingInvite(payload.inviteId);
+      this.listeners.inviteRejected.forEach(fn => fn(payload));
+    });
   }
 
   on<K extends keyof ListenerMap>(key: K, fn: ListenerMap[K]) {
@@ -146,7 +166,11 @@ class XiangqiSocketService {
   onState(fn: (state: XiangqiRealtimeState) => void) { return this.on("state", fn); }
   onMove(fn: (delta: XiangqiMoveDelta) => void) { return this.on("move", fn); }
   onInvite(fn: (invite: XiangqiInvite) => void) { return this.on("invite", fn); }
-  onOutgoingInvite(fn: (invite: XiangqiInvite) => void) { return this.on("outgoingInvite", fn); }
+  onOutgoingInvite(fn: (invite: XiangqiInvite) => void) {
+    const unsubscribe = this.on("outgoingInvite", fn);
+    if (this.lastOutgoingInvite?.expiresAt && this.lastOutgoingInvite.expiresAt > Date.now()) fn(this.lastOutgoingInvite);
+    return unsubscribe;
+  }
   onPresence(fn: (items: XiangqiPresence[]) => void) { return this.on("presence", fn); }
   onInviteExpired(fn: (payload: { inviteId: string }) => void) { return this.on("inviteExpired", fn); }
   onInviteRejected(fn: (payload: XiangqiInviteRejected) => void) { return this.on("inviteRejected", fn); }
@@ -163,6 +187,15 @@ class XiangqiSocketService {
           if (error) {
             resolve({ ok: false, errorCode: "XIANGQI_SERVER_RECOVERING", message: error.message } as XiangqiAck<T>);
             return;
+          }
+          // Match Chess's outgoing invitation handoff. When the family room
+          // push races with mounting this gate, the ACK still opens the
+          // inviter's cancellable 60-second Super Bloom notice.
+          if (event === XIANGQI_EVENTS.inviteCreate && response?.ok) {
+            const invite = (response as {ok:true;data?:XiangqiInvite}).data;
+            if (invite?.inviteId && !invite.isTestBot && invite.expiresAt > Date.now()) {
+              this.publishOutgoingInvite(invite);
+            }
           }
           resolve(response);
         },
@@ -186,6 +219,7 @@ class XiangqiSocketService {
   isConnected() { return !!this.socket?.connected; }
 
   disconnect() {
+    this.lastOutgoingInvite = null;
     this.connectPromise = null;
     this.socket?.disconnect();
     this.socket = null;

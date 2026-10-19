@@ -16,7 +16,7 @@ check(layout.includes('rootNavigatorHost: { flex: 1') && (layout.includes('navig
 check(layout.includes('<View style={styles.familySessionPlane} collapsable={false}>') && layout.includes('familySessionPlane: { flex: 1'), 'FamilySession gives navigation a stable flex parent separate from overlays');
 check(!welcome.includes('<Modal') && !welcome.includes('from "react-native";') ? true : !welcome.includes('Modal,'), 'post-auth welcome no longer creates a native Modal window');
 check(welcome.includes('StyleSheet.absoluteFillObject') && welcome.includes('accessibilityViewIsModal'), 'welcome is now an in-tree absolute overlay that blocks touches without replacing the Activity window');
-check(structure.includes('Root contains only the five intentional BAT launchers'), 'structure gate allows only the requested five BAT launchers');
+check(structure.includes('Root BAT launchers exactly match') && structure.includes('bat-entrypoints-manifest.json'), 'structure gate follows canonical root BAT manifest');
 
 console.log(`\nP2.37R2C-H4 root navigation layout gate: ${fail ? 'FAIL' : 'PASS'} (${pass}/${pass + fail})\n`);
 process.exit(fail ? 1 : 0);

@@ -5,6 +5,7 @@
 import { AppState } from "react-native";
 import { getAuth } from "@react-native-firebase/auth";
 import { xiangqiSocketService } from "../xiangqi/xiangqiSocketService";
+import { profileService } from "../profile/profileService";
 import { legalForColor } from "../xiangqi/xiangqiLocalRules";
 import { XIANGQI_EVENTS, type XiangqiMoveDelta, type XiangqiRealtimeState } from "../../types/xiangqiRealtime";
 import { setBoardGameNativeXiangqiState, type NativeXiangqiAction, type NativeXiangqiBoardState } from "./boardGameNativeOverlay";
@@ -20,9 +21,35 @@ let movePending = false;
 let boardReadyRequested: string | null = null;
 let playReadyRequested: string | null = null;
 let nativeAssetsReady: string | null = null;
+let colorNativeFrameReady: string | null = null;
 let playReadyScheduled: string | null = null;
 let renderSerial = 0;
 let transportOnline = xiangqiSocketService.isConnected();
+let opponentProfile: {uid:string;name:string;photo:string|null}|null=null;
+let selfProfile: {uid:string;name:string;photo:string|null}|null=null;
+const profileRequests=new Set<string>();
+const profileMissingUids=new Set<string>();
+function hydratePlayers(g: XiangqiRealtimeState) {
+  const me=getAuth().currentUser;
+  if (!me) return;
+  if(selfProfile?.uid!==me.uid) selfProfile={uid:me.uid,name:me.displayName || "Bạn",photo:me.photoURL || null};
+  if (!profileRequests.has(me.uid) && !profileMissingUids.has(me.uid)) {
+    profileRequests.add(me.uid);profileMissingUids.add(me.uid);
+    void profileService.get(me.uid).then(profile=>{
+      if(profile && getAuth().currentUser?.uid === me.uid)
+        selfProfile={uid:me.uid,name:profile.shortName || profile.displayName || me.displayName || "Bạn",photo:profile.avatarUrl || me.photoURL || null};
+      if(state?.gameId===g.gameId)void push("self-profile");
+    }).catch(()=>undefined).finally(()=>profileRequests.delete(me.uid));
+  }
+  const otherUid=g.redUid===me.uid?g.blackUid:g.redUid;
+  if (!otherUid || otherUid===me.uid || otherUid===g.testBotUid || profileRequests.has(otherUid) || profileMissingUids.has(otherUid) || opponentProfile?.uid===otherUid) return;
+  profileRequests.add(otherUid);
+  void profileService.get(otherUid).then(profile=>{
+    if(profile) opponentProfile={uid:otherUid,name:profile.shortName || profile.displayName || "Người thân",photo:profile.avatarUrl || null};
+    else profileMissingUids.add(otherUid);
+    if(state?.gameId===g.gameId) void push("player-profile");
+  }).catch(()=>undefined).finally(()=>profileRequests.delete(otherUid));
+}
 let reconciliationPending = false;
 let requestSerial = 0;
 let currentMoveRequestId: string | null = null;
@@ -46,9 +73,14 @@ function queueRetry(gameId: string) {
   readyRetryTimer = setTimeout(() => {
     readyRetryTimer = null;
     if (state?.gameId !== gameId || state.status !== "waiting" || !transportOnline) return;
+    // Do not clear in-flight latches: emitAck can take up to 12 seconds.
+    // Each ACK clears its own latch if still waiting, then schedules retry.
     if (state.preparationPhase === "board" && nativeAssetsReady === gameId) void markBoardReady();
-    if (state.preparationPhase === "colors") void sendPlayReady();
-  }, 1_500);
+    if (state.preparationPhase === "colors") {
+      if (colorNativeFrameReady === gameId) void sendPlayReady();
+      else void push("waiting-for-native-color-paint");
+    }
+  }, 2_500);
 }
 function scheduleWaitRecovery(g: XiangqiRealtimeState) {
   if (preparedWatchdog) { clearTimeout(preparedWatchdog); preparedWatchdog = null; }
@@ -74,6 +106,8 @@ async function push(reason: string) {
   const canMove = g.status === "active" && !!me && me === g.board.turn && transportOnline && !movePending && !reconciliationPending;
   const hints = (canMove || canPremove) && selectedOwn && me ? legalForColor(g.board, selectedOwn.id, me) : [];
   const captures = hints.filter(h => g.board.pieces.some(p => p.col === h.col && p.row === h.row && p.color !== me));
+  const opponentUid = me === "red" ? g.blackUid : g.redUid;
+  const matchedOpponentProfile = opponentProfile?.uid === opponentUid ? opponentProfile : null;
   const deadline = Date.parse(g.createdAt) + 120_000;
   const waitingRemainingMs = g.status === "waiting" && Number.isFinite(deadline) ? Math.max(0, deadline - g.serverNowMs) : null;
   const props: NativeXiangqiBoardState = {
@@ -83,7 +117,11 @@ async function push(reason: string) {
     lastFrom: g.board.lastMove?.from ?? null, lastTo: g.board.lastMove?.to ?? null,
     selectedPieceId, legalTargets: hints, captureTargets: captures,
     redRemainingMs: g.redRemainingMs, blackRemainingMs: g.blackRemainingMs, serverNowMs: g.serverNowMs,
-    canMove, canPremove, premoveTarget:queuedPremove?.to ?? null, movePending, opponentLabel: participant(g),
+    canMove, canPremove, premoveTarget:queuedPremove?.to ?? null, movePending,
+    opponentLabel: (g.testBotUid ? "Bloom Bot" : matchedOpponentProfile ? matchedOpponentProfile.name : "Người thân"),
+    meLabel: selfProfile?.name || "Bạn", meAvatarUrl: selfProfile?.photo || null,
+    opponentAvatarUrl: g.testBotUid ? null : matchedOpponentProfile?.photo || null,
+    myUid: getAuth().currentUser?.uid ?? null, drawOfferByUid: g.drawOfferByUid ?? null,
     soundCue,soundToken,
     waitingRemainingMs,
     waitingMessage: g.status === "waiting"
@@ -94,18 +132,28 @@ async function push(reason: string) {
     result: g.result, finishReason: g.finishReason,
   };
   const reply = await setBoardGameNativeXiangqiState(props);
-  if (!reply.accepted || serial !== renderSerial || state?.gameId !== g.gameId) return;
+  if (!reply.accepted || state?.gameId !== g.gameId) return;
+  if (g.status === "waiting" && g.preparationPhase === "colors" && reply.cached) {
+    // The native module accepted a CACHE write but its View is not mounted.
+    // Never start server clocks before the real oriented board exists.
+    queueRetry(g.gameId);
+    return;
+  }
+  // Readiness is not a rendered frame: an unrelated newer status/clock paint
+  // must never invalidate the one-and-only request that starts the game.
   // The native board confirms the physical PNG board before boardReady.
   if (g.status === "waiting" && g.preparationPhase === "board" && nativeAssetsReady === g.gameId && transportOnline)
     void markBoardReady();
   if (g.status === "waiting" && g.preparationPhase === "colors" && me && transportOnline && !playReadyScheduled && playReadyRequested !== g.gameId) {
     playReadyScheduled = g.gameId;
-    const colorRevision = g.revision;
     await waitNativeFrames();
     if (playReadyScheduled === g.gameId) playReadyScheduled = null;
-    if (state?.gameId === g.gameId && state.preparationPhase === "colors" && state.revision === colorRevision && transportOnline)
+    // Validate the *current phase*, not an exact revision captured before two
+    // frames. Revision can advance while both boards confirm readiness.
+    if (state?.gameId === g.gameId && state.status === "waiting" && state.preparationPhase === "colors" && transportOnline) {
+      colorNativeFrameReady = g.gameId;
       void sendPlayReady();
-    else queueRetry(g.gameId);
+    } else if (state?.gameId === g.gameId && state.status === "waiting") queueRetry(g.gameId);
   }
   emitBoardGamePresentationDiagnostic("xiangqi", "XIANGQI_NATIVE_SYNC", `${reason} · ${g.gameId} rev ${g.revision}`, {gameId:g.gameId, status:g.status});
 }
@@ -119,16 +167,27 @@ async function markBoardReady() {
     { gameId: g.gameId, requestId: req("board-ready") });
   if (!response.ok) { boardReadyRequested = null; queueRetry(g.gameId); return; }
   syncNativeXiangqiAuthoritativeState(response.data);
+  if (state?.gameId === g.gameId && state.status === "waiting" && state.preparationPhase === "board") {
+    boardReadyRequested = null;
+    queueRetry(g.gameId);
+  }
 }
 async function sendPlayReady() {
   const g = state;
-  if (!g || g.status !== "waiting" || g.preparationPhase !== "colors" || !myColor(g) || !transportOnline) return;
+  if (!g || g.status !== "waiting" || g.preparationPhase !== "colors" || !myColor(g) || !transportOnline || colorNativeFrameReady !== g.gameId) return;
   if (playReadyRequested === g.gameId) return;
   playReadyRequested = g.gameId;
   const response = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameReady,
     { gameId: g.gameId, requestId: req("play-ready") });
   if (!response.ok) { playReadyRequested = null; queueRetry(g.gameId); return; }
   syncNativeXiangqiAuthoritativeState(response.data);
+  // ACK may confirm our readiness while the other side has not finished yet.
+  // Never latch playReadyRequested forever in that case; retry safely using
+  // the server's idempotent Set until active or the preparation deadline.
+  if (state?.gameId === g.gameId && state.status === "waiting" && state.preparationPhase === "colors") {
+    playReadyRequested = null;
+    queueRetry(g.gameId);
+  }
 }
 
 export function syncNativeXiangqiAuthoritativeState(next: XiangqiRealtimeState) {
@@ -136,16 +195,27 @@ export function syncNativeXiangqiAuthoritativeState(next: XiangqiRealtimeState) 
   const fresh = state?.gameId !== next.gameId;
   if (fresh) {
     selectedPieceId = null; boardReadyRequested = null; playReadyRequested = null;
-    nativeAssetsReady = null; playReadyScheduled = null; movePending = false; currentMoveRequestId = null;
+    nativeAssetsReady = null; colorNativeFrameReady = null; playReadyScheduled = null; movePending = false; currentMoveRequestId = null;
     queuedPremove = null; soundCue=""; soundToken=0;
   }
   const previous = state;
   state = next;
+  hydratePlayers(next);
+  // A recovery can roll a persisted "colors" phase back to "board" without
+  // creating a new gameId. Re-enable the earlier readiness stage safely.
+  if (!fresh && previous?.preparationPhase !== next.preparationPhase && next.preparationPhase === "board") {
+    boardReadyRequested = null;
+    playReadyRequested = null;
+    colorNativeFrameReady = null;
+  }
   if (previous?.gameId === next.gameId && previous.status === "waiting" && next.status === "active") cue("game-start");
   if (previous?.gameId === next.gameId && !isTerminal(previous) && isTerminal(next)) {queuedPremove=null;cue("game-end");}
   if (isTerminal(next)) { selectedPieceId = null; movePending = false; currentMoveRequestId = null; }
   else if (next.status === "active") { boardReadyRequested = null; playReadyRequested = null; }
   scheduleWaitRecovery(next);
+  // This independent retry guards against a stale native ACK, a lost state
+  // broadcast, or a resumed waiting game after the server restarts.
+  if (next.status === "waiting" && next.preparationPhase === "colors" && transportOnline) queueRetry(next.gameId);
   void push("state");
 }
 
@@ -156,14 +226,14 @@ export function syncNativeXiangqiAuthoritativeMove(delta: XiangqiMoveDelta) {
   const before = state;
   currentMoveRequestId = null; movePending = false; selectedPieceId = null;
   // Server packets own the move sound; no speculative replay on ACK.
-  if (delta.status === "finished") {queuedPremove=null;cue("game-end");}
+  if (delta.status === "finished") {queuedPremove=null;cue(delta.move.capturedId ? "capture" : delta.board.inCheck ? "move-check" : "move-self");}
   else if (delta.board.inCheck) cue("move-check");
   else if (delta.move.capturedId) cue("capture");
   else cue(before.board.turn === myColor(before) ? "move-self" : "move-opponent");
   state = {
     ...state, board: delta.board, revision: delta.version, status: delta.status,
     redRemainingMs: delta.redRemainingMs, blackRemainingMs: delta.blackRemainingMs,
-    result: delta.result, finishReason: delta.finishReason, serverNowMs: delta.serverNowMs,
+    result: delta.result, finishReason: delta.finishReason, serverNowMs: delta.serverNowMs, drawOfferByUid: null,
     endedAt: delta.endedAt, preparationPhase: "play",
   };
   void push("move");
@@ -226,6 +296,13 @@ export async function handleNativeXiangqiAction(event: NativeXiangqiAction) {
     clearNativeXiangqiSession(g.gameId);
     return;
   }
+  if ((event.action === "drawOffer" || event.action === "drawAccept" || event.action === "drawDecline") && g.status === "active") {
+    const key = event.action === "drawOffer" ? XIANGQI_EVENTS.gameDrawOffer : event.action === "drawAccept" ? XIANGQI_EVENTS.gameDrawAccept : XIANGQI_EVENTS.gameDrawDecline;
+    const reply = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(key, {gameId:g.gameId,requestId:req(event.action)});
+    if (reply.ok && reply.data && state?.gameId === g.gameId) syncNativeXiangqiAuthoritativeState(reply.data);
+    else if (!reply.ok) emitBoardGamePresentationDiagnostic("xiangqi","XIANGQI_DRAW_REJECTED",reply.errorCode,{gameId:g.gameId});
+    return;
+  }
   if (event.action === "resign" && g.status === "active") {
     await xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResign, {gameId:g.gameId, requestId:req("resign")});
     return;
@@ -258,6 +335,7 @@ export function setNativeXiangqiTransportConnected(connected: boolean) {
         void xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameBoardPresence,{gameId:g.gameId,visible:true});
       });
   }
+  if (state?.status === "waiting" && connected) queueRetry(state.gameId);
   if (state) void push("transport");
 }
 
@@ -282,7 +360,7 @@ export function attachNativeXiangqiAppLifecycle() {
 export function clearNativeXiangqiSession(gameId: string) {
   if (state?.gameId !== gameId) return;
   state = null; selectedPieceId = null; movePending = false;
-  nativeAssetsReady = null; boardReadyRequested = null; playReadyRequested = null;
+  nativeAssetsReady = null; colorNativeFrameReady = null; boardReadyRequested = null; playReadyRequested = null;
   queuedPremove = null; soundCue=""; soundToken=0;
   currentMoveRequestId = null; ++renderSerial;
   if (preparedWatchdog) { clearTimeout(preparedWatchdog); preparedWatchdog=null; }

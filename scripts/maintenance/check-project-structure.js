@@ -22,7 +22,10 @@ const rootBat = rootEntries
   .filter((entry) => entry.isFile() && /\.bat$/i.test(entry.name))
   .map((entry) => entry.name)
   .sort();
-const allowedRootBat = ["Family_Bloom_BUILD_APK_TO_SHARE.bat", "Family_Bloom_CLEAN_APPLY_FULL.bat", "Family_Bloom_EAS_BUILD_TEST.bat", "Family_Bloom_EAS_UPDATE_TEST.bat", "Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat"];
+// Keep the structure gate synchronized with the canonical Windows entrypoint manifest.
+// Adding a launcher must never cause a false FAIL after a successful FULL overlay.
+const batManifest = JSON.parse(fs.readFileSync(path.join(root, 'scripts/setup/bat-entrypoints-manifest.json'), 'utf8'));
+const allowedRootBat = batManifest.batFiles.filter((entry) => !entry.includes('/') && !entry.includes('\\')).sort();
 
 check('Root has zero Markdown/TXT documentation files', rootDocs.length === 0, rootDocs.join(', '));
 const docsOutsideCanonical = [];
@@ -44,7 +47,7 @@ check('All Markdown/TXT documentation lives under document/', docsOutsideCanonic
 check('Canonical document/ directory exists', fs.existsSync(path.join(root, 'document')));
 check('Accidental plural documents/ directory is absent', !fs.existsSync(path.join(root, 'documents')));
 check('Legacy top-level reports/ directory is absent', !fs.existsSync(path.join(root, 'reports')));
-check('Root contains only the five intentional BAT launchers', JSON.stringify(rootBat) === JSON.stringify(allowedRootBat), rootBat.join(', '));
+check(`Root BAT launchers exactly match the ${allowedRootBat.length} declared in manifest`, JSON.stringify(rootBat) === JSON.stringify(allowedRootBat), rootBat.join(', '));
 check('Android BAT helpers are grouped by purpose under scripts/android', ['build','dev','install','eas','verify','maintenance'].every((group) => fs.existsSync(path.join(root, 'scripts/android', group))));
 check('Web BAT helpers live under scripts/windows/web',
   fs.existsSync(path.join(root, 'scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat')) &&

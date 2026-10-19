@@ -73,6 +73,69 @@ async function test(label,action){await action();console.log('PASS',label);passe
  await test('both playReady activate turn clock once',()=>{
    assert.equal(active.status,'active');assert.equal(active.preparationPhase,'play');assert(active.startedAt);assert.equal(active.board.turn,'red');
  });
+ // H22R8: end-to-end authoritative draw protocol, completely Xiangqi-owned.
+ const drawStart=await manager.create('family','drawA','drawB',tc);
+ await manager.markBoardReady(drawStart.gameId,'drawA','draw-board-a');
+ await manager.markBoardReady(drawStart.gameId,'drawB','draw-board-b');
+ await manager.markReady(drawStart.gameId,'drawA','draw-ready-a');
+ const drawActive=await manager.markReady(drawStart.gameId,'drawB','draw-ready-b');
+ await test('draw proposal is persisted, broadcast and clocks remain active',async()=>{
+   const got=await manager.offerDraw(drawActive.gameId,'drawA','draw-offer-1');
+   assert.equal(got.drawOfferByUid,'drawA');assert.equal(got.status,'active');
+   assert.equal(store.get(drawActive.gameId).drawOfferByUid,'drawA');
+ });
+ await test('proposal owner cannot accept their own draw',async()=>{
+   await assert.rejects(()=>manager.acceptDraw(drawActive.gameId,'drawA','invalid-accept'),e=>e.code==='XIANGQI_INVALID_REQUEST');
+ });
+ await test('draw receiver can decline and proposer can offer again',async()=>{
+   const declined=await manager.declineDraw(drawActive.gameId,'drawB','draw-decline');
+   assert.equal(declined.drawOfferByUid,null);assert.equal(declined.status,'active');
+   const again=await manager.offerDraw(drawActive.gameId,'drawA','draw-offer-2');
+   assert.equal(again.drawOfferByUid,'drawA');
+ });
+ await test('only opponent acceptance finishes as draw, releasing active locks',async()=>{
+   const decided=await manager.acceptDraw(drawActive.gameId,'drawB','draw-accept');
+   assert.equal(decided.status,'finished');assert.equal(decided.result,'draw');
+   assert.equal(decided.finishReason,'draw');assert.equal(decided.board.gameOver,true);
+   assert.equal(decided.drawOfferByUid,null);assert(!locks.has('drawA')&&!locks.has('drawB'));
+ });
+ const moveDraw=await manager.create('family','drawC','drawD',tc);
+ await manager.markBoardReady(moveDraw.gameId,'drawC','c-board');
+ await manager.markBoardReady(moveDraw.gameId,'drawD','d-board');
+ await manager.markReady(moveDraw.gameId,'drawC','c-ready');
+ const activeDraw=await manager.markReady(moveDraw.gameId,'drawD','d-ready');
+ const moveRed=activeDraw.redUid;
+ const moveBlack=activeDraw.blackUid;
+ await test('authoritative move clears pending draw without consuming extra move',async()=>{
+   const offered=await manager.offerDraw(activeDraw.gameId,moveBlack,'draw-before-move');
+   assert.equal(offered.drawOfferByUid,moveBlack);
+   const delta=await manager.move(moveDraw.gameId,moveRed,'clear-draw-move',offered.revision,'r-soldier-0',{col:0,row:5});
+   const settled=await manager.state(moveDraw.gameId,moveRed);
+   assert.equal(settled.drawOfferByUid,null);assert.equal(settled.status,'active');
+   assert.equal(delta.version,offered.revision+1);
+ });
+ const botDraw=await manager.create('family','drawHuman','drawTestBot',tc,'draw-bot-create',{testBotUid:'drawTestBot',redUid:'drawHuman',blackUid:'drawTestBot'});
+ await manager.markBoardReady(botDraw.gameId,'drawHuman','draw-bot-board');
+ await manager.markReady(botDraw.gameId,'drawHuman','draw-bot-ready');
+ await test('developer Bloom Bot draw request is server-authoritative test finish',async()=>{
+   const complete=await manager.offerDraw(botDraw.gameId,'drawHuman','draw-bot-offer');
+   assert.equal(complete.status,'finished');assert.equal(complete.result,'draw');
+ });
+ // H22R5: bot readiness is server-authoritative: virtual bot has both ready
+ // flags from creation, but the human must still cross BOTH native stages.
+ const botGame=await manager.create('family','human-bot-fixture','bloom-bot-fixture',tc,'bot-test-fixture',
+   {testBotUid:'bloom-bot-fixture',redUid:'human-bot-fixture',blackUid:'bloom-bot-fixture'});
+ await test('H22R5 bot cannot move until human boardReady and playReady',async()=>{
+   assert.equal(botGame.status,'waiting');
+   const locked=await manager.state(botGame.gameId,'human-bot-fixture');
+   assert.equal(locked.preparationPhase,'board');
+   const colors=await manager.markBoardReady(botGame.gameId,'human-bot-fixture','bot-board-ready');
+   assert.equal(colors.preparationPhase,'colors');
+   assert.equal(colors.status,'waiting');
+   const started=await manager.markReady(botGame.gameId,'human-bot-fixture','bot-play-ready');
+   assert.equal(started.status,'active');assert.equal(started.preparationPhase,'play');
+   assert.equal(started.board.turn,'red');
+ });
  const red=active.redUid;const black=active.blackUid;
  await test('red can move first; illegal turn cannot move',async()=>{
    await assert.rejects(()=>manager.move(gameId,black,'other-first-move',active.revision,'b-soldier-0',{col:0,row:4}),e=>e.code==='XIANGQI_NOT_YOUR_TURN');
@@ -158,12 +221,39 @@ async function test(label,action){await action();console.log('PASS',label);passe
    assert(controller.includes('queuedPremove={pieceId:selected,to:coord}')&&controller.includes('premove-invalidated'));
    assert(controller.includes('cue("capture")')&&controller.includes('cue("game-end")'));
  });
+ await test('H22R5 outgoing inviter sees server-authorized cancel from ACK or event',()=>{
+   const socket=read('src/services/xiangqi/xiangqiSocketService.ts');
+   const gate=read('src/components/games/XiangqiChallengeGate.tsx');
+   const server=read('server/src/xiangqi/xiangqiSocket.ts');
+   assert(socket.includes('this.publishOutgoingInvite(invite)'));
+   assert(socket.includes('this.lastOutgoingInvite = invite'));
+   assert(gate.includes('onOutgoingInvite(')&&gate.includes('Hủy lời mời'));
+   assert(gate.includes('XIANGQI_EVENTS.inviteCancel'));
+   assert(server.includes('XIANGQI_EVENTS.inviteCancel'));
+   assert(server.includes('releasePendingBoardGameInvite(i.inviteId,"xiangqi")'));
+ });
+ await test('H22R5 Xiangqi ready retry survives native frame and revision races',()=>{
+   const controller=read('src/services/games/nativeXiangqiGameplayController.ts');
+   assert(controller.includes('playReadyRequested = null;\n    queueRetry(g.gameId)'));
+   assert(controller.includes('if (next.status === "waiting" && next.preparationPhase === "colors" && transportOnline) queueRetry(next.gameId)'));
+   assert(!controller.includes('state.revision === colorRevision'));
+   assert(controller.includes('colorNativeFrameReady !== g.gameId'));
+   assert(controller.includes('g.preparationPhase === "colors" && reply.cached'));
+   assert(!controller.includes('serial !== renderSerial || state?.gameId !== g.gameId'));
+ });
+ await test('H22R6 native Super Bloom preparation and H22R8 Xiangqi pieces +10%',()=>{
+   const board=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/XiangqiNativeBoardView.kt');
+   assert(board.includes('drawBloomPreparation(c,s,contentW,contentH)'));
+   assert(board.includes('CHUẨN BỊ VÁN CỜ')&&board.includes('BLOOM ARENA'));
+   assert(board.includes('val radius=cell*.47025f')&&board.includes('val src=Rect('));
+   assert(board.includes('onSquareTap(')&&board.includes('if((!s.canMove&&!s.canPremove)||s.movePending)return true'));
+ });
  await test('new H22 native identity cannot be mistaken for H21 APK',()=>{
    const app=JSON.parse(read('app.json'));
-   assert.equal(app.expo.android.versionCode,143032);
+   assert.equal(app.expo.android.versionCode,143036);
    const kotlin=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
-   assert(kotlin.includes('P2.37R2C-H22-native-1'));
-   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H22-native-1'));
+   assert(kotlin.includes('P2.37R2C-H22R8-native-1'));
+   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H22R8-native-1'));
  });
  const share=read('scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat');
  const eas=read('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat');

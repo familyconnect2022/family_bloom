@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { xiangqiSocketService } from "../../services/xiangqi/xiangqiSocketService";
 import { getBoardGamePresentationSnapshot } from "../../services/games/boardGamePresentationStore";
 import { syncXiangqiPresentationFromState } from "../../services/games/boardGamePresentationBridge";
@@ -25,7 +25,7 @@ export function XiangqiChallengeGate({ uid, familyId, ready }: { uid: string; fa
       setChallenge(prev => prev?.invite.inviteId && prev.invite.inviteId !== invite.inviteId ? prev : { invite, kind });
     };
     const incoming = xiangqiSocketService.on("invite", invite => { if (invite.toUid === uid) assign(invite, "incoming"); });
-    const outgoing = xiangqiSocketService.on("outgoingInvite", invite => { if (invite.fromUid === uid) assign(invite, "outgoing"); });
+    const outgoing = xiangqiSocketService.onOutgoingInvite(invite => { if (invite.fromUid === uid) assign(invite, "outgoing"); });
     const clear = ({ inviteId }: { inviteId: string }) => {
       setChallenge(prev => prev?.invite.inviteId === inviteId ? null : prev);
       if (pending.current === inviteId) pending.current = null;
@@ -91,34 +91,68 @@ export function XiangqiChallengeGate({ uid, familyId, ready }: { uid: string; fa
   };
 
   const invite = challenge?.invite;
-  return <Modal visible={!!invite && remaining > 0} transparent statusBarTranslucent animationType="fade"
-    onRequestClose={() => { if (challenge?.kind === "incoming") void act("reject"); else void act("cancel"); }}>
-    <View style={styles.backdrop}><View style={styles.panel}>
-      <Text style={styles.eyebrow}>✦ BLOOM CỜ TƯỚNG · THÁCH ĐẤU</Text>
-      <Text style={styles.symbol}>帥</Text>
-      <Text style={styles.title}>{challenge?.kind === "incoming" ? "Một ván cờ tướng đang chờ bạn!" : "Đang mời người thân vào trận…"}</Text>
-      <Text style={styles.message}>{challenge?.kind === "incoming"
-        ? `${invite?.fromDisplayName || "Người thân"} muốn cùng bạn chơi một ván cờ tướng.`
-        : "Người được mời có thể tham gia trước khi đồng hồ kết thúc."}</Text>
-      <Text style={styles.count}>{remaining}s</Text><Text style={styles.caption}>Lời mời có hiệu lực trong 60 giây</Text>
-      {challenge?.kind === "incoming" ? <View style={styles.actions}>
-        <Pressable disabled={busy} style={[styles.action,styles.secondary]} onPress={() => void act("reject")}><Text style={styles.secondaryText}>Để lần sau</Text></Pressable>
-        <Pressable disabled={busy} style={[styles.action,styles.primary]} onPress={() => void act("accept")}><Text style={styles.primaryText}>{busy ? "Đang kết nối…" : "Vào trận ✨"}</Text></Pressable>
-      </View> : <Pressable disabled={busy} style={[styles.action,styles.secondary]} onPress={() => void act("cancel")}><Text style={styles.secondaryText}>{busy ? "Đang hủy…" : "Hủy lời mời"}</Text></Pressable>}
-    </View></View>
-  </Modal>;
+  const isIncoming = challenge?.kind === "incoming";
+  const progress = Math.max(0, Math.min(100, remaining / 60 * 100));
+  const seconds = `00:${String(remaining).padStart(2, "0")}`;
+  return (
+    <Modal visible={!!invite && remaining > 0} transparent statusBarTranslucent animationType="fade"
+      onRequestClose={() => { if (isIncoming) void act("reject"); else void act("cancel"); }}>
+      <View style={styles.backdrop}>
+        <View style={styles.panel}>
+          <View pointerEvents="none" style={styles.kingBadge}>
+            <Image source={require("../../../assets/xiangqi/red_general_modal.png")} style={styles.kingImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.eyebrow}>✦  BLOOM ARENA · CỜ TƯỚNG  ✦</Text>
+          <Text style={styles.title}>{isIncoming ? "MỜI BẠN VÀO TRẬN!" : "MỘT LỜI MỜI ĐẶC BIỆT"}</Text>
+          <Text style={styles.divider}>✦     ───────     ✦</Text>
+          <Text style={styles.message}>{isIncoming
+            ? `${invite?.fromDisplayName || "Người thân"} đang đợi bạn ở đấu trường Cờ tướng. Một ván cờ thật vui sắp bắt đầu!`
+            : "Bloom đã gửi lời mời. Hãy chờ người thân sẵn sàng cùng mình nhé!"}</Text>
+          <View style={styles.timerCard}>
+            <Text style={styles.timerLabel}>THỜI GIAN CÒN LẠI</Text>
+            <Text style={styles.count}>{seconds}</Text>
+            <View style={styles.timerTrack}><View style={[styles.timerFill, { width: `${progress}%` }]} /></View>
+            <Text style={styles.caption}>Lời mời tự kết thúc sau 60 giây</Text>
+          </View>
+          {isIncoming ? <View style={styles.actions}>
+            <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.secondary]} onPress={() => void act("reject")}>
+              <Text style={styles.secondaryText}>Để lần sau</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.primary]} onPress={() => void act("accept")}>
+              <Text style={styles.primaryText}>{busy ? "Đang kết nối…" : "Vào trận ✨"}</Text>
+            </Pressable>
+          </View> : <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.secondary, styles.cancel]} onPress={() => void act("cancel")}>
+            <Text style={styles.secondaryText}>{busy ? "Đang hủy lời mời…" : "Hủy lời mời"}</Text>
+          </Pressable>}
+          <Text style={styles.brand}>✦  FAMILY BLOOM  ·  PLAY TOGETHER  ✦</Text>
+        </View>
+      </View>
+    </Modal>
+  );
 }
-const styles=StyleSheet.create({
-  backdrop:{flex:1,backgroundColor:"rgba(68,38,13,.52)",justifyContent:"center",paddingHorizontal:24},
-  panel:{backgroundColor:"#FFF8EA",borderRadius:30,paddingHorizontal:24,paddingVertical:28,alignItems:"center",borderWidth:1,borderColor:"#E8C989",elevation:16},
-  eyebrow:{color:"#A6752D",fontSize:12,fontWeight:"800",letterSpacing:1.2},
-  symbol:{color:"#C64231",fontSize:56,marginTop:10},
-  title:{color:"#673315",fontSize:22,textAlign:"center",fontWeight:"900",marginTop:10},
-  message:{color:"#896243",fontSize:15,lineHeight:23,textAlign:"center",marginTop:12},
-  count:{fontSize:38,fontWeight:"900",color:"#B74829",marginTop:18,fontVariant:["tabular-nums"]},
-  caption:{color:"#9B7B57",fontSize:12,marginTop:2,marginBottom:24},
-  actions:{flexDirection:"row",width:"100%",gap:10},
-  action:{paddingVertical:16,paddingHorizontal:16,borderRadius:19,alignItems:"center",justifyContent:"center",flexGrow:1},
-  primary:{backgroundColor:"#B9442D"},secondary:{backgroundColor:"#FFE8C1",borderWidth:1,borderColor:"#E7C58D"},
-  primaryText:{color:"#FFFFFF",fontWeight:"800",fontSize:15},secondaryText:{color:"#885A32",fontWeight:"800",fontSize:15},
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: "rgba(255,240,249,.83)", justifyContent: "center", paddingHorizontal: 21 },
+  // Overflow must stay visible: half of the King physically floats above card.
+  panel: { backgroundColor: "#FFFAFC", borderRadius: 32, paddingHorizontal: 22, paddingTop: 83, paddingBottom: 20, alignItems: "center", borderWidth: 2, borderColor: "#EEC5DA", elevation: 18, overflow: "visible" },
+  kingBadge: { position: "absolute", top: -55, left: "50%", transform: [{ translateX: -55 }], width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
+  kingImage: { width: 100, height: 100 },
+  eyebrow: { color: "#873A63", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textAlign: "center" },
+  title: { color: "#79385F", fontSize: 21, textAlign: "center", fontWeight: "900", letterSpacing: .4, marginTop: 17 },
+  divider: { color: "#E2B6CD", fontSize: 14, marginTop: 13 },
+  message: { color: "#8F5A77", fontSize: 14.5, lineHeight: 23, textAlign: "center", marginTop: 16, marginBottom: 18 },
+  timerCard: { width: "100%", borderRadius: 19, borderWidth: 1, borderColor: "#F2D4E1", backgroundColor: "#FFF5FA", alignItems: "center", paddingHorizontal: 18, paddingTop: 13, paddingBottom: 15 },
+  timerLabel: { fontSize: 10.5, color: "#AC6D8B", letterSpacing: 1.5, fontWeight: "800" },
+  count: { fontSize: 35, fontWeight: "900", color: "#9D376E", marginTop: 5, marginBottom: 8, fontVariant: ["tabular-nums"] },
+  timerTrack: { width: "100%", height: 6, borderRadius: 5, backgroundColor: "#F2D5E4", overflow: "hidden" },
+  timerFill: { height: 6, backgroundColor: "#BA588C", borderRadius: 5 },
+  caption: { color: "#A87D96", fontSize: 11, marginTop: 9 },
+  actions: { flexDirection: "row", width: "100%", gap: 10, marginTop: 19 },
+  action: { paddingVertical: 15, paddingHorizontal: 15, borderRadius: 17, alignItems: "center", justifyContent: "center", flexGrow: 1 },
+  primary: { backgroundColor: "#A73674", borderColor: "#A73674", borderWidth: 1 },
+  secondary: { backgroundColor: "#FFF5FA", borderColor: "#E3BFD0", borderWidth: 1 },
+  cancel: { width: "100%", marginTop: 18 },
+  primaryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  secondaryText: { color: "#91456E", fontWeight: "800", fontSize: 14 },
+  brand: { color: "#AA7290", fontSize: 10, letterSpacing: .7, marginTop: 22, fontWeight: "600" },
 });

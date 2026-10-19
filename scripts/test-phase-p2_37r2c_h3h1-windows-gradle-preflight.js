@@ -17,7 +17,7 @@ check(gate.includes("'gradlew.bat', 'projects', '--console=plain'"), 'Windows co
 check(!gate.includes('shell: true'), 'Windows Gradle probe avoids shell:true path-space ambiguity');
 check(gate.includes('windowsHide: true'), 'Windows cmd probe is non-interactive/hidden safe');
 check(build.includes('check-p2_37r2c-native-package.js') && build.includes('--require-gradle-project'), 'Release APK path still requires real Gradle module proof');
-check(app.expo?.version === '1.3.22' && app.expo?.android?.versionCode === 143032, 'H10 app binary identity is 1.3.22 / 143032');
+check(app.expo?.version === '1.3.26' && app.expo?.android?.versionCode === 143036, 'H10 app binary identity is 1.3.26 / 143036');
 check(mod.version === '1.3.18', 'native module identity = 1.3.16');
 
 console.log(`\nP2.37R2C-H6 Windows Gradle preflight gate: ${fail ? 'FAIL' : 'PASS'} (${pass}/${pass + fail})\n`);

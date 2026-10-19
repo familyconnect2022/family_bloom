@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { chessSocketService } from "../../services/chess/chessSocketService";
 import { getBoardGamePresentationSnapshot } from "../../services/games/boardGamePresentationStore";
 import { syncChessPresentationFromState } from "../../services/games/boardGamePresentationBridge";
@@ -128,25 +128,40 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
   };
 
   const invite = challenge?.invite;
+  const isIncoming = challenge?.kind === "incoming";
+  const progress = Math.max(0, Math.min(100, remaining / 60 * 100));
+  const seconds = `00:${String(remaining).padStart(2, "0")}`;
   return (
-    <Modal visible={!!invite && remaining > 0} transparent statusBarTranslucent animationType="fade" onRequestClose={() => {
-      if (challenge?.kind === "incoming") void act("reject");
-      else if (challenge?.kind === "outgoing") void act("cancel");
-    }}>
+    <Modal visible={!!invite && remaining > 0} transparent statusBarTranslucent animationType="fade"
+      onRequestClose={() => { if (isIncoming) void act("reject"); else void act("cancel"); }}>
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <Text style={styles.eyebrow}>✦ BLOOM CHESS · THÁCH ĐẤU</Text>
-          <Text style={styles.queen}>♛</Text>
-          <Text style={styles.title}>{challenge?.kind === "incoming" ? "Một ván cờ đang chờ bạn!" : "Đang gửi lời mời yêu thương…"}</Text>
-          <Text style={styles.message}>{challenge?.kind === "incoming"
-            ? `${invite?.fromDisplayName || "Người thân"} muốn cùng bạn mở một ván cờ. Bloom đã chuẩn bị một điều thật thú vị!`
-            : "Người thân của bạn có thể tham gia trước khi đồng hồ lời mời kết thúc."}</Text>
-          <Text style={styles.seconds}>{remaining}s</Text>
-          <Text style={styles.caption}>Lời mời chỉ có hiệu lực trong 60 giây</Text>
-          {challenge?.kind === "incoming" ? <View style={styles.actions}>
-            <Pressable disabled={busy} style={[styles.action, styles.secondary]} onPress={() => void act("reject")}><Text style={styles.secondaryText}>Để lần sau</Text></Pressable>
-            <Pressable disabled={busy} style={[styles.action, styles.primary]} onPress={() => void act("accept")}><Text style={styles.primaryText}>{busy ? "Đang kết nối…" : "Vào trận ✨"}</Text></Pressable>
-          </View> : <Pressable disabled={busy} style={[styles.action, styles.secondary]} onPress={() => void act("cancel")}><Text style={styles.secondaryText}>{busy ? "Đang hủy…" : "Hủy lời mời"}</Text></Pressable>}
+          <View pointerEvents="none" style={styles.kingBadge}>
+            <Image source={require("../../../assets/images/chess/pieces-png-default/wk.png")} style={styles.kingImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.eyebrow}>✦  BLOOM ARENA · CỜ VUA  ✦</Text>
+          <Text style={styles.title}>{isIncoming ? "MỘT VÁN CỜ ĐANG CHỜ BẠN!" : "ĐÃ GỬI LỜI THÁCH ĐẤU"}</Text>
+          <Text style={styles.divider}>✦     ───────     ✦</Text>
+          <Text style={styles.message}>{isIncoming
+            ? `${invite?.fromDisplayName || "Người thân"} muốn cùng bạn mở một ván cờ thật vui. Bloom đang đợi bạn sẵn sàng!`
+            : "Bloom đã gửi lời mời. Hãy chờ người thân sẵn sàng cùng mình nhé!"}</Text>
+          <View style={styles.timerCard}>
+            <Text style={styles.timerLabel}>THỜI GIAN CÒN LẠI</Text>
+            <Text style={styles.count}>{seconds}</Text>
+            <View style={styles.timerTrack}><View style={[styles.timerFill, { width: `${progress}%` }]} /></View>
+            <Text style={styles.caption}>Lời mời tự kết thúc sau 60 giây</Text>
+          </View>
+          {isIncoming ? <View style={styles.actions}>
+            <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.secondary]} onPress={() => void act("reject")}>
+              <Text style={styles.secondaryText}>Để lần sau</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.primary]} onPress={() => void act("accept")}>
+              <Text style={styles.primaryText}>{busy ? "Đang kết nối…" : "Vào trận ✨"}</Text>
+            </Pressable>
+          </View> : <Pressable accessibilityRole="button" disabled={busy} style={[styles.action, styles.secondary, styles.cancel]} onPress={() => void act("cancel")}>
+            <Text style={styles.secondaryText}>{busy ? "Đang hủy lời mời…" : "Hủy lời mời"}</Text>
+          </Pressable>}
+          <Text style={styles.brand}>✦  FAMILY BLOOM  ·  PLAY TOGETHER  ✦</Text>
         </View>
       </View>
     </Modal>
@@ -154,16 +169,27 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(65,24,51,0.47)", justifyContent: "center", paddingHorizontal: 24 },
-  panel: { backgroundColor: "#FFF8FC", borderRadius: 32, paddingHorizontal: 24, paddingVertical: 28, alignItems: "center", borderWidth: 1, borderColor: "#F4C7DD", elevation: 16 },
-  eyebrow: { color: "#BB5685", fontSize: 12, fontWeight: "800", letterSpacing: 1.4 },
-  queen: { color: "#B63874", fontSize: 60, marginTop: 12 },
-  title: { color: "#6E2048", textAlign: "center", fontWeight: "900", fontSize: 23, marginTop: 10 },
-  message: { color: "#855771", fontSize: 15, lineHeight: 23, textAlign: "center", marginTop: 12 },
-  seconds: { fontSize: 38, fontWeight: "900", color: "#C23276", marginTop: 20, fontVariant: ["tabular-nums"] },
-  caption: { color: "#9F6D85", fontSize: 12, marginTop: 2, marginBottom: 24 },
-  actions: { flexDirection: "row", width: "100%", gap: 10 },
-  action: { paddingVertical: 16, paddingHorizontal: 16, borderRadius: 20, alignItems: "center", justifyContent: "center", flexGrow: 1 },
-  primary: { backgroundColor: "#BD3977" }, secondary: { backgroundColor: "#FCE5EF", borderWidth: 1, borderColor: "#E9B7CD" },
-  primaryText: { color: "white", fontWeight: "800", fontSize: 15 }, secondaryText: { color: "#91476C", fontWeight: "800", fontSize: 15 },
+  backdrop: { flex: 1, backgroundColor: "rgba(255,240,249,.83)", justifyContent: "center", paddingHorizontal: 21 },
+  // Overflow must stay visible: half of the King physically floats above card.
+  panel: { backgroundColor: "#FFFAFC", borderRadius: 32, paddingHorizontal: 22, paddingTop: 83, paddingBottom: 20, alignItems: "center", borderWidth: 2, borderColor: "#EEC5DA", elevation: 18, overflow: "visible" },
+  kingBadge: { position: "absolute", top: -55, left: "50%", transform: [{ translateX: -55 }], width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
+  kingImage: { width: 100, height: 100 },
+  eyebrow: { color: "#873A63", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textAlign: "center" },
+  title: { color: "#79385F", fontSize: 21, textAlign: "center", fontWeight: "900", letterSpacing: .4, marginTop: 17 },
+  divider: { color: "#E2B6CD", fontSize: 14, marginTop: 13 },
+  message: { color: "#8F5A77", fontSize: 14.5, lineHeight: 23, textAlign: "center", marginTop: 16, marginBottom: 18 },
+  timerCard: { width: "100%", borderRadius: 19, borderWidth: 1, borderColor: "#F2D4E1", backgroundColor: "#FFF5FA", alignItems: "center", paddingHorizontal: 18, paddingTop: 13, paddingBottom: 15 },
+  timerLabel: { fontSize: 10.5, color: "#AC6D8B", letterSpacing: 1.5, fontWeight: "800" },
+  count: { fontSize: 35, fontWeight: "900", color: "#9D376E", marginTop: 5, marginBottom: 8, fontVariant: ["tabular-nums"] },
+  timerTrack: { width: "100%", height: 6, borderRadius: 5, backgroundColor: "#F2D5E4", overflow: "hidden" },
+  timerFill: { height: 6, backgroundColor: "#BA588C", borderRadius: 5 },
+  caption: { color: "#A87D96", fontSize: 11, marginTop: 9 },
+  actions: { flexDirection: "row", width: "100%", gap: 10, marginTop: 19 },
+  action: { paddingVertical: 15, paddingHorizontal: 15, borderRadius: 17, alignItems: "center", justifyContent: "center", flexGrow: 1 },
+  primary: { backgroundColor: "#A73674", borderColor: "#A73674", borderWidth: 1 },
+  secondary: { backgroundColor: "#FFF5FA", borderColor: "#E3BFD0", borderWidth: 1 },
+  cancel: { width: "100%", marginTop: 18 },
+  primaryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  secondaryText: { color: "#91456E", fontWeight: "800", fontSize: 14 },
+  brand: { color: "#AA7290", fontSize: 10, letterSpacing: .7, marginTop: 22, fontWeight: "600" },
 });

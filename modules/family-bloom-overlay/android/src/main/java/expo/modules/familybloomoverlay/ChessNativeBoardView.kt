@@ -85,7 +85,7 @@ internal class ChessNativeBoardView(
   private val bloomBackdrop = FrameLayout(context)
   private val bloomPanel = LinearLayout(context)
   private val bloomEyebrow = TextView(context)
-  private val bloomEmblem = TextView(context)
+  private val bloomEmblem = ImageView(context)
   private val bloomDivider = TextView(context)
   private val bloomStatus = TextView(context)
   private val bloomCountdown = TextView(context)
@@ -572,7 +572,7 @@ internal class ChessNativeBoardView(
     bloomBackdrop.isFocusable = true
     bloomPanel.orientation = LinearLayout.VERTICAL
     bloomPanel.gravity = Gravity.CENTER_HORIZONTAL
-    bloomPanel.setPadding(dp(19f), dp(24f), dp(19f), dp(24f))
+    bloomPanel.setPadding(dp(19f), dp(90f), dp(19f), dp(24f))
     bloomPanel.elevation = dp(9f).toFloat()
 
     fun configureLabel(view: TextView, size: Float, color: String, bold: Boolean) {
@@ -583,8 +583,15 @@ internal class ChessNativeBoardView(
     }
     configureLabel(bloomEyebrow, 10.5f, "#A85180", true)
     bloomEyebrow.letterSpacing = 0.12f
-    configureLabel(bloomEmblem, 34f, "#A73575", true)
-    bloomEmblem.background = roundedStroke("#FFF0F7", 999f, "#F5D2E4", 1.5f)
+    // H22R7: one physical King in every Chess modal, anchored at the upper
+    // panel rim. The upper half floats outside; the lower half overlaps inside.
+    bloomBackdrop.clipChildren = false
+    bloomBackdrop.clipToPadding = false
+    bloomEmblem.setImageResource(R.drawable.wk)
+    bloomEmblem.scaleType = ImageView.ScaleType.FIT_CENTER
+    bloomEmblem.setPadding(dp(9f), dp(9f), dp(9f), dp(9f))
+    bloomEmblem.background = roundedStroke("#FFF8FC", 999f, "#F5D2E4", 2f)
+    bloomEmblem.elevation = dp(16f).toFloat()
     configureLabel(bloomHeadline, 22f, "#812855", true)
     bloomHeadline.maxLines = 2
     configureLabel(bloomDivider, 12f, "#D9A0BE", false)
@@ -603,9 +610,6 @@ internal class ChessNativeBoardView(
     bloomSecondary.background = roundedStroke("#FFF0F6", 16f, "#ECC6D8", 1f)
 
     bloomPanel.addView(bloomEyebrow, LinearLayout.LayoutParams(-1, dp(26f)))
-    bloomPanel.addView(bloomEmblem, LinearLayout.LayoutParams(dp(72f), dp(70f)).apply {
-      gravity = Gravity.CENTER_HORIZONTAL; topMargin = dp(3f)
-    })
     bloomPanel.addView(bloomHeadline, LinearLayout.LayoutParams(-1, dp(56f)).apply { topMargin = dp(5f) })
     bloomPanel.addView(bloomDivider, LinearLayout.LayoutParams(-1, dp(18f)))
     bloomPanel.addView(bloomMessage, LinearLayout.LayoutParams(-1, dp(101f)))
@@ -616,6 +620,12 @@ internal class ChessNativeBoardView(
     bloomBackdrop.addView(bloomPanel, FrameLayout.LayoutParams(
       LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER
     ).apply { leftMargin = dp(17f); rightMargin = dp(17f) })
+    bloomBackdrop.addView(bloomEmblem, FrameLayout.LayoutParams(dp(112f), dp(112f), Gravity.CENTER))
+    bloomPanel.addOnLayoutChangeListener { _, _, top, _, _, _, _, _, _ ->
+      // Badge centre follows the actual panel top across dynamic copy/CTA
+      // heights; avoids hardcoded coordinates on smaller Android screens.
+      bloomEmblem.translationY = top.toFloat() - bloomBackdrop.height / 2f
+    }
     bloomHeadline.text = "🌸 Đang chuẩn bị" // initial mask for the first native frame
     bloomMessage.text = "Bàn cờ và âm thanh đang sẵn sàng…"
     bloomPrimary.visibility = View.GONE // waiting has no fake CTA
@@ -749,7 +759,7 @@ internal class ChessNativeBoardView(
         val win = current.result == winner
         val draw = current.result == "draw"
         bloomEyebrow.text = if (win) "✦  BẢNG VÀNG BLOOM ARENA  ✦" else if (draw) "✦  FAIR PLAY · BLOOM ARENA  ✦" else "✦  HÀNH TRÌNH BLOOM ARENA  ✦"
-        bloomEmblem.text = if (win) "🏆" else if (draw) "⚖️" else "🌱"
+
         bloomHeadline.text = if (win) "NHÀ VÔ ĐỊCH BLOOM!" else if (draw) "MỘT TRẬN CẦU CÂN TÀI" else "MỖI VÁN LÀ MỘT BƯỚC TIẾN"
         bloomMessage.text = if (win)
           "🏅 Bạn đã giành chiến thắng xứng đáng! Sự tập trung, kiên nhẫn và những quyết định đầy bản lĩnh đã làm nên khoảnh khắc tỏa sáng này. Cả nhà Bloom tự hào về bạn! ✨"
@@ -770,7 +780,7 @@ internal class ChessNativeBoardView(
       phase.startsWith("waiting") || phase.startsWith("syncing") -> {
         val syncing = phase.startsWith("syncing")
         bloomEyebrow.text = "✦   BLOOM ARENA   ✦"
-        bloomEmblem.text = if (syncing) "🔄" else "♟"
+
         bloomHeadline.text = if (syncing) "ĐANG ĐỒNG BỘ BÀN CỜ" else "CHUẨN BỊ VÁN CỜ"
         bloomMessage.text = if (syncing)
           "Một thông tin về lượt đi chưa khớp. Bloom đang hỏi lại máy chủ để mọi nước cờ đều đúng và công bằng."
@@ -786,7 +796,7 @@ internal class ChessNativeBoardView(
       }
       phase.startsWith("drawIncoming") -> {
         bloomEyebrow.text = "✦   LỜI ĐỀ NGHỊ   ✦"
-        bloomEmblem.text = "🕊"
+
         bloomHeadline.text = "MÌNH HÒA NHÉ?"
         bloomMessage.text = "Đối thủ muốn khép lại ván cờ trong sự trân trọng. Bạn có đồng ý với một kết quả hòa không?"
         bloomPrimary.text = "Đồng ý hòa"
@@ -796,7 +806,7 @@ internal class ChessNativeBoardView(
       }
       phase.startsWith("confirmResign") -> {
         bloomEyebrow.text = "✦   MỘT LỰA CHỌN DŨNG CẢM   ✦"
-        bloomEmblem.text = "🌷"
+
         bloomHeadline.text = "DỪNG VÁN TẠI ĐÂY?"
         bloomMessage.text = "Bạn có chắc muốn xin thua không? Dù kết quả ra sao, Bloom luôn chào đón bạn ở ván tiếp theo."
         bloomPrimary.text = "Xác nhận xin thua"
@@ -806,7 +816,7 @@ internal class ChessNativeBoardView(
       }
       else -> {
         bloomEyebrow.text = "✦   TÔN TRỌNG ĐỐI THỦ   ✦"
-        bloomEmblem.text = "🤝"
+
         bloomHeadline.text = "MỘT LỜI CẦU HÒA"
         bloomMessage.text = "Bạn muốn gửi lời đề nghị hòa tới đối thủ? Ván cờ chỉ kết thúc khi cả hai cùng đồng ý."
         bloomPrimary.text = "Gửi lời đề nghị"

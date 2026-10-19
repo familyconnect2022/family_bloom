@@ -1,0 +1,24 @@
+H22R7 source regression: automated source/stub tests only, not Gradle APK/device tests.
+
+PASS	scripts/test-h22r7-royal-bloom-modals.cjs	H22R7 royal Bloom modal checks: 20/20 PASS
+PASS	scripts/test-h22r6-xiangqi-bloom-motion.cjs	H22R6 Xiangqi visual/motion/sound release gate: 18/18 PASS
+PASS	scripts/test-h22-xiangqi-parity.cjs	H22 Xiangqi server/native/build parity: 26/26 PASS
+PASS	scripts/test-h22r1-bot-invite-countdown.cjs	H22R1 Bloom Bot invite deadline/UI: 10/10 PASS
+PASS	scripts/test-h22r2-cleanup-retention.cjs	H22R2 safe source retention: PASS
+PASS	scripts/test-h22r3-windows-build-preflight.cjs	H22R3 Windows Build & Share preflight: 7/7 PASS
+PASS	scripts/test-phase-p2_37r2c-binary-identity-lock.js	P2.37R2C-H6 binary identity lock: PASS (14/14)
+PASS	scripts/test-phase-p2_37r2-full-copy-integrity.js	P2.37R2C-H6 FULL copy/import/native integrity gate: PASS (31/31)
+PASS	scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js	P2.37R2C-H6 decor rail gate: PASS (12/12)
+PASS	scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js	H11 source+store behavioral gate PASS (28/28)
+PASS	scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js	H15 authority + Release developer access: PASS (27/27)
+PASS	scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js	H16 Chess native smoothness source gate: PASS (16/16)
+PASS	scripts/test-phase-p2_37r2c_h17-chess-optimistic-authority.js	H17 client-first server-authoritative Chess: PASS (23/23)
+PASS	scripts/test-phase-p2_37r2c_h18-chess-network-resync.js	H18 Chess network recovery: PASS (25/25)
+PASS	scripts/test-phase-p2_37r2c_h20-mini-premove-isolation.js	H20 Mini/premove isolation: PASS (16/16)
+PASS	scripts/test-phase-p2_37r2c_h21r5-durable-recovery.cjs	H21R5 durable cold-recovery checks 14/14 PASS
+PASS	scripts/setup/check-source-import-integrity.js	PASS all literal source imports resolve and all external packages are declared
+PASS	scripts/setup/check-ts-syntax-transpile.js	PASS TS/TSX syntax transpile: 299/299 files
+PASS	scripts/setup/check-android-resource-names.js	PASS Android AAPT2 resource filename gate: 38 files valid; 11/11 MP3 + res/raw/keep.xml protected
+PASS	scripts/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs	H21R3 Android Resource/AAPT2 Gate: 10/10 PASS
+
+Total: 20/20 groups PASS; NO Gradle APK compilation performed.

@@ -5,7 +5,7 @@ for %%I in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fI"
 cd /d "%PROJECT_ROOT%"
 
 echo ============================================================
-echo Family Bloom P2.37R2C-H22R3 - CLEAN APPLY FULL
+echo Family Bloom P2.37R2C-H22R5 - CLEAN APPLY FULL
 echo Authenticated native sibling host + authoritative recovery + deep presentation diagnostics.
 echo ============================================================
 echo.

@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as Application from "expo-application";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { BotInviteCountdown } from "../../components/games/BotInviteCountdown";
@@ -66,8 +66,8 @@ type XiangqiRecovery =
 
 type RecoveryResolution = "active" | "pending_same" | "busy_other" | "finished_unseen" | "none";
 
-const EXPECTED_ANDROID_VERSION_CODE = "143032";
-const EXPECTED_NATIVE_IDENTITY = "P2.37R2C-H22-native-1";
+const EXPECTED_ANDROID_VERSION_CODE = "143036";
+const EXPECTED_NATIVE_IDENTITY = "P2.37R2C-H22R8-native-1";
 
 const BOT_ACCEPT_RECONCILE_MS = 1_650;
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -535,9 +535,9 @@ export default function BoardGameBotTestScreen() {
       <BloomHeroHeader eyebrow="INTERNAL · GAME FOUNDATION" title="Bloom Bot · protocol test" subtitle="Chỉ kiểm tra server, realtime, lời mời và recovery. Không dùng lại board/route/lifecycle cũ." variant="game" onBack={() => router.back()} compact roundedBottom />
       <Modal transparent visible={!!chessInvite && chessInvite.testBotDirection === "bot_to_user"} animationType="fade" onRequestClose={() => undefined}>
         <View style={styles.bloomShade}>
-          <View style={styles.bloomInviteCard}>
+          <View style={[styles.bloomInviteCard, styles.royalInviteCard]}>
+            <Image source={require("../../../assets/images/chess/pieces-png-default/wk.png")} resizeMode="contain" style={styles.royalKingHero} />
             <Text style={styles.bloomEyebrow}>✦ BLOOM SUPER HERO · CỜ VUA ✦</Text>
-            <Text style={styles.bloomCrown}>♔ ♟ ♕</Text>
             <Text style={styles.bloomInviteTitle}>Bloom Bot mời bạn!</Text>
             <Text style={styles.bloomInviteBody}>Một ván cờ thú vị đang đợi bạn. Mình cùng thử sức và tạo nên những khoảnh khắc thật vui nhé! 🌸</Text>
             {chessInvite?.testBotDirection === "bot_to_user" ? (
@@ -554,9 +554,9 @@ export default function BoardGameBotTestScreen() {
       </Modal>
       <Modal transparent visible={!!xiangqiInvite && xiangqiInvite.testBotDirection === "bot_to_user"} animationType="fade" onRequestClose={() => undefined}>
         <View style={styles.bloomShade}>
-          <View style={[styles.bloomInviteCard, styles.xiangqiInviteCard]}>
+          <View style={[styles.bloomInviteCard, styles.xiangqiInviteCard, styles.royalInviteCard]}>
+            <Image source={require("../../../assets/xiangqi/red_general_modal.png")} resizeMode="contain" style={styles.royalKingHero} />
             <Text style={[styles.bloomEyebrow, styles.xiangqiEyebrow]}>✦ BLOOM SUPER HERO · CỜ TƯỚNG ✦</Text>
-            <Text style={[styles.bloomCrown, styles.xiangqiCrown]}>帥 仕 將</Text>
             <Text style={styles.bloomInviteTitle}>Bloom Bot mời bạn!</Text>
             <Text style={styles.bloomInviteBody}>Bàn cờ tướng đã sẵn sàng chờ bạn. Cùng Bloom Bot trải nghiệm một ván thật vui nhé! 🌸</Text>
             {xiangqiInvite?.testBotDirection === "bot_to_user" ? (
@@ -573,9 +573,9 @@ export default function BoardGameBotTestScreen() {
       </Modal>
       <Modal transparent visible={!!xiangqiInviteEnded} animationType="fade" onRequestClose={() => setXiangqiInviteEnded(null)}>
         <View style={styles.bloomShade}>
-          <View style={[styles.bloomInviteCard, styles.xiangqiInviteCard]}>
+          <View style={[styles.bloomInviteCard, styles.xiangqiInviteCard, styles.royalInviteCard]}>
+            <Image source={require("../../../assets/xiangqi/red_general_modal.png")} resizeMode="contain" style={styles.royalKingHero} />
             <Text style={[styles.bloomEyebrow, styles.xiangqiEyebrow]}>✦ BLOOM ARENA · CỜ TƯỚNG ✦</Text>
-            <Text style={[styles.bloomCrown, styles.xiangqiCrown]}>🌸 帥 🌸</Text>
             <Text style={styles.bloomInviteTitle}>{xiangqiInviteEnded === "rejected" ? "Hẹn một ván khác nhé!" : "Mình hẹn nhau lần sau"}</Text>
             <Text style={styles.bloomInviteBody}>{xiangqiInviteEnded === "rejected"
               ? "Đối thủ chưa thể tham gia lúc này. Mình sẽ cùng chơi khi có dịp khác nhé!"
@@ -588,9 +588,9 @@ export default function BoardGameBotTestScreen() {
       </Modal>
       <Modal transparent visible={!!chessInviteEnded} animationType="fade" onRequestClose={() => setChessInviteEnded(null)}>
         <View style={styles.bloomShade}>
-          <View style={styles.bloomInviteCard}>
+          <View style={[styles.bloomInviteCard, styles.royalInviteCard]}>
+            <Image source={require("../../../assets/images/chess/pieces-png-default/wk.png")} resizeMode="contain" style={styles.royalKingHero} />
             <Text style={styles.bloomEyebrow}>✦ BLOOM ARENA · CỜ VUA ✦</Text>
-            <Text style={styles.bloomCrown}>💌 ♟ 🌸</Text>
             <Text style={styles.bloomInviteTitle}>{chessInviteEnded === "rejected" ? "Hẹn một ván khác nhé!" : "Mình hẹn nhau lần sau"}</Text>
             <Text style={styles.bloomInviteBody}>{chessInviteEnded === "rejected"
               ? "Lúc này đối thủ chưa thể tham gia. Không sao cả, một ván cờ thật vui vẫn đang chờ ở phía trước."
@@ -633,7 +633,7 @@ export default function BoardGameBotTestScreen() {
         <View style={styles.section}>
           <BloomSectionHeader title="Native Surface P2.37R2C-H3" subtitle="Chứng minh binary native trước, rồi mới test Surface; hoàn toàn không qua server/session" />
           <BloomCard style={styles.card}>
-            <Text style={styles.state}>JS phase: P2.37R2C-H22R1 · Bloom Bot countdown 60s · EXPECTED binary: 1.3.22 / 143032 / P2.37R2C-H22-native-1</Text>
+            <Text style={styles.state}>JS phase: P2.37R2C-H22R8 · Xiangqi royal avatars / draw / highlight / last move · EXPECTED binary: 1.3.26 / 143036 / P2.37R2C-H22R8-native-1</Text>
             <Text style={styles.state}>ACTUAL versionCode: {actualVersionCode} · FamilyBloomOverlay: {nativeModulePresent ? "YES" : "NO"} · native identity: {nativeIdentity}</Text>
             <Text style={styles.state}>Binary gate: {nativeBinaryReady ? "PASS" : "FAIL — KHÔNG test Surface trước khi cài đúng APK H6"}</Text>
             <Text style={styles.state}>Bước 1 phải hiện ô NATIVE HOST OK và log NATIVE_BINARY_PROOF_VISIBLE. Chỉ khi bước 1 PASS mới test Surface Chess/Cờ tướng. Sau đó log Surface phải có NATIVE_HOST_ATTACHED, NATIVE_HOST_PROMOTED và NATIVE_HOST_FULL_VISIBLE.</Text>
@@ -688,6 +688,8 @@ const styles = StyleSheet.create({
   xiangqiInviteCard: { borderColor: "#EED39B" },
   xiangqiEyebrow: { color: "#A56811" },
   xiangqiCrown: { color: "#986515", backgroundColor: "#FFF5DC" },
+  royalInviteCard: { paddingTop: 80, overflow: "visible" },
+  royalKingHero: { position: "absolute", top: -55, left: "50%", marginLeft: -55, width: 110, height: 110 },
   xiangqiInvitePrimary: { backgroundColor: "#B37C24" },
   content: { padding: 16, paddingBottom: 42, gap: 20 },
   section: { gap: 9 },

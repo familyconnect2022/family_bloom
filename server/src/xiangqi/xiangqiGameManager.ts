@@ -101,7 +101,7 @@ export class XiangqiGameManager {
       status: "waiting", preparationPhase: "board", board: createInitialXiangqiState(), revision: 1,
       redRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
-      timeControl, result: null, finishReason: null, awayBudgetByUid: {},
+      timeControl, result: null, finishReason: null, drawOfferByUid: null, awayBudgetByUid: {},
       recentRequestIds: requestId ? [requestId] : [], testBotUid: bot, isTestGame: !!bot,
       createdAt: now, startedAt: null, endedAt: null, updatedAt: now,
     };
@@ -399,7 +399,7 @@ export class XiangqiGameManager {
           if (color === "red") r.game.redRemainingMs = (r.game.redRemainingMs ?? 0) + r.game.timeControl.incrementMs;
           else r.game.blackRemainingMs = (r.game.blackRemainingMs ?? 0) + r.game.timeControl.incrementMs;
         }
-        r.game.board = after; r.game.revision++; r.game.updatedAt = iso(); this.remember(r.game, clientMoveId);
+        r.game.board = after; r.game.drawOfferByUid = null; r.game.revision++; r.game.updatedAt = iso(); this.remember(r.game, clientMoveId);
         r.turnStartedMono = r.game.timeControl.kind === "clocked" ? performance.now() : null;
         if (after.gameOver) {
           r.game.result = after.winner; r.game.finishReason = after.finishReason;
@@ -428,10 +428,61 @@ export class XiangqiGameManager {
         const winner: XiangqiColor = r.game.redUid === uid ? "black" : "red";
         r.game.result = winner; r.game.finishReason = "resignation"; r.game.status = "finished";
         r.game.board = { ...r.game.board, winner, gameOver: true };
-        r.game.revision++; r.game.updatedAt = iso(); this.remember(r.game, requestId);
+        r.game.drawOfferByUid = null; r.game.revision++; r.game.updatedAt = iso(); this.remember(r.game, requestId);
         this.finishRuntime(r); await this.persistence.finish(r.game);
       } catch (error) { this.restoreSnapshot(r, before); throw error; }
       const state = this.publicState(r); this.broadcast({ kind: "state", state }); return state;
+    });
+  }
+  // Xiangqi-owned draw protocol. A proposal never pauses server clocks and
+  // the opponent must accept. Bloom Bot accepts its own test games immediately.
+  async offerDraw(gameId: string, uid: string, requestId: string) {
+    return this.enqueue(gameId, async () => {
+      const r = this.requireRuntime(gameId); this.assertPlayer(r,uid); await this.settleExpired(r);this.assertActive(r);
+      if (r.game.drawOfferByUid && r.game.drawOfferByUid !== uid)
+        throw new XiangqiDomainError("XIANGQI_INVALID_REQUEST", "Opponent already offered a draw");
+      if (r.game.drawOfferByUid === uid || r.game.recentRequestIds.includes(requestId)) return this.publicState(r);
+      const before = this.snapshot(r);
+      try {
+        const bot = r.game.testBotUid && r.game.testBotUid !== uid;
+        r.game.drawOfferByUid = bot ? null : uid;
+        r.game.revision++;r.game.updatedAt=iso();this.remember(r.game,requestId);
+        if(bot) {
+          this.consumeClock(r,r.game.board.turn);
+          r.game.result="draw";r.game.finishReason="draw";r.game.status="finished";
+          r.game.board={...r.game.board,gameOver:true,winner:null};
+          this.finishRuntime(r);await this.persistence.finish(r.game);
+        } else await this.persistence.save(r.game);
+      } catch(error) {this.restoreSnapshot(r,before);throw error;}
+      const state=this.publicState(r);this.broadcast({kind:"state",state});return state;
+    });
+  }
+  async acceptDraw(gameId:string,uid:string,requestId:string) {
+    return this.enqueue(gameId,async()=>{
+      const r=this.requireRuntime(gameId);this.assertPlayer(r,uid);await this.settleExpired(r);this.assertActive(r);
+      if(!r.game.drawOfferByUid||r.game.drawOfferByUid===uid) throw new XiangqiDomainError("XIANGQI_INVALID_REQUEST", "No opponent draw proposal");
+      const before=this.snapshot(r);
+      try {
+        this.consumeClock(r,r.game.board.turn);
+        r.game.result="draw";r.game.finishReason="draw";r.game.status="finished";r.game.drawOfferByUid=null;
+        r.game.board={...r.game.board,gameOver:true,winner:null};
+        r.game.revision++;r.game.updatedAt=iso();this.remember(r.game,requestId);
+        this.finishRuntime(r);await this.persistence.finish(r.game);
+      }catch(error){this.restoreSnapshot(r,before);throw error;}
+      const state=this.publicState(r);this.broadcast({kind:"state",state});return state;
+    });
+  }
+  async declineDraw(gameId:string,uid:string,requestId:string) {
+    return this.enqueue(gameId,async()=>{
+      const r=this.requireRuntime(gameId);this.assertPlayer(r,uid);await this.settleExpired(r);this.assertActive(r);
+      if(!r.game.drawOfferByUid) return this.publicState(r);
+      // Inviter may withdraw; receiver may decline. Neither is a move.
+      const before=this.snapshot(r);
+      try {
+        r.game.drawOfferByUid=null;r.game.revision++;r.game.updatedAt=iso();this.remember(r.game,requestId);
+        await this.persistence.save(r.game);
+      }catch(error){this.restoreSnapshot(r,before);throw error;}
+      const state=this.publicState(r);this.broadcast({kind:"state",state});return state;
     });
   }
   private scheduleEviction(r: Runtime) {
