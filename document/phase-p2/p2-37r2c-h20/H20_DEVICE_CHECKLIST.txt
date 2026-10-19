@@ -1,0 +1,10 @@
+FAMILY BLOOM H20 — APK REAL DEVICE CHECKLIST
+[ ] Build APK v1.3.20 / versionCode 143030 / native P2.37R2C-H20-native-1.
+[ ] Chess Mini shows glyph + last source/destination, below it active clock. No static game name.
+[ ] The clock increments once per second without tab/Full rerender or lag.
+[ ] Full -> Mini -> Full returns to same active game, no board remount.
+[ ] Repeat as Black, verify last piece glyph and remaining clock.
+[ ] Queued premove survives harmless snapshot + pause/resume + invalid delta/resync.
+[ ] A legal premove executes once after opponent's verified move; a real illegal premove is rejected.
+[ ] Xiangqi Mini shows independent last piece glyph + clock when Xiangqi state exists.
+[ ] No regressions: Bot, sound, result sheets, offline move, kill/recover.

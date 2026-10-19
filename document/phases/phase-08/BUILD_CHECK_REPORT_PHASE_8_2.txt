@@ -1,0 +1,46 @@
+FAMILY BLOOM — PHASE 8.2 GRAPH PERFORMANCE OPTIMIZATION
+Build date: 2026-09-25
+Status: IMPLEMENTED / AWAITING DEVICE RE-MEASUREMENT
+
+CHANGED RUNTIME FILES
+- src/components/familyGraph/familyGraphLiveAdapter.ts
+- src/components/familyGraph/familyGraphConnectorRouting.ts
+- src/components/familyGraph/FamilyGraphPrototype.tsx
+- src/constants/appConfiguration.ts
+
+TEST-HARNESS UPDATE
+- src/app/(internal)/performance-graph-test.tsx
+
+DATA / DEPLOY IMPACT
+- Firestore schema: unchanged
+- migration: none
+- firestore.rules: unchanged
+- Cloud Functions: unchanged / Blaze not required
+- native dependencies: none
+- performance test files: kept intentionally
+
+VALIDATION
+- Phase 2 static check: PASS — 141 TS/TSX
+- Dense layout/spatial routing: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Graph Query/Kinship/Focus: PASS
+- Phase 6.3 synthetic benchmark 50/100/300/500: PASS
+- Phase 7 multi-family contract: PASS
+- Startup gate: PASS
+- Tab warmup: PASS
+- Phase 6.5 contract: PASS
+
+NOT CERTIFIED HERE
+- Android/Hermes first-paint result after optimization
+- GPU/FPS/native memory
+- production release performance
+
+KNOWN TODO (deferred consolidated polish pass)
+1. offline Moment retry
+2. button/card spacing
+3. immediate family-switch splash feedback
+
+PERSISTENT TEST / TODO POLICY
+- automated performance-test workflow intentionally kept in source
+- synthetic graph data remains RAM-only / no Firebase writes
+- deferred polish TODO recorded in document/phases/phase-08/PHASE_8_TODO_POLISH_RELIABILITY.md

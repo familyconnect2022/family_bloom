@@ -1,0 +1,18 @@
+PASS scripts/test-phase-p2_12_5-remote-apk-share-build.js :: P2.12.5 Remote Standalone APK + Share Build: 31/31 PASS
+PASS scripts/test-phase-p2_12_7-expo-asset-peer-contract.js :: P2.12.7 Expo Asset Peer Contract: 14/14 PASS
+PASS scripts/test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js :: H14R1 BAT audit tests: 11/11 PASS
+PASS scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js :: H15 authority + Release developer access: PASS (27/27)
+PASS scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js :: H16 Chess native smoothness source gate: PASS (16/16)
+PASS scripts/test-phase-p2_37r2c_h17-chess-optimistic-authority.js :: H17 client-first server-authoritative Chess: PASS (23/23)
+PASS scripts/test-phase-p2_37r2c_h18-chess-network-resync.js :: H18 Chess network recovery: PASS (25/25)
+PASS scripts/test-phase-p2_37r2c_h19-recovery-offline.js :: H19 recovery/offline: PASS (15/15)
+PASS scripts/test-phase-p2_37r2c_h20-mini-premove-isolation.js :: H20 Mini/premove isolation: PASS (16/16)
+PASS scripts/test-phase-p2_37r2c_h21-invite-away-authority.cjs :: H21 server/away/invite policy: 32/32 PASS
+PASS scripts/test-phase-p2_37r2c_h21r1-audio-packaging.cjs :: H21R1 audio packaging: 6/6 PASS
+PASS scripts/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs :: H21R3 Android Resource/AAPT2 Gate: 9/9 PASS
+PASS scripts/test-phase-p2_37r2c_h21r4-ready-build-share.cjs :: H21R4 Ready + Build & Share Gate: 12/12 PASS
+PASS scripts/setup/check-build-entrypoints.js :: Build entrypoint audit: PASS (32 shipped BAT files, 0 unmanaged)
+PASS scripts/setup/check-android-resource-names.js :: PASS Android AAPT2 resource filename gate: 24 files valid; 11/11 MP3 + res/raw/keep.xml protected
+PASS scripts/setup/check-source-import-integrity.js :: PASS all literal source imports resolve and all external packages are declared
+PASS scripts/test-phase-p2_37r2c-binary-identity-lock.js :: P2.37R2C-H6 binary identity lock: PASS (14/14)
+TOTAL 17/17 PASS

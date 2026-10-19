@@ -1,0 +1,37 @@
+FAMILY BLOOM — H12 — KIỂM THỬ THIẾT BỊ ANDROID THẬT
+
+A. Trước test
+[ ] Copy-over H12 + chạy Family_Bloom_CLEAN_APPLY_FULL.bat và xác nhận PASS.
+[ ] Build APK H12, kiểm tra versionCode 143022 và native identity P2.37R2C-H12-native-1.
+[ ] Triển khai server H12 lên Render (H12 đổi luật Bot và ngẫu nhiên màu); xác nhận server đáp ứng /health.
+[ ] Giữ app data, không gỡ ứng dụng cũ khi chưa cần thiết; bảo đảm cùng signing key.
+
+B. Khởi động và giao diện
+[ ] Cold start app + đăng nhập. Mời Bloom Bot khi Render cold; Full mở tức thì.
+[ ] Modal 'Đang chuẩn bị' che trạng thái quân/board load, không lóe quân nhỏ.
+[ ] Sau sẵn sàng server/audio, modal tự hết, 64 ô và 32 quân hiển thị đúng kích thước.
+[ ] Không còn viền vàng; Full không hiện modal 'Đến lượt bạn đi'.
+[ ] Thu Full xuống Mini, chuyển 5 tab; check mức khựng, FPS và lượng render so với H11.
+
+C. Giao thức lượt/Bot — ưu tiên tái hiện 6453.mp4
+[ ] Chơi >=10 ván Bot. Trong các ván khác nhau, người chơi cả trắng lẫn đen.
+[ ] Khi đồng hồ của người chơi chạy mà người chơi không đi quân, Bot KHÔNG được phát nước đi mới.
+[ ] Giữ 1 premove (không di chuyển quân trên FEN trước khi được server xác nhận), cho Bot đi nước bất ngờ; xác minh highlight và board không lệch.
+[ ] Mất mạng khi pending/move; reconnect/resync phải đưa bàn cờ về FEN và revision server.
+[ ] Nếu phát hiện di chuyển trái lượt, thu log server '[chess:test-bot] authoritative action' và client 'CHESS_AUTHORITATIVE_MOVE' cùng gameId/revision.
+
+D. SFX, phong cấp, kết quả
+[ ] Premove thường, premove ăn quân, premove chiếu, premove phong cấp nghe đúng âm.
+[ ] Premove tốt trên hàng 7/2 cho chọn trước Hậu/Xe/Tượng/Mã; hiện ảnh PNG chính xác cả hai màu.
+[ ] Xin thua -> xác nhận -> kết quả Thua, đóng sau ACK.
+[ ] Cầu hòa -> đối thủ chấp nhận/từ chối; đóng modal đúng, đồng hồ đúng.
+[ ] Chiếu hết -> modal Thắng có pháo hoa, Hòa có lời trân trọng, Thua có thông điệp nhẹ nhàng.
+[ ] Kết thúc khi đang Mini -> trở về Full hiện kết quả, nhấn nút về sảnh mới dọn.
+
+E. Lời mời
+[ ] Bot mời người chơi khi ở màn test: modal Bloom có logo cờ vua, Đồng ý/Từ chối.
+[ ] Từ chối/timeout: server dọn invite, không tạo game treo; đối phương nhận thông điệp nhẹ và 1 nút về sảnh.
+[ ] Chấp nhận: Full + modal chuẩn bị, server starts khi READY cả hai bên.
+[ ] Test invite khi ở tab khác: ghi nhận liệu custom modal có hiện hay vẫn là overlay chung (chưa được xác nhận ở H12).
+
+NẾU BUILD FAIL: gửi dòng lỗi đầu tiên trong output Gradle/TypeScript + log, không chỉ dòng 'BUILD FAILED'.

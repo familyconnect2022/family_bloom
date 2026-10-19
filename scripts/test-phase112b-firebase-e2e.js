@@ -1,0 +1,14 @@
+const fs = require('fs');
+const must = (p, s) => { const x = fs.readFileSync(p, 'utf8'); if (!x.includes(s)) throw new Error(`${p}: missing ${s}`); };
+must('src/services/performance/e2eTestHarnessService.ts', 'getOrCreateTestFamily');
+must('src/services/performance/e2eTestHarnessService.ts', 'E2E_REAL_FAMILY_BLOCKED');
+must('src/services/performance/e2eTestHarnessService.ts', 'eventService.create');
+must('src/services/performance/e2eTestHarnessService.ts', 'momentsService.create');
+must('src/services/performance/e2eTestHarnessService.ts', 'momentsService.delete');
+must('src/services/performance/e2eTestHarnessService.ts', 'eventService.delete');
+must('src/app/(internal)/performance-test.tsx', 'Chạy Firebase E2E');
+must('src/app/(internal)/performance-test.tsx', 'Sao chép E2E report');
+console.log('PASS Phase 11.2B Firebase E2E sender + cleanup safety contracts');
+must('src/services/performance/e2eTestHarnessService.ts', 'Activity Center projection');
+must('src/services/performance/e2eTestHarnessService.ts', 'Deep-link contract');
+must('src/services/performance/e2eTestHarnessService.ts', 'Receiver badge / delivered notification');

@@ -1,0 +1,54 @@
+Family Bloom — Phase 14L Dynamic Vietnamese Catalog + Audius Audit
+Date: 2026-09-30
+Base: Phase 14K VIETNAMESE_MUSIC_SIGNAL_MATCH FULL
+
+GOAL
+- Keep the Vietnamese-only automatic playlist contract from 14K.
+- Let the discovery catalog grow append-only when public NCT/Zing signals change.
+- Do not reset old catalog history every 3 days.
+- Audit Audius once (and incrementally afterward) so provider-missing tracks are removed from the playable pool before family playlists use them.
+- Keep NCT/Zing as metadata/editorial signals only; never stream their audio.
+
+RUNTIME CHANGES
+1. Catalog V2 merges the 88-track Phase 14K base with generated verified additions and current source-rank signals.
+2. Initial 14L bootstrap adds 6 conservative Vietnamese-title candidates and keeps 3 ambiguous-title candidates in a non-playable review queue.
+3. Playlist cycle variant is bumped from vi1 to vi2 so a 14K cycle cannot silently reuse old catalog semantics.
+4. Runtime matcher first uses exact pre-audited Audius provider IDs when available.
+5. Seeds marked unmatched or ambiguous by a current-version Audius audit are skipped immediately; runtime does not waste repeated searches on them.
+6. If no audit has been run yet, the 14K runtime matcher remains as a safe fallback.
+
+CATALOG REFRESH
+- `npm run music:refresh-catalog`
+- Reads stable public NCT homepage/top100 surfaces and optional Zing editorial routes.
+- Uses ETag / Last-Modified when available plus SHA-256 source fingerprint.
+- If a source did not change, catalog files are not reset.
+- Existing tracks only receive refreshed source/rank signals.
+- New high-confidence Vietnamese-title candidates append to the verified additions file.
+- Ambiguous/English-looking titles go to the review queue and CANNOT enter automatic playlists.
+
+AUDIUS AUDIT
+- `npm run music:audit-audius -- --full` for the first complete pass.
+- Later `npm run music:audit-audius` checks only seeds that do not already have a reusable classification.
+- Max concurrency = 4.
+- Classifies MATCHED / AMBIGUOUS / UNMATCHED using strong title + artist evidence and alternate-version rejection.
+- Writes exact provider track IDs into `src/data/music/vietnameseMusicPlayableV2.generated.ts`.
+- Source candidates are retained even if Audius has no match, so a future provider can reuse the historical Vietnamese catalog.
+
+AUTOMATION WITHOUT BLAZE
+- `.github/workflows/refresh-vietnamese-music-catalog.yml` runs every 6 hours and can also be started manually.
+- It refreshes source signals, incrementally audits Audius, validates Phase 14L, and commits only when generated metadata changed.
+- This does not require Firebase scheduled Functions or Blaze.
+- The workflow starts working after this latest source is pushed to the GitHub repo and Actions has write permission.
+
+WINDOWS HELPER
+- `Family_Bloom_Refresh_Vietnamese_Music.bat`
+- Runs source refresh -> Audius audit -> Phase 14L static validation.
+
+IMPORTANT LANGUAGE SAFETY
+- Automatic playlist is still Vietnamese-language only.
+- Phase 14L does NOT assume every item in "Nhạc Việt" is sung in Vietnamese.
+- Only explicit existing verified seeds or conservatively verified Vietnamese-title additions enter the playable catalog.
+- Ambiguous candidates remain review-only.
+
+BUILD-ENVIRONMENT LIMITATION
+The packaging environment cannot reach the Audius API, so the initial pre-audit manifest is intentionally empty. No fake coverage number is claimed. Run the one-time audit on an Internet-connected PC or let the included GitHub Action run after the code is pushed.

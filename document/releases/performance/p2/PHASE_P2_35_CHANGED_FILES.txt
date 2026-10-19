@@ -1,0 +1,34 @@
+Family Bloom P2.35 — changed files versus P2.34
+
+MODIFIED
+- src/app/(internal)/board-game-bot-test.tsx
+  - separate Chess/Xiangqi authoritative recovery helpers
+  - preflight recovery before outgoing Bloom Bot challenge
+  - *_ALREADY_IN_GAME -> recovery instead of terminal throw
+  - 1.65 s post-bot-accept authoritative reconciliation fallback
+  - lightweight screen-entry reconciliation for already-connected transports
+  - manual Recover buttons reuse the same path
+
+- package.json
+  - registers phaseP2_35:check
+
+- scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+  - P2.35 labeling
+  - runs phaseP2_35:check
+  - Windows CRLF retained
+
+ADDED
+- scripts/test-phase-p2_35-already-in-game-recovery-surface.js
+- document/releases/performance/p2/PHASE_P2_35_ALREADY_IN_GAME_RECOVERY_SURFACE_BUILD_REPORT.md
+- document/releases/performance/p2/PHASE_P2_35_CHANGED_FILES.txt
+
+UNCHANGED IMPORTANT FOUNDATION
+- server/ (byte-identical to P2.34)
+- src/services/chess/chessSocketService.ts
+- src/services/xiangqi/xiangqiSocketService.ts
+- src/services/games/boardGamePresentationBridge.ts
+- src/services/games/boardGamePresentationStore.ts
+- src/components/games/BoardGamePresentationRoot.tsx
+- scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat
+- scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat
+- eas.json

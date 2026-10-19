@@ -1,0 +1,31 @@
+PHASE 14V4I — CHESS RENDER ISOLATION / PERF VALIDATION
+Date: 2026-10-04
+Base: Phase 14V4H FULL
+
+Intentional performance changes
+- Hint OFF by default.
+- Piece Motion/Scale OFF by default.
+- Battle FX remains OFF by default.
+- Highlight renderer: 256 per-square Animated.View/styles -> max 6 active marker views.
+- Interaction renderer: 64 Pressables -> 1 RNGH tap surface.
+- Clock React ticks: 2 clocks x 4Hz -> only active clock x 1Hz.
+- Chess diagnostic panel removed from game hot path; diagnostics fan-out disabled.
+- Server-authoritative Socket.IO/revision/chess.js validation unchanged.
+
+Validation
+- Phase 14V4I static gate: 8/8 PASS.
+- Changed TS/TSX files: TypeScript transpile/syntax PASS.
+- Phase 14U authoritative chess core: 54/54 PASS.
+- Phase 14V4G premove/lift/hint historical gate: 26/26 PASS (features preserved when toggled on).
+- Historical V4/V4F/V4H checks that require 64 highlight slots, visible diagnostics, or Hint default ON are expected to fail because V4I deliberately removes/changes those assertions. These are superseded by the V4I gate and are not runtime regressions.
+
+Device gate
+Test in this order:
+A. Motion OFF + Hint OFF + FX OFF (default) — baseline.
+B. Motion ON + Hint OFF + FX OFF.
+C. Motion OFF + Hint ON + FX OFF.
+D. Motion OFF + Hint OFF + FX ON.
+
+Interpretation
+- If A is fast: renderer/worklet/diagnostic load was the main cause. Reintroduce features selectively.
+- If A still lags: next suspects are Piece Gesture/Image architecture and ScrollView/board gesture contention; proceed to a Skia renderer experiment.

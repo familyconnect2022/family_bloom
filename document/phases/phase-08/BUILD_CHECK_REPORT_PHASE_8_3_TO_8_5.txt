@@ -1,0 +1,74 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 8.3 → 8.5
+Date: 2026-09-25
+Base: Phase 8.2 Graph Performance Optimized
+Status: IMPLEMENTED / AWAITING USER DEVICE TEST
+
+STATIC / REGRESSION
+- TS/TSX transpile: PASS — 144 files
+- Relative imports: PASS — 530 imports, 0 missing
+- Phase 8.3–8.5 reliability contracts: PASS
+- Phase 7 multi-family contract: PASS
+- Startup gate: PASS
+- Tab warmup: PASS
+- Phase 6.5 Person integration contract: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Query/Kinship/Focus: PASS
+- DG-11 batch relationships: PASS
+- Dense layout/spatial routing: PASS
+- Phase 6.3 synthetic 50/100/300/500: PASS
+- functions/index.js syntax: PASS
+- functions/familyGraphCore.js syntax: PASS
+
+LATEST SYNTHETIC RUN (container only; not device certification)
+- viewport/progressive: order ~7.72ms; 120 viewport queries ~9.84ms; avg 82.7; max 143
+- dense layout: adapter ~3.36ms; spatial routing ~43.29ms
+- 500 Person adapter benchmark ~2.77ms
+- Phase 7 10k membership ordering ~7.76ms
+
+PHASE 8.2 REGRESSION GUARD
+- `buildLayoutRelationshipIndex` preserved
+- bounded pre-layout mount preserved
+- Full Tree 64/48 progressive budget preserved
+- viewport-working-set connector routing preserved
+- Performance Test Lab preserved
+
+PHASE 8.3
+- resumable Moment media checkpoints
+- retry skips already successful uploads
+- Cloudinary-success / Firestore-metadata-failure checkpoint repair
+- worker queue waits for all bounded workers before next family task
+- opt-in multi-family Moment publish (max 3 extra houses)
+- independent per-family Moment/media lifecycle
+- family-scoped Person ids copied only to source family
+
+PHASE 8.4
+- family transition paints before network membership verification
+- FamilySwitcher native modal closes immediately after transition starts
+- shared spacing tokens applied to reported UI problem areas
+
+PHASE 8.5
+- Planner post-warm listeners focus-gated
+- Planner/Moments moderation listeners focus-gated
+- local event listeners exposed in Performance Lab counters
+- concurrent graph Person-directory reads deduped in-flight only
+
+CROSS-FAMILY GRAPH
+- read-only identity bridge foundation added
+- same linkedUid only
+- no structural cross-family edge persistence
+- default OFF
+- combined-tree UI deferred until Phase 8.2 device perf acceptance + decision gate
+
+DEPLOY IMPACT
+- Firestore schema: unchanged
+- migration: none
+- firestore.rules: unchanged
+- Cloud Functions/Blaze: not required
+- native/npm dependency: none
+- USE_CLOUD_FUNCTIONS=false
+
+NOT CERTIFIED HERE
+- Android runtime retry after real network loss
+- family-switch first visual frame improvement on device
+- 8.2 100/300/500 device performance improvement
+- native memory/GPU/FPS

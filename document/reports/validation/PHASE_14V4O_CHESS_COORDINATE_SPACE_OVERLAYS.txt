@@ -1,0 +1,22 @@
+PHASE 14V4O — CHESS COORDINATE SPACE OVERLAYS
+Date: 2026-10-04
+
+RESULT
+- V4O coordinate-space gate: 16/16 PASS
+- Phase 14U chess core: 54/54 PASS
+- V4J sparse hint / visual commit regression: 17/17 PASS
+- V4K material swing FX regression: 11/11 PASS
+- TS/TSX syntax parse: 256/256 PASS
+
+CHANGES
+1. Promotion chooser is no longer a root/native Modal. It is an absolute child of boardStage, so it is centered on the chessboard coordinate space.
+2. Result toast stays at screen root but uses explicit physical app-window width/height from useWindowDimensions(), anchored at top:0,left:0. It no longer derives its center from a potentially long parent/content height.
+3. Added explicit loss presentation: “Bạn thua”. Draw remains “Ván hòa”; win remains “Bạn thắng!”.
+4. Preserved image-only promotion choices using the same board WebP pieces.
+5. Preserved V4M fixed Bloom Bot test delay of 120 ms.
+6. Preserved advantage row above long captured-piece strip, Sparse Hint, lean Motion, Material Swing FX, and server-authoritative move/promotion validation.
+
+DEVICE GATE
+- Verify result toast remains at visible phone-screen center at multiple ScrollView offsets.
+- Verify promotion selector remains centered on board at multiple ScrollView offsets.
+- Verify loss result says “Bạn thua”.

@@ -1,0 +1,29 @@
+PHASE 14V4P — CHESS BOARD-LOCAL OVERLAY HOST VALIDATION
+Date: 2026-10-04
+Base: Phase 14V4O full code
+
+ROOT CAUSE FIXED
+- Promotion and preparing/rematch overlays now share one exact board coordinate host.
+- `boardSurface` has explicit `boardSize x boardSize` dimensions.
+- `boardOverlayHost` absolute-fills only `boardSurface`.
+- `getChessBoardSize(windowWidth)` is the single shared board-size source used by ChessBoard and ChessGameScreen.
+- Result win/loss/draw toast remains viewport-level and was intentionally not moved.
+
+STATIC GATES
+PASS — Phase 14V4P overlay-coordinate checks: 17/17
+PASS — Phase 14U chess core/server-authoritative checks: 54/54
+PASS — Phase 14V4J sparse-hint/motion regression: 17/17
+PASS — Phase 14V4K material-swing FX regression: 11/11
+PASS — TS/TSX syntax transpile: 256/256
+
+PRESERVED
+- Promotion Q/R/B/N uses actual piece image assets.
+- Bloom Bot fixed 120 ms test delay remains in server code.
+- Hint/Motion/FX production behavior remains enabled.
+- Material advantage row remains above captured pieces.
+- Win/loss/draw result toast remains centered by physical viewport dimensions.
+
+DEVICE VALIDATION STILL REQUIRED
+- Trigger promotion at different scroll offsets and confirm the chooser center tracks the chessboard center.
+- Tap Chơi ván mới from a finished game and confirm preparing overlay center tracks the chessboard center.
+- Confirm result toast still centers on the visible phone viewport.

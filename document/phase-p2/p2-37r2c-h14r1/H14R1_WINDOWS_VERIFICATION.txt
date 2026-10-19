@@ -1,0 +1,12 @@
+H14R1 WINDOWS BUILD CHECKLIST
+============================
+1. Use FULL ZIP H14R1 source, not a mix of H13 root BAT and H14 scripts.
+2. Source root > node scripts\setup\check-build-entrypoints.js
+3. Expect: PASS (32 shipped BAT files, N unmanaged). WARN lists old copied BATs.
+4. Source root > node scripts\test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js
+5. Expect: 11/11 PASS.
+6. Run root Family_Bloom_CLEAN_APPLY_FULL.bat.
+7. Run root Family_Bloom_BUILD_APK_TO_SHARE.bat.
+8. Only if real Gradle succeeded, verify output: C:\FamilyBloomShare\apk\Family_Bloom_LATEST.apk
+9. If any BUILD FAIL, capture the FIRST error or send audit full log. Never disable the guard.
+10. Native logic/Chess game is unchanged from H14; H14 server must still be deployed for side-authority checks.

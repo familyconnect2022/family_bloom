@@ -1,0 +1,32 @@
+FAMILY BLOOM — PHASE 14R.1 DUAL ANDROID VARIANTS VALIDATION
+Date: 2026-10-01
+Base: Phase 14R Time Capsule Functional V1 clean-root FULL
+
+IMPLEMENTED
+- RELEASE: Family Bloom / com.familybloom.android / familybloom
+- DEV: Family Bloom Dev / com.familybloom.android.dev / familybloom-dev
+- RELEASE launcher/adaptive/themed/notification assets derived from user-supplied Family Bloom family/house icon.
+- DEV launcher/adaptive/themed/notification assets use Expo-style black/white branding.
+- app.config.js selects variant through APP_VARIANT.
+- RELEASE keeps google-services.json.
+- DEV expects config/firebase/google-services.dev.json.
+- Added DEV SHA helper, DEV native build+Metro helper, Metro-only helper.
+- RELEASE BAT forces production variant and clean prebuild.
+- Android build helpers use npm install fallback and no unsupported Expo --output flag.
+
+STATIC VALIDATION
+PASS Phase 14R.1 dual Android variants: 38/38
+PASS Phase 14R Time Capsule: 49/49
+PASS Phase 14Q V2.2 reveal themes: 34/34
+PASS Phase 14N: 13/13
+PASS Phase 14J: 18/18; TS/TSX syntax 210/210
+PASS Phase 14C: 44/44
+PASS Phase 13 release readiness: 11/11
+PASS production dynamic config resolves to com.familybloom.android
+PASS development dynamic config resolves to com.familybloom.android.dev
+PASS no BAT files at project root
+
+NOT CLAIMED
+- No Android native DEV build was run in this packaging environment because the user's Firebase DEV app config does not exist yet.
+- No real-device side-by-side install is claimed until the user registers com.familybloom.android.dev in Firebase and performs the device steps.
+- package-lock may still be older than package.json in this archived source; Android helpers intentionally run npm install when dependencies are missing/incomplete, which repairs it on an online Windows machine.

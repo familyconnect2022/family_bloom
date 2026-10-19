@@ -1,0 +1,40 @@
+Family Bloom Phase 14G validation — 2026-09-30
+
+Base:
+Family_Bloom_Phase_14F_GRAPH_FOCUS_ISOLATION_DEFAULT3_FULL_2026-09-29
+
+Static / contract validation executed in packaging environment:
+- Phase14G True Focus Overlay: 30 PASS / 0 FAIL
+- Phase14F Graph Focus Isolation regression: 21 PASS / 0 FAIL
+- Phase14E Music Card + Graph Focus regression: 24 PASS / 0 FAIL
+- Phase14D Nha Minh Music+TODO regression: 47 PASS / 0 FAIL
+- Phase14C Functional V1 regression: 44 PASS / 0 FAIL
+- TypeScript/TSX syntax transpile: 198/198 PASS
+- Family Graph Query + Kinship + Focus Subgraph tests: PASS
+- Family Graph dense layout: PASS
+- Phase 6.4 viewport/progressive tests: PASS
+- Phase 8.2C tab-regression contracts: PASS
+- Phase 8.3–8.5 reliability contracts: PASS
+
+Phase14G contract highlights checked:
+- default Canvas mode = 3 generations;
+- linked user is centered/highlighted only, not selected as branch focus;
+- Canvas connectors never enter focus/dim mode;
+- branch open never mutates Canvas viewMode, anchor, selection, pan, zoom or scale;
+- Focus target frame = 80% x 80% of Canvas viewport;
+- open source point derives from tapped Person node under current Canvas camera;
+- open/close duration normalized by source-to-target distance;
+- Focus mounts before branch layout and shows preparing copy while visual is unavailable;
+- Focus branch derives from full in-memory family snapshot, independent from background 3/5/all mode;
+- all three background mode buttons disabled while Focus is active;
+- background touch is disabled while Focus is active;
+- Android 12+ render-layer blur uses React Native filter blur, with translucent shield fallback;
+- Focus owns its own pan/pinch;
+- A -> B navigation reuses one overlay;
+- top-right hero wrench removed; lower Add action preserved;
+- no new native dependency, Firestore schema/rules/index or Functions change.
+
+Not claimed by this report:
+- physical Android device visual/FPS PASS;
+- exact perceived animation timing on every screen density/aspect ratio;
+- iOS visual blur parity (Android is the current device target; fallback shield remains cross-platform).

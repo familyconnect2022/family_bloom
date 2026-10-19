@@ -1,0 +1,26 @@
+Family Bloom Phase 14D — Nhà Mình Music + TODO
+Date: 2026-09-29
+
+EXACT BASE:
+Family_Bloom_Phase_14C_1_MEMBER_PICKER_INDEX_UX_HOTFIX_FULL_2026-09-29
+User upload filename: full code 14C.zip
+Base upload SHA-256: a1e58799fcf4881859807f1deff27995eba040feaa471238aafa78e998e4bf93
+
+This patch is ONLY for that base checkpoint.
+
+Scope:
+- Bloom native-confirmation replacement / keyboard-safe validation / Bloom note callouts.
+- Kitchen daily shared-default invariant; personalization only after explicit filters.
+- Inline Nhà Mình music hero + Search + Playlist/Yêu thích/Bài hát Nhà Mình.
+- 3-day shared auto playlist: 25/20/15/20/20 mix, 20 tracks, anti-repeat.
+- Audius provider + cached/debounced search + Firestore favorites/family songs/cycle snapshot.
+- Persistent lightweight expo-video audio player using existing dependency.
+
+Deploy/build:
+- Firestore Rules: REQUIRED for new music writes.
+- Firestore indexes: no new Phase14D composite indexes.
+- Functions: no new deploy.
+- Native rebuild/dev-client rebuild: REQUIRED to apply expo-video background playback config.
+
+Static validation: Phase14D 47/47 PASS; Phase14C regression 44/44 PASS; TS/TSX syntax 198/198 PASS.
+No claim of native/device/runtime PASS.

@@ -1,0 +1,78 @@
+import type { HomeKitchenRecipe } from "../types";
+
+export const HOME_KITCHEN_RECIPES: HomeKitchenRecipe[] = [
+  {
+    id: "canh-chua-ca",
+    title: "Canh chua cá",
+    subtitle: "Vị chua dịu, nhiều rau và rất hợp một bữa cơm quây quần.",
+    minutes: 35,
+    servings: 4,
+    difficulty: "Vừa",
+    icon: "fish-outline",
+    ingredients: ["500g cá", "2 quả cà chua", "1/4 quả thơm", "Đậu bắp", "Bạc hà", "Giá", "Me chua", "Rau thơm và gia vị"],
+    steps: [
+      "Sơ chế cá, rau và ngâm me với nước ấm rồi lọc lấy nước chua.",
+      "Phi thơm hành, đảo cà chua và thơm khoảng 2 phút.",
+      "Thêm nước, nước me rồi đun sôi. Cho cá vào nấu vừa chín.",
+      "Cho đậu bắp, bạc hà, giá vào sau cùng. Nêm lại vị chua-ngọt-mặn vừa nhà mình.",
+      "Tắt bếp, thêm rau thơm và dùng nóng cùng cơm.",
+    ],
+    tip: "Nếu nấu cùng trẻ nhỏ, để bé phụ nhặt rau hoặc xếp nguyên liệu theo màu sẽ vui hơn.",
+  },
+  {
+    id: "thit-kho-trung",
+    title: "Thịt kho trứng",
+    subtitle: "Một nồi thịt mềm thơm, dễ chia phần và hợp những ngày cả nhà đông đủ.",
+    minutes: 70,
+    servings: 5,
+    difficulty: "Vừa",
+    icon: "flame-outline",
+    ingredients: ["600g thịt ba rọi", "6 quả trứng", "Nước dừa", "Hành tím", "Nước mắm", "Đường", "Tiêu"],
+    steps: [
+      "Cắt thịt miếng vừa ăn, ướp nước mắm, hành, tiêu và một ít đường.",
+      "Luộc trứng, bóc vỏ. Thắng nhẹ đường để tạo màu nếu thích.",
+      "Cho thịt vào đảo săn, thêm nước dừa và nước vừa ngập mặt thịt.",
+      "Kho lửa nhỏ 45–55 phút, cho trứng vào giữa quá trình để thấm vị.",
+      "Nêm lại, để nước kho trong và thịt mềm rồi tắt bếp.",
+    ],
+    tip: "Nấu nhiều hơn một chút để hôm sau cả nhà có bữa nhanh mà vẫn ngon.",
+  },
+  {
+    id: "goi-cuon",
+    title: "Gỏi cuốn cả nhà",
+    subtitle: "Mỗi người tự cuốn một chiếc — vừa ăn vừa trò chuyện rất hợp cuối tuần.",
+    minutes: 30,
+    servings: 4,
+    difficulty: "Dễ",
+    icon: "leaf-outline",
+    ingredients: ["Bánh tráng", "Bún", "Tôm hoặc thịt", "Xà lách", "Rau thơm", "Dưa leo", "Nước chấm"],
+    steps: [
+      "Luộc tôm/thịt và chuẩn bị bún, rau, dưa leo thành từng đĩa nhỏ.",
+      "Pha nước chấm theo khẩu vị gia đình.",
+      "Làm ẩm bánh tráng, xếp rau, bún và phần đạm vào giữa.",
+      "Gập hai mép và cuộn chặt vừa tay.",
+      "Đặt tất cả nguyên liệu giữa bàn để ai cũng tự làm phần của mình.",
+    ],
+    tip: "Thử một vòng 'cuốn cho người bên cạnh' để biến bữa ăn thành một trò nhỏ.",
+  },
+  {
+    id: "trung-chien-rau",
+    title: "Trứng chiên rau củ",
+    subtitle: "Nhanh, dễ và phù hợp khi muốn cùng trẻ nhỏ vào bếp.",
+    minutes: 15,
+    servings: 3,
+    difficulty: "Dễ",
+    icon: "restaurant-outline",
+    ingredients: ["4 quả trứng", "Cà rốt", "Hành lá", "Bắp hạt", "Nước mắm", "Tiêu"],
+    steps: [
+      "Cắt rau củ thật nhỏ.",
+      "Đập trứng vào tô, thêm rau củ và nêm nhẹ.",
+      "Làm nóng chảo với ít dầu rồi đổ hỗn hợp trứng vào.",
+      "Chiên lửa vừa đến khi vàng hai mặt.",
+      "Cắt miếng nhỏ và ăn khi còn ấm.",
+    ],
+    tip: "Cho bé tự chọn 2–3 loại rau màu sắc khác nhau để món ăn có 'chữ ký' riêng của bé.",
+  },
+];
+
+export const getHomeKitchenRecipe = (id: string) => HOME_KITCHEN_RECIPES.find((item) => item.id === id) ?? null;

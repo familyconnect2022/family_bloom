@@ -1,0 +1,241 @@
+{
+  "release": "H17",
+  "basedOn": "H16 FULL CODE",
+  "appVersion": "1.3.17",
+  "versionCode": 143027,
+  "nativeIdentity": "P2.37R2C-H17-native-1",
+  "sourceSha256": "9ec7203e7c843a24da8ef9b3ce87ad9c4a00c0c49c0690857b32281a44e3402e",
+  "changes": [
+    {
+      "path": "app.json",
+      "sha256": "89809407e1db58609bfbe1f544b3fb157e652b83a3b889067ca64862b160caa0",
+      "change": "modified"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessNativeBoardView.kt",
+      "sha256": "2db343b9aca7d90a28fdccd21724c2b7d4adde2543076d2d2ecd81683871d6e2",
+      "change": "modified"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt",
+      "sha256": "1d528804d00c7383d2982ea19ec8695f354904010e9d9f08ee7cbd194ddf2adc",
+      "change": "modified"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/NativeChessBoardState.kt",
+      "sha256": "37a5db2685d244b0642a76e626c97a87ad6f775c0c63bd946640cc12ea87b557",
+      "change": "modified"
+    },
+    {
+      "path": "modules/family-bloom-overlay/index.ts",
+      "sha256": "de505efe4707847258f059c79b66217392f85e0a054825438ea4ad60d2084fdc",
+      "change": "modified"
+    },
+    {
+      "path": "modules/family-bloom-overlay/package.json",
+      "sha256": "60d380ec31492b2388c3f5d80beb1b592333b1db083a03fe5220c3b9384e71e8",
+      "change": "modified"
+    },
+    {
+      "path": "package.json",
+      "sha256": "024930742ebd3c10d90a6e0e17b7cae23fa327b235fd4dd483473af2a82346ea",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_Android_Build_APK_ONLY.bat",
+      "sha256": "d27e24f04cb1ac8d1c8168dd48c3cce5950cb2cea5e21e964410e51a65367520",
+      "change": "added"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
+      "sha256": "bfa2b8b1d559ffd619a9645b4604754793273cb6c8f7f60e822bdcd1828eef27",
+      "change": "added"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_Android_Test_App_CLEAN_RELEASE.bat",
+      "sha256": "c5614bb2dd1ddcf7e32466f807e39347e001e1231585fd6e6a7f3968adb875a5",
+      "change": "added"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
+      "sha256": "309e3818ed28264ae3cfa0b1cc57ede5797ec1f7c7ae8c160601690d43c14ded",
+      "change": "added"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
+      "sha256": "fe710fade5b96cd32d23a83307d91c80c631d148f79bebed34ec7a644093ef97",
+      "change": "added"
+    },
+    {
+      "path": "scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat",
+      "sha256": "b8eec854c31a7416695bd2a8c32ba0b1836068a28f55d650d05e15ec0f1060af",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
+      "sha256": "75aeeed4b218c8df438d9c341792c9c4c76f0893e830e889aff19763a4becdbe",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/android/install/Family_Bloom_INSTALL_R2C_APK.bat",
+      "sha256": "7fd47d77b6953eac3b00e9aa1ea306a6eb219d8f0de2ccae9c4a19a6538977cb",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat",
+      "sha256": "960d656610b30890c3150722d845f3c4b7e10526c8b2edebac4233e25a08343d",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/android/verify/Family_Bloom_VERIFY_DEVICE_BINARY_R2C.bat",
+      "sha256": "1586f2ed5df77c391260deb13afbf253d46751d369215c6874da5c8300d3881d",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/benchmark-familyGraphPhase63.js",
+      "sha256": "4868e69c96549d92ec06541831804e8fd8303252a4c921e54497774758d57f25",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/phase2-static-check.js",
+      "sha256": "c12fc9359e8f09c49b723138e4f52d6d8abd4b552d059c9e5b229969d2ff62b4",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/reset-project.js",
+      "sha256": "549922a40b983de34068b36d7879fcc8aed6c60b8d45b3c7b866267e766ae9fe",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
+      "sha256": "e7e6d64862bca9e1c6cd02fba78a30c5a4f42b616b729b827fc8eaa2c7145d21",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/setup/check-p2_37r2c-native-package.js",
+      "sha256": "8615859ded2b253e14e3040e4d89046b162f6c7c08fcac7ea40088e4f46c7f95",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-familyGraphBatchRelationships.js",
+      "sha256": "2c2e9533cc33696d8de0dcf0010b8802e67a15ae0b1270640dc3b1db4240d0b5",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-familyGraphPhase64.js",
+      "sha256": "7f7c54f8ed439b79fd535073fa2c0a57413911ebfca98346da4ed7e4fa052424",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-familyGraphQueryEngine.js",
+      "sha256": "d4ba269d1db47f6f152904370ca494168e390931ea4432f1b2df16aae330fc48",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2-full-copy-integrity.js",
+      "sha256": "a78d5c36fd3ab54319f7e56ae2365e2179cf074ea130f781855933f3565d4743",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c-binary-identity-lock.js",
+      "sha256": "81eada215f1acc95d27e86574122cd016f4234ad61f83d1191f0a4524f99c491",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h10-chess-native-latency.js",
+      "sha256": "c17fde23dd4195969d86fd33111a0721dfdc2c090e45297113162a308ed7173a",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js",
+      "sha256": "a347697f676532fb36f239fb225229647398de669f818e65d2c02609ce53d2d7",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h12-chess-safe-turns-results.js",
+      "sha256": "ed8fe5021de73feb2aa3b9b910768e9d98fd2aa87037a1a614c48da3b6dc5089",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h13-bloom-results-return.js",
+      "sha256": "91ea1dda48f591da9c3de0cd30aa17e0d884d63799f55bab0a34f2a7bb487b97",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h14-chess-color-mini-edge.js",
+      "sha256": "00b11c67a42bde17be52ea3771396ce2b83d6ccbbb7cdec136a099aadadae24d",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js",
+      "sha256": "e1f0dd12c848733aad2da3f142346418939d8ec0be6e0672637032c2c48d2b8e",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js",
+      "sha256": "11fd6dabefe9eac9141edeac4057fb762ae8f3d7dfee871e69f2a5b5acdbdee0",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h17-chess-optimistic-authority.js",
+      "sha256": "1a2289ab682732257231cab433a0008bdac1acdc16273a94355f6d0a6189a446",
+      "change": "added"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js",
+      "sha256": "1cb8b3db7696d3343fe9126fa8d279df66976afb5209686e77b4b557c725c1a0",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h5-root-slot-offscreen-idle.js",
+      "sha256": "13f2a7617e33e49fdf56af6a54d9f57736bab2feb5ba5d90013de7e6d7e63790",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
+      "sha256": "8ec8554b93b323bb7f6a26b886099a01978d5628f0c46be476977683e615e46b",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
+      "sha256": "e03ba29619c0a3a5126664650f69c88cc9df38fa8b6b1ca0ed9143c0fa1f3480",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
+      "sha256": "ea064886684170a45621055bf676b338c13f92512fc1ebc85007c57cce0c199f",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
+      "sha256": "993e6d9ba83f6c0e1ae1422d319b6791876c2af4728d6b1ba5fb329cd14e6697",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
+      "sha256": "8de7493dfd5f0a148fd3c9e417842b1f4ef4e907d980da1ace41afadac2a2fac",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-proposalCloud-emulator.js",
+      "sha256": "2c4b7bc6121abb993aef1ccca02c033bd549d808fcd4ab3397dcd896e6e936bf",
+      "change": "modified"
+    },
+    {
+      "path": "scripts/test-proposals-emulator.js",
+      "sha256": "f6f2629224da2729aabb3be74940f64e32c7e4284de7aa4cd9483bcf724f68c3",
+      "change": "modified"
+    },
+    {
+      "path": "src/app/(internal)/board-game-bot-test.tsx",
+      "sha256": "14f8f89224e15094232dff2609c27823929a565803c81fa85171b635c2134f46",
+      "change": "modified"
+    },
+    {
+      "path": "src/services/games/nativeChessGameplayController.ts",
+      "sha256": "30f9c1d66bb3bbac224edfe39e3fc0189c3c73f31077016aa639bc45a0ae6750",
+      "change": "modified"
+    }
+  ],
+  "unchangedServerAndXiangqi": true
+}

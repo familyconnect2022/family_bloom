@@ -1,0 +1,21 @@
+Family Bloom P2.17 validation summary — 2026-10-13
+
+P2.17 Presentation Rail: 48 PASS / 0 FAIL
+Xiangqi Server Authority: 45 PASS / 0 FAIL
+Runtime Lifecycle / Zero-Leak: 53 PASS / 0 FAIL
+P2.4 Frozen Tab Surfaces: 41 PASS / 0 FAIL
+P2.8 Stabilization/Audio/Tabbar: 32 PASS / 0 FAIL
+P2.11.3 Focus Cancel-first: 31 PASS / 0 FAIL
+Chess lifecycle/mini/premove: 44 PASS / 0 FAIL
+Xiangqi playable: 29 PASS / 0 FAIL
+Native persistent tabbar: 33 PASS / 0 FAIL
+Current Chess aggregate: 21 / 21 phase groups PASS
+Board audio integrity: PASS (11 supplied MP3 files)
+Build entrypoint audit: PASS (22 BAT files, Windows CRLF)
+
+Debug/Release source-node gate sweep:
+- All executable source/static node gates reached before timeout passed.
+- Remaining tail gates were run separately and passed, including chess:current-check and Phase 14Q..14T0A.
+- doctor:native-check was not run in the source-only container because node_modules is intentionally absent; Android BAT runs dependency install/check before this gate.
+
+No physical Android device execution was performed in this container. Device verification should use the included copy-over cleanup BAT and normal Android build/run flow.

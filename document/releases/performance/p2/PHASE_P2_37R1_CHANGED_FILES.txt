@@ -1,0 +1,24 @@
+Family Bloom P2.37R1 — changed/new files vs P2.37
+
+.easignore
+scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat
+scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat
+app.json
+package.json
+modules/family-bloom-overlay/package.json
+modules/family-bloom-overlay/index.ts
+modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt
+src/services/games/boardGameNativeOverlay.ts
+src/components/games/BoardGamePresentationRoot.android.tsx
+src/app/(internal)/board-game-bot-test.tsx
+scripts/setup/check-p2_37r1-native-package.js
+scripts/setup/check-p2_37r1-apk-native-proof.js
+scripts/setup/check-p2_37r1-eas-apk-proof.js
+scripts/test-phase-p2_37r1-native-binary-proof.js
+scripts/test-phase-p2_37-authenticated-native-sibling-presentation.js
+scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
+scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
+scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
+document/releases/performance/p2/PHASE_P2_37R1_NATIVE_BINARY_PROOF_BUILD_REPORT.md
+document/releases/performance/p2/PHASE_P2_37R1_CHANGED_FILES.txt

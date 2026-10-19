@@ -1,0 +1,28 @@
+Family Bloom — Chess Phase 14V.3E
+Date: 2026-10-03
+
+SCOPE
+- Move piece-theme selection out of always-visible Lobby UI into pre-game challenge/accept flows.
+- Lock selected theme for the complete active game.
+- Allow theme choice again only for a new game/rematch.
+- Preserve per-user independence: opponents may see different piece themes.
+
+DATA IMPACT
+- Additive user-profile field: chessPieceTheme = classic | duotone | bloom.
+- No family member duplication of this preference.
+- No Chess server schema, Firestore Rules, indexes, or Functions changes.
+
+ASSETS
+- 36 transparent PNG piece assets: 3 themes x 12 color/piece combinations.
+
+STATIC CHECKS
+- Phase 14V.3E: 14/14 PASS.
+- Phase 14V.3C Smooth Motion: 16/16 PASS.
+- Phase 14V.2D History/Bot Capability: 13/13 PASS.
+- Phase 14V.1 Global Presence/Battle FX: 33/33 PASS.
+- Changed TS/TSX transpile syntax diagnostics: 0.
+- Generated .js in src/server/src: 0.
+
+RUNTIME STILL REQUIRED
+- Verify all 3 themes on real Android board at normal screen size.
+- Verify outgoing challenge picker, incoming picker, Bloom Bot picker, locked active-game theme, and rematch picker.

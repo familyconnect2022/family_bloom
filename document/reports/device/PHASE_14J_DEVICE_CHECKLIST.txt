@@ -1,0 +1,16 @@
+FAMILY BLOOM PHASE 14J — DEVICE CHECKLIST
+
+[ ] Open Focus from a node near center: card grows smoothly from the node to 80% full screen.
+[ ] Open Focus from nodes near each edge/corner: perceived speed stays similar; no sudden jump.
+[ ] During open, card uses opacity + scale and does not pop directly to 100%.
+[ ] Close with “Trở về”: card remains visible while shrinking all the way back to the source node, then disappears only at scale 0.
+[ ] Android hardware Back performs the same close animation.
+[ ] Tap outside Focus performs the same close animation.
+[ ] There is no X button; only “Trở về” closes Focus from the header.
+[ ] Focus background uses only a light ordinary dim overlay, no blur.
+[ ] Focus View is about 80% x 80% of the full screen, larger than the old 80%-of-canvas version.
+[ ] Locate button recenters the currently focused Person; pinch/pan still work.
+[ ] A -> B inside Focus reuses one overlay and updates to B without opening another Modal.
+[ ] While Focus is open, 3/5/Toàn phả hệ and the background canvas cannot be interacted with.
+[ ] Closing Focus reveals the original Canvas at exactly the same mode/pan/zoom/node/line state.
+[ ] If branch layout is delayed, “Đang chuẩn bị nhánh của …” is visible inside the Focus card.

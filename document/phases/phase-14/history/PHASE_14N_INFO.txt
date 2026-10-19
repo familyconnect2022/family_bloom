@@ -1,0 +1,21 @@
+Family Bloom Phase 14N — Focus First + Catalog First
+Date: 2026-09-30
+Base: Phase 14M FULL
+
+Focus View
+- Native Modal shell is now committed first and uses Modal.onShow as the hard boundary.
+- Loading Focus View becomes visible before full branch extraction/layout starts.
+- Branch work begins only after the portal is shown; Reanimated shell animation stays on the UI thread.
+- A -> B inside Focus also shows the loading shell before branch work.
+- Background canvas state/camera remains frozen and untouched.
+
+Music
+- Automatic 20-song Vietnamese playlist is composed immediately from Bloom's verified Vietnamese catalog.
+- Playlist rendering no longer waits for Audius/provider matching.
+- Previous 3 cycles are derived deterministically for anti-repeat without blocking Firestore reads.
+- Cycle persistence is best-effort and never gates the visible playlist.
+- Playback provider resolution happens only when a user taps a song.
+- If the current provider does not carry a song, the list remains visible and Bloom shows friendly copy.
+- Existing search/provider abstraction is preserved for later provider replacement.
+
+No new native dependency, Firestore rule, index, or Cloud Function change.

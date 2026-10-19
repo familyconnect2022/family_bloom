@@ -1,0 +1,15 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "family-bloom-test": {
+      "distribution": "internal",
+      "channel": "family-bloom-test",
+      "android": {
+        "buildType": "apk"
+      },
+      "developmentClient": true
+    }
+  }
+}

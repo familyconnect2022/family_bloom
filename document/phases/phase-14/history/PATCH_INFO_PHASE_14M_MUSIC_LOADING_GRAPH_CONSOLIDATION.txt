@@ -1,0 +1,16 @@
+Family Bloom Phase 14M - Music Loading + Graph Consolidation Hotfix
+Base: Phase 14L FULL
+
+Music
+- 6.5s timeout per Audius request.
+- 16s maximum playlist build window; cancellation propagates into searches.
+- Same-family/same-cycle builds are deduplicated locally.
+- Friendly retry state; no endless spinner.
+- User-facing music copy no longer exposes NCT/Zing/Audius/catalog/pool implementation details.
+- Still fail closed: no arbitrary foreign track is inserted.
+
+Family Graph
+- PATCH explicitly includes the latest FamilyGraphPrototype from the 14J+ line.
+- Native Focus Modal, target frame 80% of full screen, Locate action, and one visible exit only.
+- Focus header has “Trở về” and no X button.
+- Explicit inclusion repairs devices/projects where music-only patches were applied over an older graph baseline.

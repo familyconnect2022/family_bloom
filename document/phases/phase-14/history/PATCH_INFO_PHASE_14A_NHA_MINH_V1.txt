@@ -1,0 +1,20 @@
+FAMILY BLOOM · PHASE 14A · NHÀ MÌNH V1
+Base: Phase 13 Android RC1
+
+IMPORTANT
+- Phase 13 RC1 remains the release checkpoint; Phase 14A is a feature branch built from a copy.
+- Deploy updated Firestore Rules before testing Thì thầm / Cùng quyết định:
+  firebase deploy --only firestore:rules
+- No Blaze / Cloud Functions required.
+- No new npm package and no app.json change.
+
+V1
+1) Rename bottom tab Góc chơi -> Nhà Mình.
+2) Bloom Supper living-space hero.
+3) Thì thầm: real family-scoped Firestore notes.
+4) Cùng quyết định: real family-scoped polls / per-member vote.
+5) Bếp Nhà Mình: offline-friendly recipes + step-by-step detail.
+6) Placeholders/reserved modules: games, music, family fund, family notices.
+7) Internal Performance Lab remains hidden unless PERFORMANCE_TEST_BUILD + test account.
+
+Static contract: 13/13 PASS.

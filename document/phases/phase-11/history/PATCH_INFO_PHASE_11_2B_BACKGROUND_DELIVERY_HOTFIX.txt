@@ -1,0 +1,10 @@
+Family Bloom Phase 11.2B - Background Delivery Probe Hotfix
+Date: 2026-09-27
+
+Fixes:
+- Delivery probe now uses the same DATE trigger path as real Event reminders.
+- Probe is not considered successful until Android's scheduled notification queue contains the request.
+- UI now shows an explicit success Alert: "Đã hẹn với Android ✓".
+- User must keep app foreground until that confirmation appears; only then background/lock the device.
+- Success text includes Event ID and expected delivery time.
+- This removes ambiguity from the previous test where the app could be backgrounded while Firebase/Event creation and scheduling were still in progress.

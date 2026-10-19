@@ -1,0 +1,18 @@
+Family Bloom Phase 11.2B FINAL AUTOMATION checkpoint — 2026-09-27
+
+Built on Phase 11.2A PASS + Phase 11.2B Automated Regression/Firebase E2E Sender.
+
+Included:
+- DEV-only Firebase E2E Test Family safety guard (no Auth/Rules bypass).
+- Real Event write/read through Firestore.
+- Real Moment write/read through Firestore.
+- Activity Center projection verification for both Event and Moment.
+- Deep-link route contract verification for Event and Moment.
+- Cleanup of test Event, Moment and generated Activity documents.
+- Existing automated performance regression evaluator and Phase 8.2 graph synthetic tests remain intact.
+- Receiver badge / delivered notification is intentionally reported SKIP until a second dedicated test account/device exists. It is never reported as a false PASS.
+
+Production safety:
+- Harness is gated by __DEV__.
+- Family name must start with "Bloom E2E" or execution is blocked.
+- No backdoor, no admin credential, no Firestore Security Rules bypass.

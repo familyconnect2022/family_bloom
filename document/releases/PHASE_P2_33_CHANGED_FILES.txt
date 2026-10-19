@@ -1,0 +1,50 @@
+Family Bloom P2.33 — changed files vs P2.32
+
+ADDED:
+  + assets/xiangqi/black_advisor.png
+  + assets/xiangqi/black_cannon.png
+  + assets/xiangqi/black_chariot.png
+  + assets/xiangqi/black_elephant.png
+  + assets/xiangqi/black_general.png
+  + assets/xiangqi/black_horse.png
+  + assets/xiangqi/black_soldier.png
+  + assets/xiangqi/red_advisor.png
+  + assets/xiangqi/red_cannon.png
+  + assets/xiangqi/red_chariot.png
+  + assets/xiangqi/red_elephant.png
+  + assets/xiangqi/red_general.png
+  + assets/xiangqi/red_horse.png
+  + assets/xiangqi/red_soldier.png
+  + document/releases/PHASE_P2_33_PERSISTENT_FULL_MINI_PRESENTATION_FOUNDATION.md
+  + scripts/test-phase-p2_33-persistent-full-mini-presentation.js
+  + src/components/games/BoardGamePresentationRoot.tsx
+  + src/services/games/boardGamePresentationStore.ts
+
+REMOVED:
+  - assets/xiangqi/black_advisor.webp
+  - assets/xiangqi/black_cannon.webp
+  - assets/xiangqi/black_chariot.webp
+  - assets/xiangqi/black_elephant.webp
+  - assets/xiangqi/black_general.webp
+  - assets/xiangqi/black_horse.webp
+  - assets/xiangqi/black_soldier.webp
+  - assets/xiangqi/red_advisor.webp
+  - assets/xiangqi/red_cannon.webp
+  - assets/xiangqi/red_chariot.webp
+  - assets/xiangqi/red_elephant.webp
+  - assets/xiangqi/red_general.webp
+  - assets/xiangqi/red_horse.webp
+  - assets/xiangqi/red_soldier.webp
+
+CHANGED:
+  * scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+  * assets/xiangqi/asset-manifest.json
+  * package.json
+  * scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
+  * scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
+  * scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
+  * scripts/setup/cleanup-overlay-routes.js
+  * scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
+  * scripts/test-phase-p2_32-client-game-reset-foundation.js
+  * src/app/(home)/(games)/home-games.tsx
+  * src/app/_layout.tsx

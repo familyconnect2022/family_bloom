@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-30T07:48:00.000Z",
+  "bootstrap": true,
+  "verifiedBase": 88,
+  "verifiedDynamicAdditions": 6,
+  "reviewQueue": 3,
+  "note": "Phase 14L bootstrap. Run npm run music:refresh-catalog on an Internet-connected machine or GitHub Actions to replace this with a live source-diff report."
+}

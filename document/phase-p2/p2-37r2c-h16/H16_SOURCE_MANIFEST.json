@@ -1,0 +1,41 @@
+{
+  "source": "H15 FULL CODE",
+  "release": "H16",
+  "appVersion": "1.3.16",
+  "androidVersionCode": 143026,
+  "nativeIdentity": "P2.37R2C-H16-native-1",
+  "files": {
+    "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessNativeBoardView.kt": {
+      "sizeBytes": 49585,
+      "sha256": "3005e7f1b572a8d63267464a5c1cee0ccc34250d2c74539a0d98cb3381fd2b4c"
+    },
+    "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessPieceMotionPlanner.kt": {
+      "sizeBytes": 2931,
+      "sha256": "0a2f33ade0c2a52871c14d0df3be7b9ec60b7fed8509efda8438ee533c7acb8d"
+    },
+    "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt": {
+      "sizeBytes": 41207,
+      "sha256": "68f551569d10ff3015c00774843adc92b1af9f51c4c1b9179e7f401f364d2ae4"
+    },
+    "src/services/games/nativeChessGameplayController.ts": {
+      "sizeBytes": 24248,
+      "sha256": "1fcd45372fc1d85dafe6106d95c7013d33915b5ff08d1f05a4c48d85441c4d1d"
+    },
+    "app.json": {
+      "sizeBytes": 2459,
+      "sha256": "a86ebb119f5fff1049c6cac04b5c946bd1e39c7031e279b3b53e24b25cefd21f"
+    },
+    "package.json": {
+      "sizeBytes": 12113,
+      "sha256": "beaa76733c1d28ee3bc051d22465d86059bee92d48e18ef0f463afb2b787a9d9"
+    },
+    "modules/family-bloom-overlay/package.json": {
+      "sizeBytes": 212,
+      "sha256": "ecf8dfab7ee88ed3aaef317ed3ca608475956225bcae2e99d96b866b52d0fe83"
+    },
+    "scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js": {
+      "sizeBytes": 4471,
+      "sha256": "c70b5456f7f78281b9be69feace91347105927004a14df300c6db0b90f8557ac"
+    }
+  }
+}

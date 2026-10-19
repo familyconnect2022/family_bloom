@@ -1,0 +1,30 @@
+Family Bloom P2.37R2C — changed files from P2.37R2
+
+app.json
+eas.json
+package.json
+scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat
+scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat
+scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat
+scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat
+src/app/(internal)/board-game-bot-test.tsx
+src/services/games/boardGameNativeOverlay.ts
+modules/family-bloom-overlay/package.json
+modules/family-bloom-overlay/android/build.gradle
+modules/family-bloom-overlay/android/src/main/AndroidManifest.xml
+modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt
+scripts/test-phase-p2_37-authenticated-native-sibling-presentation.js
+scripts/test-phase-p2_37r2-full-copy-integrity.js
+scripts/test-phase-p2_37r2c-binary-identity-lock.js
+scripts/setup/check-p2_37r2c-native-package.js
+scripts/setup/check-p2_37r2c-apk-native-proof.js
+scripts/setup/check-p2_37r2c-eas-apk-proof.js
+scripts/setup/check-build-entrypoints.js
+scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
+scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
+scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
+document/releases/performance/p2/PHASE_P2_37R2C_BINARY_IDENTITY_LOCK_BUILD_REPORT.md
+document/releases/performance/p2/PHASE_P2_37R2C_CHANGED_FILES.txt
+
+Server tree intentionally unchanged.

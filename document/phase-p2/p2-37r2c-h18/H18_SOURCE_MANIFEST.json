@@ -1,0 +1,73 @@
+{
+  "release": "H18",
+  "basedOn": "H17 FULL CODE",
+  "appVersion": "1.3.18",
+  "androidVersionCode": 143028,
+  "nativeIdentity": "P2.37R2C-H18-native-1",
+  "files": [
+    {
+      "path": "app.json",
+      "sha256": "b041742e308d8d24ae82228710521b68e3d8734963831fec728c4f761b9259b3"
+    },
+    {
+      "path": "package.json",
+      "sha256": "21c27b48d36f574aec9eb322c2903510db3b017cc9cb96c2f29e8e30ef47285a"
+    },
+    {
+      "path": "modules/family-bloom-overlay/package.json",
+      "sha256": "6b84852eabf164fa4d58fca0b80b309735189996f80eb1b3dab7bb561d61d57d"
+    },
+    {
+      "path": "modules/family-bloom-overlay/index.ts",
+      "sha256": "13caef5867c2c68eee5eec349981d9e872becadc97bf502adf50ace0f1dea9ca"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt",
+      "sha256": "b1b999f3c6293e0844d9e8dd6e32b71cd991f4a3e7a0558c284bb051281f05f8"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessNativeBoardView.kt",
+      "sha256": "c8c94d0b83a07d6f24cbc46cd352553869c228936b59900a9cbe3908b65b9d5b"
+    },
+    {
+      "path": "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/NativeChessBoardState.kt",
+      "sha256": "199a363b0593642dcdd8556048abd794d51f82dcf9e287ff9cdcd544587b5767"
+    },
+    {
+      "path": "src/services/games/nativeChessGameplayController.ts",
+      "sha256": "86e04a6559f952aaf10e62d3d6ffd7cd2e1e4b135b2ffdc166a495ba85d02058"
+    },
+    {
+      "path": "src/services/games/boardGamePresentationBridge.ts",
+      "sha256": "78bca346663e5a4db86c3aeb52e0f86ee1d786ce8aac134d230833b59587e065"
+    },
+    {
+      "path": "src/types/chess.ts",
+      "sha256": "45ae631fb5b12a1d7d41b005dd6b020dcbe2c6e95826aa9bd456d59415a2dbdd"
+    },
+    {
+      "path": "server/src/chess/chessGameManager.ts",
+      "sha256": "a4628c758de2f505aeaf25b1fd3936e15977e32207da8908a047f361dc249b16"
+    },
+    {
+      "path": "server/src/chess/chessTypes.ts",
+      "sha256": "c3712162296870bdf97dce67443665fc671b5473836658d42a62099de0b59274"
+    },
+    {
+      "path": "scripts/test-phase-p2_37r2c_h18-chess-network-resync.js",
+      "sha256": "6d7e5b45adc73049f1d39904b7227cee1896724eba5c39a9f61e2d3cbecbb8f0"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
+      "sha256": "0e2fb60b1710c8269c8985afe02fb9f279bbda857ee153dc34ef6b7bf934a2c7"
+    },
+    {
+      "path": "scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat",
+      "sha256": "0aa64133038329dd3fd9f85c43eef0f986666bed4f33e291a52c14ba2b887ded"
+    },
+    {
+      "path": "document/phase-p2/p2-37r2c-h18/H18_IMPLEMENTATION_REPORT.md",
+      "sha256": "1c3dd2415917f2a442aa33c3368b8e933f446d6d462503f1dd8733447ab737e2"
+    }
+  ]
+}

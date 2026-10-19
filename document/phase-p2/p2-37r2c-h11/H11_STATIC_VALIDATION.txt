@@ -1,0 +1,564 @@
+===== RUN scripts/setup/check-ts-syntax-transpile.js =====
+PASS TS/TSX syntax transpile: 292/292 files
+
+
+EXIT_CODE=0
+===== RUN scripts/setup/check-source-import-integrity.js =====
+SOURCE_IMPORT_INTEGRITY files=292 imports=1719
+PASS all literal source imports resolve and all external packages are declared
+
+
+EXIT_CODE=0
+===== RUN scripts/maintenance/check-project-structure.js =====
+PASS 01 - Root has zero Markdown/TXT documentation files
+PASS 02 - All Markdown/TXT documentation lives under document/
+PASS 03 - Canonical document/ directory exists
+PASS 04 - Accidental plural documents/ directory is absent
+PASS 05 - Legacy top-level reports/ directory is absent
+PASS 06 - Root contains only the five intentional BAT launchers
+PASS 07 - Android BAT helpers are grouped by purpose under scripts/android
+PASS 08 - Web BAT helpers live under scripts/windows/web
+PASS 09 - Firebase deploy helpers have one canonical home under scripts/firebase
+PASS 10 - Release reports are grouped under document/releases
+PASS 11 - Verification logs are grouped under document/verification
+PASS 12 - Device and validation reports are grouped under document/reports
+PASS 13 - Music machine state is outside document/
+PASS 14 - iOS Firebase plist is retired from Android/Web source
+PASS 15 - app.json has no active iOS block
+PASS 16 - package.json has no iOS run script
+PASS 17 - Android identity remains canonical
+PASS 18 - Structure gate is registered
+PASS 19 - P2.9 gate is registered
+
+Family Bloom project structure gate: 19/19 PASS
+
+
+EXIT_CODE=0
+===== RUN scripts/setup/check-build-entrypoints.js =====
+PASS Family_Bloom_BUILD_APK_TO_SHARE.bat uses Windows CRLF
+PASS Family_Bloom_CLEAN_APPLY_FULL.bat uses Windows CRLF
+PASS Family_Bloom_EAS_BUILD_TEST.bat uses Windows CRLF
+PASS Family_Bloom_EAS_UPDATE_TEST.bat uses Windows CRLF
+PASS Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat uses Windows CRLF
+PASS scripts/android/build/Family_Bloom_Android_Build_APK_ONLY.bat uses Windows CRLF
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat uses Windows CRLF
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_5-remote-apk-share-build.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_6-build-dependency-contract.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_7-expo-asset-peer-contract.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_32-client-game-reset-foundation.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_34-session-presentation-bridge-stacked-views.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_35-already-in-game-recovery-surface.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h10-chess-native-latency.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-p2_37r2-local-install.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-p2_37r2c-native-package.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_CLEAN_RELEASE.bat uses Windows CRLF
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat uses Windows CRLF
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_12_4:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_12_6:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_12_7:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_12_8:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_32:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_34:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_35:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H6:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H7:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H8:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H9A:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H9B:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H10:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script phaseP2_37R2C_H11:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script structure:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script doctor:native-check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script release:check
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script typecheck
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references npm script typecheck
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/cleanup-overlay-routes.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-board-audio-apk.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-h10-native-kotlin-when.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-p2_37r2-local-install.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-effective-expo-config.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-board-audio-integrity.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-build-entrypoints.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-generated-android-package.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-p2_37r2c-native-package.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-p2_37r2c-apk-native-proof.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-board-audio-apk.js
+PASS scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat uses Windows CRLF
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat uses Windows CRLF
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_12_4:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_12_6:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_12_7:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_12_8:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_32:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_34:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_35:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_37R2C:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_37R2C_H6:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_37R2C_H7:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_37R2C_H8:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script phaseP2_37R2C_H9A:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script structure:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script doctor:native-check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script release:check
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script typecheck
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references npm script typecheck
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/cleanup-overlay-routes.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-p2_37r2-local-install.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-effective-expo-config.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-board-audio-integrity.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-build-entrypoints.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-generated-android-package.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-p2_37r2c-native-package.js
+PASS scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat references node script scripts/setup/check-p2_37r2c-apk-native-proof.js
+PASS scripts/android/dev/Family_Bloom_Android_Metro_Only.bat uses Windows CRLF
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat uses Windows CRLF
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-p2_37r2-local-install.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-ts-syntax-transpile.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h10-chess-native-latency.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-board-audio-apk.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-p2_37r2c-native-package.js
+PASS scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat uses Windows CRLF
+PASS scripts/android/install/Family_Bloom_Android_Install_Last_APK.bat uses Windows CRLF
+PASS scripts/android/install/Family_Bloom_INSTALL_R2C_APK.bat uses Windows CRLF
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat uses Windows CRLF
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_32:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_34:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_35:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H6:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H7:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H8:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H9A:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H9B:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script phaseP2_37R2C_H10:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script structure:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script typecheck
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script typecheck
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script typecheck
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references npm script release:check
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/cleanup-overlay-routes.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/maintenance/normalize-project-root.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-p2_37r2-local-install.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_5-remote-apk-share-build.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_6-build-dependency-contract.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_7-expo-asset-peer-contract.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-ts-syntax-transpile.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-p2_37r2c-native-package.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-effective-expo-config.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-board-audio-integrity.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-board-audio-apk.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-build-entrypoints.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w1-web-companion.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w2-web-parity.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat uses Windows CRLF
+PASS scripts/android/verify/Family_Bloom_VERIFY_DEVICE_BINARY_R2C.bat uses Windows CRLF
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat uses Windows CRLF
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-source-import-integrity.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-ts-syntax-transpile.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/maintenance/check-project-structure.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-build-entrypoints.js
+PASS scripts/firebase/Family_Bloom_Deploy_Firestore_Indexes.bat uses Windows CRLF
+PASS scripts/firebase/Family_Bloom_Deploy_Firestore_Rules.bat uses Windows CRLF
+PASS scripts/firebase/Family_Bloom_Deploy_Functions.bat uses Windows CRLF
+PASS scripts/firebase/Family_Bloom_Deploy_Phase_14C_Firestore.bat uses Windows CRLF
+PASS scripts/maintenance/Family_Bloom_Cleanup_Expo_Route_JS.bat uses Windows CRLF
+PASS scripts/maintenance/Family_Bloom_Cleanup_Expo_Route_JS.bat references npm script typecheck
+PASS scripts/maintenance/Family_Bloom_Cleanup_Generated_JS.bat uses Windows CRLF
+PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat uses Windows CRLF
+PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/music/refresh-vietnamese-music-catalog.js
+PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/music/audit-audius-vietnamese-catalog.js
+PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/test-phase14l-dynamic-vietnamese-catalog.js
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat uses Windows CRLF
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references npm script phaseP2_12_8:check
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references npm script doctor:native-check
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references node script scripts/setup/check-effective-expo-config.js
+PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references node script scripts/setup/check-board-audio-integrity.js
+PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat uses Windows CRLF
+PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat references node script scripts/setup/check-expo-dependencies.js
+PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat references node script scripts/setup/check-package-lock.js
+PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat references node script scripts/setup/check-effective-expo-config.js
+PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat references node script scripts/setup/check-board-audio-integrity.js
+PASS scripts/setup/settup.bat uses Windows CRLF
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat uses Windows CRLF
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/check-web-firebase-version.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w1-web-companion.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w2-web-parity.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat uses Windows CRLF
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/check-web-firebase-version.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w1-web-companion.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w2-web-parity.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS audited 32 BAT files
+
+Build entrypoint audit: PASS (32 BAT files)
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2-full-copy-integrity.js =====
+
+Family Bloom P2.37R2C-H6 — FULL copy/import/native integrity gate
+
+PASS all game presentation/socket/native critical files are present in FULL source
+PASS PRE_COPY never deletes current game presentation/socket directories
+PASS PRE_COPY destructive target list contains no path that exists in the P2.37R2C-H6 FULL tree
+PASS post-overlay cleaner explicitly preserves both low-level socket transports
+PASS post-overlay cleaner does not retire current game presentation directory
+PASS Android controller renders no native wrapper; service imports local native module API directly
+PASS Metro no longer requires bare family-bloom-overlay import for runtime source
+PASS source import integrity scanner is packaged
+PASS full TS/TSX syntax transpile scanner is packaged
+PASS CLEAN APPLY and EAS build both hard-gate the source import graph
+PASS CLEAN APPLY and EAS build hard-gate TS/TSX syntax after dependency install
+PASS FULL source import graph resolves before packaging
+PASS native package remains a direct file: dependency for Expo/Gradle autolinking
+PASS Expo nativeModulesDir explicitly points at ./modules
+PASS local native module identity/version = family-bloom-overlay@1.3.10
+PASS Expo module config registers FamilyBloomOverlayModule
+PASS Kotlin source contains R2C native identity + decor rail
+PASS native decor rail contains independent visible proof
+PASS Activity-global PopupWindow remains retired
+PASS local JS wrapper is module/event only; no native ViewManager enters React tree
+PASS Developer test UI identifies exact H8 JS/native proof step
+PASS Android binary version bumped to 1.3.11 / 143021
+PASS package exposes current FULL integrity gate
+PASS EAS post-install uses R2C native autolink proof
+PASS EAS success hook uses R2C APK/Dex proof
+PASS EAS helper forces clean waited build + R2C native package proof
+PASS CLEAN APPLY installs local module when needed and runs H6 decor-rail gate
+PASS .easignore explicitly uploads local native modules
+PASS EAS CLI locks appVersionSource=local so app.json versionCode reaches APK
+PASS APK DEX proof requires native module + decor rail + exact R2C identity
+PASS native preflight proves Gradle project graph with Windows-space-safe cmd invocation
+
+P2.37R2C-H6 FULL copy/import/native integrity gate: PASS (31/31)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c-binary-identity-lock.js =====
+
+Family Bloom P2.37R2C-H6 — binary identity lock
+
+PASS app binary identity is unique R2C = 1.3.11 / 143021
+PASS EAS uses local app version source
+PASS family-bloom-test is developmentClient=true for Metro workflow
+PASS local native package = 1.3.10
+PASS local Android library includes explicit manifest
+PASS Kotlin native identity is P2.37R2C-H11-native-1
+PASS test UI hard-codes expected binary/native identity
+PASS test UI exposes PASS/FAIL binary gate
+PASS Surface probes are disabled until correct binary is installed
+PASS EAS post-install runs R2C native package proof
+PASS EAS on-success inspects built R2C APK
+PASS APK proof requires manifest versionCode + exact native identity
+PASS EAS helper always waits and always clears cache
+PASS EAS helper prints exact expected artifact identity
+
+P2.37R2C-H6 binary identity lock: PASS (14/14)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js =====
+
+Family Bloom P2.37R2C-H6 — Activity decor rail / React-Yoga isolation
+
+PASS root navigation restored to Stack
+PASS auth navigation restored to Stack
+PASS Android presentation controller renders no React/native View
+PASS controller drives module API only
+PASS module index exports functions/events only; no ViewManager
+PASS native rail attaches directly to Activity.window.decorView
+PASS native source has no ExpoView in React/Yoga tree
+PASS current native identity/module version = H9B-native-1 / 1.3.10
+PASS IDLE/background keeps persistent rail hidden without destroying containers
+PASS active presentation can rise only inside Android decor hierarchy
+PASS EAS helper prints exact current app/native identity
+PASS project root retains requested EAS, cleanup and APK build shortcuts
+
+P2.37R2C-H6 decor rail gate: PASS (12/12)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js =====
+
+Family Bloom P2.37R2C-H7 — tab navigator flex layout regression guard
+
+PASS tab workspace owns a normal flex layout root
+PASS tab navigator host restored to flex:1
+PASS tab navigator host is not absoluteFillObject
+PASS tab navigator host remains non-collapsable for stable native measurement
+PASS tab scene keeps reserved persistent-tabbar inset
+PASS each tab scene owns flex:1
+PASS root Stack remains on normal flex navigation plane
+PASS React presentation controller still renders no overlay View
+PASS H6 decor rail isolation remains the native binary contract
+
+P2.37R2C-H7 tab navigator flex gate: PASS (9/9)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js =====
+
+Family Bloom P2.37R2C-H9B — native Chess authoritative tap-to-move
+
+PASS native module identity is current H9B / 1.3.10
+PASS app identity stays 1.3.11 / 143021
+PASS all 12 Chess PNG pieces are bundled in native module
+PASS native module exposes Chess state + input event bridge
+PASS decor rail hosts persistent native Chess renderer
+PASS native renderer parses FEN and uses PNG pieces
+PASS selection / last move / check highlights restored
+PASS quiet and capture legal hints rendered
+PASS native board emits tap-to-move + ready intents
+PASS TypeScript native-module surface exposes H8 Chess contract
+PASS JS chess.js derives legal targets and submits server move intent
+PASS move command is revision-guarded with immediate speculative FEN + authoritative reconciliation
+PASS Ready flow is server-authoritative
+PASS presentation bridge forwards authoritative Chess state/deltas to renderer
+PASS root controller receives native Chess input without rendering game in Yoga
+PASS React/Yoga remains free of game overlay view
+PASS tab flex baseline is clipped against first-login overflow
+PASS Xiangqi remains isolated/probe-only in H8
+
+P2.37R2C-H8 native Chess gate: PASS (18/18)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js =====
+
+Family Bloom P2.37R2C-H9B — Mini lifecycle + bounded native rail
+
+PASS native binary identity is H9B / module 1.3.10
+PASS app identity remains 1.3.11 / 143021
+PASS same authoritative game refresh preserves local Full/Mini mode
+PASS stale/different game state cannot steal active presentation
+PASS server still owns live-game existence while store owns local presentation mode
+PASS native rail separates logical viewport from physical rail bounds
+PASS Mini explicitly shrinks native decor rail
+PASS Mini rail physical bounds equal Mini surface bounds
+PASS Idle/background rail is parked off-screen at 1x1
+PASS Mini drag moves bounded rail itself instead of a child inside a full-screen rail
+PASS Mini dock side/Y are retained in persistent native rail memory
+PASS presentation promotion no longer requests full Decor layout
+PASS native action subscriptions are stable across Full/Mini transitions
+PASS React/Yoga remains free of native game overlay View
+PASS tab flex baseline is clipped against first-login overflow
+PASS root Stack baseline remains frozen
+PASS H8 native Chess tap-to-move renderer remains present
+
+P2.37R2C-H9B Mini lifecycle/performance gate: PASS (17/17)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js =====
+
+Family Bloom P2.37R2C-H9B — Bloom Super Hero Native UI
+
+PASS new APK identity prevents stale H9A native binary
+PASS native binary identity/version are updated together
+PASS Full takes exactly 90% of current native viewport
+PASS H11 Chess stage uses a single 10dp inset per side
+PASS retired 85% Full geometry
+PASS Chess and Xiangqi retain separate visual layers
+PASS new gradient stage and premium Mini styling are present
+PASS new stage header is visible in native Chess UI
+PASS both player panels and clocks are independent controls
+PASS entire Chess stage is vertically centered, not top-aligned
+PASS board is geometrically between status and player panels
+PASS Chessboard has a distinctive light frame
+PASS Chess native input callbacks unchanged
+PASS authoritative board/hints are still rendered
+PASS Mini restores by tap and has no X button
+PASS Mini drag/snap gesture retained
+PASS Idle is off-screen and cannot blank React home
+PASS Mini bounded performance contract retained
+PASS full build contains all requested root BAT entrypoints
+PASS root cleanup no longer deletes current BAT entrypoints
+PASS responsive centered board fits 300×500dp stage
+PASS responsive centered board fits 360×720dp stage
+PASS responsive centered board fits 412×835dp stage
+PASS responsive centered board fits 480×915dp stage
+
+H9B Bloom Super Hero UI gate: PASS (24/24)
+
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h10-chess-native-latency.js =====
+Family Bloom H10 | Chess local-first / native UI guards
+PASS distinct APK identity
+PASS native binary tag synchronized
+PASS 11 source mp3 embedded in Android res/raw
+PASS 11 native cues registered in SoundPool
+PASS build/preflight/after-build verifies exact APK raw resource names
+PASS 5-slot premove queue
+PASS premove rechecked against authoritative FEN
+PASS instant visual move + rollback
+PASS server revision and resync remain mandatory
+PASS late ACKs/timers cannot overwrite newer state
+PASS dirty-square / piece-cache renderer
+PASS Kotlin square highlight branches are Boolean expressions
+PASS Native piece animation
+PASS Native elapsedRealtime clock
+PASS manual promotion picker
+PASS first-login overflow and auth transition guarded
+PASS idle decor host parked at 1x1 during login
+H10 guards: PASS (17/17)
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js =====
+Family Bloom H10R2 | Native board Z-order + post-auth welcome guards
+PASS background mat does not cover 64 cells via positive native Z
+PASS board draws after background mat
+PASS all 64 cells retain native PNG drawable mapping
+PASS dirty-square cache is invalidated on layout/orientation
+PASS promotion controls retain the front drawing plane
+PASS native piece drawable wk is valid PNG
+PASS native piece drawable wq is valid PNG
+PASS native piece drawable wr is valid PNG
+PASS native piece drawable wb is valid PNG
+PASS native piece drawable wn is valid PNG
+PASS native piece drawable wp is valid PNG
+PASS native piece drawable bk is valid PNG
+PASS native piece drawable bq is valid PNG
+PASS native piece drawable br is valid PNG
+PASS native piece drawable bb is valid PNG
+PASS native piece drawable bn is valid PNG
+PASS native piece drawable bp is valid PNG
+PASS welcome overlay bounded to real device window during auth transition
+PASS in-tree welcome retained to protect H4 zero-height navigation regression
+PASS welcome remains actionable/dismissible
+PASS welcome remains intentional per sign-in, not every app restore
+PASS greeting deferred until first auth navigation paint
+H10R2 guard: PASS (22/22)
+
+
+EXIT_CODE=0
+===== RUN scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js =====
+PASS tap opens Chess Full immediately without Socket ACK
+PASS double invite cannot replace pending preview
+PASS server game id replaces pending id without unminimizing
+PASS authoritative resync never steals Full/Mini choice
+PASS late failure cannot close confirmed game
+PASS different game cannot steal live Chess
+PASS tap Mini restores Full with game id retained
+PASS stale terminal packet cannot close current match
+PASS matching server terminal closes presentation
+PASS successful session cancels local orphan watchdog
+PASS next invitation receives new lifecycle
+PASS watchdog closes orphan preview, not server game
+PASS Bloom Bot tap presents before prewake, connect and server preflight
+PASS preview shows real starting pieces but never authorizes moves
+PASS waiting game sends native READY intent through authoritative server
+PASS no Ready / Your Turn overlay banner
+PASS waiting status is small inline copy on opponent name bar
+PASS Mini is smaller than H10R2 118x72dp
+PASS Mini dims to 20% visibility outside my turn
+PASS both native close buttons absent
+PASS Mini skips Full cell render on authoritative updates
+PASS parked Full has no tick callback / piece animation
+PASS transparent arena and single 10dp geometry inset
+PASS global bridge dismisses unconfirmed rejected/expired invite
+PASS hidden developer screen releases diagnostic and game listeners
+PASS server starts the clock only after both players are ready
+PASS new native APK identity is unique
+PASS FULL COPY includes root BAT entrypoints
+H11 source+store behavioral gate PASS (28/28)
+
+
+EXIT_CODE=0
+===== RUN scripts/setup/check-board-audio-integrity.js =====
+PASS assets/audio/board-game/game-start.mp3 valid (5353 bytes)
+PASS assets/audio/board-game/move-self.mp3 valid (3433 bytes)
+PASS assets/audio/board-game/move-opponent.mp3 valid (3433 bytes)
+PASS assets/audio/board-game/capture.mp3 valid (6889 bytes)
+PASS assets/audio/board-game/move-check.mp3 valid (6121 bytes)
+PASS assets/audio/board-game/castle.mp3 valid (5353 bytes)
+PASS assets/audio/board-game/promote.mp3 valid (4969 bytes)
+PASS assets/audio/board-game/premove.mp3 valid (4201 bytes)
+PASS assets/audio/board-game/illegal.mp3 valid (4585 bytes)
+PASS assets/audio/board-game/tenseconds.mp3 valid (10729 bytes)
+PASS assets/audio/board-game/game-end.mp3 valid (5353 bytes)
+PASS board-game MP3 pack retained (60419 bytes)
+PASS no competing generated Chess audio bank
+PASS audio integrity is asset-only; deleted legacy board renderer/soundscape code is not required
+
+
+EXIT_CODE=0
+===== RUN scripts/setup/check-p2_37r2c-native-package.js =====
+
+Family Bloom P2.37R2C-H6-H1 — native package + binary identity preflight
+
+PASS app.json binary identity = 1.3.11 / 143021
+PASS EAS appVersionSource=local locks app.json versionCode into build
+PASS family-bloom-test is a real developmentClient build for Metro workflow
+PASS root dependency pins family-bloom-overlay=file:modules/family-bloom-overlay
+PASS Expo nativeModulesDir explicitly points at ./modules
+PASS local module package identity/version = family-bloom-overlay@1.3.10
+PASS expo-module.config.json registers FamilyBloomOverlayModule for Android
+PASS local Android library manifest is present
+PASS native source contains H6 identity + decor rail
+INFO node_modules/family-bloom-overlay absent; install proof deferred to CLEAN APPLY/EAS
+INFO expo-modules-autolinking CLI unavailable; resolver proof deferred to real build
+INFO generated Android project proof deferred until prebuild
+
+P2.37R2C-H6-H1 native package/binary preflight: PASS
+
+
+
+EXIT_CODE=0

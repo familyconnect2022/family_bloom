@@ -1,0 +1,42 @@
+Family Bloom — Phase 14R.4C Focus View Generation Hierarchy Hotfix
+Date: 2026-10-01
+Base: Phase 14R.4B RELEASE_GATE_HOTFIX FULL
+
+DEVICE ISSUE REPRODUCED
+- Main tree correctly shows Nguyễn Vũ Đôn + Nguyễn Thị Lan above their child Nguyễn Thị Bích.
+- Focus View opened on a deeper descendant could place Đôn/Lan on the same row as Bích.
+
+ROOT CAUSE
+- Focus View reused the standard adapter's bounded generation strategy.
+- The tapped focus Person was seeded at generation 3.
+- Ancestors above generation 1 were clamped to generation 1.
+- With a four-generation chain this collapsed great-grandparents and grandparents onto one visual row.
+
+FIX
+- Added opt-in preserveGenerationHierarchy to adaptFamilyGraphSnapshot.
+- Standard/main tree keeps the existing bounded behavior unchanged.
+- Focus View alone enables preserveGenerationHierarchy.
+- Focus branch generations are rebased so the oldest visible generation starts at row 1.
+- Every explicit parent_child edge remains exactly one generation apart.
+- Focus layout can grow beyond five generations without collapsing different generations onto one row.
+- No Firestore schema/read/listener changes.
+
+REGRESSION FIXTURE
+Nguyễn Thị Lan + Nguyễn Vũ Đôn
+  -> Nguyễn Thị Bích + Huỳnh Văn Long
+     -> Huỳnh Thanh Nhân + Nguyễn Thị Kim Hồng
+        -> Huỳnh Nguyễn Gia Minh (focus)
+Expected generations: 1 / 2 / 3 / 4.
+
+VALIDATION
+PASS node scripts/test-familyGraphLayout.js
+PASS phase14f:check — 21 PASS / 0 FAIL
+PASS phase14j:check — 18 PASS / 0 FAIL
+PASS phase14n:check — 13 PASS / 0 FAIL
+PASS phase14r1:check — 39 PASS / 0 FAIL
+PASS phase14r3:check — 8 PASS / 0 FAIL
+PASS phase14r4:check — 16 PASS / 0 FAIL
+PASS TS/TSX syntax scan — 210/210 (via Phase14F/14J)
+
+NOTE
+Full tsc --noEmit is not claimed in this clean-root package because node_modules/expo tsconfig is intentionally absent from the ZIP runtime used for validation.

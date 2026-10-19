@@ -1,0 +1,15 @@
+Family Bloom H16 — Checklist nghiệm thu thiết bị Android
+
+[ ] 1. Giải nén H16 FULL sang bản sao thư mục dự án. Chạy BAT PRE_COPY trước copy-over; copy toàn bộ, chạy CLEAN_APPLY_FULL.
+[ ] 2. Build APK Release qua Family_Bloom_BUILD_APK_TO_SHARE.bat. Kiểm tra app 1.3.16 / Android versionCode 143026 / native P2.37R2C-H16-native-1.
+[ ] 3. Server Render vẫn chạy H15 hoặc bản đồng bộ mới hơn; không triển khai lại chỉ vì H16 animation.
+[ ] 4. Mời Bloom Bot: Full hiện trước khi Socket Ready, không mất bàn cờ/không trắng. Sau READY được đi.
+[ ] 5. Chơi thử khi cầm quân Trắng và khi cầm quân Đen. Chỉ được chạm quân của mình, đúng turn; server từ chối sai lượt.
+[ ] 6. Kiểm tra quân đi êm và có hành trình rõ ràng; không xuất hiện quân đích một nhịp trước animation.
+[ ] 7. Kiểm tra capture, en passant, promotion, kingside/queenside castle; quân dừng đúng ô.
+[ ] 8. Chạm một quân, thấy hint, đổi chọn; animation đang chạy không chớp hoặc hiện thêm bản sao quân.
+[ ] 9. Thu Mini khi Bot đang đi, khôi phục Full; bàn cờ theo đúng FEN server, không có ghost/frozen piece.
+[ ] 10. Ngắt/kết nối lại mạng, bỏ lỡ nhiều revision: snap/reconcile đúng server, không dựng sai move giả.
+[ ] 11. Kết thúc thắng/hòa/thua: màn kết quả hoạt động và quay lại sảnh được; không remount/treo bàn cờ.
+[ ] 12. So sánh video H15 (6465.mp4) với H16 và ghi Perfetto FrameTimeline / Choreographer jank, nếu có; 60FPS chưa được xác nhận.
+[ ] 13. Nếu thấy lỗi: gửi video + logcat với gameId/revision (ẩn UID và dữ liệu bí mật).

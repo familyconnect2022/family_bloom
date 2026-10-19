@@ -1,0 +1,44 @@
+Family Bloom P2.29 changed/new source files
+Date: 2026-10-15
+Base: P2.28 R2
+
+Root / build workflow
+- scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat
+- scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+- scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat
+- package.json
+- scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
+- scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
+- scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
+- scripts/test-phase-p2_29-stable-waiting-independent-games.js (new)
+
+Server
+- server/src/games/boardGamePendingReservation.ts
+- server/src/socket/socketServer.ts
+- server/src/xiangqi/xiangqiSocket.ts
+
+Chess only
+- src/app/(chess)/chess-challenge/[inviteId].tsx
+- src/components/chess/ChessGameHeader.tsx (new)
+- src/components/chess/ChessPlayerRail.tsx
+- src/components/chess/ChessSurfaceHost.tsx
+- src/services/chess/chessSurfaceStore.ts
+- src/types/chess.ts
+
+Xiangqi only
+- src/app/(xiangqi)/xiangqi-challenge/[inviteId].tsx
+- src/app/(xiangqi)/xiangqi-preview.tsx
+- src/components/xiangqi/XiangqiGameHeader.tsx (new)
+- src/components/xiangqi/XiangqiPlayerRail.tsx (new)
+- src/components/xiangqi/XiangqiSurfaceHost.tsx
+- src/services/xiangqi/xiangqiSurfaceStore.ts
+- src/types/xiangqiRealtime.ts
+
+Navigation
+- src/app/_layout.tsx
+
+Documentation
+- document/releases/PHASE_P2_29_STABLE_WAITING_SHELL_INDEPENDENT_GAMES.md (new)
+- document/releases/PHASE_P2_29_CHANGED_FILES.txt (new)
+
+Family Graph / Focus source: unchanged in P2.29.

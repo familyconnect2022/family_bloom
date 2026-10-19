@@ -1,0 +1,14 @@
+H14 CHECKLIST — test on Android APK + matching Render server
+
+[ ] Build H14 Android APK versionCode 143024 and native identity P2.37R2C-H14-native-1. Keep previous signing key/applicationId.
+[ ] Confirm deployed Render service uses H14 server/ (new deployments may wake slowly on Free instance).
+[ ] Bot challenge: repeat until human is WHITE, then BLACK. For each game, server whiteUid/blackUid must match UI board orientation and clock ownership.
+[ ] Black human, White Bot: while White clock runs, tapping any White piece cannot select/move it. Premove uses BLACK piece only.
+[ ] Black human, Black-to-move: move BLACK pawn, server accepts one revision; bot makes exactly one legal WHITE move after human move.
+[ ] Leave board untouched for 30 seconds (both colors), observe only side-to-move clock changes and Bot never acts on human turn.
+[ ] Reconnect or background/resume: gameId/revision/FEN/color preserved; no phantom/unacknowledged move.
+[ ] Mini: drag to LEFT and RIGHT from Home and distant tabs; the visible Mini edge touches the physical viewport edge (excluding intentionally rounded corners), with no ghost 10dp gap.
+[ ] Mini: snap/restore 5 times, maintain gameId, FEN, clocks and drag responsiveness; no tab stutter.
+[ ] Full board after Mini: no screen flash, missing pieces, or changes to Xiangqi behavior.
+[ ] Test H13 modal victory/draw/defeat, decline, resign, draw offer.
+[ ] Inspect Android Logcat and Gradle build output for native Kotlin errors.

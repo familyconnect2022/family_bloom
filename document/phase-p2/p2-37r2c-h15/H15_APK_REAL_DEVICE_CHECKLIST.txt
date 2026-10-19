@@ -1,0 +1,22 @@
+H15 — REAL ANDROID APK CHECKLIST (CHƯA CHẠY TRÊN THIẾT BỊ)
+
+[ ] 1. CLEAN APPLY FULL báo PASS; Build & Share tạo mới APK, không copy APK cũ vào folder share.
+[ ] 2. Android package com.familybloom.android, versionCode 143025, native ID P2.37R2C-H15-native-1.
+[ ] 3. Render đã deploy server/src H15 và /health lên; bật CHESS_TEST_BOT_ENABLED nếu muốn kiểm Bot.
+[ ] 4. Release APK: Firebase huynh235@gmail.com (emailVerified=true) nhìn thấy Developer Tools trong Settings.
+[ ] 5. Release APK: Admin gia đình khác / user thường / tài khoản chưa verify KHÔNG thấy đường vào; deep link cũng bị từ chối.
+[ ] 6. Tài khoản khác gọi chess:test:bot:invite/challenge bị từ chối CHESS_UNAUTHORIZED; Xiangqi cũng vậy.
+[ ] 7. Khi được gán TRẮNG: chỉ chọn quân Trắng; đồng hồ/turn khớp; Bot Đen không di chuyển trái lượt.
+[ ] 8. Khi được gán ĐEN: bàn cờ xoay theo màu Đen; không chọn được quân Trắng phía Bot; chỉ được premove bằng quân Đen.
+[ ] 9. Đợi ít nhất 30 giây không chạm, ghi video đồng hồ và so sánh bot logs gameId/revision. Bot tuyệt đối không đi khi không đến lượt.
+[ ] 10. Khi server có trạng thái FEN/ply mâu thuẫn, bàn cờ hiển thị 'ĐANG ĐỒNG BỘ BÀN CỜ', không cho đi quân.
+[ ] 11. Premove ăn quân, chiếu, phong cấp trước: đúng quân được chọn; âm thanh capture/check/promote phát ở thời điểm thực thi.
+[ ] 12. Kết quả thắng: vàng gold, huy hiệu cúp, pháo hoa; hòa: xanh lam/ngọc, icon cân; thua: xanh sage, mầm cây.
+[ ] 13. Modal thắng/hòa/thua không còn giống hệt nền hồng; bấm về sảnh tức thì, ACK server chạy nền.
+[ ] 14. Cầu hòa và Xin thua có nút rõ + xác nhận; server nhận lệnh chuẩn, không mất session ngoài ý muốn.
+[ ] 15. Full -> Mini -> chuyển tab Home/Moments/Phả hệ -> Full; Mini sát mép ngang, không lag và không tự thoát ván.
+[ ] 16. Ngắt mạng/reconnect: màu quân không đổi, snapshot đúng revision, không phát hai lần sound nước đi.
+[ ] 17. Đóng app sau trận hoàn tất rồi mở lại: không hồi sinh ván đã ACK, không mở lại kết quả cũ.
+
+Nếu FAIL màu quân: gửi video + log server [chess:test-bot] authoritative action
+và client CHESS_AUTHORITATIVE_MOVE / CHESS_SIDE_OR_TURN_INVALID của CÙNG gameId/revision.

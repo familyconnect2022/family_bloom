@@ -1,0 +1,1092 @@
+import { createHash, randomUUID } from "node:crypto";
+import { Chess } from "chess.js";
+import type { Server, Socket } from "socket.io";
+import { ChessGameManager } from "../chess/chessGameManager.js";
+import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
+import { ChessDomainError, type ChessTimeControl, type ClientGameState, type PublicGameState } from "../chess/chessTypes.js";
+import { RematchProposalStore } from "../chess/rematchProposalStore.js";
+import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
+import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
+import { isVerifiedDeveloperIdentity } from "../security/developerIdentity.js";
+import {
+  getPendingBoardGameReservation,
+  pendingReservationPublicShape,
+  releasePendingBoardGameInvite,
+  reservePendingBoardGame,
+  reservePendingBoardGameParticipants,
+} from "../games/boardGamePendingReservation.js";
+
+const E = {
+  appJoin: "chess:app:join",
+  appLeave: "chess:app:leave",
+  lobbyJoin: "chess:lobby:join",
+  lobbyLeave: "chess:lobby:leave",
+  presenceUpdate: "chess:presence:update",
+  inviteCreate: "chess:invite:create",
+  inviteReceived: "chess:invite:received",
+  inviteAccept: "chess:invite:accept",
+  inviteReject: "chess:invite:reject",
+  inviteCancel: "chess:invite:cancel",
+  inviteExpired: "chess:invite:expired",
+  inviteRejected: "chess:invite:rejected",
+  gameJoin: "chess:game:join",
+  gameState: "chess:game:state",
+  gameMove: "chess:game:move",
+  gameMoveApplied: "chess:game:moveApplied",
+  gameResign: "chess:game:resign",
+  drawOffer: "chess:draw:offer",
+  drawAccept: "chess:draw:accept",
+  drawReject: "chess:draw:reject",
+  gameRematch: "chess:game:rematch",
+  gameRematchCancel: "chess:game:rematch:cancel",
+  gameReady: "chess:game:ready",
+  gameBoardReady: "chess:game:boardReady",
+  gameResync: "chess:game:resync",
+  gameBoardPresence: "chess:game:boardPresence",
+  sessionGetActive: "chess:session:getActive",
+  sessionRecover: "chess:session:recover",
+  gameResultAck: "chess:game:resultAck",
+  testBotInvite: "chess:test:bot:invite",
+  testBotChallenge: "chess:test:bot:challenge",
+} as const;
+
+function toClientGameState(state: PublicGameState): ClientGameState {
+  const { pgn: _pgn, legalMoves: _legalMoves, ...client } = state;
+  return client;
+}
+
+type Ack = (response: unknown) => void;
+type SocketData = { uid: string; developerAuthorized?: boolean; appFamilyId?: string; lobbyFamilyId?: string; gameId?: string; gameFamilyId?: string };
+type Invite = {
+  inviteId: string;
+  familyId: string;
+  fromUid: string;
+  toUid: string;
+  timeControl: ChessTimeControl;
+  expiresAt: number;
+  isTestBot?: boolean;
+  fromDisplayName?: string;
+  testBotDirection?: "bot_to_user" | "user_to_bot";
+  testCycleStep?: 1 | 2 | 3;
+  whiteUid?: string;
+  blackUid?: string;
+};
+
+type Bucket = { count: number; resetAt: number };
+const memberCache = new Map<string, { ok: boolean; expires: number }>();
+const memberInFlight = new Map<string, Promise<boolean>>();
+const invites = new Map<string, Invite>();
+// Serialize invite terminal transitions (cancel/reject/accept/expiry) even
+// while Firebase membership/transaction awaits across concurrent sockets.
+const acceptingInvites = new Set<string>();
+const rematchVotes = new RematchProposalStore(45_000);
+const buckets = new Map<string, Bucket>();
+
+const ALLOWED_TIME_CONTROLS = new Set(["180000:2000", "300000:0", "600000:0", "600000:5000", "unlimited"]);
+const DOC_ID = /^[^/]{1,128}$/;
+const SQUARE = /^[a-h][1-8]$/;
+const TEST_BOT_ENABLED = /^(1|true|yes)$/i.test(process.env.CHESS_TEST_BOT_ENABLED ?? "");
+const TEST_BOT_UID_PREFIX = "__bloom_test_bot__";
+const TEST_BOT_NAME = "Bloom Bot";
+// H10: human-readable but responsive bot UX (~1 second per move).
+// This only changes Chess test bot pacing, not Xiangqi gameplay/server rules.
+const TEST_BOT_MOVE_DELAY_MS = 1_000;
+const TEST_BOT_CHECK_DELAY_MS = 1_300;
+const INVITE_TTL_MS = 60_000;
+const TEST_BOT_INVITE_RESPONSE_DELAY_MS = 1_200;
+const outgoingTestBotCycleByUid = new Map<string, number>();
+
+function nextOutgoingTestBotCycleStep(uid: string): 1 | 2 | 3 {
+  const next = ((outgoingTestBotCycleByUid.get(uid) ?? 0) % 3) + 1 as 1 | 2 | 3;
+  outgoingTestBotCycleByUid.set(uid, next);
+  return next;
+}
+
+function testBotUidFor(uid: string) {
+  return `${TEST_BOT_UID_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0, 24)}`;
+}
+
+function fenHasPieceAt(fen: string, square: string) {
+  const [board] = fen.split(" ");
+  const rows = board.split("/");
+  const targetFile = square.charCodeAt(0) - 97;
+  const targetRank = Number(square[1]);
+  const row = rows[8 - targetRank];
+  let file = 0;
+  for (const char of row) {
+    if (/\d/.test(char)) { file += Number(char); continue; }
+    if (file === targetFile) return true;
+    file += 1;
+  }
+  return false;
+}
+
+function invalid(message = "CHESS_INVALID_REQUEST"): never {
+  throw new ChessDomainError("CHESS_INVALID_REQUEST", message);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) invalid();
+  return value as Record<string, unknown>;
+}
+
+function asId(value: unknown, label: string) {
+  if (typeof value !== "string" || !DOC_ID.test(value)) invalid(`Invalid ${label}`);
+  return value;
+}
+
+function asRequestId(value: unknown) {
+  if (typeof value !== "string" || value.length < 8 || value.length > 128) invalid("Invalid requestId");
+  return value;
+}
+
+function asRevision(value: unknown) {
+  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 1_000_000_000) invalid("Invalid revision");
+  return value as number;
+}
+
+function asSquare(value: unknown, label: string) {
+  if (typeof value !== "string" || !SQUARE.test(value)) invalid(`Invalid ${label}`);
+  return value;
+}
+
+function asPromotion(value: unknown) {
+  if (value == null) return null;
+  if (value !== "q" && value !== "r" && value !== "b" && value !== "n") invalid("Invalid promotion");
+  return value;
+}
+
+function asBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") invalid(`Invalid ${label}`);
+  return value;
+}
+
+function asOptionalTestDelay(value: unknown) {
+  if (value == null) return 0;
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 10_000) invalid("Invalid test bot delay");
+  return value as number;
+}
+
+function asTimeControl(value: unknown): ChessTimeControl {
+  const input = asRecord(value);
+  if (input.kind === "unlimited" && input.initialMs === null && input.incrementMs === 0) {
+    return { kind: "unlimited", initialMs: null, incrementMs: 0 };
+  }
+  if (input.kind !== "clocked" || !Number.isSafeInteger(input.initialMs) || !Number.isSafeInteger(input.incrementMs)) invalid("Invalid time control");
+  const initialMs = input.initialMs as number;
+  const incrementMs = input.incrementMs as number;
+  if (!ALLOWED_TIME_CONTROLS.has(`${initialMs}:${incrementMs}`)) invalid("Unsupported time control");
+  return { kind: "clocked", initialMs, incrementMs };
+}
+
+function limit(key: string, max: number, windowMs: number) {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  if (bucket.count >= max) throw new ChessDomainError("CHESS_RATE_LIMITED");
+  bucket.count += 1;
+}
+
+function ackError(ack: Ack, error: unknown) {
+  if (error instanceof ChessDomainError) {
+    ack({ ok: false, errorCode: error.code, message: error.message });
+    return;
+  }
+  console.error("[chess] command failed", error);
+  ack({ ok: false, errorCode: "CHESS_SERVER_RECOVERING", message: "Chess server command failed" });
+}
+
+function safe<T>(ack: Ack, fn: () => Promise<T>) {
+  void fn().then((data) => ack({ ok: true, data })).catch((error) => ackError(ack, error));
+}
+
+export function installChessSocket(io: Server<any, any, any, SocketData>) {
+  const persistence = new ChessPersistenceService(adminDb);
+  const botTimers = new Map<string, { revision: number; timer: NodeJS.Timeout }>();
+  const manager = new ChessGameManager(
+    persistence,
+    (event) => {
+      if (event.kind === "move") io.to(`chess:game:${event.state.gameId}`).emit(E.gameMoveApplied, event.delta);
+      else io.to(`chess:game:${event.state.gameId}`).emit(E.gameState, toClientGameState(event.state));
+      scheduleTestBotAction(event.state);
+      if (event.state.status === "finished") void emitPresence(event.state.familyId);
+    },
+  );
+
+  // Never return a stale Firestore lock as an active Chess match. A sleeping
+  // Render process may not have run any timer while the user was away.
+  async function resolveCurrentGameForUid(uid: string) {
+    const lock = await persistence.getActiveForUid(uid);
+    if (!lock || lock.gameKind === "xiangqi") return lock;
+    const state = await manager.recover(lock.familyId, lock.gameId, uid);
+    if (state.status === "finished" || state.status === "cancelled") {
+      // Re-read so older dangling locks are healed by the shared lock resolver.
+      await persistence.getActiveForUid(uid);
+      return null;
+    }
+    return lock;
+  }
+
+  function clearBotTimer(gameId: string) {
+    const existing = botTimers.get(gameId);
+    if (existing) clearTimeout(existing.timer);
+    botTimers.delete(gameId);
+  }
+
+  function chooseTestBotMove(state: PublicGameState) {
+    if (!state.legalMoves.length) return null;
+    const scored = state.legalMoves.map((move) => {
+      let score = Math.random();
+      if (fenHasPieceAt(state.fen, move.to)) score += 5;
+      if (move.promotion) score += 8;
+      const center = ["d4", "e4", "d5", "e5"].includes(move.to);
+      if (center) score += 0.8;
+      let givesCheck = false;
+      try {
+        const probe = new Chess(state.fen);
+        probe.move({ from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}) });
+        givesCheck = probe.inCheck();
+      } catch {
+        givesCheck = false;
+      }
+      if (givesCheck) score += 1.1;
+      return { move, score, givesCheck };
+    }).sort((a, b) => b.score - a.score);
+    return scored[0] ?? null;
+  }
+
+  function scheduleTestBotAction(state: PublicGameState) {
+    const botUid = state.testBotUid;
+    if (!TEST_BOT_ENABLED || !botUid) return;
+    if (state.status !== "active") { clearBotTimer(state.gameId); return; }
+
+    const botColor = state.whiteUid === botUid ? "w" : state.blackUid === botUid ? "b" : null;
+    const shouldRejectDraw = !!state.drawOfferByUid && state.drawOfferByUid !== botUid;
+    const shouldMove = !!botColor && state.turn === botColor;
+    if (!shouldRejectDraw && !shouldMove) { clearBotTimer(state.gameId); return; }
+
+    const existing = botTimers.get(state.gameId);
+    if (existing?.revision === state.revision) return;
+    clearBotTimer(state.gameId);
+    const planned = shouldMove ? chooseTestBotMove(state) : null;
+    const thinkDelayMs = planned?.givesCheck ? TEST_BOT_CHECK_DELAY_MS : TEST_BOT_MOVE_DELAY_MS;
+    const timer = setTimeout(() => {
+      void (async () => {
+        botTimers.delete(state.gameId);
+        try {
+          const latest = await manager.state(state.gameId, botUid);
+          if (latest.status !== "active" || latest.revision !== state.revision) return;
+          if (latest.drawOfferByUid && latest.drawOfferByUid !== botUid) {
+            await manager.rejectDraw(latest.gameId, botUid, `bot-draw-${latest.gameId}-${latest.revision}`);
+            return;
+          }
+          // Never assume the Bot owns Black: H12 randomizes assignments.
+          const latestBotColor = latest.whiteUid === botUid ? "w" : latest.blackUid === botUid ? "b" : null;
+          if (!latestBotColor || latest.turn !== latestBotColor) return;
+          const chosen = planned ?? chooseTestBotMove(latest);
+          if (!chosen) return;
+          const move = chosen.move;
+          // Diagnostic only: no per-tick DB write. Compare this accepted move
+          // revision/color with client CHESS_AUTHORITATIVE_MOVE to triage 6453.
+          console.info("[chess:test-bot] authoritative action", {
+            gameId: latest.gameId, revision: latest.revision, botColor: latestBotColor,
+            from: move.from, to: move.to,
+          });
+          await manager.move(
+            latest.gameId,
+            botUid,
+            `bot-move-${latest.gameId}-${latest.revision}`,
+            latest.revision,
+            move.from,
+            move.to,
+            move.promotion ?? null,
+          );
+        } catch (error) {
+          console.warn("[chess:test-bot] action skipped", { gameId: state.gameId, error: error instanceof Error ? error.message : String(error) });
+        }
+      })();
+    }, thinkDelayMs);
+    timer.unref();
+    botTimers.set(state.gameId, { revision: state.revision, timer });
+  }
+
+  async function isMember(uid: string, familyId: string) {
+    const key = `${familyId}:${uid}`;
+    const cached = memberCache.get(key);
+    if (cached && cached.expires > Date.now()) return cached.ok;
+    const pending = memberInFlight.get(key);
+    if (pending) return pending;
+    const read = adminDb.doc(`families/${familyId}/members/${uid}`).get()
+      .then((snap) => {
+        const ok = snap.exists;
+        memberCache.set(key, { ok, expires: Date.now() + 10_000 });
+        return ok;
+      })
+      .finally(() => memberInFlight.delete(key));
+    memberInFlight.set(key, read);
+    return read;
+  }
+
+  async function requireMember(uid: string, familyId: string) {
+    if (!(await isMember(uid, familyId))) throw new ChessDomainError("CHESS_NOT_FAMILY_MEMBER");
+  }
+
+  function socketsForUid(uid: string) {
+    return [...io.sockets.sockets.values()].filter((socket) => socket.data.uid === uid);
+  }
+
+  function socketsForUidInFamily(uid: string, familyId: string) {
+    return socketsForUid(uid).filter((socket) => socket.data.appFamilyId === familyId || socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId);
+  }
+
+  function lobbyReady(uid: string, familyId: string) {
+    return socketsForUid(uid).some((socket) => socket.data.lobbyFamilyId === familyId);
+  }
+
+  function appReady(uid: string, familyId: string) {
+    return socketsForUid(uid).some((socket) => socket.data.appFamilyId === familyId);
+  }
+
+  async function emitPresence(familyId: string) {
+    const uids = new Set<string>();
+    for (const socket of io.sockets.sockets.values()) {
+      if (socket.data.appFamilyId === familyId || socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId) uids.add(socket.data.uid);
+    }
+    const items = await Promise.all([...uids].map(async (uid) => {
+      const active = await resolveCurrentGameForUid(uid);
+      const pending = getPendingBoardGameReservation(uid);
+      const status = active?.familyId === familyId
+        ? "in_game"
+        : active || pending
+          ? "busy"
+          : lobbyReady(uid, familyId)
+            ? "in_lobby"
+            : appReady(uid, familyId)
+              ? "online_app"
+              : "offline";
+      return { uid, status };
+    }));
+    io.to(`chess:family:${familyId}`).to(`chess:lobby:${familyId}`).emit(E.presenceUpdate, items);
+  }
+
+  function refreshPresenceSoon(familyId: string) {
+    void emitPresence(familyId).catch((error) => {
+      console.warn("[chess] presence refresh failed", {
+        familyId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
+  async function expireInvite(inviteId: string) {
+    const invite = invites.get(inviteId);
+    if (!invite || invite.expiresAt > Date.now() || acceptingInvites.has(inviteId)) return;
+    invites.delete(inviteId);
+    releasePendingBoardGameInvite(invite.inviteId, "chess");
+    for (const uid of [invite.fromUid, invite.toUid]) {
+      for (const socket of socketsForUidInFamily(uid, invite.familyId)) socket.emit(E.inviteExpired, { inviteId });
+    }
+    await emitPresence(invite.familyId);
+  }
+
+
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      if (typeof token !== "string" || !token) {
+        console.warn("[chess][auth] missing token", { socketId: socket.id });
+        return next(new Error("CHESS_UNAUTHORIZED"));
+      }
+      const decoded = await adminAuth.verifyIdToken(token);
+      socket.data.uid = decoded.uid;
+      socket.data.developerAuthorized = isVerifiedDeveloperIdentity(decoded);
+      next();
+    } catch (error) {
+      console.warn("[chess][auth] verify failed", {
+        socketId: socket.id,
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+      });
+      next(new Error("CHESS_UNAUTHORIZED"));
+    }
+  });
+
+  io.on("connection", (socket: Socket<any, any, any, SocketData>) => {
+    const uid = socket.data.uid;
+
+    const requireGameMembership = async (gameId: string) => {
+      const state = await manager.state(gameId, uid);
+      await requireMember(uid, state.familyId);
+      return state;
+    };
+
+    const leaveBoundGameForFamily = async (familyId: string, markAway = true) => {
+      const gameId = socket.data.gameId;
+      if (!gameId || socket.data.gameFamilyId !== familyId) return;
+      if (markAway) {
+        try { await manager.setBoardVisible(gameId, uid, false); }
+        catch (error) {
+          if (!(error instanceof ChessDomainError) || !["CHESS_GAME_FINISHED", "CHESS_GAME_NOT_FOUND"].includes(error.code)) throw error;
+        }
+      }
+      manager.disconnect(gameId, uid);
+      socket.leave(`chess:game:${gameId}`);
+      delete socket.data.gameId;
+      delete socket.data.gameFamilyId;
+    };
+
+    socket.on(E.appJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`app:${uid}`, 12, 10_000);
+      const familyId = asId(asRecord(raw).familyId, "familyId");
+      await requireMember(uid, familyId);
+      const previousFamilyId = socket.data.appFamilyId;
+      if (previousFamilyId && previousFamilyId !== familyId) {
+        await leaveBoundGameForFamily(previousFamilyId, true);
+        socket.leave(`chess:family:${previousFamilyId}`);
+        if (socket.data.lobbyFamilyId === previousFamilyId) {
+          socket.leave(`chess:lobby:${previousFamilyId}`);
+          delete socket.data.lobbyFamilyId;
+        }
+        delete socket.data.appFamilyId;
+        refreshPresenceSoon(previousFamilyId);
+      }
+      socket.data.appFamilyId = familyId;
+      await socket.join(`chess:family:${familyId}`);
+      // Keep one low-frequency successful family-join diagnostic for Render health;
+      // per-socket authenticated/disconnected chatter stays removed.
+      refreshPresenceSoon(familyId);
+      console.info("[chess] app joined", { uid, familyId, socketId: socket.id });
+      return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
+    }));
+
+    socket.on(E.appLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const familyId = asId(asRecord(raw).familyId, "familyId");
+      await leaveBoundGameForFamily(familyId, true);
+      if (socket.data.appFamilyId === familyId) {
+        socket.leave(`chess:family:${familyId}`);
+        delete socket.data.appFamilyId;
+      }
+      if (socket.data.lobbyFamilyId === familyId) {
+        socket.leave(`chess:lobby:${familyId}`);
+        delete socket.data.lobbyFamilyId;
+      }
+      await emitPresence(familyId);
+      return { left: true };
+    }));
+
+    socket.on(E.lobbyJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`lobby:${uid}`, 12, 10_000);
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      await requireMember(uid, familyId);
+      if (socket.data.appFamilyId !== familyId) {
+        const previousAppFamilyId = socket.data.appFamilyId;
+        if (previousAppFamilyId) {
+          await leaveBoundGameForFamily(previousAppFamilyId, true);
+          socket.leave(`chess:family:${previousAppFamilyId}`);
+        }
+        socket.data.appFamilyId = familyId;
+        await socket.join(`chess:family:${familyId}`);
+        if (previousAppFamilyId && previousAppFamilyId !== familyId) refreshPresenceSoon(previousAppFamilyId);
+      }
+      const previousFamilyId = socket.data.lobbyFamilyId;
+      if (previousFamilyId && previousFamilyId !== familyId) {
+        socket.leave(`chess:lobby:${previousFamilyId}`);
+        delete socket.data.lobbyFamilyId;
+        refreshPresenceSoon(previousFamilyId);
+      }
+      socket.data.lobbyFamilyId = familyId;
+      await socket.join(`chess:lobby:${familyId}`);
+      refreshPresenceSoon(familyId);
+      return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
+    }));
+
+    socket.on(E.lobbyLeave, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      socket.leave(`chess:lobby:${familyId}`);
+      if (socket.data.lobbyFamilyId === familyId) delete socket.data.lobbyFamilyId;
+      await emitPresence(familyId);
+      return { left: true };
+    }));
+
+    socket.on(E.testBotInvite, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      if (!socket.data.developerAuthorized) throw new ChessDomainError("CHESS_UNAUTHORIZED");
+      limit(`testbot:${uid}`, 4, 30_000);
+      if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+      const payload = asRecord(raw);
+      asRequestId(payload.requestId);
+      const familyId = asId(payload.familyId, "familyId");
+      const timeControl = asTimeControl(payload.timeControl);
+      const delayMs = asOptionalTestDelay(payload.delayMs);
+      // Bloom Bot is a one-device test/training opponent, so quiet hours do not apply.
+      await requireMember(uid, familyId);
+      if (await resolveCurrentGameForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+
+      const botUid = testBotUidFor(uid);
+      const existing = [...invites.values()].find((invite) =>
+        invite.isTestBot && invite.familyId === familyId && invite.toUid === uid && invite.expiresAt > Date.now(),
+      );
+      if (existing) {
+        const pending = getPendingBoardGameReservation(uid);
+        if (pending && (pending.gameKind !== "chess" || pending.inviteId !== existing.inviteId)) {
+          throw new ChessDomainError("CHESS_ALREADY_IN_GAME", pending.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS");
+        }
+        if (!pending) reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: existing.inviteId, createdAt: Date.now(), expiresAt: existing.expiresAt });
+        return existing;
+      }
+
+      const invite: Invite = {
+        inviteId: randomUUID(),
+        familyId,
+        fromUid: botUid,
+        toUid: uid,
+        timeControl,
+        expiresAt: Date.now() + delayMs + INVITE_TTL_MS,
+        isTestBot: true,
+        fromDisplayName: TEST_BOT_NAME,
+        testBotDirection: "bot_to_user",
+        whiteUid: Math.random() < 0.5 ? uid : botUid,
+        blackUid: "", // resolved atomically below, before the invite is registered
+      };
+      invite.blackUid = invite.whiteUid === uid ? botUid : uid;
+      const reserved = reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt });
+      if (!reserved) {
+        const pending = getPendingBoardGameReservation(uid);
+        throw new ChessDomainError(
+          "CHESS_ALREADY_IN_GAME",
+          pending?.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS",
+        );
+      }
+      invites.set(invite.inviteId, invite);
+      await emitPresence(familyId);
+      const deliver = setTimeout(() => {
+        const current = invites.get(invite.inviteId);
+        if (!current || current.expiresAt <= Date.now()) return;
+        for (const targetSocket of socketsForUidInFamily(uid, familyId)) targetSocket.emit(E.inviteReceived, current);
+      }, delayMs);
+      deliver.unref();
+      setTimeout(() => void expireInvite(invite.inviteId), delayMs + INVITE_TTL_MS + 100).unref();
+      return invite;
+    }));
+
+    socket.on(E.testBotChallenge, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      if (!socket.data.developerAuthorized) throw new ChessDomainError("CHESS_UNAUTHORIZED");
+      limit(`testbot-outgoing:${uid}`, 6, 30_000);
+      if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+      const payload = asRecord(raw);
+      const clientRequestId = asRequestId(payload.requestId);
+      const familyId = asId(payload.familyId, "familyId");
+      const timeControl = asTimeControl(payload.timeControl);
+      await requireMember(uid, familyId);
+      if (await resolveCurrentGameForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (getPendingBoardGameReservation(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+
+      const botUid = testBotUidFor(uid);
+      const cycleStep = nextOutgoingTestBotCycleStep(uid);
+      const invite: Invite = {
+        inviteId: randomUUID(),
+        familyId,
+        fromUid: uid,
+        toUid: botUid,
+        timeControl,
+        expiresAt: Date.now() + INVITE_TTL_MS,
+        isTestBot: true,
+        fromDisplayName: undefined,
+        testBotDirection: "user_to_bot",
+        testCycleStep: cycleStep,
+        whiteUid: Math.random() < 0.5 ? uid : botUid,
+        blackUid: "", // resolved atomically below, before the invite is registered
+      };
+      invite.blackUid = invite.whiteUid === uid ? botUid : uid;
+      const reserved = reservePendingBoardGame({
+        uid, gameKind: "chess", familyId, inviteId: invite.inviteId, createdAt: Date.now(), expiresAt: invite.expiresAt,
+      });
+      if (!reserved) {
+        const pending = getPendingBoardGameReservation(uid);
+        throw new ChessDomainError(
+          "CHESS_ALREADY_IN_GAME",
+          pending?.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS",
+        );
+      }
+      invites.set(invite.inviteId, invite);
+      await emitPresence(familyId);
+
+      const resolveTimer = setTimeout(() => {
+        void (async () => {
+          const current = invites.get(invite.inviteId);
+          if (!current || current.expiresAt <= Date.now()) return;
+          if (cycleStep === 3) {
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.emit(E.inviteRejected, { inviteId: invite.inviteId, byUid: botUid, isTestBot: true, testCycleStep: cycleStep });
+            }
+            await emitPresence(familyId);
+            return;
+          }
+          try {
+            if (await resolveCurrentGameForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+            const pending = getPendingBoardGameReservation(uid);
+            if (!pending || pending.gameKind !== "chess" || pending.inviteId !== invite.inviteId) {
+              throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+            }
+            const state = await manager.create(
+              familyId,
+              uid,
+              botUid,
+              timeControl,
+              `${clientRequestId}:bot-accept`,
+              { testBotUid: botUid, whiteUid: invite.whiteUid, blackUid: invite.blackUid },
+            );
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.data.gameId = state.gameId;
+              targetSocket.data.gameFamilyId = familyId;
+              await targetSocket.join(`chess:game:${state.gameId}`);
+              targetSocket.emit(E.gameState, toClientGameState(state));
+            }
+            scheduleTestBotAction(state);
+            await emitPresence(familyId);
+          } catch (error) {
+            invites.delete(invite.inviteId);
+            releasePendingBoardGameInvite(invite.inviteId, "chess");
+            for (const targetSocket of socketsForUidInFamily(uid, familyId)) {
+              targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+            }
+            await emitPresence(familyId);
+          }
+        })();
+      }, TEST_BOT_INVITE_RESPONSE_DELAY_MS);
+      resolveTimer.unref();
+      setTimeout(() => void expireInvite(invite.inviteId), INVITE_TTL_MS + 100).unref();
+      return invite;
+    }));
+
+    socket.on(E.inviteCreate, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`invite:${uid}`, 5, 30_000);
+      const payload = asRecord(raw);
+      asRequestId(payload.requestId);
+      const familyId = asId(payload.familyId, "familyId");
+      const toUid = asId(payload.toUid, "toUid");
+      const timeControl = asTimeControl(payload.timeControl);
+      assertFamilyGameCreationOpen();
+      if (toUid === uid) invalid();
+      await requireMember(uid, familyId);
+      await requireMember(toUid, familyId);
+      if (await resolveCurrentGameForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (await resolveCurrentGameForUid(toUid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (getPendingBoardGameReservation(toUid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      if (!appReady(toUid, familyId)) throw new ChessDomainError("CHESS_PLAYER_OFFLINE");
+
+      const existing = [...invites.values()].find((invite) =>
+        invite.familyId === familyId && invite.fromUid === uid && invite.toUid === toUid && invite.expiresAt > Date.now(),
+      );
+      if (existing) {
+        const pending = getPendingBoardGameReservation(uid);
+        if (pending && (pending.gameKind !== "chess" || pending.inviteId !== existing.inviteId)) {
+          throw new ChessDomainError("CHESS_ALREADY_IN_GAME", pending.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS");
+        }
+        if (!pending) reservePendingBoardGame({ uid, gameKind: "chess", familyId, inviteId: existing.inviteId, createdAt: Date.now(), expiresAt: existing.expiresAt });
+        return existing;
+      }
+
+      // Never accept spoofed inviter names from socket payloads.
+      const inviterRecord = await adminAuth.getUser(uid).catch(() => null);
+      const fromDisplayName = inviterRecord?.displayName?.trim().slice(0, 56) || "Người thân";
+      const whiteUid = Math.random() < 0.5 ? uid : toUid;
+      const blackUid = whiteUid === uid ? toUid : uid;
+      const invite: Invite = {
+        inviteId: randomUUID(), familyId, fromUid: uid, toUid, timeControl, fromDisplayName, expiresAt: Date.now() + INVITE_TTL_MS, whiteUid, blackUid,
+      };
+      const reserved = reservePendingBoardGameParticipants({
+        uids: [uid, toUid],
+        inviterUid: uid,
+        inviteeUid: toUid,
+        gameKind: "chess",
+        familyId,
+        inviteId: invite.inviteId,
+        createdAt: Date.now(),
+        expiresAt: invite.expiresAt,
+      });
+      if (!reserved) {
+        const pending = getPendingBoardGameReservation(uid);
+        throw new ChessDomainError(
+          "CHESS_ALREADY_IN_GAME",
+          pending?.gameKind === "xiangqi" ? "PENDING_XIANGQI" : "PENDING_CHESS",
+        );
+      }
+      invites.set(invite.inviteId, invite);
+      await emitPresence(familyId);
+      for (const targetSocket of socketsForUidInFamily(toUid, familyId)) targetSocket.emit(E.inviteReceived, { ...invite, whiteUid: undefined, blackUid: undefined });
+      setTimeout(() => void expireInvite(invite.inviteId), INVITE_TTL_MS + 100).unref();
+      return { ...invite, whiteUid: undefined, blackUid: undefined };
+    }));
+
+    socket.on(E.inviteReject, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const inviteId = asId(payload.inviteId, "inviteId");
+      const invite = invites.get(inviteId);
+      if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
+      if (invite.toUid !== uid) invalid();
+      if (acceptingInvites.has(inviteId)) throw new ChessDomainError("CHESS_INVITE_EXPIRED", "INVITE_ALREADY_ACCEPTING");
+      invites.delete(invite.inviteId);
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
+      for (const targetSocket of socketsForUidInFamily(invite.toUid, invite.familyId)) {
+        targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+      }
+      for (const senderSocket of socketsForUidInFamily(invite.fromUid, invite.familyId)) {
+        senderSocket.emit(E.inviteRejected, { inviteId: invite.inviteId, byUid: uid });
+      }
+      await emitPresence(invite.familyId);
+      return { rejected: true };
+    }));
+
+    socket.on(E.inviteCancel, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const inviteId = asId(payload.inviteId, "inviteId");
+      const invite = invites.get(inviteId);
+      if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
+      const canCancel = !invite.isTestBot
+        ? invite.fromUid === uid
+        : invite.testBotDirection === "bot_to_user"
+          ? invite.toUid === uid
+          : invite.testBotDirection === "user_to_bot"
+            ? invite.fromUid === uid
+            : false;
+      if (!canCancel) invalid();
+      if (acceptingInvites.has(inviteId)) throw new ChessDomainError("CHESS_INVITE_EXPIRED", "INVITE_ALREADY_ACCEPTING");
+      invites.delete(invite.inviteId);
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
+      for (const targetSocket of socketsForUidInFamily(invite.toUid, invite.familyId)) {
+        targetSocket.emit(E.inviteExpired, { inviteId: invite.inviteId });
+      }
+      await emitPresence(invite.familyId);
+      return { cancelled: true };
+    }));
+
+    socket.on(E.inviteAccept, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`accept:${uid}`, 6, 20_000);
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const inviteId = asId(payload.inviteId, "inviteId");
+      const invite = invites.get(inviteId);
+
+      // If the accept ACK was lost, the invite may already be gone. Resolve the
+      // durable active lock and return the same game when requestId matches.
+      if (!invite || invite.expiresAt <= Date.now()) {
+        if (invite) await expireInvite(inviteId);
+        const active = await resolveCurrentGameForUid(uid);
+        if (active) {
+          const stored = await persistence.load(active.familyId, active.gameId);
+          if (stored?.recentRequestIds.includes(requestId)) {
+            const state = await manager.join(active.familyId, active.gameId, uid);
+            return { gameId: state.gameId, state: toClientGameState(state) };
+          }
+        }
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
+
+      if (invite.toUid !== uid) invalid();
+      if (acceptingInvites.has(inviteId)) throw new ChessDomainError("CHESS_SERVER_RECOVERING", "INVITE_ACCEPT_IN_FLIGHT");
+      acceptingInvites.add(inviteId);
+      try {
+      if (!invite.isTestBot) assertFamilyGameCreationOpen();
+      if (invite.toUid !== uid) invalid();
+      if (!invite.isTestBot) await requireMember(invite.fromUid, invite.familyId);
+      await requireMember(invite.toUid, invite.familyId);
+
+      const ownerUid = invite.isTestBot ? invite.toUid : invite.fromUid;
+      const ownerPending = getPendingBoardGameReservation(ownerUid);
+      if (!ownerPending || ownerPending.gameKind !== "chess" || ownerPending.inviteId !== invite.inviteId || (!invite.isTestBot && ownerPending.role !== "inviter")) {
+        throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+      }
+      if (!invite.isTestBot) {
+        const inviteePending = getPendingBoardGameReservation(uid);
+        if (!inviteePending || inviteePending.gameKind !== "chess" || inviteePending.inviteId !== invite.inviteId || inviteePending.role !== "invitee") {
+          throw new ChessDomainError("CHESS_INVITE_EXPIRED");
+        }
+      }
+
+      const state = await manager.create(
+        invite.familyId,
+        invite.fromUid,
+        invite.toUid,
+        invite.timeControl,
+        requestId,
+        invite.isTestBot
+          ? { testBotUid: invite.fromUid, whiteUid: invite.whiteUid, blackUid: invite.blackUid }
+          : { whiteUid: invite.whiteUid, blackUid: invite.blackUid },
+      );
+      invites.delete(invite.inviteId);
+      releasePendingBoardGameInvite(invite.inviteId, "chess");
+
+      for (const playerUid of [invite.fromUid, invite.toUid]) {
+        for (const playerSocket of socketsForUidInFamily(playerUid, invite.familyId)) {
+          playerSocket.data.gameId = state.gameId;
+          playerSocket.data.gameFamilyId = invite.familyId;
+          await playerSocket.join(`chess:game:${state.gameId}`);
+          playerSocket.emit(E.gameState, toClientGameState(state));
+        }
+      }
+      scheduleTestBotAction(state);
+      await emitPresence(invite.familyId);
+      return { gameId: state.gameId, state: toClientGameState(state) };
+      } finally {
+        acceptingInvites.delete(inviteId);
+        // If a failed accept crossed the 60s boundary, expire it now.
+        if (invites.get(inviteId)?.expiresAt && invites.get(inviteId)!.expiresAt <= Date.now()) {
+          void expireInvite(inviteId);
+        }
+      }
+    }));
+
+    socket.on(E.sessionGetActive, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      await requireMember(uid, familyId);
+      const active = await resolveCurrentGameForUid(uid);
+      if (!active || active.familyId !== familyId || active.gameKind === "xiangqi") return null;
+      return { gameId: active.gameId };
+    }));
+
+    socket.on(E.sessionRecover, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      await requireMember(uid, familyId);
+      const active = await resolveCurrentGameForUid(uid);
+      // chessActiveUsers is intentionally the single durable board-game lock
+      // (legacy collection name). A Chess and Xiangqi session can never coexist
+      // for one uid, including across two devices. Surface recovery exposes the
+      // other game instead of pretending this family is idle.
+      if (active?.gameKind === "xiangqi") {
+        return { kind: "busy_other_game", gameKind: "xiangqi", gameId: active.gameId, familyId: active.familyId };
+      }
+      if (active?.familyId === familyId) return { kind: "active", gameId: active.gameId };
+
+      const pending = pendingReservationPublicShape(uid);
+      if (pending) return pending;
+
+      const unseen = await persistence.getUnseenResult(uid, familyId);
+      if (!unseen) return { kind: "none" };
+      const stored = await persistence.load(familyId, unseen.gameId);
+      const belongs = !!stored && (stored.whiteUid === uid || stored.blackUid === uid);
+      if (!stored || !belongs || stored.status !== "finished") {
+        await persistence.acknowledgeResult(uid, familyId, unseen.gameId);
+        return { kind: "none" };
+      }
+      return { kind: "finished_unseen", gameId: unseen.gameId };
+    }));
+
+    socket.on(E.gameResultAck, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      const gameId = asId(payload.gameId, "gameId");
+      await requireMember(uid, familyId);
+      const stored = await persistence.load(familyId, gameId);
+      if (!stored) throw new ChessDomainError("CHESS_GAME_NOT_FOUND");
+      if (stored.whiteUid !== uid && stored.blackUid !== uid) throw new ChessDomainError("CHESS_NOT_PLAYER");
+      if (stored.status !== "finished") throw new ChessDomainError("CHESS_INVALID_REQUEST");
+      await persistence.acknowledgeResult(uid, familyId, gameId);
+      return { acknowledged: true };
+    }));
+
+    socket.on(E.gameJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`join:${uid}`, 15, 20_000);
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      const gameId = asId(payload.gameId, "gameId");
+      await requireMember(uid, familyId);
+      if (socket.data.gameId && socket.data.gameId !== gameId && socket.data.gameFamilyId) {
+        await leaveBoundGameForFamily(socket.data.gameFamilyId, true);
+      }
+      const state = await manager.join(familyId, gameId, uid);
+      socket.data.gameId = gameId;
+      socket.data.gameFamilyId = familyId;
+      await socket.join(`chess:game:${gameId}`);
+      scheduleTestBotAction(state);
+      await emitPresence(familyId);
+      return toClientGameState(state);
+    }));
+
+    socket.on(E.gameResync, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`resync:${uid}`, 12, 10_000);
+      const gameId = asId(asRecord(raw).gameId, "gameId");
+      return toClientGameState(await requireGameMembership(gameId));
+    }));
+
+    socket.on(E.gameBoardReady, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      await requireGameMembership(gameId);
+      return toClientGameState(await manager.markBoardReady(gameId, uid, requestId));
+    }));
+
+    socket.on(E.gameReady, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      const current = await requireGameMembership(gameId);
+      const next = await manager.markReady(gameId, uid, requestId);
+      if (next.status === "active") scheduleTestBotAction(next);
+      if (current.status !== next.status) await emitPresence(next.familyId);
+      return toClientGameState(next);
+    }));
+
+    socket.on(E.gameBoardPresence, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`board-presence:${uid}`, 20, 10_000);
+      const payload = asRecord(raw);
+      const gameId = asId(payload.gameId, "gameId");
+      const visible = asBoolean(payload.visible, "visible");
+      await requireGameMembership(gameId);
+      return manager.setBoardVisible(gameId, uid, visible);
+    }));
+
+    socket.on(E.gameMove, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`move:${uid}`, 20, 5_000);
+      const payload = asRecord(raw);
+      const clientMoveId = asRequestId(payload.clientMoveId);
+      const gameId = asId(payload.gameId, "gameId");
+      const expectedVersion = asRevision(payload.expectedVersion);
+      const from = asSquare(payload.from, "from");
+      const to = asSquare(payload.to, "to");
+      const promotion = asPromotion(payload.promotion);
+      await requireGameMembership(gameId);
+      return manager.move(gameId, uid, clientMoveId, expectedVersion, from, to, promotion);
+    }));
+
+    socket.on(E.gameResign, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      await requireGameMembership(gameId);
+      return manager.resign(gameId, uid, requestId);
+    }));
+
+    const drawCommand = (action: "offer" | "reject" | "accept") => (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`draw:${uid}`, 4, 20_000);
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      await requireGameMembership(gameId);
+      if (action === "offer") return manager.offerDraw(gameId, uid, requestId);
+      if (action === "reject") return manager.rejectDraw(gameId, uid, requestId);
+      return manager.acceptDraw(gameId, uid, requestId);
+    });
+    socket.on(E.drawOffer, drawCommand("offer"));
+    socket.on(E.drawReject, drawCommand("reject"));
+    socket.on(E.drawAccept, drawCommand("accept"));
+
+    socket.on(E.gameRematch, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`rematch:${uid}`, 4, 20_000);
+      const payload = asRecord(raw);
+      const requestId = asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      const old = await requireGameMembership(gameId);
+      if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
+      if (!old.testBotUid && !isFamilyGameCreationOpen()) {
+        rematchVotes.clear(gameId);
+        throw new ChessDomainError("CHESS_QUIET_HOURS", "Nhà mình nghỉ ngơi nhé 🌙 Mình hẹn nhau chơi tiếp từ 6:00 sáng.");
+      }
+
+      const existingActive = await resolveCurrentGameForUid(uid);
+      if (existingActive && existingActive.gameId !== gameId) {
+        const stored = await persistence.load(existingActive.familyId, existingActive.gameId);
+        if (stored?.recentRequestIds.includes(requestId)) {
+          const existing = await manager.join(existingActive.familyId, existingActive.gameId, uid);
+          return { waiting: false, gameId: existing.gameId, state: toClientGameState(existing) };
+        }
+        throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      }
+
+      if (old.testBotUid) {
+        if (!socket.data.developerAuthorized) throw new ChessDomainError("CHESS_UNAUTHORIZED");
+        if (!TEST_BOT_ENABLED) throw new ChessDomainError("CHESS_TEST_BOT_DISABLED");
+        const humanUid = old.whiteUid === old.testBotUid ? old.blackUid : old.whiteUid;
+        if (uid !== humanUid) invalid();
+
+        const next = await manager.create(
+          old.familyId,
+          humanUid,
+          old.testBotUid,
+          old.timeControl,
+          requestId,
+          { testBotUid: old.testBotUid, whiteUid: old.blackUid, blackUid: old.whiteUid },
+        );
+        for (const playerSocket of socketsForUidInFamily(humanUid, old.familyId)) {
+          playerSocket.leave(`chess:game:${gameId}`);
+          playerSocket.data.gameId = next.gameId;
+          playerSocket.data.gameFamilyId = old.familyId;
+          await playerSocket.join(`chess:game:${next.gameId}`);
+          playerSocket.emit(E.gameState, toClientGameState(next));
+        }
+        await emitPresence(old.familyId);
+        return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
+      }
+
+      const vote = rematchVotes.vote(gameId, uid, requestId);
+      if (!vote.ready) return { waiting: true, expiresAt: vote.expiresAt };
+
+      rematchVotes.clear(gameId);
+      const next = await manager.create(
+        old.familyId,
+        old.whiteUid,
+        old.blackUid,
+        old.timeControl,
+        requestId,
+        { whiteUid: old.blackUid, blackUid: old.whiteUid, additionalRequestIds: vote.requestIds.filter((id) => id !== requestId) },
+      );
+      for (const playerUid of [old.whiteUid, old.blackUid]) {
+        for (const playerSocket of socketsForUidInFamily(playerUid, old.familyId)) {
+          playerSocket.leave(`chess:game:${gameId}`);
+          playerSocket.data.gameId = next.gameId;
+          playerSocket.data.gameFamilyId = old.familyId;
+          await playerSocket.join(`chess:game:${next.gameId}`);
+          playerSocket.emit(E.gameState, toClientGameState(next));
+        }
+      }
+      await emitPresence(old.familyId);
+      return { waiting: false, gameId: next.gameId, state: toClientGameState(next) };
+    }));
+
+    socket.on(E.gameRematchCancel, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      const payload = asRecord(raw);
+      asRequestId(payload.requestId);
+      const gameId = asId(payload.gameId, "gameId");
+      const old = await requireGameMembership(gameId);
+      if (old.status !== "finished") throw new ChessDomainError("CHESS_GAME_FINISHED");
+      rematchVotes.cancel(gameId, uid);
+      return { cancelled: true };
+    }));
+
+    socket.on("disconnect", () => {
+      const familyIds = new Set([socket.data.appFamilyId, socket.data.lobbyFamilyId, socket.data.gameFamilyId].filter((value): value is string => !!value));
+      const gameId = socket.data.gameId;
+      if (gameId && !socketsForUid(uid).some((other) => other.id !== socket.id && other.data.gameId === gameId)) {
+        manager.disconnect(gameId, uid);
+        // Socket disconnect is the only reliable signal for a killed process.
+        // A 1.5s grace avoids treating a transient transport change as a
+        // repeated departure. The original deadline is never extended.
+        const disconnectedUid = uid;
+        setTimeout(() => {
+          const another = socketsForUid(disconnectedUid).some((peer) => peer.connected && peer.data.gameId === gameId);
+          if (!another) void manager.setBoardVisible(gameId, disconnectedUid, false).catch((error) => {
+            console.warn("[chess] away-on-disconnect", error instanceof Error ? error.message : String(error));
+          });
+        }, 1_500).unref();
+      }
+      for (const familyId of familyIds) setTimeout(() => void emitPresence(familyId), 8_000).unref();
+    });
+  });
+}

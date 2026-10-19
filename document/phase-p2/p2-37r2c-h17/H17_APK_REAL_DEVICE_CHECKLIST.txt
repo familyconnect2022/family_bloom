@@ -1,0 +1,18 @@
+FAMILY BLOOM H17 - THỬ NGHIỆM APK ANDROID
+
+[ ] 1. Sao lưu source cũ, chạy Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat.
+[ ] 2. Copy H17 FULL, chạy Family_Bloom_CLEAN_APPLY_FULL.bat.
+[ ] 3. Kiểm tra app 1.3.17, Android versionCode 143027, native P2.37R2C-H17-native-1.
+[ ] 4. Build bằng Family_Bloom_BUILD_APK_TO_SHARE.bat. Không cần điện thoại cắm cáp, không cần Metro.
+[ ] 5. Kiểm tra APK có tên mới, cài đúng binary. Kotlin native thay đổi nên OTA không đủ.
+[ ] 6. Chơi Trắng vs Bot, 20 nước liên tục: chạm ô đích -> quân bắt đầu đi ngay, KHÔNG đợi mạng.
+[ ] 7. Chơi Đen vs Bot, 20 nước: không chọn/đi được quân Trắng, không chạy nhầm đồng hồ.
+[ ] 8. So H14/H16/H17 cùng điện thoại và quay video slo-mo để so touch-to-motion / mất frame.
+[ ] 9. Kiểm tra đi bắt quân, nhập thành hai bên, phong cấp, en passant; mỗi nước animate MỘT lần.
+[ ] 10. Kiểm tra premove, network lag (100/300/800ms) và gói ACK/delta đến khác thứ tự.
+[ ] 11. Chặn network cho server từ chối: client hoàn tác đúng FEN và không gửi trùng nước.
+[ ] 12. Thu nhỏ/khôi phục Mini đang animate, chuyển tab, reconnect không bị đứng hay nhảy sai quân.
+[ ] 13. Kiểm tra Build/Share output C:\FamilyBloomShare\apk, APK name, SHA256, metadata.
+[ ] 14. Kiểm tra tài khoản kiểm thử được xác minh chính xác vẫn xem được developer tools trong Release, các admin khác không thấy.
+
+CHƯA được công nhận PASS cho các mục trên trước khi thử APK thật.

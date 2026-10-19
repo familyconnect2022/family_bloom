@@ -1,0 +1,45 @@
+export type ChessColor = "w" | "b";
+export type ChessTimeControl =
+  | { kind: "clocked"; initialMs: number; incrementMs: number }
+  | { kind: "unlimited"; initialMs: null; incrementMs: 0 };
+export type GameStatus = "waiting" | "active" | "paused" | "finished" | "cancelled";
+export type GameResult = "white" | "black" | "draw" | null;
+export type FinishReason = "checkmate" | "resignation" | "timeout" | "stalemate" | "draw" |
+  "insufficient_material" | "threefold_repetition" | "fifty_move_rule" | "abandoned" | "away_timeout" | null;
+export type MoveHint = { from: string; to: string; promotion?: "q" | "r" | "b" | "n" };
+export type LastMove = MoveHint & { san: string };
+export type CapturedPiece = "p"|"n"|"b"|"r"|"q";
+export type CaptureCounts = Record<CapturedPiece, number>;
+export type CaptureSummary = { byWhite: CaptureCounts; byBlack: CaptureCounts };
+export type PersistedAwayBudget = { remainingMs: number; leftAtEpochMs?: number; deadlineEpochMs?: number };
+export type PersistedGame = {
+  id: string; familyId: string; whiteUid: string; blackUid: string; playerUids: string[];
+  status: GameStatus; fen: string; pgn: string; turn: ChessColor; revision: number;
+  whiteRemainingMs: number | null; blackRemainingMs: number | null; timeControl: ChessTimeControl;
+  result: GameResult; finishReason: FinishReason; lastMove: LastMove | null; drawOfferByUid: string | null;
+  recentRequestIds: string[]; awayBudgetByUid?: Record<string, PersistedAwayBudget>; preparationPhase?: "board" | "colors"; testBotUid?: string | null; isTestGame?: boolean; createdAt: string; startedAt: string | null; endedAt: string | null; updatedAt: string;
+};
+// The persisted preparation phase has only waiting stages (board/colors).
+// The public snapshot also reports "play" once the match begins; omit the
+// persisted property before redeclaring it to avoid narrowing the union.
+export type PublicGameState = Omit<PersistedGame, "id" | "playerUids" | "recentRequestIds" | "awayBudgetByUid" | "updatedAt" | "preparationPhase"> & {
+  gameId: string; ply: number; preparationPhase: "board" | "colors" | "play"; legalMoves: MoveHint[]; checkSquare: string | null; captureSummary: CaptureSummary; serverNowMs: number; lastMoveBeforeFen?: string | null;
+};
+export type ClientGameState = Omit<PublicGameState, "pgn" | "legalMoves">;
+export type AppliedMove = {
+  from: string; to: string; san: string; color: ChessColor; piece: "p"|"n"|"b"|"r"|"q"|"k"; flags: string;
+  captured?: CapturedPiece; promotion?: "q"|"r"|"b"|"n";
+};
+export type MoveDelta = {
+  gameId: string; clientMoveId: string; version: number; ply: number; move: AppliedMove; fen: string; turn: ChessColor;
+  whiteRemainingMs: number | null; blackRemainingMs: number | null; checkSquare: string | null; status: GameStatus;
+  result: GameResult; finishReason: FinishReason; drawOfferByUid: string | null; serverNowMs: number; endedAt: string | null;
+};
+export type MoveCommandAck = { clientMoveId: string; version: number; duplicate?: boolean };
+export type ChessErrorCode = "CHESS_UNAUTHORIZED" | "CHESS_NOT_FAMILY_MEMBER" | "CHESS_GAME_NOT_FOUND" |
+  "CHESS_NOT_PLAYER" | "CHESS_NOT_YOUR_TURN" | "CHESS_ILLEGAL_MOVE" | "CHESS_GAME_FINISHED" |
+  "CHESS_ALREADY_IN_GAME" | "CHESS_INVITE_EXPIRED" | "CHESS_PLAYER_OFFLINE" | "CHESS_INVALID_PROMOTION" |
+  "CHESS_STATE_CONFLICT" | "CHESS_SERVER_RECOVERING" | "CHESS_RATE_LIMITED" | "CHESS_QUIET_HOURS" | "CHESS_TEST_BOT_DISABLED" | "CHESS_INVALID_REQUEST";
+export class ChessDomainError extends Error {
+  constructor(public code: ChessErrorCode, message?: string) { super(message ?? code); }
+}

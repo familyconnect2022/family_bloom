@@ -1,0 +1,189 @@
+import { createHash, randomUUID } from "node:crypto";
+import type { Server, Socket } from "socket.io";
+import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
+import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
+import { chooseBotPlan } from "./xiangqiEngine.js";
+import { XiangqiGameManager } from "./xiangqiGameManager.js";
+import { XiangqiPersistenceService } from "./xiangqiPersistenceService.js";
+import { XiangqiDomainError, type PublicXiangqiGameState, type XiangqiTimeControl } from "./xiangqiTypes.js";
+import {
+  getPendingBoardGameReservation,
+  pendingReservationPublicShape,
+  releasePendingBoardGameInvite,
+  reservePendingBoardGame,
+  reservePendingBoardGameParticipants,
+} from "../games/boardGamePendingReservation.js";
+
+export const XIANGQI_EVENTS={
+  appJoin:"xiangqi:app:join", appLeave:"xiangqi:app:leave", lobbyJoin:"xiangqi:lobby:join", lobbyLeave:"xiangqi:lobby:leave", presenceUpdate:"xiangqi:presence:update",
+  inviteCreate:"xiangqi:invite:create", inviteSent:"xiangqi:invite:sent", inviteReceived:"xiangqi:invite:received", inviteAccept:"xiangqi:invite:accept", inviteReject:"xiangqi:invite:reject", inviteCancel:"xiangqi:invite:cancel", inviteExpired:"xiangqi:invite:expired", inviteRejected:"xiangqi:invite:rejected",
+  testBotInvite:"xiangqi:test:bot:invite", testBotChallenge:"xiangqi:test:bot:challenge", gameJoin:"xiangqi:game:join", gameState:"xiangqi:game:state", gameMove:"xiangqi:game:move", gameMoveApplied:"xiangqi:game:moveApplied", gameReady:"xiangqi:game:ready", gameBoardReady:"xiangqi:game:boardReady", gameResign:"xiangqi:game:resign", gameBoardPresence:"xiangqi:game:boardPresence", gameResync:"xiangqi:game:resync", gameRematch:"xiangqi:game:rematch", sessionRecover:"xiangqi:session:recover", gameResultAck:"xiangqi:game:resultAck",
+} as const;
+type Ack=(response:unknown)=>void;
+type Data={uid:string;developerAuthorized?:boolean;xiangqiFamilyId?:string;xiangqiLobbyFamilyId?:string;xiangqiGameId?:string;xiangqiGameFamilyId?:string};
+type Invite={inviteId:string;familyId:string;fromUid:string;toUid:string;timeControl:XiangqiTimeControl;expiresAt:number;isTestBot?:boolean;fromDisplayName?:string;testBotDirection?:"bot_to_user"|"user_to_bot";testCycleStep?:1|2|3;redUid?:string;blackUid?:string};
+const invites=new Map<string,Invite>();
+const memberCache=new Map<string,{ok:boolean;expires:number}>();
+const ALLOWED=new Set(["180000:2000","300000:0","600000:0","600000:5000","unlimited"]);
+const TEST_BOT_ENABLED=/^(1|true|yes)$/i.test(process.env.CHESS_TEST_BOT_ENABLED??"");
+const BOT_PREFIX="__bloom_xiangqi_bot__";const BOT_NAME="Bloom Bot";
+const MOVE_DELAY=1000,CHECK_DELAY=1300,INVITE_TTL_MS=60000,TEST_BOT_INVITE_RESPONSE_DELAY_MS=1200;
+const outgoingTestBotCycleByUid=new Map<string,number>();
+function nextOutgoingTestBotCycleStep(uid:string):1|2|3{const next=(((outgoingTestBotCycleByUid.get(uid)??0)%3)+1) as 1|2|3;outgoingTestBotCycleByUid.set(uid,next);return next;}
+const DOC=/^[^/]{1,128}$/;
+function botUid(uid:string){return `${BOT_PREFIX}${createHash("sha256").update(uid).digest("hex").slice(0,24)}`;}
+function invalid(message="XIANGQI_INVALID_REQUEST"):never{throw new XiangqiDomainError("XIANGQI_INVALID_REQUEST",message);}
+function rec(v:unknown){if(!v||typeof v!=="object"||Array.isArray(v))invalid();return v as Record<string,unknown>;}
+function id(v:unknown,label:string){if(typeof v!=="string"||!DOC.test(v))invalid(`Invalid ${label}`);return v;}
+function requestId(v:unknown){if(typeof v!=="string"||v.length<8||v.length>128)invalid("Invalid requestId");return v;}
+function revision(v:unknown){if(!Number.isSafeInteger(v)||(v as number)<1)invalid("Invalid revision");return v as number;}
+function bool(v:unknown){if(typeof v!=="boolean")invalid();return v;}
+function coord(v:unknown){const x=rec(v);if(!Number.isInteger(x.col)||!Number.isInteger(x.row)||(x.col as number)<0||(x.col as number)>8||(x.row as number)<0||(x.row as number)>9)invalid("Invalid coordinate");return {col:x.col as number,row:x.row as number};}
+function tc(v:unknown):XiangqiTimeControl{const x=rec(v);if(x.kind==="unlimited"&&x.initialMs===null&&x.incrementMs===0)return {kind:"unlimited",initialMs:null,incrementMs:0};if(x.kind!=="clocked"||!Number.isSafeInteger(x.initialMs)||!Number.isSafeInteger(x.incrementMs))invalid("Invalid time control");const a=x.initialMs as number,b=x.incrementMs as number;if(!ALLOWED.has(`${a}:${b}`))invalid("Unsupported time control");return {kind:"clocked",initialMs:a,incrementMs:b};}
+function ackError(ack:Ack,e:unknown){if(e instanceof XiangqiDomainError)ack({ok:false,errorCode:e.code,message:e.message});else{console.error("[xiangqi] command failed",e);ack({ok:false,errorCode:"XIANGQI_SERVER_RECOVERING",message:"Xiangqi server command failed"});}}
+function safe<T>(ack:Ack,fn:()=>Promise<T>){void fn().then(data=>ack({ok:true,data})).catch(e=>ackError(ack,e));}
+
+export function installXiangqiSocket(io:Server<any,any,any,any>){
+ const persistence=new XiangqiPersistenceService(adminDb);const botTimers=new Map<string,{revision:number;timer:NodeJS.Timeout}>();
+ const manager=new XiangqiGameManager(persistence,event=>{if(event.kind==="move")io.to(`xiangqi:game:${event.state.gameId}`).emit(XIANGQI_EVENTS.gameMoveApplied,event.delta);else io.to(`xiangqi:game:${event.state.gameId}`).emit(XIANGQI_EVENTS.gameState,event.state);scheduleBot(event.state);if(event.state.status==="finished")void emitPresence(event.state.familyId);});
+ async function member(uid:string,familyId:string){const k=`${familyId}:${uid}`,c=memberCache.get(k);if(c&&c.expires>Date.now())return c.ok;const s=await adminDb.doc(`families/${familyId}/members/${uid}`).get();memberCache.set(k,{ok:s.exists,expires:Date.now()+10000});return s.exists;}
+ async function requireMember(uid:string,familyId:string){if(!(await member(uid,familyId)))throw new XiangqiDomainError("XIANGQI_NOT_FAMILY_MEMBER");}
+ const socketsFor=(uid:string)=>[...io.sockets.sockets.values()].filter(s=>(s.data as Data).uid===uid) as Socket<any,any,any,Data>[];
+ const socketsIn=(uid:string,familyId:string)=>socketsFor(uid).filter(s=>s.data.xiangqiFamilyId===familyId||s.data.xiangqiLobbyFamilyId===familyId||s.data.xiangqiGameFamilyId===familyId);
+ const appReady=(uid:string,familyId:string)=>socketsFor(uid).some(s=>s.data.xiangqiFamilyId===familyId);
+ async function emitPresence(familyId:string){const uids=new Set<string>();for(const s of io.sockets.sockets.values()){const d=s.data as Data;if(d.xiangqiFamilyId===familyId||d.xiangqiLobbyFamilyId===familyId||d.xiangqiGameFamilyId===familyId)uids.add(d.uid);}const items=await Promise.all([...uids].map(async uid=>{const active=await persistence.getAnyActiveForUid(uid),pending=getPendingBoardGameReservation(uid);return {uid,status:active?.familyId===familyId?"in_game":active||pending?"busy":appReady(uid,familyId)?"online_app":"offline"};}));io.to(`xiangqi:family:${familyId}`).to(`xiangqi:lobby:${familyId}`).emit(XIANGQI_EVENTS.presenceUpdate,items);}
+ function clearBot(gameId:string){const x=botTimers.get(gameId);if(x)clearTimeout(x.timer);botTimers.delete(gameId);}
+ function scheduleBot(state:PublicXiangqiGameState){const bot=state.testBotUid;if(!TEST_BOT_ENABLED||!bot||state.status!=="active"){clearBot(state.gameId);return;}const color=state.redUid===bot?"red":state.blackUid===bot?"black":null;if(!color||state.board.turn!==color){clearBot(state.gameId);return;}const old=botTimers.get(state.gameId);if(old?.revision===state.revision)return;clearBot(state.gameId);const plan=chooseBotPlan(state.board,color);if(!plan)return;const timer=setTimeout(()=>{void (async()=>{botTimers.delete(state.gameId);try{const latest=await manager.state(state.gameId,bot);if(latest.status!=="active"||latest.revision!==state.revision)return;const c=latest.redUid===bot?"red":"black";if(latest.board.turn!==c)return;const chosen=chooseBotPlan(latest.board,c);if(!chosen)return;await manager.move(latest.gameId,bot,`xq-bot-${latest.gameId}-${latest.revision}`,latest.revision,chosen.move.pieceId,chosen.move.to);}catch(e){console.warn("[xiangqi:test-bot] action skipped",e instanceof Error?e.message:String(e));}})();},plan.givesCheck?CHECK_DELAY:MOVE_DELAY);timer.unref();botTimers.set(state.gameId,{revision:state.revision,timer});}
+ async function expireInvite(inviteId:string){const i=invites.get(inviteId);if(!i||i.expiresAt>Date.now())return;invites.delete(inviteId);releasePendingBoardGameInvite(i.inviteId,"xiangqi");for(const uid of [i.fromUid,i.toUid])for(const s of socketsIn(uid,i.familyId))s.emit(XIANGQI_EVENTS.inviteExpired,{inviteId});await emitPresence(i.familyId);}
+ io.on("connection",(socket:Socket<any,any,any,Data>)=>{const uid=socket.data.uid;if(!uid)return;
+  socket.on(XIANGQI_EVENTS.appJoin,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const familyId=id(rec(raw).familyId,"familyId");await requireMember(uid,familyId);const previous=socket.data.xiangqiFamilyId;if(previous&&previous!==familyId){socket.leave(`xiangqi:family:${previous}`);if(socket.data.xiangqiLobbyFamilyId===previous){socket.leave(`xiangqi:lobby:${previous}`);delete socket.data.xiangqiLobbyFamilyId;}await emitPresence(previous);}socket.data.xiangqiFamilyId=familyId;await socket.join(`xiangqi:family:${familyId}`);await emitPresence(familyId);return {ready:true,testBotEnabled:TEST_BOT_ENABLED};}));
+  socket.on(XIANGQI_EVENTS.appLeave,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const familyId=id(rec(raw).familyId,"familyId");socket.leave(`xiangqi:family:${familyId}`);if(socket.data.xiangqiFamilyId===familyId)delete socket.data.xiangqiFamilyId;await emitPresence(familyId);return {left:true};}));
+  socket.on(XIANGQI_EVENTS.lobbyJoin,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const familyId=id(rec(raw).familyId,"familyId");await requireMember(uid,familyId);const previous=socket.data.xiangqiLobbyFamilyId;if(previous&&previous!==familyId){socket.leave(`xiangqi:lobby:${previous}`);delete socket.data.xiangqiLobbyFamilyId;await emitPresence(previous);}socket.data.xiangqiLobbyFamilyId=familyId;await socket.join(`xiangqi:lobby:${familyId}`);await emitPresence(familyId);return {ready:true,testBotEnabled:TEST_BOT_ENABLED};}));
+  socket.on(XIANGQI_EVENTS.lobbyLeave,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const familyId=id(rec(raw).familyId,"familyId");socket.leave(`xiangqi:lobby:${familyId}`);if(socket.data.xiangqiLobbyFamilyId===familyId)delete socket.data.xiangqiLobbyFamilyId;await emitPresence(familyId);return {left:true};}));
+  socket.on(XIANGQI_EVENTS.testBotInvite,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    if(!socket.data.developerAuthorized)throw new XiangqiDomainError("XIANGQI_UNAUTHORIZED");
+    if(!TEST_BOT_ENABLED)throw new XiangqiDomainError("XIANGQI_TEST_BOT_DISABLED");
+    const p=rec(raw);requestId(p.requestId);
+    const familyId=id(p.familyId,"familyId"),timeControl=tc(p.timeControl);
+    await requireMember(uid,familyId);
+    if(await persistence.getAnyActiveForUid(uid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
+    const existing=[...invites.values()].find(i=>i.isTestBot&&i.familyId===familyId&&i.toUid===uid&&i.expiresAt>Date.now());
+    if(existing){
+      const pending=getPendingBoardGameReservation(uid);
+      if(pending&&(pending.gameKind!=="xiangqi"||pending.inviteId!==existing.inviteId))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");
+      if(!pending)reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:existing.inviteId,createdAt:Date.now(),expiresAt:existing.expiresAt});
+      return existing;
+    }
+    const b=botUid(uid);
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:b,toUid:uid,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,fromDisplayName:BOT_NAME,testBotDirection:"bot_to_user",redUid:uid,blackUid:b};
+    const reserved=reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
+    if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
+    invites.set(invite.inviteId,invite);
+    await emitPresence(familyId);
+    for(const s of socketsIn(uid,familyId))s.emit(XIANGQI_EVENTS.inviteReceived,invite);
+    setTimeout(()=>void expireInvite(invite.inviteId),INVITE_TTL_MS+100).unref();
+    return invite;
+  }));
+  socket.on(XIANGQI_EVENTS.testBotChallenge,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    if(!socket.data.developerAuthorized)throw new XiangqiDomainError("XIANGQI_UNAUTHORIZED");
+    if(!TEST_BOT_ENABLED)throw new XiangqiDomainError("XIANGQI_TEST_BOT_DISABLED");
+    const p=rec(raw),clientRequestId=requestId(p.requestId);
+    const familyId=id(p.familyId,"familyId"),timeControl=tc(p.timeControl);
+    await requireMember(uid,familyId);
+    if(await persistence.getAnyActiveForUid(uid)||getPendingBoardGameReservation(uid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
+    const b=botUid(uid),cycleStep=nextOutgoingTestBotCycleStep(uid);
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid:b,timeControl,expiresAt:Date.now()+INVITE_TTL_MS,isTestBot:true,testBotDirection:"user_to_bot",testCycleStep:cycleStep,redUid:uid,blackUid:b};
+    const reserved=reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
+    if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
+    invites.set(invite.inviteId,invite);
+    await emitPresence(familyId);
+    const timer=setTimeout(()=>{void (async()=>{
+      const current=invites.get(invite.inviteId);if(!current||current.expiresAt<=Date.now())return;
+      if(cycleStep===3){invites.delete(invite.inviteId);releasePendingBoardGameInvite(invite.inviteId,"xiangqi");for(const s of socketsIn(uid,familyId))s.emit(XIANGQI_EVENTS.inviteRejected,{inviteId:invite.inviteId,byUid:b,isTestBot:true,testCycleStep:cycleStep});await emitPresence(familyId);return;}
+      try{
+        if(await persistence.getAnyActiveForUid(uid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
+        const pending=getPendingBoardGameReservation(uid);if(!pending||pending.gameKind!=="xiangqi"||pending.inviteId!==invite.inviteId)throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");
+        const state=await manager.create(familyId,uid,b,timeControl,`${clientRequestId}:bot-accept`,{testBotUid:b,redUid:uid,blackUid:b});
+        invites.delete(invite.inviteId);releasePendingBoardGameInvite(invite.inviteId,"xiangqi");
+        for(const s of socketsIn(uid,familyId)){s.data.xiangqiGameId=state.gameId;s.data.xiangqiGameFamilyId=familyId;await s.join(`xiangqi:game:${state.gameId}`);s.emit(XIANGQI_EVENTS.gameState,state);}
+        scheduleBot(state);await emitPresence(familyId);
+      }catch{invites.delete(invite.inviteId);releasePendingBoardGameInvite(invite.inviteId,"xiangqi");for(const s of socketsIn(uid,familyId))s.emit(XIANGQI_EVENTS.inviteExpired,{inviteId:invite.inviteId});await emitPresence(familyId);}
+    })();},TEST_BOT_INVITE_RESPONSE_DELAY_MS);timer.unref();
+    setTimeout(()=>void expireInvite(invite.inviteId),INVITE_TTL_MS+100).unref();
+    return invite;
+  }));
+  socket.on(XIANGQI_EVENTS.inviteCreate,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    const p=rec(raw);requestId(p.requestId);
+    const familyId=id(p.familyId,"familyId"),toUid=id(p.toUid,"toUid"),timeControl=tc(p.timeControl);
+    assertFamilyGameCreationOpen();
+    await requireMember(uid,familyId);await requireMember(toUid,familyId);
+    if(await persistence.getAnyActiveForUid(uid)||await persistence.getAnyActiveForUid(toUid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
+    if(getPendingBoardGameReservation(toUid))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME");
+    if(!appReady(toUid,familyId))throw new XiangqiDomainError("XIANGQI_PLAYER_OFFLINE");
+    const existing=[...invites.values()].find(i=>!i.isTestBot&&i.familyId===familyId&&i.fromUid===uid&&i.toUid===toUid&&i.expiresAt>Date.now());
+    if(existing){
+      const pending=getPendingBoardGameReservation(uid);
+      if(pending&&(pending.gameKind!=="xiangqi"||pending.inviteId!==existing.inviteId))throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");
+      if(!pending)reservePendingBoardGame({uid,gameKind:"xiangqi",familyId,inviteId:existing.inviteId,createdAt:Date.now(),expiresAt:existing.expiresAt});
+      return existing;
+    }
+    // User names come from verified Firebase Admin, never from socket payload.
+    const inviterRecord=await adminAuth.getUser(uid).catch(()=>null);
+    const fromDisplayName=inviterRecord?.displayName?.trim().slice(0,56)||"Người thân";
+    const redUid=Math.random()<.5?uid:toUid,blackUid=redUid===uid?toUid:uid;
+    const invite:Invite={inviteId:randomUUID(),familyId,fromUid:uid,toUid,timeControl,fromDisplayName,expiresAt:Date.now()+INVITE_TTL_MS,redUid,blackUid};
+    const reserved=reservePendingBoardGameParticipants({uids:[uid,toUid],inviterUid:uid,inviteeUid:toUid,gameKind:"xiangqi",familyId,inviteId:invite.inviteId,createdAt:Date.now(),expiresAt:invite.expiresAt});
+    if(!reserved){const pending=getPendingBoardGameReservation(uid);throw new XiangqiDomainError("XIANGQI_ALREADY_IN_GAME",pending?.gameKind==="chess"?"PENDING_CHESS":"PENDING_XIANGQI");}
+    invites.set(invite.inviteId,invite);
+    await emitPresence(familyId);
+    for(const s of socketsIn(toUid,familyId))s.emit(XIANGQI_EVENTS.inviteReceived,invite);
+    for(const s of socketsIn(uid,familyId))s.emit(XIANGQI_EVENTS.inviteSent,invite);
+    setTimeout(()=>void expireInvite(invite.inviteId),INVITE_TTL_MS+100).unref();
+    return invite;
+  }));
+  socket.on(XIANGQI_EVENTS.inviteAccept,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    const p=rec(raw),rid=requestId(p.requestId),inviteId=id(p.inviteId,"inviteId"),invite=invites.get(inviteId);
+    if(!invite||invite.expiresAt<=Date.now()){if(invite)await expireInvite(inviteId);throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
+    if(invite.toUid!==uid)invalid();
+    if(!invite.isTestBot){assertFamilyGameCreationOpen();await requireMember(invite.fromUid,invite.familyId);}
+    await requireMember(uid,invite.familyId);
+    const ownerUid=invite.isTestBot?invite.toUid:invite.fromUid;
+    const ownerPending=getPendingBoardGameReservation(ownerUid);
+    if(!ownerPending||ownerPending.gameKind!=="xiangqi"||ownerPending.inviteId!==invite.inviteId||(!invite.isTestBot&&ownerPending.role!=="inviter"))throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");
+    if(!invite.isTestBot){const inviteePending=getPendingBoardGameReservation(uid);if(!inviteePending||inviteePending.gameKind!=="xiangqi"||inviteePending.inviteId!==invite.inviteId||inviteePending.role!=="invitee")throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
+    const state=await manager.create(invite.familyId,invite.fromUid,invite.toUid,invite.timeControl,rid,invite.isTestBot?{testBotUid:invite.fromUid,redUid:invite.redUid,blackUid:invite.blackUid}:{redUid:invite.redUid,blackUid:invite.blackUid});
+    invites.delete(inviteId);
+    releasePendingBoardGameInvite(invite.inviteId,"xiangqi");
+    for(const playerUid of [invite.fromUid,invite.toUid])for(const s of socketsIn(playerUid,invite.familyId)){s.data.xiangqiGameId=state.gameId;s.data.xiangqiGameFamilyId=invite.familyId;await s.join(`xiangqi:game:${state.gameId}`);s.emit(XIANGQI_EVENTS.gameState,state);}
+    scheduleBot(state);await emitPresence(invite.familyId);return {gameId:state.gameId,state};
+  }));
+  socket.on(XIANGQI_EVENTS.inviteReject,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    const inviteId=id(rec(raw).inviteId,"inviteId"),i=invites.get(inviteId);
+    if(!i||i.expiresAt<=Date.now()){if(i)await expireInvite(inviteId);throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
+    if(i.toUid!==uid)invalid();
+    invites.delete(inviteId);releasePendingBoardGameInvite(i.inviteId,"xiangqi");
+    for(const memberUid of [i.fromUid,i.toUid])for(const s of socketsIn(memberUid,i.familyId))s.emit(XIANGQI_EVENTS.inviteRejected,{inviteId,byUid:uid});
+    await emitPresence(i.familyId);return {rejected:true};
+  }));
+  socket.on(XIANGQI_EVENTS.inviteCancel,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    const inviteId=id(rec(raw).inviteId,"inviteId"),i=invites.get(inviteId);
+    if(!i||i.expiresAt<=Date.now()){if(i)await expireInvite(inviteId);throw new XiangqiDomainError("XIANGQI_INVITE_EXPIRED");}
+    const canCancel=(!i.isTestBot&&i.fromUid===uid)||(i.isTestBot&&i.testBotDirection==="bot_to_user"&&i.toUid===uid)||(i.isTestBot&&i.testBotDirection==="user_to_bot"&&i.fromUid===uid);
+    if(!canCancel)invalid();
+    invites.delete(inviteId);releasePendingBoardGameInvite(i.inviteId,"xiangqi");
+    for(const memberUid of [i.fromUid,i.toUid])for(const s of socketsIn(memberUid,i.familyId))s.emit(XIANGQI_EVENTS.inviteExpired,{inviteId:i.inviteId});
+    await emitPresence(i.familyId);return {cancelled:true};
+  }));
+  socket.on(XIANGQI_EVENTS.gameJoin,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw),familyId=id(p.familyId,"familyId"),gameId=id(p.gameId,"gameId");await requireMember(uid,familyId);const state=await manager.join(familyId,gameId,uid);socket.data.xiangqiGameId=gameId;socket.data.xiangqiGameFamilyId=familyId;await socket.join(`xiangqi:game:${gameId}`);scheduleBot(state);await emitPresence(familyId);return state;}));
+  socket.on(XIANGQI_EVENTS.gameBoardReady,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw),gameId=id(p.gameId,"gameId"),rid=requestId(p.requestId);return manager.markBoardReady(gameId,uid,rid);}));
+  socket.on(XIANGQI_EVENTS.gameReady,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw),gameId=id(p.gameId,"gameId"),rid=requestId(p.requestId);const next=await manager.markReady(gameId,uid,rid);scheduleBot(next);return next;}));
+  socket.on(XIANGQI_EVENTS.gameResync,(raw:unknown,ack:Ack)=>safe(ack,async()=>manager.state(id(rec(raw).gameId,"gameId"),uid)));
+  socket.on(XIANGQI_EVENTS.gameBoardPresence,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw);return manager.setBoardVisible(id(p.gameId,"gameId"),uid,bool(p.visible));}));
+  socket.on(XIANGQI_EVENTS.gameMove,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw);return manager.move(id(p.gameId,"gameId"),uid,requestId(p.clientMoveId),revision(p.expectedVersion),id(p.pieceId,"pieceId"),coord(p.to));}));
+  socket.on(XIANGQI_EVENTS.gameResign,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw);return manager.resign(id(p.gameId,"gameId"),uid,requestId(p.requestId));}));
+  socket.on(XIANGQI_EVENTS.sessionRecover,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const familyId=id(rec(raw).familyId,"familyId");await requireMember(uid,familyId);const active=await persistence.getAnyActiveForUid(uid);if(active&&active.gameKind!=="xiangqi")return {kind:"busy_other_game",gameKind:"chess",gameId:active.gameId,familyId:active.familyId};if(active?.gameKind==="xiangqi"&&active.familyId===familyId){const refreshed=await manager.recover(familyId,active.gameId,uid);if(refreshed.status==="finished"||refreshed.status==="cancelled")return {kind:"finished_unseen",gameId:active.gameId};return {kind:"active",gameId:active.gameId};}const pending=pendingReservationPublicShape(uid);if(pending)return pending;const unseen=await persistence.getUnseenResult(uid,familyId);return unseen?{kind:"finished_unseen",gameId:unseen.gameId}:{kind:"none"};}));
+  socket.on(XIANGQI_EVENTS.gameResultAck,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw),familyId=id(p.familyId,"familyId"),gameId=id(p.gameId,"gameId");await requireMember(uid,familyId);await persistence.acknowledgeResult(uid,familyId,gameId);return {acknowledged:true};}));
+  socket.on(XIANGQI_EVENTS.gameRematch,(raw:unknown,ack:Ack)=>safe(ack,async()=>{const p=rec(raw),rid=requestId(p.requestId),gameId=id(p.gameId,"gameId");const old=await manager.state(gameId,uid);if(old.status!=="finished")throw new XiangqiDomainError("XIANGQI_GAME_FINISHED");if(!old.testBotUid&&!isFamilyGameCreationOpen())throw new XiangqiDomainError("XIANGQI_QUIET_HOURS");if(old.testBotUid){if(!socket.data.developerAuthorized)throw new XiangqiDomainError("XIANGQI_UNAUTHORIZED");const human=old.redUid===old.testBotUid?old.blackUid:old.redUid;const next=await manager.create(old.familyId,human,old.testBotUid,old.timeControl,rid,{testBotUid:old.testBotUid,redUid:human,blackUid:old.testBotUid});for(const s of socketsIn(human,old.familyId)){s.data.xiangqiGameId=next.gameId;s.data.xiangqiGameFamilyId=old.familyId;await s.join(`xiangqi:game:${next.gameId}`);s.emit(XIANGQI_EVENTS.gameState,next);}return {waiting:false,gameId:next.gameId,state:next};}throw new XiangqiDomainError("XIANGQI_INVALID_REQUEST","Human rematch requires a fresh invite in this build");}));
+  socket.on("disconnect",()=>{const gameId=socket.data.xiangqiGameId;if(gameId&&!socketsFor(uid).some(s=>s.id!==socket.id&&s.data.xiangqiGameId===gameId)){manager.disconnect(gameId,uid);void manager.setBoardVisible(gameId,uid,false).catch(e=>console.warn("[xiangqi] disconnect absence skipped",e));}const f=socket.data.xiangqiGameFamilyId??socket.data.xiangqiFamilyId;if(f)setTimeout(()=>void emitPresence(f),8000).unref();});
+ });
+}

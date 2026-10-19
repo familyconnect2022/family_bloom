@@ -1,0 +1,28 @@
+Family Bloom — P2.16.2 validation
+Date: 2026-10-13
+Base: P2.16.1 HYDRATION_NO_ACK_DEADLOCK COPY-OVER FULL
+
+Scope
+- Family Graph Focus View hot revisit / A -> B -> A BSH scene reuse
+- Xiangqi route-owned presentation + board-ready + transport recovery
+- Chess painted-board reconnect/synchronization presentation
+
+Automated gates
+- phaseP2_16:check: 50 PASS / 0 FAIL
+- phaseP2_16_1:check: 30 PASS / 0 FAIL
+- phaseP2_16_2:check: 31 PASS / 0 FAIL
+- structure:check: 18 / 18 PASS
+- build entrypoint audit: PASS (Windows CRLF + required gates/entrypoints)
+- board audio integrity: PASS (11 supplied MP3 cues; no retired WAV bank)
+- changed TS/TSX syntax: PASS (included in P2.16.2 gate)
+
+Important validation boundary
+The extracted COPY-OVER source archive intentionally does not contain node_modules/package-lock.json.
+Therefore a full project `tsc`/native Android compile was not claimed in this container workspace because
+Expo's tsconfig/package dependencies are not installed here. The included CLEAN/APPLY and Android build
+entrypoints restore/check dependencies before their normal project build gates.
+
+Device validation targets
+1. Family Graph: open Focus A, close, open B, return A; hot scenes should display immediately when graph revision is unchanged.
+2. Xiangqi: route must paint the warm board immediately; Ready must not depend on 32 image onLoadEnd callbacks; Socket.IO starts concurrently with the /health wake hint; transient transport/ACK failures retry while focused.
+3. Chess: once the board is painted, ordinary reconnect/sync/waiting state remains a small non-blocking pill; move input remains disabled until authoritative connected+synced+active conditions are true.
