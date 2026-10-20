@@ -99,8 +99,10 @@ export function XiangqiChallengeGate({ uid, familyId, ready }: { uid: string; fa
       onRequestClose={() => { if (isIncoming) void act("reject"); else void act("cancel"); }}>
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <View pointerEvents="none" style={styles.kingBadge}>
+          <View pointerEvents="none" style={styles.kingSlot}>
+            <View style={styles.kingBadge}>
             <Image source={require("../../../assets/xiangqi/red_general_modal.png")} style={styles.kingImage} resizeMode="contain" />
+            </View>
           </View>
           <Text style={styles.eyebrow}>✦  BLOOM ARENA · CỜ TƯỚNG  ✦</Text>
           <Text style={styles.title}>{isIncoming ? "MỜI BẠN VÀO TRẬN!" : "MỘT LỜI MỜI ĐẶC BIỆT"}</Text>
@@ -135,7 +137,8 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(255,240,249,.83)", justifyContent: "center", paddingHorizontal: 21 },
   // Overflow must stay visible: half of the King physically floats above card.
   panel: { backgroundColor: "#FFFAFC", borderRadius: 32, paddingHorizontal: 22, paddingTop: 83, paddingBottom: 20, alignItems: "center", borderWidth: 2, borderColor: "#EEC5DA", elevation: 18, overflow: "visible" },
-  kingBadge: { position: "absolute", top: -55, left: "50%", transform: [{ translateX: -55 }], width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
+  kingSlot: { position: "absolute", top: -55, left: 0, right: 0, height: 110, alignItems: "center", justifyContent: "center", zIndex: 20, overflow: "visible" },
+  kingBadge: { width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
   kingImage: { width: 100, height: 100 },
   eyebrow: { color: "#873A63", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textAlign: "center" },
   title: { color: "#79385F", fontSize: 21, textAlign: "center", fontWeight: "900", letterSpacing: .4, marginTop: 17 },

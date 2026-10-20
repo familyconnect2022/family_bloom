@@ -8,6 +8,7 @@ import { RematchProposalStore } from "../chess/rematchProposalStore.js";
 import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 import { isVerifiedDeveloperIdentity } from "../security/developerIdentity.js";
+import { hasDualAppLease, listDualAppLeaseUids, onDualAppPresenceChange, setDualAppLease } from "../games/developerDualAppPresence.js";
 import {
   getPendingBoardGameReservation,
   pendingReservationPublicShape,
@@ -347,7 +348,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
   }
 
   function appReady(uid: string, familyId: string) {
-    return socketsForUid(uid).some((socket) => socket.data.appFamilyId === familyId);
+    return socketsForUid(uid).some((socket) => socket.data.appFamilyId === familyId) || hasDualAppLease(uid, familyId);
   }
 
   async function emitPresence(familyId: string) {
@@ -355,6 +356,7 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
     for (const socket of io.sockets.sockets.values()) {
       if (socket.data.appFamilyId === familyId || socket.data.lobbyFamilyId === familyId || socket.data.gameFamilyId === familyId) uids.add(socket.data.uid);
     }
+    for (const uid of listDualAppLeaseUids(familyId)) uids.add(uid);
     const items = await Promise.all([...uids].map(async (uid) => {
       const active = await resolveCurrentGameForUid(uid);
       const pending = getPendingBoardGameReservation(uid);
@@ -364,13 +366,15 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
           ? "busy"
           : lobbyReady(uid, familyId)
             ? "in_lobby"
-            : appReady(uid, familyId)
+            : socketsForUid(uid).some((socket) => socket.data.appFamilyId === familyId)
               ? "online_app"
-              : "offline";
+              : hasDualAppLease(uid, familyId) ? "test_background" : "offline";
       return { uid, status };
     }));
     io.to(`chess:family:${familyId}`).to(`chess:lobby:${familyId}`).emit(E.presenceUpdate, items);
   }
+
+  onDualAppPresenceChange((familyId) => { refreshPresenceSoon(familyId); });
 
   function refreshPresenceSoon(familyId: string) {
     void emitPresence(familyId).catch((error) => {
@@ -438,6 +442,19 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       delete socket.data.gameFamilyId;
     };
 
+    socket.on("dev:dualapp:lease", (raw: unknown, ack: Ack) => safe(ack, async () => {
+      if (!socket.data.developerAuthorized) throw new ChessDomainError("CHESS_UNAUTHORIZED");
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      if (typeof payload.enabled !== "boolean") invalid("enabled must be boolean");
+      await requireMember(uid, familyId);
+      // Reject forged renewals from a socket not joined to that family.
+      if (socket.data.appFamilyId !== familyId) throw new ChessDomainError("CHESS_NOT_FAMILY_MEMBER");
+      // A lease does not make an ongoing game playable or extend the away clock.
+      if (payload.enabled && await resolveCurrentGameForUid(uid)) throw new ChessDomainError("CHESS_ALREADY_IN_GAME");
+      return setDualAppLease(uid, familyId, payload.enabled);
+    }));
+
     socket.on(E.appJoin, (raw: unknown, ack: Ack) => safe(ack, async () => {
       limit(`app:${uid}`, 12, 10_000);
       const familyId = asId(asRecord(raw).familyId, "familyId");
@@ -458,6 +475,13 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       // Keep one low-frequency successful family-join diagnostic for Render health;
       // per-socket authenticated/disconnected chatter stays removed.
       refreshPresenceSoon(familyId);
+      // A cloned app can be suspended while the 60-second invitation arrives.
+      // Replay only unexpired invites upon foreground rejoin (no Firestore write).
+      for (const invite of invites.values()) {
+        if (invite.familyId === familyId && invite.toUid === uid && invite.expiresAt > Date.now() && !invite.isTestBot) {
+          socket.emit(E.inviteReceived, { ...invite, whiteUid: undefined, blackUid: undefined });
+        }
+      }
       console.info("[chess] app joined", { uid, familyId, socketId: socket.id });
       return { ready: true, testBotEnabled: TEST_BOT_ENABLED };
     }));

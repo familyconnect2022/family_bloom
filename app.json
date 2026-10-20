@@ -2,7 +2,7 @@
   "expo": {
     "name": "Family Bloom",
     "slug": "family-bloom",
-    "version": "1.3.26",
+    "version": "1.3.28",
     "orientation": "portrait",
     "icon": "./assets/branding/release/icon.png",
     "scheme": "familybloom",
@@ -22,7 +22,7 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
-      "versionCode": 143036
+      "versionCode": 143038
     },
     "web": {
       "output": "static",

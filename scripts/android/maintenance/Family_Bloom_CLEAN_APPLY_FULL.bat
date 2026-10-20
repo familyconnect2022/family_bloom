@@ -21,7 +21,11 @@ if errorlevel 1 (
   goto :fail
 )
 
+node scripts\setup\check-expo-route-uniqueness.cjs
+if errorlevel 1 goto :fail
 node scripts\test-h22r3-windows-build-preflight.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23r3-typescript-bootstrap.cjs
 if errorlevel 1 goto :fail
 echo [H21R3] Cleaning invalid Android raw resource left by H21R1/H21R2...
 if exist "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" del /f /q "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" >nul 2>nul
@@ -76,6 +80,7 @@ if exist "android\app\build" rmdir /s /q "android\app\build" >nul 2>nul
 echo [2/6] Checking/installing dependencies...
 set "NEED_INSTALL=0"
 if not exist "node_modules\expo\package.json" set "NEED_INSTALL=1"
+if not exist "node_modules\typescript\package.json" set "NEED_INSTALL=1"
 if not exist "node_modules\expo-audio\package.json" set "NEED_INSTALL=1"
 if not exist "node_modules\expo-asset\package.json" set "NEED_INSTALL=1"
 if not exist "package-lock.json" set "NEED_INSTALL=1"
@@ -104,7 +109,15 @@ if errorlevel 1 goto :fail
 echo [3/6] Verifying build regressions + P2.37 native presentation invariants...
 node scripts\test-h22r2-cleanup-retention.cjs
 if errorlevel 1 goto :fail
+call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
+if errorlevel 1 goto :fail
 node scripts\test-h22-xiangqi-parity.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h22r9-chess-assets-royal-highlight.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23-family-game-hubs.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23r2-dual-app-presence.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22r1-bot-invite-countdown.cjs
 if errorlevel 1 goto :fail

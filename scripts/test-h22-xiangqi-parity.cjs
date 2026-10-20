@@ -250,10 +250,10 @@ async function test(label,action){await action();console.log('PASS',label);passe
  });
  await test('new H22 native identity cannot be mistaken for H21 APK',()=>{
    const app=JSON.parse(read('app.json'));
-   assert.equal(app.expo.android.versionCode,143036);
+   assert.equal(app.expo.android.versionCode,143038);
    const kotlin=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
-   assert(kotlin.includes('P2.37R2C-H22R8-native-1'));
-   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H22R8-native-1'));
+   assert(kotlin.includes('P2.37R2C-H23-native-1'));
+   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H23-native-1'));
  });
  const share=read('scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat');
  const eas=read('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat');

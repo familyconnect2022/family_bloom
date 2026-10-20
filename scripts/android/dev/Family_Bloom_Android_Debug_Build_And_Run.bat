@@ -154,6 +154,8 @@ call npm run phaseP2_37R2C_H8:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C_H9A:check
 if errorlevel 1 goto :fail
+node scripts\setup\check-expo-route-uniqueness.cjs
+if errorlevel 1 goto :fail
 call npm run structure:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_15_5_1:check

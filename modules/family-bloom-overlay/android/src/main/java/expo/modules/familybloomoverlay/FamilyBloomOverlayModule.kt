@@ -19,7 +19,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private const val FAMILY_BLOOM_OVERLAY_NATIVE_IDENTITY = "P2.37R2C-H22R8-native-1"
+private const val FAMILY_BLOOM_OVERLAY_NATIVE_IDENTITY = "P2.37R2C-H23-native-1"
 
 private data class PresentationCommand(
   val mode: String,

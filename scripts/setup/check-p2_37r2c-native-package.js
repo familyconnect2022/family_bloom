@@ -32,8 +32,8 @@ const eas = JSON.parse(read('eas.json'));
 const localPkg = JSON.parse(read('modules/family-bloom-overlay/package.json'));
 const config = JSON.parse(read('modules/family-bloom-overlay/expo-module.config.json'));
 
-if (app.expo?.version === '1.3.26' && app.expo?.android?.versionCode === 143036) pass('app.json binary identity = 1.3.26 / 143036');
-else fail('app.json must be version 1.3.26 with Android versionCode 143036');
+if (app.expo?.version === '1.3.28' && app.expo?.android?.versionCode === 143038) pass('app.json binary identity = 1.3.28 / 143038');
+else fail('app.json must be version 1.3.28 with Android versionCode 143038');
 
 if (eas.cli?.appVersionSource === 'local') pass('EAS appVersionSource=local locks app.json versionCode into build');
 else fail('eas.json must set cli.appVersionSource=local');
@@ -58,7 +58,7 @@ if (exists(manifestRel)) pass('local Android library manifest is present');
 else fail('local Android library manifest missing');
 
 const kotlinRel = 'modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt';
-if (exists(kotlinRel) && read(kotlinRel).includes('P2.37R2C-H22R8-native-1') && read(kotlinRel).includes('class FamilyBloomOverlayRail')) pass('native source contains H6 identity + decor rail');
+if (exists(kotlinRel) && read(kotlinRel).includes('P2.37R2C-H23-native-1') && read(kotlinRel).includes('class FamilyBloomOverlayRail')) pass('native source contains H6 identity + decor rail');
 else fail('native source missing H6 identity or decor rail');
 
 const installed = path.join(root, 'node_modules', 'family-bloom-overlay');
@@ -113,7 +113,7 @@ if (requireEffectiveConfig) {
         const effective = JSON.parse(r.stdout.trim());
         if (effective.android?.package === 'com.familybloom.android') pass('effective Expo config package=com.familybloom.android');
         else fail(`effective Expo package mismatch: ${effective.android?.package || 'missing'}`);
-        if (effective.version === '1.3.26' && effective.android?.versionCode === 143036) pass('effective Expo config = 1.3.26 / versionCode 143036');
+        if (effective.version === '1.3.28' && effective.android?.versionCode === 143038) pass('effective Expo config = 1.3.28 / versionCode 143038');
         else fail(`effective Expo binary identity mismatch: ${effective.version || '?'} / ${effective.android?.versionCode || '?'}`);
       } catch (error) {
         fail(`could not parse expo config JSON: ${error instanceof Error ? error.message : String(error)}`);

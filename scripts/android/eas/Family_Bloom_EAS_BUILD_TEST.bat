@@ -8,8 +8,8 @@ cd /d "%PROJECT_ROOT%"
 echo ============================================================
 echo  FAMILY BLOOM P2.37R2C-H22R8 - EAS ANDROID TEST BUILD
 echo  Profile : family-bloom-test
-echo  EXPECTED: app 1.3.26 / versionCode 143036
-echo  Native   : P2.37R2C-H22R8-native-1
+echo  EXPECTED: app 1.3.28 / versionCode 143038
+echo  Native   : P2.37R2C-H23-native-1
 echo  This helper ALWAYS waits for the new build and clears EAS cache.
 echo ============================================================
 echo.
@@ -49,7 +49,11 @@ if errorlevel 1 (
   set "EAS_CMD=eas"
 )
 
+node scripts\setup\check-expo-route-uniqueness.cjs
+if errorlevel 1 goto :fail
 node scripts\test-h22r3-windows-build-preflight.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23r3-typescript-bootstrap.cjs
 if errorlevel 1 goto :fail
 node scripts\setup\check-source-import-integrity.js
 if errorlevel 1 goto :fail
@@ -63,6 +67,8 @@ if "%NEED_NATIVE_INSTALL%"=="1" (
   if errorlevel 1 goto :fail
 )
 
+call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
+if errorlevel 1 goto :fail
 node scripts\setup\check-ts-syntax-transpile.js
 if errorlevel 1 goto :fail
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_VERIFY_SERVER_TYPES.bat"
@@ -76,6 +82,12 @@ if errorlevel 1 goto :fail
 node scripts\test-h22r7-royal-bloom-modals.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22r8-xiangqi-ux-draw.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h22r9-chess-assets-royal-highlight.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23-family-game-hubs.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h23r2-dual-app-presence.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22r1-bot-invite-countdown.cjs
 if errorlevel 1 goto :fail
@@ -107,9 +119,9 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.26
-echo   versionCode : 143036
-echo   native ID   : P2.37R2C-H22R8-native-1
+echo   app version : 1.3.28
+echo   versionCode : 143038
+echo   native ID   : P2.37R2C-H23-native-1
 echo ------------------------------------------------------------
 echo.
 echo EAS will now build a NEW APK and wait until the build finishes.
@@ -126,9 +138,9 @@ echo ============================================================
 echo [OK] EAS reports the P2.37R2C-H21 build completed successfully.
 echo Install ONLY the APK produced by THIS build.
 echo After install, Game Foundation MUST show:
-echo   ACTUAL versionCode: 143036
+echo   ACTUAL versionCode: 143038
 echo   FamilyBloomOverlay: YES
-echo   native identity: P2.37R2C-H22R8-native-1
+echo   native identity: P2.37R2C-H23-native-1
 echo ============================================================
 echo.
 pause

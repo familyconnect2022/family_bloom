@@ -20,7 +20,7 @@ check('native king assets available',fs.existsSync(path.join(root,chessImg))&&fs
 check('Chess invite uses real white king asset not queen glyph',chessGate.includes('require("../../../'+chessImg+'")') && !chessGate.includes('>♛</Text>'));
 check('Xiangqi invite uses red General image',xiangqiGate.includes('require("../../../'+xqImg+'")') && !xiangqiGate.includes('<Text style={styles.symbol}>帥</Text>'));
 for(const [name,source] of [['chess',chessGate],['xiangqi',xiangqiGate]]){
- check(`${name}: badge straddles panel rim 50/50 and will not clip`,source.includes('top: -55, left: "50%"') && source.includes('width: 110, height: 110') && source.includes('overflow: "visible"'));
+ check(`${name}: badge straddles panel rim 50/50 and will not clip`,source.includes('top: -55, left: 0, right: 0') && source.includes('alignItems: "center"') && source.includes('width: 110, height: 110') && source.includes('overflow: "visible"'));
  check(`${name}: invitation maintains both sides and server countdown`,source.includes('act("accept")') && source.includes('act("reject")') && source.includes('act("cancel")') && source.includes('remaining / 60 * 100'));
  check(`${name}: badge is decorative, no touch interference`,source.includes('pointerEvents="none"') && source.includes('kingBadge'));
 }
@@ -32,7 +32,7 @@ check('Native Xiangqi king uses preloaded red_general PNG, half-overlapping canv
 check('Native Xiangqi all connecting, waiting, ready, result stages have King',xiangqi.includes('drawBloomKing(c,w/2f,top') && xiangqi.includes('drawBloomKing(c,center,top') && xiangqi.includes('drawBloomKing(c,x,top') && xiangqi.includes('SẴN SÀNG VÀO TRẬN'));
 check('Xiangqi distinct victory/draw/loss colors and CTA retained',xiangqi.includes('#FFF9DF') && xiangqi.includes('#E8FAFF') && xiangqi.includes('#F1F8EC') && xiangqi.includes('onAction("resultAck",s.gameId)'));
 check('Live game move logic unaffected by presentation badge',xiangqi.includes('moveDurationMs = 205L') && xiangqi.includes('val radius=cell*.47025f') && xiangqi.includes('next.soundToken!=lastSoundToken'));
-check('Native APK identity is fresh and in sync',app.expo.version==='1.3.26' && app.expo.android.versionCode===143036 && nativeModule.includes('P2.37R2C-H22R8-native-1'));
+check('Native APK identity is fresh and in sync',app.expo.version==='1.3.28' && app.expo.android.versionCode===143038 && nativeModule.includes('P2.37R2C-H23-native-1'));
 for (const bat of ['scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat']) {
  const source=read(bat);
  check(`${path.basename(bat)} runs H22R7 gate before building`,source.includes('node scripts\\test-h22r7-royal-bloom-modals.cjs\r\nif errorlevel 1 goto :fail'));

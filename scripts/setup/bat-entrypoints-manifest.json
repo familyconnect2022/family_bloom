@@ -21,6 +21,7 @@
     "scripts/android/install/Family_Bloom_INSTALL_R2C_APK.bat",
     "scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat",
     "scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat",
+    "scripts/android/maintenance/Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat",
     "scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat",
     "scripts/android/maintenance/Family_Bloom_VERIFY_SERVER_TYPES.bat",
     "scripts/android/verify/Family_Bloom_VERIFY_DEVICE_BINARY_R2C.bat",

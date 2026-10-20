@@ -13,7 +13,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { homeGameService } from "../../../services/home/homeGameService";
 import { formatHomeGameDeadline, getHomeGamePlayWindow, homeGameStatusLabel } from "../../../services/home/homeGamePolicy";
 import { subscribeSharedRealtime } from "../../../services/realtime/sharedRealtimeRegistry";
-import { activateBoardGamePresentation } from "../../../services/games/boardGamePresentationStore";
 import type { HomeGameSession, HomeGameType } from "../../../types/homeLiving";
 
 const TYPES: HomeGameType[] = ["know_each_other", "guess_person", "memory_owner", "truth_lie", "story_chain", "family_bingo"];
@@ -99,18 +98,18 @@ export default function HomeGamesScreen() {
             <View style={[styles.todayAction, !playWindow.canCreate && styles.todayActionSleeping]}><Text style={styles.todayActionText}>{playWindow.canCreate ? "Tạo lượt mới" : "Mở lại lúc 06:00"}</Text><Ionicons name={playWindow.canCreate ? "arrow-forward" : "moon-outline"} size={18} color={COLORS.white} /></View>
           </BloomCard>
 
-          <BloomSectionHeader title="Cờ vua & Cờ tướng" subtitle="Thử riêng hệ thống Full ↔ Mini mới. Chưa dựng bàn cờ và chưa nối gameplay production." />
+          <BloomSectionHeader title="Cờ vua & Cờ tướng" subtitle="Hai đấu trường riêng, thách đấu tài khoản người thân đang online trong Nhà Mình." />
           <View style={styles.boardGameResetRow}>
-            <BloomCard style={styles.boardGameResetCard} onPress={() => activateBoardGamePresentation("chess")}>
+            <BloomCard style={styles.boardGameResetCard} onPress={() => router.push("/home-chess" as never)}>
               <View style={styles.chessIcon}><Image accessibilityLabel="Quân Mã cờ vua" source={require("../../../../assets/images/chess/pieces-png-default/bn.png")} resizeMode="contain" fadeDuration={0} style={styles.chessPieceIcon} /></View>
               <Text style={styles.chessTitle}>Cờ vua Nhà Mình</Text>
-              <Text style={styles.chessText}>Mở khung Full 85% để thử Full ↔ Mini.</Text>
+              <Text style={styles.chessText}>Vào sảnh · Chọn người thân · Thách đấu trực tuyến.</Text>
               <View style={styles.boardGameChallenge}><Text style={styles.boardGameChallengeText}>Thách đấu</Text><Ionicons name="arrow-forward" size={14} color={COLORS.white} /></View>
             </BloomCard>
-            <BloomCard style={styles.boardGameResetCard} onPress={() => activateBoardGamePresentation("xiangqi")}>
+            <BloomCard style={styles.boardGameResetCard} onPress={() => router.push("/home-xiangqi" as never)}>
               <View style={styles.xiangqiIcon}><Image accessibilityLabel="Quân Tướng cờ tướng" source={require("../../../../assets/xiangqi/red_general.png")} resizeMode="contain" fadeDuration={0} style={styles.xiangqiPieceIcon} /></View>
               <Text style={styles.chessTitle}>Cờ tướng Nhà Mình</Text>
-              <Text style={styles.chessText}>Mở khung Full 85% để thử Full ↔ Mini.</Text>
+              <Text style={styles.chessText}>Đấu trường riêng · Người nhà online · Mời đối thủ.</Text>
               <View style={styles.boardGameChallenge}><Text style={styles.boardGameChallengeText}>Thách đấu</Text><Ionicons name="arrow-forward" size={14} color={COLORS.white} /></View>
             </BloomCard>
           </View>
@@ -156,7 +155,7 @@ export default function HomeGamesScreen() {
 
           <BloomCard tone="soft" style={styles.noteCard}>
             <Ionicons name="leaf-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.noteText}>Phòng game gia đình chỉ mở lượt mới từ 06:00 đến trước 22:00 để nhà mình có khoảng nghỉ buổi tối. Cờ vua và Cờ tướng đang được xây lại phần client từ nền sạch.</Text>
+            <Text style={styles.noteText}>Phòng game gia đình chỉ mở lượt mới từ 06:00 đến trước 22:00 để nhà mình có khoảng nghỉ buổi tối. Cờ vua và Cờ tướng có sảnh thách đấu realtime riêng, chỉ hiện tài khoản gia đình đang hoạt động.</Text>
           </BloomCard>
         </View>
       </ScrollView>

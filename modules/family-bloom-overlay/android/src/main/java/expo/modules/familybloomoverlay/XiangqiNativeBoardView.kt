@@ -282,23 +282,13 @@ internal class XiangqiNativeBoardView(
     }
     text(c,"楚 河",boardLeft+cell*2,boardTop+cell*4.71f,min(17f,cell/d*.47f),boardInk,true,true)
     text(c,"漢 界",boardLeft+cell*6,boardTop+cell*4.71f,min(17f,cell/d*.47f),boardInk,true,true)
-    // Two distinct filled squares + a directional stroke identify the last
-    // move even when the landing piece is now covered by an opponent's piece.
-    val lastOpponent = s.pieces.firstOrNull { it.col == s.lastTo?.col && it.row == s.lastTo?.row }?.color != s.meColor
-    val moveAccent = color(if(lastOpponent)"#512C83C9" else "#55A1CA4B")
-    for(p in listOf(s.lastFrom,s.lastTo)) if(p!=null){
-      val(x,y)=toScreen(p.col,p.row,s)
-      paint.color=moveAccent
-      c.drawRoundRect(RectF(x-cell*.45f,y-cell*.45f,x+cell*.45f,y+cell*.45f),dp(6f),dp(6f),paint)
-    }
-    if(s.lastFrom!=null && s.lastTo!=null){
-      val(fx,fy)=toScreen(s.lastFrom.col,s.lastFrom.row,s)
-      val(tx,ty)=toScreen(s.lastTo.col,s.lastTo.row,s)
-      val dx=tx-fx;val dy=ty-fy;val length=kotlin.math.sqrt(dx*dx+dy*dy).coerceAtLeast(1f)
-      paint.color=color(if(lastOpponent)"#8742C0" else "#77A431");paint.strokeWidth=dp(3f)
-      paint.style=Paint.Style.STROKE
-      c.drawLine(fx+dx*.23f,fy+dy*.23f,tx-dx*.23f,ty-dy*.23f,paint)
-      paint.style=Paint.Style.FILL
+    // H22R9: same gentle violet for BOTH players. Circular start/end halos,
+    // not rectangles and never a directional line drawn across the board.
+    val lastMovePoints = listOfNotNull(s.lastFrom, s.lastTo).distinctBy { it.col to it.row }
+    for (point in lastMovePoints) {
+      val (x,y) = toScreen(point.col,point.row,s)
+      paint.color = color("#366F4EB1")
+      c.drawCircle(x,y,cell*.48f,paint)
     }
     val selected=s.pieces.firstOrNull{it.id==s.selectedPieceId}
     if(selected!=null){val(x,y)=toScreen(selected.col,selected.row,s);paint.color=color("#E0A838");paint.style=Paint.Style.STROKE;paint.strokeWidth=dp(3f);c.drawCircle(x,y,cell*.47f,paint);paint.style=Paint.Style.FILL}
@@ -335,11 +325,15 @@ internal class XiangqiNativeBoardView(
       if(piece!=null) drawPiece(c,piece,fx+(tx-fx)*smooth,fy+(ty-fy)*smooth)
       postInvalidateOnAnimation()
     } else if (moving != null) clearMove()
-    s.lastTo?.let { p ->
-      val(x,y)=toScreen(p.col,p.row,s)
-      paint.style=Paint.Style.STROKE;paint.strokeWidth=dp(3.1f)
-      paint.color=color(if(lastOpponent)"#8843BC" else "#4A9D53")
-      c.drawCircle(x,y,cell*.49f,paint);paint.style=Paint.Style.FILL
+    // Draw the circles AFTER pieces too: both the source and destination
+    // remain identifiable even if another sprite occupies either point.
+    for (point in lastMovePoints) {
+      val (x,y) = toScreen(point.col,point.row,s)
+      paint.style = Paint.Style.STROKE
+      paint.strokeWidth = dp(2.6f)
+      paint.color = color("#9B7954BC")
+      c.drawCircle(x,y,cell*.515f,paint)
+      paint.style = Paint.Style.FILL
     }
     if(s.status=="waiting"){
       val remaining=s.waitingRemainingMs?.let{max(0L,it-(SystemClock.elapsedRealtime()-clockAnchor))}
@@ -448,11 +442,10 @@ internal class XiangqiNativeBoardView(
     card(bottom+dp(37f),s.meLabel.ifBlank{"Bạn"},me?:"red",false,s.meAvatarUrl)
     val bottomHint=bottom+dp(115f)
     if(bottomHint<h()-dp(69f)) {
-      val movedByOpponent=s.pieces.firstOrNull{it.col==s.lastTo?.col&&it.row==s.lastTo?.row}?.color != s.meColor
       val notice=if(s.status=="active" && s.lastTo!=null)
-        if(movedByOpponent) "✦  ${s.opponentLabel} vừa đi · Xem viền tím  ✦" else "✦  Nước của bạn · Xem viền xanh  ✦"
+        "✦  Nước vừa đi · Xem vòng tròn tím  ✦"
         else "✦  Chạm quân để chọn · Chạm ô để đi  ✦"
-      centerText(c,notice.take(44),center,bottomHint,10f,color(if(movedByOpponent)"#7D4FB1" else "#995B77"))
+      centerText(c,notice.take(44),center,bottomHint,10f,color("#8464B3"))
     }
   }
   private fun drawBloomActions(c:Canvas,s:NativeXiangqiBoardState,w:Float,boardBottom:Float) {

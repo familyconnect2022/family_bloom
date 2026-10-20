@@ -5,6 +5,7 @@ import { getBoardGamePresentationSnapshot } from "../../services/games/boardGame
 import { syncChessPresentationFromState } from "../../services/games/boardGamePresentationBridge";
 import { CHESS_EVENTS, type ChessGameState, type ChessInvite } from "../../types/chess";
 import { useBloomDialog } from "../ui/BloomDialogProvider";
+import { DEV_DUAL_APP_LEASE_EVENT, isDualAppTestOn, loadDualAppTestSetting } from "../../services/games/developerDualAppTest";
 
 /** H21: Chess-only app-shell invitation gate and OS background presence.
  * The countdown updates only this isolated Modal (once/sec). No board store,
@@ -22,6 +23,7 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
   useEffect(() => {
     if (!ready) return;
     let active = true;
+    void loadDualAppTestSetting(uid);
     const assign = (invite: ChessInvite, kind: "incoming" | "outgoing") => {
       if (!active || invite.familyId !== familyId || invite.expiresAt <= Date.now() || invite.isTestBot) return;
       // A challenge may only replace itself. Never open over an active match.
@@ -61,6 +63,7 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
       if (!active || AppState.currentState !== "active") return;
       const result = await chessSocketService.emitAck(CHESS_EVENTS.appJoin, { familyId }, 20_000);
       if (!result.ok || !active) return;
+      if (isDualAppTestOn(uid)) chessSocketService.emitBestEffort(DEV_DUAL_APP_LEASE_EVENT, { familyId, enabled: false });
       const visible = getBoardGamePresentationSnapshot();
       if (visible.activeKind === "chess" && visible.activeGameId && !visible.activeGameId.startsWith("pending-chess:")) {
         chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence, { gameId: visible.activeGameId, visible: true });
@@ -71,7 +74,13 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
       const gameId = getBoardGamePresentationSnapshot().activeKind === "chess"
         ? getBoardGamePresentationSnapshot().activeGameId : null;
       if (!gameId || gameId.startsWith("pending-chess:")) {
-        if (state === "background") chessSocketService.emitBestEffort(CHESS_EVENTS.appLeave, { familyId });
+        if (state === "background") {
+          if (isDualAppTestOn(uid)) {
+            // Ordered ahead of appLeave on the same socket; server validates UID.
+            chessSocketService.emitBestEffort(DEV_DUAL_APP_LEASE_EVENT, { familyId, enabled: true });
+          }
+          chessSocketService.emitBestEffort(CHESS_EVENTS.appLeave, { familyId });
+        }
         if (state === "active") void joinFamily();
         return;
       }
@@ -136,8 +145,10 @@ export function ChessChallengeGate({ uid, familyId, ready }: { uid: string; fami
       onRequestClose={() => { if (isIncoming) void act("reject"); else void act("cancel"); }}>
       <View style={styles.backdrop}>
         <View style={styles.panel}>
-          <View pointerEvents="none" style={styles.kingBadge}>
+          <View pointerEvents="none" style={styles.kingSlot}>
+            <View style={styles.kingBadge}>
             <Image source={require("../../../assets/images/chess/pieces-png-default/wk.png")} style={styles.kingImage} resizeMode="contain" />
+            </View>
           </View>
           <Text style={styles.eyebrow}>✦  BLOOM ARENA · CỜ VUA  ✦</Text>
           <Text style={styles.title}>{isIncoming ? "MỘT VÁN CỜ ĐANG CHỜ BẠN!" : "ĐÃ GỬI LỜI THÁCH ĐẤU"}</Text>
@@ -172,7 +183,8 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(255,240,249,.83)", justifyContent: "center", paddingHorizontal: 21 },
   // Overflow must stay visible: half of the King physically floats above card.
   panel: { backgroundColor: "#FFFAFC", borderRadius: 32, paddingHorizontal: 22, paddingTop: 83, paddingBottom: 20, alignItems: "center", borderWidth: 2, borderColor: "#EEC5DA", elevation: 18, overflow: "visible" },
-  kingBadge: { position: "absolute", top: -55, left: "50%", transform: [{ translateX: -55 }], width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
+  kingSlot: { position: "absolute", top: -55, left: 0, right: 0, height: 110, alignItems: "center", justifyContent: "center", zIndex: 20, overflow: "visible" },
+  kingBadge: { width: 110, height: 110, borderRadius: 55, backgroundColor: "#FFF7FB", borderWidth: 3, borderColor: "#EBC4D9", alignItems: "center", justifyContent: "center", elevation: 19, zIndex: 20 },
   kingImage: { width: 100, height: 100 },
   eyebrow: { color: "#873A63", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textAlign: "center" },
   title: { color: "#79385F", fontSize: 21, textAlign: "center", fontWeight: "900", letterSpacing: .4, marginTop: 17 },

@@ -10,7 +10,7 @@ import {
   type XiangqiRealtimeState,
 } from "../../types/xiangqiRealtime";
 
-export type XiangqiPresence = { uid: string; status: "offline" | "online_app" | "in_lobby" | "in_game" | "busy" | "reconnecting" };
+export type XiangqiPresence = { uid: string; status: "offline" | "online_app" | "in_lobby" | "in_game" | "busy" | "reconnecting" | "test_background" };
 export type XiangqiInviteRejected = { inviteId: string; byUid: string; isTestBot?: boolean; testCycleStep?: 1 | 2 | 3 };
 
 type ListenerMap = {

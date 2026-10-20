@@ -11,5 +11,10 @@ echo   FAMILY BLOOM - METRO FOR DEBUG BUILD
 echo   Package: com.familybloom.android
 echo ============================================================
 echo.
+node scripts\setup\check-expo-route-uniqueness.cjs
+if errorlevel 1 (
+  echo [ERROR] Expo Router duplicate route names. Metro NOT started.
+  exit /b 1
+)
 call npx expo start --dev-client
 exit /b %ERRORLEVEL%

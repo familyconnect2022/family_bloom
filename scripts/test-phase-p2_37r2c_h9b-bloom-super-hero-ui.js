@@ -15,8 +15,8 @@ function check(ok, reason) {
   else { failed++; console.error('FAIL ' + reason); }
 }
 console.log('\nFamily Bloom P2.37R2C-H9B — Bloom Super Hero Native UI\n');
-check(app.expo.version === '1.3.26' && app.expo.android.versionCode === 143036, 'new APK identity prevents stale H9A native binary');
-check(native.includes('P2.37R2C-H22R8-native-1') && pkg.version === '1.3.18', 'native binary identity/version are updated together');
+check(app.expo.version === '1.3.28' && app.expo.android.versionCode === 143038, 'new APK identity prevents stale H9A native binary');
+check(native.includes('P2.37R2C-H23-native-1') && pkg.version === '1.3.18', 'native binary identity/version are updated together');
 check(native.includes('(viewportW * 0.90f)') && native.includes('(viewportH * 0.90f)'), 'Full takes exactly 90% of current native viewport');
 check(native.includes('val innerW = (fullW - dp(20f))') && native.includes('val innerH = (fullH - dp(20f))'), 'H11 Chess stage uses a single 10dp inset per side');
 check(!native.includes('val fullW = (viewportW * 0.85f)') && !native.includes('val fullH = (viewportH * 0.85f)'), 'retired 85% Full geometry');

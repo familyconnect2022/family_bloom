@@ -142,7 +142,7 @@ export default function PlayScreen() {
             <HubCard
               icon="game-controller-outline"
               title="Trò chơi Nhà Mình"
-              description="6 trò turn-based: hiểu nhau, đoán người, ký ức, thật/bịa, nối chuyện và Bingo."
+              description="Cờ vua, Cờ tướng cùng 6 trò gắn kết. Thách đấu tài khoản người thân đang online."
               accent="#FFF0D9"
               badge="Chơi ngay"
               onPress={() => router.push("/home-games" as never)}

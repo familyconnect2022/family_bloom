@@ -22,8 +22,8 @@ const app = json('app.json');
 const drawableDir = path.join(root, 'modules/family-bloom-overlay/android/src/main/res/drawable-nodpi');
 const pieceFiles = ['wk','wq','wr','wb','wn','wp','bk','bq','br','bb','bn','bp'].map((x) => `${x}.png`);
 
-check(mod.version === '1.3.18' && native.includes('P2.37R2C-H22R8-native-1'), 'native module identity is current H9B / 1.3.14');
-check(app.expo.version === '1.3.26' && app.expo.android.versionCode === 143036, 'app identity stays 1.3.26 / 143036');
+check(mod.version === '1.3.18' && native.includes('P2.37R2C-H23-native-1'), 'native module identity is current H9B / 1.3.14');
+check(app.expo.version === '1.3.28' && app.expo.android.versionCode === 143038, 'app identity stays 1.3.28 / 143038');
 check(pieceFiles.every((f) => fs.existsSync(path.join(drawableDir, f))), 'all 12 Chess PNG pieces are bundled in native module');
 // Event additions are additive: H22 registers a separate Xiangqi event without changing Chess.
 // Check the actual Chess contract rather than a hard-coded complete Events(...) string.

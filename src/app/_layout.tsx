@@ -198,6 +198,8 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule-compose" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule/[capsuleId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(games)/home-games" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(home)/(games)/home-chess" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(home)/(games)/home-xiangqi" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(games)/home-game-create" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(fund)/home-fund" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(board)/home-board" options={{ animation: BLOOM_MOTION.screen.animation }} />

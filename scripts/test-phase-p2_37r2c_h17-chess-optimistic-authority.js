@@ -134,7 +134,7 @@ try {
     rail.includes('state.renderSequence < (latestChessState?.renderSequence ?: 0)') && nativeState.includes('renderSequence'),
     'Older JS->Kotlin bind cannot overwrite a newer preview/confirmation');
   check(read('server/src/chess/chessGameManager.ts').includes('sourcePiece.color !== color'), 'Server color and legal move defense preserved');
-  check(read('app.json').includes('"versionCode": 143036') && rail.includes('P2.37R2C-H22R8-native-1'), 'H17 APK identity prevents stale H16 native install');
+  check(read('app.json').includes('"versionCode": 143038') && rail.includes('P2.37R2C-H23-native-1'), 'H17 APK identity prevents stale H16 native install');
 } catch (error) {failed++;console.error('FAIL H17 runtime',error?.stack||error);}
 console.log(`H17 client-first server-authoritative Chess: ${failed?'FAIL':'PASS'} (${passed}/${passed+failed})`);
 process.exitCode=failed?1:0;
