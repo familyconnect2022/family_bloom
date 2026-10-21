@@ -22,6 +22,6 @@ check(tabs.includes('sceneStyle: [styles.tabScene, { paddingBottom: reservedTabB
 check(tabs.includes('tabScene: { flex: 1, backgroundColor: COLORS.background }'), 'each tab scene owns flex:1');
 check(rootLayout.includes('<Stack') && rootLayout.includes('navigationPlane: { flex: 1'), 'root Stack remains on normal flex navigation plane');
 check(presentation.includes('return null;') && !presentation.includes('<FamilyBloomOverlayHost'), 'React presentation controller still renders no overlay View');
-check(native.includes('activity.window.decorView') && native.includes('P2.37R2C-H23-native-1'), 'H6 decor rail isolation remains the native binary contract');
+check(native.includes('activity.window.decorView') && native.includes('P2.37R2C-H25-native-1'), 'H6 decor rail isolation remains the native binary contract');
 console.log(`\nP2.37R2C-H7 tab navigator flex gate: ${fail ? 'FAIL' : 'PASS'} (${pass}/${pass+fail})\n`);
 process.exit(fail ? 1 : 0);

@@ -133,6 +133,12 @@ try {
     } catch(error) {
       die('Release source fails structure:check before update. ' + String(error.stdout || error.stderr || error.message).trim().slice(-1200));
     }
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/test-h25-source-package.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe'});
+    } catch(error) {
+      die('Release source fails H25 required-file gate before update. ' + String(error.stdout || error.stderr || error.message).trim().slice(-1200));
+    }
     console.log('PREFLIGHT PASS', JSON.stringify({source,target,...versions,sourceStructure:'PASS'}));
   }
   if(mode==='backup')console.log('BACKUP PASS',JSON.stringify(backup()));

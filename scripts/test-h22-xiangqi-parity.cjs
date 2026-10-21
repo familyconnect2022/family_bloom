@@ -53,16 +53,16 @@ async function test(label,action){await action();console.log('PASS',label);passe
  const manager=newManager();
  const initial=await manager.create('family','p1','p2',tc);
  const gameId=initial.gameId;
- await test('new Xiangqi game starts board preparation with hidden colors',()=>{
-   assert.equal(initial.status,'waiting');assert.equal(initial.preparationPhase,'board');
-   assert.equal(initial.redUid,'');assert.equal(initial.blackUid,'');assert.equal(initial.startedAt,null);
+ await test('new human Xiangqi game publishes locked colors immediately',()=>{
+   assert.equal(initial.status,'waiting');assert.equal(initial.preparationPhase,'colors');
+   assert(initial.redUid&&initial.blackUid&&initial.redUid!==initial.blackUid);assert.equal(initial.startedAt,null);
  });
  await manager.markBoardReady(gameId,'p1','board-1');
- await test('one boardReady cannot reveal color or start time',async()=>{
-   const g=await manager.state(gameId,'p1');assert.equal(g.preparationPhase,'board');assert.equal(g.redUid,'');
+ await test('legacy boardReady event cannot start a game',async()=>{
+   const g=await manager.state(gameId,'p1');assert.equal(g.preparationPhase,'colors');assert.equal(g.status,'waiting');
  });
  const colors=await manager.markBoardReady(gameId,'p2','board-2');
- await test('both boardReady reveal independently locked colors',()=>{
+ await test('colors remain immutable after redundant boardReady events',()=>{
    assert.equal(colors.preparationPhase,'colors');assert(colors.redUid&&colors.blackUid&&colors.redUid!==colors.blackUid);assert.equal(colors.status,'waiting');
  });
  await manager.markReady(gameId,'p1','play-1');
@@ -195,7 +195,7 @@ async function test(label,action){await action();console.log('PASS',label);passe
  });
  await test('full app-shell Xiangqi invite, recover and native action handlers are wired',()=>{
    const root=read('src/app/_layout.tsx');
-   assert(root.includes('<XiangqiChallengeGate'));assert(root.includes('<XiangqiSessionRecoveryGate'));
+   assert(root.includes('<FirebaseBoardInvitationGate'));assert(!root.includes('<XiangqiChallengeGate'));assert(!root.includes('<XiangqiSessionRecoveryGate'));
    assert(read('server/src/xiangqi/xiangqiSocket.ts').includes('inviteSent:"xiangqi:invite:sent"'));
    assert(read('src/services/games/nativeXiangqiGameplayController.ts').includes('handleNativeXiangqiAction'));
    assert(read('src/components/games/BoardGamePresentationRoot.android.tsx').includes('subscribeBoardGameNativeXiangqiActions'));
@@ -250,10 +250,10 @@ async function test(label,action){await action();console.log('PASS',label);passe
  });
  await test('new H22 native identity cannot be mistaken for H21 APK',()=>{
    const app=JSON.parse(read('app.json'));
-   assert.equal(app.expo.android.versionCode,143038);
+   assert.equal(app.expo.android.versionCode,143039);
    const kotlin=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
-   assert(kotlin.includes('P2.37R2C-H23-native-1'));
-   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H23-native-1'));
+   assert(kotlin.includes('P2.37R2C-H25-native-1'));
+   assert(read('src/app/(internal)/board-game-bot-test.tsx').includes('P2.37R2C-H25-native-1'));
  });
  const share=read('scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat');
  const eas=read('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat');

@@ -27,6 +27,10 @@ node scripts\test-h22r3-windows-build-preflight.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h23r3-typescript-bootstrap.cjs
 if errorlevel 1 goto :fail
+node scripts\test-h25-firebase-invitation.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25-runtime-claims.cjs
+if errorlevel 1 goto :fail
 echo [H21R3] Cleaning invalid Android raw resource left by H21R1/H21R2...
 if exist "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" del /f /q "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" >nul 2>nul
 if exist "android\app\src\main\res\raw\com.familybloom.keep.xml" del /f /q "android\app\src\main\res\raw\com.familybloom.keep.xml" >nul 2>nul

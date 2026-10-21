@@ -7,10 +7,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { BloomAppBootstrap } from "../components/system/BloomAppBootstrap";
 import { DeferredFamilyPrewarm } from "../components/system/DeferredFamilyPrewarm";
 import { BoardGamePresentationRoot } from "../components/games/BoardGamePresentationRoot";
-import { ChessSessionRecoveryGate } from "../components/games/ChessSessionRecoveryGate";
-import { ChessChallengeGate } from "../components/games/ChessChallengeGate";
-import { XiangqiChallengeGate } from "../components/games/XiangqiChallengeGate";
-import { XiangqiSessionRecoveryGate } from "../components/games/XiangqiSessionRecoveryGate";
+import { FirebaseBoardInvitationGate } from "../components/games/FirebaseBoardInvitationGate";
+
+
+
 import { closeBoardGamePresentation } from "../services/games/boardGamePresentationStore";
 import { BloomPushBridge } from "../components/system/BloomPushBridge";
 import { MediaViewerProvider } from "../components/media/MediaViewerProvider";
@@ -286,10 +286,7 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
           <DeferredFamilyPrewarm ready={backgroundWarmReady} />
           {authenticatedGameShellReady && user && activeFamilyId ? (
             <>
-              <ChessSessionRecoveryGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
-              <ChessChallengeGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
-              <XiangqiSessionRecoveryGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
-              <XiangqiChallengeGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
+              <FirebaseBoardInvitationGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
             </>
           ) : null}
         </View>

@@ -17,7 +17,7 @@ export type PersistedGame = {
   status: GameStatus; fen: string; pgn: string; turn: ChessColor; revision: number;
   whiteRemainingMs: number | null; blackRemainingMs: number | null; timeControl: ChessTimeControl;
   result: GameResult; finishReason: FinishReason; lastMove: LastMove | null; drawOfferByUid: string | null;
-  recentRequestIds: string[]; awayBudgetByUid?: Record<string, PersistedAwayBudget>; preparationPhase?: "board" | "colors"; testBotUid?: string | null; isTestGame?: boolean; createdAt: string; startedAt: string | null; endedAt: string | null; updatedAt: string;
+  recentRequestIds: string[]; readyUids?: string[]; awayBudgetByUid?: Record<string, PersistedAwayBudget>; preparationPhase?: "board" | "colors"; testBotUid?: string | null; isTestGame?: boolean; createdAt: string; startedAt: string | null; endedAt: string | null; updatedAt: string;
 };
 // The persisted preparation phase has only waiting stages (board/colors).
 // The public snapshot also reports "play" once the match begins; omit the

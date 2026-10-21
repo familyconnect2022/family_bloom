@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { ChessDomainError, type PersistedGame } from "./chessTypes.js";
 import { inspectBoardGameActiveLock, resolveLiveBoardGameActiveLock } from "../games/boardGameActiveLock.js";
+import { finalizeInvitationWithGame } from "../games/firebaseInvitationMatch.js";
 
 export class ChessPersistenceService {
   constructor(private db: Firestore) {}
@@ -25,13 +26,14 @@ export class ChessPersistenceService {
 
   async save(game: PersistedGame) { await this.gameRef(game.familyId, game.id).set(game, { merge: false }); }
   async finish(game: PersistedGame) {
-    const batch = this.db.batch();
-    batch.set(this.gameRef(game.familyId, game.id), game, { merge: false });
-    batch.delete(this.lockRef(game.whiteUid)); batch.delete(this.lockRef(game.blackUid));
-    const recovery = { familyId: game.familyId, gameId: game.id, endedAt: game.endedAt, updatedAt: game.updatedAt };
-    batch.set(this.recoveryRef(game.whiteUid, game.familyId), { ...recovery, uid: game.whiteUid }, { merge: false });
-    batch.set(this.recoveryRef(game.blackUid, game.familyId), { ...recovery, uid: game.blackUid }, { merge: false });
-    await batch.commit();
+    await this.db.runTransaction(async tx => {
+      await finalizeInvitationWithGame(tx,this.db,game.familyId,game.id,[game.whiteUid,game.blackUid]);
+      tx.set(this.gameRef(game.familyId,game.id),game,{merge:false});
+      tx.delete(this.lockRef(game.whiteUid));tx.delete(this.lockRef(game.blackUid));
+      const recovery={familyId:game.familyId,gameId:game.id,endedAt:game.endedAt,updatedAt:game.updatedAt};
+      tx.set(this.recoveryRef(game.whiteUid,game.familyId),{...recovery,uid:game.whiteUid},{merge:false});
+      tx.set(this.recoveryRef(game.blackUid,game.familyId),{...recovery,uid:game.blackUid},{merge:false});
+    });
   }
   async load(familyId: string, gameId: string): Promise<PersistedGame | null> {
     const snap = await this.gameRef(familyId, gameId).get();

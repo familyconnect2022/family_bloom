@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { useBloomToast } from "../../../components/ui/BloomToast";
 import { useAuth } from "../../../context/AuthContext";
@@ -12,6 +12,7 @@ import { syncXiangqiPresentationFromState } from "../../../services/games/boardG
 import { getBoardGamePresentationSnapshot, restoreBoardGamePresentation } from "../../../services/games/boardGamePresentationStore";
 import { XIANGQI_EVENTS, XIANGQI_TIME_CONTROLS, type XiangqiInvite, type XiangqiRealtimeState } from "../../../types/xiangqiRealtime";
 import { ArenaPlayerRow, ArenaRuleLine, mayChallengeMember, type ArenaPalette, type ArenaPresence } from "../../../components/games/FamilyBoardGameLobbyVisuals";
+import { createFirebaseInvitation, watchInvitationSlots, type InvitationSlot } from "../../../services/games/firebaseBoardInvitations";
 
 const PALETTE: ArenaPalette = { primary: '#B67C2D', deep:'#815226', background:'#FFF3DE', surface:'#FFFEFB', pale:'#FFF0D2', border:'#ECDAB9' };
 const ART = require("../../../../assets/xiangqi/red_general.png");
@@ -24,6 +25,7 @@ export default function XiangqiFamilyLobby() {
   const { showToast }=useBloomToast();
   const { members,loading:loadingMembers,error:memberError }=useFamilyMembers(activeFamilyId);
   const [presence,setPresence]=useState<Record<string,ArenaPresence>>({});
+  const [slots,setSlots]=useState<Record<string,InvitationSlot>>({});
   const [online,setOnline]=useState(false);
   const [connecting,setConnecting]=useState(true);
   const [sendingUid,setSendingUid]=useState<string|null>(null);
@@ -33,54 +35,39 @@ export default function XiangqiFamilyLobby() {
   const familyId=activeFamilyId ?? "";
   const options=XIANGQI_TIME_CONTROLS;
   const players=useMemo(()=>members.filter(m=>!!m.uid && m.uid!==user?.uid).sort((a,b)=> {
-    const rank=(uid:string)=> mayChallengeMember(presence[uid])?0:presence[uid]==="busy"||presence[uid]==="in_game"?1:2;
+    const rank=(uid:string)=> slots[uid]?1:0;
     return rank(a.uid)-rank(b.uid) || (a.shortName||a.displayName).localeCompare(b.shortName||b.displayName,"vi");
-  }),[members,presence,user?.uid]);
-  const readyCount=players.filter(m=>mayChallengeMember(presence[m.uid])).length;
+  }),[members,slots,user?.uid]);
+  const readyCount=players.filter(m=>!slots[m.uid]).length;
   const selectControl=options.find(o=>o.id===selectedControl)?.value ?? options[0].value;
 
+  // Firebase invite availability only. Opening the lobby never wakes Render.
   useFocusEffect(useCallback(()=>{
-    if(!familyId || !user?.uid) return;
+    if (!familyId || !user?.uid) return;
     alive.current=true;
-    let scopeActive=true;
     setConnecting(true);
-    setPresence({});
-    let initialConnection=true;
-    const stopPresence=xiangqiSocketService.onPresence((items)=>{
-      if(!scopeActive)return;
-      const next: Record<string,ArenaPresence>={};
-      for (const item of items) next[item.uid]=item.status;
-      setPresence(next);  // Missing uid = offline; never infer presence from a Firestore person.
+    const unsub=watchInvitationSlots(familyId,items=>{
+      if(!alive.current)return;
+      setSlots(items);setConnecting(false);setOnline(true);
+    },e=>{
+      if(alive.current){setConnecting(false);setOnline(false);showToast({title:"Chưa tải được danh sách mời",message:e.message,type:"warning"});}
     });
-    const stopConnected=xiangqiSocketService.onConnected(()=>{if(scopeActive && !initialConnection){setConnecting(true);void enter().catch(()=>{if(scopeActive)setOnline(false);});}});
-    const stopDisconnected=xiangqiSocketService.onDisconnected(()=>{if(scopeActive){setOnline(false);setPresence({});}});
-    const enter=async()=>{
-      const app=await xiangqiSocketService.emitAck(XIANGQI_EVENTS.appJoin,{familyId},20_000);
-      if(!app.ok)throw new Error(app.errorCode);
-      if(!scopeActive)return;
-      const lobby=await xiangqiSocketService.emitAck(XIANGQI_EVENTS.lobbyJoin,{familyId},20_000);
-      if(!lobby.ok)throw new Error(lobby.errorCode);
-      if(!scopeActive){xiangqiSocketService.emitBestEffort(XIANGQI_EVENTS.lobbyLeave,{familyId});return;}
-      if(scopeActive){setOnline(true);setConnecting(false);}
-    };
-    // Mount the screen immediately; Render may need a cold-start wake-up.
-    void enter().catch((e)=>{if(scopeActive){setConnecting(false);setOnline(false);showToast({title:"Chưa kết nối sảnh",message:e instanceof Error?e.message:String(e),type:"warning"});}}).finally(()=>{initialConnection=false;});
-    const app=AppState.addEventListener("change",s=>{if(s==="active")void enter().catch(()=>undefined);});
-    return ()=>{scopeActive=false;alive.current=false;stopPresence();stopConnected();stopDisconnected();app.remove();
-      xiangqiSocketService.emitBestEffort(XIANGQI_EVENTS.lobbyLeave,{familyId});
-    };
+    return ()=>{alive.current=false;unsub();};
   },[familyId,user?.uid,showToast]));
 
   const invitePlayer=async(toUid:string)=>{
     if(!familyId || !online || sendingUid)return;
     const player=players.find(p=>p.uid===toUid);
-    if(!player || !mayChallengeMember(presence[toUid]))return;
+    if(!player || slots[toUid])return;
     const surface=getBoardGamePresentationSnapshot();
     if(surface.activeGameId){showToast({title:"Đang có ván cờ",message:"Hãy trở lại ván đang mở trước khi mời người khác.",type:"warning"});return;}
     setSendingUid(toUid);
     try{
-      const response=await xiangqiSocketService.emitAck<XiangqiInvite>(XIANGQI_EVENTS.inviteCreate,{requestId:makeRequestId(),familyId,toUid,timeControl:selectControl},20_000);
-      if(!response.ok)throw new Error(response.errorCode);
+      await createFirebaseInvitation({
+        familyId,gameKind:"xiangqi",fromUid:user!.uid,toUid,
+        fromDisplayName:user?.displayName || "Người thân",
+        toDisplayName:player.shortName||player.displayName||"Người thân",timeControl:selectControl,
+      });
       // Global XiangqiChallengeGate owns the authoritative 60s countdown + cancel.
       showToast({title:"Đã gửi lời thách đấu",message:`Đang chờ ${player.shortName||player.displayName} trả lời trong 60 giây.`,duration:3500});
     }catch(e){showToast({title:"Không gửi được lời mời",message:e instanceof Error?e.message:String(e),type:"warning",duration:4500});}
@@ -100,7 +87,7 @@ export default function XiangqiFamilyLobby() {
         restoreBoardGamePresentation();
       }else if(response.data.kind==="pending"){showToast({title:"Lời mời đang chờ",message:"Vui lòng xử lý lời mời hiện tại trước khi tạo ván mới."});}
       else if(response.data.kind==="busy_other_game"){showToast({title:"Đang có ván ở trò khác",message:"Hãy kết thúc hoặc thu nhỏ ván đang chơi trước nhé."});}
-      else showToast({title:"Sảnh đã sẵn sàng",message:"Chọn một người thân online để gửi lời thách đấu."});
+      else showToast({title:"Sảnh đã sẵn sàng",message:"Chọn thành viên gia đình để gửi lời mời."});
     }catch(e){showToast({title:"Chưa khôi phục được",message:e instanceof Error?e.message:String(e),type:"warning"});}
     finally{if(alive.current)setRecovering(false);}
   };
@@ -113,9 +100,9 @@ export default function XiangqiFamilyLobby() {
         <Text style={[styles.eyebrow,{color:PALETTE.deep}]}>✦ BLOOM ARENA · CỜ TƯỚNG ✦</Text>
         <Image source={ART} style={styles.royalPiece} resizeMode="contain"/>
         <Text style={styles.title}>Đấu trường Cờ tướng</Text>
-        <Text style={styles.subtitle}>Một cuộc đấu trí vui cùng người thân trong Nhà Mình. Ai đang online, mời ngay một ván nhé!</Text>
+        <Text style={styles.subtitle}>Một cuộc đấu trí vui cùng người thân trong Nhà Mình. Gửi lời mời cho người thân, không cần họ đang online!</Text>
         <View style={styles.heroStats}>
-          <View style={styles.statItem}><View style={[styles.onlineDot,{backgroundColor:online?"#38BD82":"#D7AB54"}]}/><Text style={styles.statText}>{connecting?"Đang kết nối…":online?"Sảnh trực tuyến":"Sảnh chưa kết nối"}</Text></View>
+          <View style={styles.statItem}><View style={[styles.onlineDot,{backgroundColor:online?"#38BD82":"#D7AB54"}]}/><Text style={styles.statText}>{connecting?"Đang kết nối…":online?"Lời mời Firebase":"Chưa kết nối Firebase"}</Text></View>
           <View style={styles.statDivider}/>
           <View style={styles.statItem}><Ionicons name="people" size={15} color={PALETTE.deep}/><Text style={styles.statText}>{readyCount} người sẵn sàng</Text></View>
         </View>
@@ -128,14 +115,14 @@ export default function XiangqiFamilyLobby() {
             style={[styles.timeChip,{backgroundColor:selectedControl===o.id?PALETTE.primary:PALETTE.pale,borderColor:selectedControl===o.id?PALETTE.primary:PALETTE.border}]}><Text style={[styles.timeText,{color:selectedControl===o.id?"#FFFFFF":PALETTE.deep}]}>{o.id}</Text></Pressable>)}</View>
           <Text style={styles.helper}>Đồng hồ do máy chủ quản lý · Hai người sẵn sàng mới bắt đầu.</Text>
         </View>
-        <View style={styles.sectionHead}><View><Text style={styles.sectionEyebrow}>THÁCH ĐẤU NGƯỜI NHÀ</Text><Text style={styles.sectionTitle}>Ai đang ở Nhà Mình?</Text></View><View style={[styles.countPill,{backgroundColor:PALETTE.pale}]}><Text style={[styles.countText,{color:PALETTE.deep}]}>{readyCount} online</Text></View></View>
-        <Text style={styles.description}>Chỉ hiện thành viên có tài khoản tham gia gia đình. Trạng thái online lấy trực tiếp từ máy chủ, không lấy từ Phả hệ.</Text>
+        <View style={styles.sectionHead}><View><Text style={styles.sectionEyebrow}>THÁCH ĐẤU NGƯỜI NHÀ</Text><Text style={styles.sectionTitle}>Mời người thân cùng chơi</Text></View><View style={[styles.countPill,{backgroundColor:PALETTE.pale}]}><Text style={[styles.countText,{color:PALETTE.deep}]}>{readyCount} có thể mời</Text></View></View>
+        <Text style={styles.description}>Danh sách thành viên từ Firebase. Có thể mời dù đối phương chưa mở ứng dụng; thời hạn phản hồi là 60 giây.</Text>
         {memberError?<Text style={styles.empty}>Không tải được danh sách tài khoản. Hãy kiểm tra quyền gia đình.</Text>:null}
         {loadingMembers?<Text style={styles.empty}>Đang lấy danh sách thành viên…</Text>:players.length===0?<Text style={styles.empty}>Chưa có tài khoản người thân khác trong gia đình.</Text>:
-          players.map(person=><ArenaPlayerRow key={person.uid} member={person} presence={presence[person.uid]} theme={PALETTE} waiting={sendingUid!==null||!online} onChallenge={()=>void invitePlayer(person.uid)}/>)}
+          players.map(person=><ArenaPlayerRow key={person.uid} member={person} presence={slots[person.uid]?"busy":undefined} inviteWithoutPresence theme={PALETTE} waiting={sendingUid!==null||!online} onChallenge={()=>void invitePlayer(person.uid)}/>)}
         <Pressable onPress={()=>void resume()} disabled={recovering} style={[styles.resume,{borderColor:PALETTE.border}]}><Ionicons name="refresh-circle-outline" color={PALETTE.primary} size={23}/><Text style={[styles.resumeText,{color:PALETTE.deep}]}>{recovering?"Đang tìm ván cũ…":"Tiếp tục ván đang chơi"}</Text><Ionicons name="arrow-forward" size={17} color={PALETTE.primary}/></Pressable>
         <View style={[styles.panel,{borderColor:PALETTE.border}]}><Text style={styles.sectionEyebrow}>CÁCH CHƠI CÙNG NHAU</Text>
-          <ArenaRuleLine icon="people-outline" theme={PALETTE}>Mời tài khoản người nhà đang online từ bất kỳ tab nào.</ArenaRuleLine>
+          <ArenaRuleLine icon="people-outline" theme={PALETTE}>Mời thành viên gia đình qua Firebase, không cần họ đang online.</ArenaRuleLine>
           <ArenaRuleLine icon="notifications-outline" theme={PALETTE}>Người nhận có 60 giây để đồng ý hoặc từ chối.</ArenaRuleLine>
           <ArenaRuleLine icon="sparkles-outline" theme={PALETTE}>Khi cả hai sẵn sàng, bàn cờ Full mở ra; có thể thu nhỏ để dùng các tab khác.</ArenaRuleLine>
         </View>

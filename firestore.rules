@@ -408,6 +408,117 @@ service cloud.firestore {
     }
 
     match /families/{familyId} {
+
+      // H25: Direct Firestore human invitation transport. Firebase Auth and
+      // transaction getAfter() enforce both participants' exclusive slots.
+      // Admin SDK alone promotes ACCEPT_REQUESTED to ACCEPTED/gameId.
+      function invitePath(inviteId) {
+        return /databases/$(database)/documents/families/$(familyId)/boardInvitations/$(inviteId);
+      }
+      function slotPath(uid) {
+        return /databases/$(database)/documents/families/$(familyId)/boardInviteSlots/$(uid);
+      }
+      function validTimeControl(c) {
+        return c is map && c.keys().hasOnly(['kind','initialMs','incrementMs'])
+          && ((c.kind == 'unlimited' && c.initialMs == null && c.incrementMs == 0)
+            || (c.kind == 'clocked'
+              && ((c.initialMs == 180000 && c.incrementMs == 2000)
+                || (c.initialMs == 300000 && c.incrementMs == 0)
+                || (c.initialMs == 600000 && c.incrementMs in [0,5000]))));
+      }
+      function bothSlots(inviteId, status) {
+        return getAfter(slotPath(request.resource.data.fromUid)).data.inviteId == inviteId
+          && getAfter(slotPath(request.resource.data.toUid)).data.inviteId == inviteId
+          && getAfter(slotPath(request.resource.data.fromUid)).data.status == status
+          && getAfter(slotPath(request.resource.data.toUid)).data.status == status;
+      }
+      match /boardInvitations/{inviteId} {
+        allow read: if familyAccess(familyId)
+          && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+        allow create: if member(familyId)
+          && request.resource.data.keys().hasOnly(['inviteId','familyId','gameKind','fromUid','toUid','fromDisplayName','toDisplayName','timeControl','createdAtMs','expiresAtMs','createdAt','updatedAt','status','revision'])
+          && request.resource.data.keys().hasAll(['inviteId','familyId','gameKind','fromUid','toUid','timeControl','createdAtMs','expiresAtMs','createdAt','updatedAt','status','revision'])
+          && inviteId == request.resource.data.inviteId
+          && familyId == request.resource.data.familyId
+          && request.auth.uid == request.resource.data.fromUid
+          && request.resource.data.fromUid != request.resource.data.toUid
+          && graphMemberUid(familyId,request.resource.data.toUid)
+          && request.resource.data.gameKind in ['chess','xiangqi']
+          && request.resource.data.fromDisplayName is string
+          && request.resource.data.fromDisplayName.size() <= 56
+          && request.resource.data.toDisplayName is string
+          && request.resource.data.toDisplayName.size() <= 56
+          && validTimeControl(request.resource.data.timeControl)
+          && request.resource.data.status == 'PENDING'
+          && request.resource.data.revision == 1
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.createdAtMs is int
+          && request.resource.data.createdAtMs >= request.time.toMillis() - 5000
+          && request.resource.data.createdAtMs <= request.time.toMillis() + 5000
+          && request.resource.data.expiresAtMs == request.resource.data.createdAtMs + 60000
+          && !exists(/databases/$(database)/documents/chessActiveUsers/$(request.resource.data.fromUid))
+          && !exists(/databases/$(database)/documents/chessActiveUsers/$(request.resource.data.toUid))
+          && bothSlots(inviteId,'PENDING');
+        allow update: if member(familyId)
+          && resource.data.status in ['PENDING','ACCEPT_REQUESTED']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','revision','updatedAt','acceptedAt'])
+          && request.resource.data.revision == resource.data.revision + 1
+          && request.resource.data.updatedAt == request.time
+          && ((resource.data.status == 'PENDING' && request.resource.data.status == 'ACCEPT_REQUESTED'
+              && request.auth.uid == resource.data.toUid
+              && request.time.toMillis() < resource.data.expiresAtMs
+              && request.resource.data.acceptedAt == request.time
+              && bothSlots(inviteId,'ACCEPT_REQUESTED'))
+            || (resource.data.status == 'PENDING' && request.resource.data.status == 'CANCELLED'
+              && request.auth.uid == resource.data.fromUid && bothSlots(inviteId,'RELEASED'))
+            || (resource.data.status == 'PENDING' && request.resource.data.status == 'DECLINED'
+              && request.auth.uid == resource.data.toUid && bothSlots(inviteId,'RELEASED'))
+            || (resource.data.status == 'PENDING' && request.resource.data.status == 'EXPIRED'
+              && request.auth.uid in [resource.data.fromUid,resource.data.toUid]
+              && request.time.toMillis() >= resource.data.expiresAtMs
+              && bothSlots(inviteId,'RELEASED'))
+            || (resource.data.status == 'ACCEPT_REQUESTED'
+              && request.resource.data.status == 'FAILED'
+              && request.auth.uid in [resource.data.fromUid,resource.data.toUid]
+              && request.time >= resource.data.acceptedAt + duration.value(180,'s')
+              && bothSlots(inviteId,'RELEASED')));
+        allow delete: if false;
+      }
+      match /boardInviteSlots/{slotUid} {
+        allow read: if familyAccess(familyId);
+        allow create, update: if member(familyId)
+          && request.resource.data.keys().hasOnly(['uid','familyId','inviteId','gameKind','role','status','holdUntilMs','updatedAt'])
+          && request.resource.data.keys().hasAll(['uid','familyId','inviteId','gameKind','role','status','holdUntilMs','updatedAt'])
+          && request.resource.data.uid == slotUid
+          && request.resource.data.familyId == familyId
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.holdUntilMs is int
+          && (request.resource.data.status in ['PENDING','ACCEPT_REQUESTED','RELEASED'])
+          && (!exists(slotPath(slotUid)) || resource.data.status == 'RELEASED'
+            || resource.data.holdUntilMs <= request.time.toMillis()
+            || (resource.data.inviteId == request.resource.data.inviteId))
+          && getAfter(invitePath(request.resource.data.inviteId)).data.gameKind == request.resource.data.gameKind
+          && ((request.resource.data.role == 'inviter'
+              && getAfter(invitePath(request.resource.data.inviteId)).data.fromUid == slotUid)
+            || (request.resource.data.role == 'invitee'
+              && getAfter(invitePath(request.resource.data.inviteId)).data.toUid == slotUid))
+          && ((request.resource.data.status == 'PENDING'
+              && getAfter(invitePath(request.resource.data.inviteId)).data.status == 'PENDING'
+              && request.auth.uid == getAfter(invitePath(request.resource.data.inviteId)).data.fromUid
+              && request.resource.data.holdUntilMs == getAfter(invitePath(request.resource.data.inviteId)).data.expiresAtMs)
+            || (resource.data.inviteId == request.resource.data.inviteId
+              && request.resource.data.status == 'ACCEPT_REQUESTED'
+              && request.auth.uid == getAfter(invitePath(request.resource.data.inviteId)).data.toUid
+              && getAfter(invitePath(request.resource.data.inviteId)).data.status == 'ACCEPT_REQUESTED'
+              && request.resource.data.holdUntilMs >= request.time.toMillis() + 170000
+              && request.resource.data.holdUntilMs <= request.time.toMillis() + 190000)
+            || (resource.data.inviteId == request.resource.data.inviteId
+              && request.resource.data.status == 'RELEASED'
+              && getAfter(invitePath(request.resource.data.inviteId)).data.status in ['CANCELLED','DECLINED','EXPIRED','FAILED']
+              && request.resource.data.holdUntilMs <= request.time.toMillis() + 5000));
+        allow delete: if false;
+      }
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.id == familyId;
       allow read: if familyAccess(familyId);
       allow update: if owner(familyId)

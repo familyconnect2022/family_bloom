@@ -19,7 +19,7 @@ const iso = () => new Date().toISOString();
 const otherColor = (c: ChessColor): ChessColor => c === "w" ? "b" : "w";
 const CHECKPOINT_EVERY_PLY = 4;
 const FINISHED_RUNTIME_TTL_MS = 30 * 60_000;
-const WAITING_PREPARATION_TIMEOUT_MS = 120_000;
+const WAITING_PREPARATION_TIMEOUT_MS = 180_000;
 type CapturablePiece = NonNullable<AppliedMove["captured"]>;
 const emptyCaptureSummary = (): CaptureSummary => ({
   byWhite: { p: 0, n: 0, b: 0, r: 0, q: 0 },
@@ -98,7 +98,7 @@ export class ChessGameManager {
       fen: chess.fen(), pgn: chess.pgn(), turn: "w", revision: 1,
       whiteRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
-      timeControl, awayBudgetByUid: {}, preparationPhase: "board", result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
+      timeControl, awayBudgetByUid: {}, readyUids: [], preparationPhase: options?.testBotUid ? "board" : "colors", result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
       recentRequestIds: [...new Set([...(createRequestId ? [createRequestId] : []), ...(options?.additionalRequestIds ?? [])])].slice(-24), testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: null, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
@@ -107,7 +107,7 @@ export class ChessGameManager {
       chess,
       turnStartedMono: null,
       connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
-      boardReadyUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
+      boardReadyUids: new Set(options?.testBotUid ? [options.testBotUid] : [whiteUid,blackUid]),
       readyUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
       captures: emptyCaptureSummary(),
       boardAwayByUid: new Map(),
@@ -150,7 +150,7 @@ export class ChessGameManager {
     const restoredBoardReady = stored.preparationPhase === "colors"
       ? [stored.whiteUid, stored.blackUid]
       : (stored.testBotUid ? [stored.testBotUid] : []);
-    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), boardReadyUids: new Set(restoredBoardReady), readyUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), captures: deriveCaptureSummary(chess), boardAwayByUid: restoredAway, awayRemainingByUid: restoredBudgets };
+    const runtime: Runtime = { game: stored, chess, turnStartedMono: null, connectedUids: new Set(stored.testBotUid ? [stored.testBotUid] : []), boardReadyUids: new Set(restoredBoardReady), readyUids: new Set(stored.readyUids ?? (stored.testBotUid ? [stored.testBotUid] : [])), captures: deriveCaptureSummary(chess), boardAwayByUid: restoredAway, awayRemainingByUid: restoredBudgets };
     this.games.set(gameId, runtime);
     // A Render Free restart can erase the timer/runtime while the Firestore
     // cross-game lock survives. Reconcile against immutable persisted deadlines
@@ -219,18 +219,25 @@ export class ChessGameManager {
       if (r.game.status === "finished" || r.game.status === "cancelled") throw new ChessDomainError("CHESS_GAME_FINISHED");
       if (r.game.status === "active") return this.publicState(r);
       if (r.game.status !== "waiting" || r.game.preparationPhase !== "colors" ||
-          !r.boardReadyUids.has(r.game.whiteUid) || !r.boardReadyUids.has(r.game.blackUid)) {
+          (!r.boardReadyUids.has(r.game.whiteUid) || !r.boardReadyUids.has(r.game.blackUid))) {
         throw new ChessDomainError("CHESS_SERVER_RECOVERING");
       }
       r.readyUids.add(uid);
       const bothReady = r.readyUids.has(r.game.whiteUid) && r.readyUids.has(r.game.blackUid);
-      if (!bothReady) return this.publicState(r);
+      // A single READY per user is durable even if Render restarts before
+      // the other participant joins. Retried requests are idempotent.
+      if (!bothReady) {
+        r.game.readyUids = [...r.readyUids];
+        await this.persistence.save(r.game);
+        return this.publicState(r);
+      }
 
       const before = this.snapshot(r);
       const readyBefore = new Set(r.readyUids);
       try {
         const now = iso();
         r.game.status = "active";
+        r.game.readyUids = [...r.readyUids];
         r.game.preparationPhase = "colors";
         r.game.startedAt = now;
         r.game.updatedAt = now;

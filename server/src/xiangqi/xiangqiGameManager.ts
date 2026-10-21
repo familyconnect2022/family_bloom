@@ -9,7 +9,7 @@ import { XiangqiPersistenceService } from "./xiangqiPersistenceService.js";
 
 // Xiangqi owns its own manager / clocks / readiness / lifecycle. Nothing here
 // imports or mutates Chess runtime state.
-const WAITING_TIMEOUT_MS = 120_000;
+const WAITING_TIMEOUT_MS = 180_000;
 const FINISHED_TTL_MS = 30 * 60_000;
 const CHECKPOINT_EVERY_MOVE = 4;
 const iso = () => new Date().toISOString();
@@ -98,17 +98,17 @@ export class XiangqiGameManager {
     const id = randomUUID(); const now = iso(); const bot = options?.testBotUid ?? null;
     const game: PersistedXiangqiGame = {
       id, familyId, redUid, blackUid, playerUids: [redUid, blackUid],
-      status: "waiting", preparationPhase: "board", board: createInitialXiangqiState(), revision: 1,
+      status: "waiting", preparationPhase: options?.testBotUid ? "board" : "colors", board: createInitialXiangqiState(), revision: 1,
       redRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       timeControl, result: null, finishReason: null, drawOfferByUid: null, awayBudgetByUid: {},
-      recentRequestIds: requestId ? [requestId] : [], testBotUid: bot, isTestGame: !!bot,
+      recentRequestIds: requestId ? [requestId] : [], readyUids: [], testBotUid: bot, isTestGame: !!bot,
       createdAt: now, startedAt: null, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
     const runtime: Runtime = {
       game, turnStartedMono: null, connectedUids: new Set(bot ? [bot] : []),
-      boardReadyUids: new Set(bot ? [bot] : []), readyUids: new Set(bot ? [bot] : []),
+      boardReadyUids: new Set(bot ? [bot] : [redUid,blackUid]), readyUids: new Set(bot ? [bot] : []),
       boardAwayByUid: new Map(), awayRemainingByUid: new Map(),
     };
     this.games.set(id, runtime);
@@ -144,7 +144,7 @@ export class XiangqiGameManager {
     const r: Runtime = {
       game: stored, turnStartedMono: null, connectedUids: new Set(bot ? [bot] : []),
       boardReadyUids: new Set(pastBoardStage ? [stored.redUid, stored.blackUid] : (bot ? [bot] : [])),
-      readyUids: new Set(bot ? [bot] : []), boardAwayByUid, awayRemainingByUid,
+      readyUids: new Set(stored.readyUids ?? (bot ? [bot] : [])), boardAwayByUid, awayRemainingByUid,
     };
     this.games.set(gameId, r);
     // A persisted lock cannot be exposed to recovery without reconciling any
@@ -198,10 +198,13 @@ export class XiangqiGameManager {
         !r.boardReadyUids.has(r.game.redUid) || !r.boardReadyUids.has(r.game.blackUid))
         throw new XiangqiDomainError("XIANGQI_SERVER_RECOVERING");
       r.readyUids.add(uid);
-      if (!r.readyUids.has(r.game.redUid) || !r.readyUids.has(r.game.blackUid)) return this.publicState(r);
+      if (!r.readyUids.has(r.game.redUid) || !r.readyUids.has(r.game.blackUid)) {
+        r.game.readyUids = [...r.readyUids]; await this.persistence.save(r.game);
+        return this.publicState(r);
+      }
       const before = this.snapshot(r);
       try {
-        const now = iso(); r.game.status = "active"; r.game.startedAt = now; r.game.updatedAt = now;
+        const now = iso(); r.game.status = "active"; r.game.readyUids=[...r.readyUids]; r.game.startedAt = now; r.game.updatedAt = now;
         r.game.revision++; this.remember(r.game, requestId);
         r.turnStartedMono = r.game.timeControl.kind === "clocked" ? performance.now() : null;
         await this.persistence.save(r.game);

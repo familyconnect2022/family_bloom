@@ -43,9 +43,9 @@ check('reconnect and game cleanup reset scheduled/inflight readiness',()=>{
   assert(js.includes('boardAssetsReadyForGame = null;\n  readyScheduledForGame = null;\n  clearReadinessRetry();'));
 });
 check('waiting countdown originates from immutable server createdAt, never local reset',()=>{
-  assert(js.includes('120_000 - (state.serverNowMs - Date.parse(state.createdAt))'));
+  assert(js.includes('180_000 - (state.serverNowMs - Date.parse(state.createdAt))'));
   assert(server.includes('Date.parse(r.game.createdAt) + WAITING_PREPARATION_TIMEOUT_MS'));
-  assert(server.includes('const WAITING_PREPARATION_TIMEOUT_MS = 120_000'));
+  assert(server.includes('const WAITING_PREPARATION_TIMEOUT_MS = 180_000'));
 });
 check('Native countdown is a dedicated display-only row and monotonic tick',()=>{
   assert(wire.includes('waitingRemainingMs?: number | null;'));

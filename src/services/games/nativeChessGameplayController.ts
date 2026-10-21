@@ -51,7 +51,7 @@ function watchWaitingDeadline(state: ChessGameState) {
   if (waitingDeadlineTimer && waitingDeadlineGame === state.gameId) return;
   clearWaitingDeadlineWatchdog();
   const started = Date.parse(state.createdAt);
-  const leftMs = Number.isFinite(started) ? Math.max(0, started + 120_000 - state.serverNowMs) : 0;
+  const leftMs = Number.isFinite(started) ? Math.max(0, started + 180_000 - state.serverNowMs) : 0;
   const gameId = state.gameId;
   waitingDeadlineGame = gameId;
   waitingDeadlineTimer = setTimeout(() => {
@@ -345,10 +345,10 @@ async function pushState(reason: string) {
     // The timeout is measured from the immutable server creation timestamp.
     // Every reconnect/rebind can refine its estimate, but never extend it.
     waitingRemainingMs: state.status === "waiting" && Number.isFinite(Date.parse(state.createdAt))
-      ? Math.max(0, 120_000 - (state.serverNowMs - Date.parse(state.createdAt))) : null,
+      ? Math.max(0, 180_000 - (state.serverNowMs - Date.parse(state.createdAt))) : null,
     waitingMessage: offlineNotice || (state.status === "waiting" &&
       Number.isFinite(Date.parse(state.createdAt)) &&
-      state.serverNowMs - Date.parse(state.createdAt) >= 120_000
+      state.serverNowMs - Date.parse(state.createdAt) >= 180_000
       ? "Thời gian chuẩn bị đã hết · Đang xác nhận kết quả với máy chủ…"
       : state.status === "waiting" ?
       (state.preparationPhase === "board" ? "Đang chuẩn bị bàn cờ cho cả hai người…" : `Đã chốt màu quân · Đợi ${opponentLabel(state)} sẵn sàng`)
@@ -359,6 +359,7 @@ async function pushState(reason: string) {
   // Stage 2 only after Native has accepted a board with its authoritative
   // orientation. This is separate from board/assets/audio readiness.
   if (state.status === "waiting" && state.preparationPhase === "colors" && mine &&
+      boardAssetsReadyForGame === state.gameId &&
       readyRequestedForGame !== state.gameId && readyScheduledForGame !== state.gameId &&
       !readyPending && transportOnline) {
     readyScheduledForGame = state.gameId;
@@ -885,6 +886,10 @@ export async function handleNativeChessAction(event: NativeChessAction) {
   const state = currentState;
   if (!state || event.gameId !== state.gameId) return;
   if (event.action === "assetsReady") {
+    boardAssetsReadyForGame = event.gameId;
+    if (currentState?.status === "waiting" && currentState.preparationPhase === "colors") {
+      void pushState("h25-assets-ready");
+    }
     if (currentState?.status === "waiting" && currentState.preparationPhase === "board" &&
         boardReadyRequestedForGame !== currentState.gameId) {
       boardAssetsReadyForGame = currentState.gameId;

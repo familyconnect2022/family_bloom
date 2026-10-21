@@ -17,10 +17,10 @@ export function memberPresenceText(status: ArenaPresence): string {
     case "reconnecting": return "Đang kết nối lại";
     default: return "Hiện không online"; }
 }
-export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting }: {
-  member: FamilyMember; presence: ArenaPresence; theme: ArenaPalette; onChallenge: () => void; waiting: boolean;
+export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting, inviteWithoutPresence=false }: {
+  member: FamilyMember; presence: ArenaPresence; theme: ArenaPalette; onChallenge: () => void; waiting: boolean; inviteWithoutPresence?: boolean;
 }) {
-  const active = mayChallengeMember(presence);
+  const active = inviteWithoutPresence ? presence !== "busy" && presence !== "in_game" : mayChallengeMember(presence);
   const title = names(member);
   return <View style={[styles.playerRow, { borderColor: theme.border, backgroundColor: theme.surface }]}>
     <View style={styles.avatarWrap}>
@@ -28,7 +28,7 @@ export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting }
         <View style={[styles.avatar, { backgroundColor: theme.pale, alignItems:"center",justifyContent:"center" }]}><Text style={[styles.avatarLetter,{color:theme.deep}]}>{title.slice(0,1).toLocaleUpperCase("vi")}</Text></View>}
       <View style={[styles.presenceDot,{backgroundColor:active?"#3BC58B":presence==="in_game"||presence==="busy"?"#E9B366":"#B9B8BF"}]} />
     </View>
-    <View style={styles.personText}><Text style={styles.personName} numberOfLines={1}>{title}</Text><Text style={styles.personStatus} numberOfLines={1}>{memberPresenceText(presence)}</Text></View>
+    <View style={styles.personText}><Text style={styles.personName} numberOfLines={1}>{title}</Text><Text style={styles.personStatus} numberOfLines={1}>{inviteWithoutPresence && !presence ? "Có thể gửi lời mời · không cần online" : memberPresenceText(presence)}</Text></View>
     <Pressable accessibilityRole="button" accessibilityLabel={`Thách đấu ${title}`} disabled={!active || waiting} onPress={onChallenge}
       style={({pressed})=>[styles.inviteButton,{backgroundColor:active?theme.primary:"#F0ECED", opacity:waiting?0.5:pressed?0.75:1}]}>
       <Ionicons name={active?"flash":"lock-closed-outline"} size={14} color={active?"#FFFFFF":"#9D959A"}/>

@@ -40,13 +40,13 @@ const events=[];const mgr=new ChessGameManager(fakePersistence,event=>events.pus
 (async()=>{
 const tc = {kind:'clocked',initialMs:600000,incrementMs:0};
 const first=await mgr.create('family','a','b',tc);
-test('colors are private before both boards ready',()=>{ assert.equal(first.preparationPhase,'board');assert.equal(first.whiteUid,'');assert.equal(first.blackUid,'')});
+test('H25 human matches lock colors immediately',()=>{ assert.equal(first.preparationPhase,'colors');assert(first.whiteUid&&first.blackUid)});
 await mgr.markBoardReady(first.gameId,'a','board-a-1234');
 const one=await mgr.state(first.gameId,'a');
 test('single prepared participant cannot start clocks',()=>assert.equal(one.status,'waiting'));
 await mgr.markBoardReady(first.gameId,'b','board-b-1234');
 const both=await mgr.state(first.gameId,'a');
-test('colors released only after both boardReady',()=>{assert.equal(both.preparationPhase,'colors'); assert(both.whiteUid&&both.blackUid);});
+test('boardReady legacy packets cannot change locked human colors',()=>{assert.equal(both.preparationPhase,'colors'); assert(both.whiteUid&&both.blackUid);});
 await mgr.markReady(first.gameId,'a','ready-a-1234');
 const wait=await mgr.state(first.gameId,'a');
 test('first playReady does not start clock',()=>{assert.equal(wait.status,'waiting');assert.equal(wait.startedAt,null)});
@@ -69,10 +69,10 @@ test('expired leave finishes before returning',()=>assert.equal(finished.finishe
 test('winner announced, terminal lock cleanup',()=>{assert.equal(events.at(-1).state.status,'finished');assert.equal(events.at(-1).state.finishReason,'away_timeout');assert.equal(events.at(-1).state.result,active.whiteUid==='a'?'black':'white')});
 test('invite TTL 60s, not 120s',()=>assert(socketSrc.includes('INVITE_TTL_MS = 60_000')));
 test('A may cancel while invitation pending',()=> assert(socketSrc.includes('socket.on(E.inviteCancel')));
-test('B cross-tab invitation with countdown',()=>assert(gateSrc.includes('Modal')&&gateSrc.includes('inviteAccept')&&gateSrc.includes('setInterval(tick, 1000)')));
+test('H25 invitation gate lives on Firestore with local countdown',()=>{const fire=fs.readFileSync('src/components/games/FirebaseBoardInvitationGate.tsx','utf8');assert(fire.includes('watchMyFirebaseInvitations')&&fire.includes('setInterval(tick,1000)'));});
 test('disconnect is a server-side away signal',()=>assert(socketSrc.includes('away-on-disconnect')));
 test('Native waits for board-ready pixels',()=>assert(nativeSrc.includes('pieces.size != 64 || paintedCells.size != 64')));
-test('client sends distinct board and play readiness',()=>assert(controllerSrc.includes('CHESS_EVENTS.gameBoardReady')&&controllerSrc.includes('CHESS_EVENTS.gameReady')));
+test('H25 native gameplay sends final READY after native assets',()=>assert(controllerSrc.includes('CHESS_EVENTS.gameReady')&&controllerSrc.includes('boardAssetsReadyForGame')));
 // Prove that leaving does not become free again if the Render process restarts.
 const durable = new Map();
 let durableFinishCount = 0;

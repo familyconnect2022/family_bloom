@@ -85,7 +85,7 @@ function queueRetry(gameId: string) {
 function scheduleWaitRecovery(g: XiangqiRealtimeState) {
   if (preparedWatchdog) { clearTimeout(preparedWatchdog); preparedWatchdog = null; }
   if (g.status !== "waiting") return;
-  const remain = Math.max(0, Date.parse(g.createdAt) + 120_000 - g.serverNowMs);
+  const remain = Math.max(0, Date.parse(g.createdAt) + 180_000 - g.serverNowMs);
   const gameId = g.gameId;
   preparedWatchdog = setTimeout(() => {
     preparedWatchdog = null;
@@ -108,7 +108,7 @@ async function push(reason: string) {
   const captures = hints.filter(h => g.board.pieces.some(p => p.col === h.col && p.row === h.row && p.color !== me));
   const opponentUid = me === "red" ? g.blackUid : g.redUid;
   const matchedOpponentProfile = opponentProfile?.uid === opponentUid ? opponentProfile : null;
-  const deadline = Date.parse(g.createdAt) + 120_000;
+  const deadline = Date.parse(g.createdAt) + 180_000;
   const waitingRemainingMs = g.status === "waiting" && Number.isFinite(deadline) ? Math.max(0, deadline - g.serverNowMs) : null;
   const props: NativeXiangqiBoardState = {
     gameId: g.gameId, revision: g.revision, renderSequence: serial, status: g.status,
@@ -144,7 +144,7 @@ async function push(reason: string) {
   // The native board confirms the physical PNG board before boardReady.
   if (g.status === "waiting" && g.preparationPhase === "board" && nativeAssetsReady === g.gameId && transportOnline)
     void markBoardReady();
-  if (g.status === "waiting" && g.preparationPhase === "colors" && me && transportOnline && !playReadyScheduled && playReadyRequested !== g.gameId) {
+  if (g.status === "waiting" && g.preparationPhase === "colors" && nativeAssetsReady === g.gameId && me && transportOnline && !playReadyScheduled && playReadyRequested !== g.gameId) {
     playReadyScheduled = g.gameId;
     await waitNativeFrames();
     if (playReadyScheduled === g.gameId) playReadyScheduled = null;

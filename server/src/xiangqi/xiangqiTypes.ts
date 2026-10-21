@@ -16,7 +16,7 @@ export type PersistedXiangqiGame = {
   id:string; familyId:string; redUid:string; blackUid:string; playerUids:string[];
   status:XiangqiGameStatus; board:XiangqiBoardState; revision:number;
   redRemainingMs:number|null; blackRemainingMs:number|null; timeControl:XiangqiTimeControl;
-  result:XiangqiResult; finishReason:XiangqiFinishReason; drawOfferByUid?:string|null; recentRequestIds:string[];
+  result:XiangqiResult; finishReason:XiangqiFinishReason; drawOfferByUid?:string|null; recentRequestIds:string[]; readyUids?:string[];
   awayBudgetByUid?:Record<string,{remainingMs:number;leftAtEpochMs?:number;deadlineEpochMs?:number}>;
   preparationPhase?:"board"|"colors";
   testBotUid?:string|null; isTestGame?:boolean;

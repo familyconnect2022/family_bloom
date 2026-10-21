@@ -119,7 +119,7 @@ function harness(color='w'){
  const gate=read('src/components/games/ChessSessionRecoveryGate.tsx');
  const layout=read('src/app/_layout.tsx');
  check(gate.includes('CHESS_EVENTS.sessionRecover')&&gate.indexOf('await confirm(')<gate.indexOf('CHESS_EVENTS.gameJoin') &&
-   layout.includes('<ChessSessionRecoveryGate'), 'Root-owned recovery asks consent BEFORE joining/painting active match');
+   layout.includes('<FirebaseBoardInvitationGate') && !layout.includes('<ChessSessionRecoveryGate'), 'H25 Firebase invitation gate owns accepted-game restore without eager boot socket');
  check(gate.includes('cancelLabel: "Để sau"') && !gate.includes('gameResign'),
    'Deferring recovery leaves server match running, without resign');
  check(native.includes('fun ensureRecoveredGeometry()')&&native.includes('paintedCells.clear()')&&

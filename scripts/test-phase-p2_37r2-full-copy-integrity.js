@@ -65,13 +65,13 @@ check(pkg.dependencies?.['family-bloom-overlay'] === 'file:modules/family-bloom-
 check(pkg.expo?.autolinking?.nativeModulesDir === './modules', 'Expo nativeModulesDir explicitly points at ./modules');
 check(modPkg.name === 'family-bloom-overlay' && modPkg.version === '1.3.18', 'local native module identity/version = family-bloom-overlay@1.3.18');
 check(cfg.android?.modules?.includes('expo.modules.familybloomoverlay.FamilyBloomOverlayModule'), 'Expo module config registers FamilyBloomOverlayModule');
-check(native.includes('P2.37R2C-H23-native-1') && native.includes('class FamilyBloomOverlayRail'), 'Kotlin source contains R2C native identity + decor rail');
+check(native.includes('P2.37R2C-H25-native-1') && native.includes('class FamilyBloomOverlayRail'), 'Kotlin source contains R2C native identity + decor rail');
 check(native.includes('NATIVE HOST OK') && native.includes('NATIVE_BINARY_PROOF_VISIBLE'), 'native decor rail contains independent visible proof');
 check(!native.includes('PopupWindow'), 'Activity-global PopupWindow remains retired');
 check(moduleTs.includes('requireOptionalNativeModule') && !moduleTs.includes('requireNativeViewManager') && moduleTs.includes('setFamilyBloomOverlayPresentation'), 'local JS wrapper is module/event only; no native ViewManager enters React tree');
 
-check(screen.includes('JS phase: P2.37R2C-H22R9') && screen.includes('P2.37R2C-H23-native-1'), 'Developer test UI identifies current H22R8 JS/native proof step');
-check(app.expo?.android?.versionCode === 143038 && app.expo?.version === '1.3.28', 'Android binary version bumped to 1.3.28 / 143038');
+check(screen.includes('JS phase: P2.37R2C-H22R9') && screen.includes('P2.37R2C-H25-native-1'), 'Developer test UI identifies current H22R8 JS/native proof step');
+check(app.expo?.android?.versionCode === 143039 && app.expo?.version === '1.3.29', 'Android binary version bumped to 1.3.29 / 143039');
 check(pkg.scripts?.['phaseP2_37R2:check']?.includes('test-phase-p2_37r2-full-copy-integrity.js'), 'package exposes current FULL integrity gate');
 check(pkg.scripts?.['eas-build-post-install']?.includes('check-p2_37r2c-native-package.js'), 'EAS post-install uses R2C native autolink proof');
 check(pkg.scripts?.['eas-build-on-success']?.includes('check-p2_37r2c-eas-apk-proof.js'), 'EAS success hook uses R2C APK/Dex proof');
@@ -80,7 +80,7 @@ check(clean.includes('node_modules\\family-bloom-overlay\\package.json') && clea
 check(easIgnore.includes('!modules/**'), '.easignore explicitly uploads local native modules');
 const eas = json('eas.json');
 check(eas.cli?.appVersionSource === 'local', 'EAS CLI locks appVersionSource=local so app.json versionCode reaches APK');
-check(read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('FamilyBloomOverlayRail') && read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('P2.37R2C-H23-native-1'), 'APK DEX proof requires native module + decor rail + exact R2C identity');
+check(read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('FamilyBloomOverlayRail') && read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('P2.37R2C-H25-native-1'), 'APK DEX proof requires native module + decor rail + exact R2C identity');
 const nativePreflight = read('scripts/setup/check-p2_37r2c-native-package.js');
 check(nativePreflight.includes('graphHasOverlay') && nativePreflight.includes("process.env.ComSpec") && nativePreflight.includes("'gradlew.bat', 'projects', '--console=plain'") && !nativePreflight.includes('shell: true'), 'native preflight proves Gradle project graph with Windows-space-safe cmd invocation');
 

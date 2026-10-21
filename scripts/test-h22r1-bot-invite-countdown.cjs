@@ -71,7 +71,7 @@ test('Xiangqi Bot has a real server-side rejection action rather than a nonfunct
  assert(screen.includes('onPress={xiangqiReject}'));
 });
 test('Android native identity remains H22 (JS-only change, no binary rebuild required for already installed H22)',()=>{
- assert(screen.includes('P2.37R2C-H23-native-1'));
- assert(screen.includes('143038'));
+ assert(screen.includes('P2.37R2C-H25-native-1'));
+ assert(screen.includes('143039'));
 });
 console.log(`H22R1 Bloom Bot invite deadline/UI: ${passed}/${passed} PASS`);

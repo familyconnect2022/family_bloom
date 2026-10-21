@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { resolveFirebaseMatch, cleanupPreviousInvitesWhenAwake } from "../games/firebaseInvitationMatch.js";
 import type { Server, Socket } from "socket.io";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
 import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
@@ -142,6 +143,28 @@ export function installXiangqiSocket(io:Server<any,any,any,any>){
     for(const s of socketsIn(uid,familyId))s.emit(XIANGQI_EVENTS.inviteSent,invite);
     setTimeout(()=>void expireInvite(invite.inviteId),INVITE_TTL_MS+100).unref();
     return invite;
+  }));
+  socket.on("xiangqi:firebase:claim",(raw:unknown,ack:Ack)=>safe(ack,async()=>{
+    const p=rec(raw),familyId=id(p.familyId,"familyId"),inviteId=id(p.inviteId,"inviteId");
+    await requireMember(uid,familyId); assertFamilyGameCreationOpen();
+    const gameId=await resolveFirebaseMatch({familyId,inviteId,uid,kind:"xiangqi",
+      getCurrent:async u=>(await persistence.getAnyActiveForUid(u)) as {familyId:string;gameId:string;gameKind:string}|null,
+      sameMatch:async (gid,fromUid,toUid,invitationId)=>{
+        const game=await persistence.load(familyId,gid);
+        return !!game && [fromUid,toUid].every(u=>game.playerUids.includes(u)) && game.recentRequestIds.includes(`firebase:${invitationId}`);
+      },
+      create:async i=>{
+        await requireMember(i.fromUid,familyId);await requireMember(i.toUid,familyId);
+        const state=await manager.create(familyId,i.fromUid,i.toUid,tc(i.timeControl),`firebase:${inviteId}`);
+        return state.gameId;
+      },
+    });
+    const state=await manager.join(familyId,gameId,uid);
+    socket.data.xiangqiGameId=gameId;socket.data.xiangqiGameFamilyId=familyId;
+    await socket.join(`xiangqi:game:${gameId}`);
+    socket.emit(XIANGQI_EVENTS.gameState,state);
+    void cleanupPreviousInvitesWhenAwake();
+    return {gameId,state};
   }));
   socket.on(XIANGQI_EVENTS.inviteAccept,(raw:unknown,ack:Ack)=>safe(ack,async()=>{
     const p=rec(raw),rid=requestId(p.requestId),inviteId=id(p.inviteId,"inviteId"),invite=invites.get(inviteId);

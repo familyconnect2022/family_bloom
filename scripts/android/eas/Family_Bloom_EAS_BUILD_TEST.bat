@@ -1,15 +1,15 @@
 @echo off
 setlocal EnableExtensions
-title Family Bloom - EAS Test Build P2.37R2C-H22R8
+title Family Bloom - EAS Test Build H25
 
 for %%I in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fI"
 cd /d "%PROJECT_ROOT%"
 
 echo ============================================================
-echo  FAMILY BLOOM P2.37R2C-H22R8 - EAS ANDROID TEST BUILD
+echo  FAMILY BLOOM H25 - EAS ANDROID TEST BUILD
 echo  Profile : family-bloom-test
-echo  EXPECTED: app 1.3.28 / versionCode 143038
-echo  Native   : P2.37R2C-H23-native-1
+echo  EXPECTED: app 1.3.29 / versionCode 143039
+echo  Native   : P2.37R2C-H25-native-1
 echo  This helper ALWAYS waits for the new build and clears EAS cache.
 echo ============================================================
 echo.
@@ -54,6 +54,12 @@ if errorlevel 1 goto :fail
 node scripts\test-h22r3-windows-build-preflight.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h23r3-typescript-bootstrap.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25-firebase-invitation.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25-runtime-claims.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25-source-package.cjs
 if errorlevel 1 goto :fail
 node scripts\setup\check-source-import-integrity.js
 if errorlevel 1 goto :fail
@@ -119,9 +125,9 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.28
-echo   versionCode : 143038
-echo   native ID   : P2.37R2C-H23-native-1
+echo   app version : 1.3.29
+echo   versionCode : 143039
+echo   native ID   : P2.37R2C-H25-native-1
 echo ------------------------------------------------------------
 echo.
 echo EAS will now build a NEW APK and wait until the build finishes.
@@ -135,12 +141,12 @@ if not "%ERR%"=="0" goto :buildfail
 
 echo.
 echo ============================================================
-echo [OK] EAS reports the P2.37R2C-H21 build completed successfully.
+echo [OK] EAS reports the H25 Android build completed successfully.
 echo Install ONLY the APK produced by THIS build.
 echo After install, Game Foundation MUST show:
-echo   ACTUAL versionCode: 143038
+echo   ACTUAL versionCode: 143039
 echo   FamilyBloomOverlay: YES
-echo   native identity: P2.37R2C-H23-native-1
+echo   native identity: P2.37R2C-H25-native-1
 echo ============================================================
 echo.
 pause
@@ -156,7 +162,7 @@ exit /b %ERR%
 
 :fail
 echo.
-echo [ERROR] P2.37R2C-H21 pre-build gate failed. Build cancelled.
+echo [ERROR] H25 pre-build gate failed. Build cancelled.
 echo Fix the first error above before trying EAS again.
 echo.
 pause

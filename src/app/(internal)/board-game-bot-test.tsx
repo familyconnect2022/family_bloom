@@ -66,8 +66,8 @@ type XiangqiRecovery =
 
 type RecoveryResolution = "active" | "pending_same" | "busy_other" | "finished_unseen" | "none";
 
-const EXPECTED_ANDROID_VERSION_CODE = "143038";
-const EXPECTED_NATIVE_IDENTITY = "P2.37R2C-H23-native-1";
+const EXPECTED_ANDROID_VERSION_CODE = "143039";
+const EXPECTED_NATIVE_IDENTITY = "P2.37R2C-H25-native-1";
 
 const BOT_ACCEPT_RECONCILE_MS = 1_650;
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -641,7 +641,7 @@ export default function BoardGameBotTestScreen() {
         <View style={styles.section}>
           <BloomSectionHeader title="Native Surface P2.37R2C-H3" subtitle="Chứng minh binary native trước, rồi mới test Surface; hoàn toàn không qua server/session" />
           <BloomCard style={styles.card}>
-            <Text style={styles.state}>JS phase: P2.37R2C-H22R9 · Chess PNG replacement / Xiangqi violet circular last move / centered King · EXPECTED binary: 1.3.28 / 143038 / P2.37R2C-H23-native-1</Text>
+            <Text style={styles.state}>JS phase: P2.37R2C-H22R9 · Chess PNG replacement / Xiangqi violet circular last move / centered King · EXPECTED binary: 1.3.29 / 143039 / P2.37R2C-H25-native-1</Text>
             <Text style={styles.state}>ACTUAL versionCode: {actualVersionCode} · FamilyBloomOverlay: {nativeModulePresent ? "YES" : "NO"} · native identity: {nativeIdentity}</Text>
             <Text style={styles.state}>Binary gate: {nativeBinaryReady ? "PASS" : "FAIL — KHÔNG test Surface trước khi cài đúng APK H6"}</Text>
             <Text style={styles.state}>Bước 1 phải hiện ô NATIVE HOST OK và log NATIVE_BINARY_PROOF_VISIBLE. Chỉ khi bước 1 PASS mới test Surface Chess/Cờ tướng. Sau đó log Surface phải có NATIVE_HOST_ATTACHED, NATIVE_HOST_PROMOTED và NATIVE_HOST_FULL_VISIBLE.</Text>

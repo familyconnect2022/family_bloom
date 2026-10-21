@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { resolveFirebaseMatch, cleanupPreviousInvitesWhenAwake } from "../games/firebaseInvitationMatch.js";
 import { Chess } from "chess.js";
 import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
@@ -689,6 +690,39 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       resolveTimer.unref();
       setTimeout(() => void expireInvite(invite.inviteId), INVITE_TTL_MS + 100).unref();
       return invite;
+    }));
+
+    // H25: Firebase transports human invitations; this event is only called
+    // after Firestore confirms ACCEPT_REQUESTED. Bot's legacy socket flow stays.
+    socket.on("chess:firebase:claim", (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`firebase-match:${uid}`, 8, 30_000);
+      const payload = asRecord(raw);
+      const familyId = asId(payload.familyId, "familyId");
+      const inviteId = asId(payload.inviteId, "inviteId");
+      await requireMember(uid, familyId);
+      assertFamilyGameCreationOpen();
+      const gameId = await resolveFirebaseMatch({familyId,inviteId,uid,kind:"chess",
+        getCurrent: async u => (await persistence.getActiveForUid(u)) as {familyId:string;gameId:string;gameKind:string}|null,
+        sameMatch: async (id, fromUid, toUid, invitationId) => {
+          const game = await persistence.load(familyId,id);
+          return !!game && [fromUid,toUid].every(u => game.playerUids.includes(u))
+            && game.recentRequestIds.includes(`firebase:${invitationId}`);
+        },
+        create: async i => {
+          await requireMember(i.fromUid,familyId); await requireMember(i.toUid,familyId);
+          const state = await manager.create(familyId,i.fromUid,i.toUid,
+            asTimeControl(i.timeControl),`firebase:${inviteId}`);
+          return state.gameId;
+        },
+      });
+      // Both clients individually join after connecting; do not require the
+      // inviter's old lobby socket to still be foreground/alive.
+      const state = await manager.join(familyId,gameId,uid);
+      socket.data.gameId=gameId;socket.data.gameFamilyId=familyId;
+      await socket.join(`chess:game:${gameId}`);
+      socket.emit(E.gameState,toClientGameState(state));
+      void cleanupPreviousInvitesWhenAwake();
+      return {gameId,state:toClientGameState(state)};
     }));
 
     socket.on(E.inviteCreate, (raw: unknown, ack: Ack) => safe(ack, async () => {
