@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { chessSocketService } from '../../services/chess/chessSocketService';
 import { xiangqiSocketService } from '../../services/xiangqi/xiangqiSocketService';
 import { syncChessPresentationFromState, syncXiangqiPresentationFromState } from '../../services/games/boardGamePresentationBridge';
@@ -59,6 +59,9 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
     if (forwarded.has(key)) return;
     forwarded.add(key);
     let cancelled=false;
+    let completed=false;
+    let retries=0;
+    let retryTimer: ReturnType<typeof setTimeout> | null=null;
     const run=async()=>{
       const chess=invitation.gameKind==='chess';
       setConnectionMessage(invitation.status==='ACCEPT_REQUESTED'?'Đang kết nối máy chủ ván cờ…':'Đang mở bàn cờ đã xác nhận…');
@@ -89,14 +92,25 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
             if (!cancelled) {syncXiangqiPresentationFromState(response.data);restoreBoardGamePresentation();}
           }
         }
-        if (!cancelled) setConnectionMessage('');
+        if (!cancelled) { completed=true; setConnectionMessage(''); }
       } catch(error) {
-        forwarded.delete(key);
-        if (!cancelled) setConnectionMessage('Máy chủ đang kết nối lại. Bạn có thể thử tiếp tục.');
+        if (cancelled) return;
+        // Render may be waking from sleep. Socket.IO already handles network
+        // reconnection. Retry the idempotent claim/join without a user button,
+        // and never create another invitation or a second game.
+        setConnectionMessage('Máy chủ đang xác nhận ván cờ, hệ thống sẽ tự kết nối lại…');
+        const delay=Math.min(8_000, 1_500 * 2 ** Math.min(retries++,3));
+        retryTimer=setTimeout(()=>{retryTimer=null;if (!cancelled && AppState.currentState==='active') void run();}, delay);
       }
     };
     void run();
-    return()=>{cancelled=true;};
+    return()=>{
+      cancelled=true;
+      if (retryTimer) clearTimeout(retryTimer);
+      // A successful match is already forwarded; ignore duplicate Firestore
+      // snapshots. An interrupted attempt may resume on the next foreground.
+      if (!completed) forwarded.delete(key);
+    };
   },[chosen?.inviteId,chosen?.status,chosen?.gameId,foreground,ready,familyId]);
 
   useEffect(()=>{
@@ -136,7 +150,7 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
   const isChess=chosen?.gameKind==='chess';
   const base=isChess?'#963A70':'#A77030';
   return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent
-    onRequestClose={()=>{if(done&&chosen)acknowledge.add(`${chosen.inviteId}:${result}`); else if(isInviter)void act('cancel');}}>
+    onRequestClose={()=>{if(done&&chosen)acknowledge.add(`${chosen.inviteId}:${result}`); else if(result==='PENDING'&&isInviter)void act('cancel');}}>
     <View style={styles.backdrop}>
       <View style={[styles.form,{borderColor:isChess?'#F1CBDF':'#EED8A5'}]}>
         <Image source={isChess?KING:GENERAL} resizeMode="contain" style={styles.crest}/>
@@ -146,14 +160,14 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
         {result==='PENDING' ? <View style={styles.timerBox}>
           <Text style={styles.clock}>{`00:${String(seconds).padStart(2,'0')}`}</Text>
           <Text style={styles.helper}>Thời gian phản hồi còn lại</Text>
-        </View> : inMatch?<Text style={styles.progress}>{connectionMessage || 'Đang chuẩn bị phiên chơi…'}</Text>:null}
+        </View> : inMatch?<View style={styles.progressRow}><ActivityIndicator size="small" color={base}/><Text style={styles.progress}>{connectionMessage || 'Đang chuẩn bị phiên chơi…'}</Text></View>:null}
         {transportError?<Text style={styles.error}>{transportError}</Text>:null}
         {result==='PENDING' && !isInviter ? <View style={styles.actions}>
           <Pressable disabled={busy||seconds===0} onPress={()=>void act('decline')} style={[styles.button,styles.secondary]}><Text style={styles.secondaryLabel}>Từ chối</Text></Pressable>
           <Pressable disabled={busy||seconds===0} onPress={()=>void act('accept')} style={[styles.button,{backgroundColor:base}]}><Text style={styles.primaryLabel}>Đồng ý</Text></Pressable>
         </View>:result==='PENDING' && isInviter?<Pressable disabled={busy} onPress={()=>void act('cancel')} style={[styles.button,styles.secondary,styles.full]}><Text style={styles.secondaryLabel}>Hủy lời mời</Text></Pressable>
         :done?<Pressable onPress={()=>{acknowledge.add(`${chosen?.inviteId}:${result}`);setSeconds(x=>x+0.00001);}} style={[styles.button,{backgroundColor:base},styles.full]}><Text style={styles.primaryLabel}>Đồng ý</Text></Pressable>
-        :inMatch&&connectionMessage?<Pressable onPress={()=>{forwarded.delete(`${chosen?.inviteId}:${result}`);setForeground(false);setTimeout(()=>setForeground(true),100);}} style={[styles.button,styles.secondary,styles.full]}><Text style={styles.secondaryLabel}>Thử kết nối lại</Text></Pressable>:null}
+        :null}
       </View>
     </View>
   </Modal>;
@@ -168,7 +182,8 @@ const styles=StyleSheet.create({
   timerBox:{width:'100%',backgroundColor:'#FAEDF3',borderRadius:17,padding:15,marginTop:20,alignItems:'center'},
   clock:{fontSize:33,color:'#883E6B',fontWeight:'900',fontVariant:['tabular-nums']},
   helper:{fontSize:11,color:'#9B6A84',marginTop:3},
-  progress:{fontSize:12,color:'#967087',textAlign:'center',marginTop:20},
+  progressRow:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:9,marginTop:20,paddingHorizontal:5},
+  progress:{fontSize:12,color:'#967087',textAlign:'center',flexShrink:1},
   error:{fontSize:11,color:'#BC5260',marginTop:10,textAlign:'center'},
   actions:{flexDirection:'row',gap:10,marginTop:19,width:'100%'},
   button:{minHeight:46,borderRadius:16,justifyContent:'center',alignItems:'center',paddingHorizontal:15,flex:1},

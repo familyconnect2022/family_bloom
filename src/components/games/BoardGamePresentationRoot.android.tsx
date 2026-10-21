@@ -18,7 +18,7 @@ import {
 } from "../../services/games/boardGameNativeOverlay";
 import { emitBoardGamePresentationDiagnostic } from "../../services/games/boardGamePresentationDiagnostics";
 import { attachNativeXiangqiAppLifecycle, handleNativeXiangqiAction } from "../../services/games/nativeXiangqiGameplayController";
-import { handleNativeChessAction } from "../../services/games/nativeChessGameplayController";
+import { attachNativeChessAppLifecycle, handleNativeChessAction } from "../../services/games/nativeChessGameplayController";
 
 /**
  * H6 Android presentation controller.
@@ -43,7 +43,8 @@ export function BoardGamePresentationRoot() {
     );
     const detachBridge = attachBoardGamePresentationBridge();
     const detachXiangqiLifecycle = attachNativeXiangqiAppLifecycle();
-    return () => { detachBridge(); detachXiangqiLifecycle(); };
+    const detachChessLifecycle = attachNativeChessAppLifecycle();
+    return () => { detachBridge(); detachXiangqiLifecycle(); detachChessLifecycle(); };
   }, []);
 
   useEffect(() => {

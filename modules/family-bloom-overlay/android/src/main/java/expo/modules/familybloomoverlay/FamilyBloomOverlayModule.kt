@@ -236,6 +236,8 @@ private class FamilyBloomOverlayRail(
       val bound = gameId
       if (bound != null && kind == "xiangqi")
         xiangqiAction(mapOf("action" to "square", "gameId" to bound, "col" to col, "row" to row, "source" to "decor-rail-xiangqi-board"))
+      if (bound != null && kind == "xiangqi")
+        emit("NATIVE_XIANGQI_SQUARE_TAP", "$col,$row tapped", mapOf("gameId" to bound, "col" to col, "row" to row))
     },
     onAction = { action, boundId ->
       xiangqiAction(mapOf("action" to action, "gameId" to boundId, "source" to "decor-rail-xiangqi-action"))
@@ -923,8 +925,12 @@ private class FamilyBloomOverlayRail(
 
   private fun applyKind() {
     val chessActive = kind != "xiangqi"
-    chessLayer.alpha = if (chessActive) 1f else 0f
-    xiangqiLayer.alpha = if (chessActive) 0f else 1f
+    // Alpha=0 does NOT disable Android hit testing of child views. Preserve
+    // both native Views but make the dormant game layer untouchable.
+    chessLayer.visibility = if (chessActive) View.VISIBLE else View.INVISIBLE
+    xiangqiLayer.visibility = if (chessActive) View.INVISIBLE else View.VISIBLE
+    chessLayer.alpha = 1f
+    xiangqiLayer.alpha = 1f
     chessLayer.isClickable = chessActive
     xiangqiLayer.isClickable = !chessActive
     if (chessActive) chessLayer.bringToFront() else xiangqiLayer.bringToFront()

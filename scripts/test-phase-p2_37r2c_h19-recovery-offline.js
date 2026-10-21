@@ -33,9 +33,10 @@ function harness(color='w'){
  const module={exports:{}};
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const stubs={
+  'react-native':{AppState:{currentState:'active',addEventListener:()=>({remove(){}})}},
   'chess.js':{Chess:ChessMock},
   '@react-native-firebase/auth':{getAuth:()=>({currentUser:{uid}})},
-  '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,revision:d.version,ply:d.ply,turn:d.turn,fen:d.fen,status:d.status,lastMove:d.move})},
+  '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join',gameCatchup:'catchup'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,revision:d.version,ply:d.ply,turn:d.turn,fen:d.fen,status:d.status,lastMove:d.move})},
   '../chess/chessSocketService':{chessSocketService:{emitAck:(event,payload)=>{let resolve;const p=new Promise(done=>resolve=done);acks.push({event,payload,resolve});return p}}},
   './boardGamePresentationDiagnostics':{emitBoardGamePresentationDiagnostic:(...args)=>diagnostics.push(args)},
   './boardGameNativeOverlay':{setBoardGameNativeChessState:async v=>{writes.push(v);return{accepted:true}}},

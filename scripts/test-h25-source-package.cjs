@@ -11,6 +11,7 @@ const required = [
   'scripts/maintenance/auto-update-full.cjs',
   'scripts/test-h25-firebase-invitation.cjs',
   'scripts/test-h25-runtime-claims.cjs',
+  'scripts/test-h25r2-xiangqi-black-turn-reconnect.cjs',
   'server/src/games/firebaseInvitationMatch.ts',
   'src/services/games/firebaseBoardInvitations.ts',
   'src/components/games/FirebaseBoardInvitationGate.tsx',

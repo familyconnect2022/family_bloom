@@ -51,9 +51,10 @@ class ChessMock{
 }
 const writes=[],acks=[];
 const stubs={
- 'chess.js':{Chess:ChessMock},
+ 'react-native':{AppState:{currentState:'active',addEventListener:()=>({remove(){}})}},
+  'chess.js':{Chess:ChessMock},
  '@react-native-firebase/auth':{getAuth:()=>({currentUser:{uid:'me'}})},
- '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,fen:d.fen,turn:d.turn,ply:d.ply,revision:d.version,status:d.status,lastMove:d.move})},
+ '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join',gameCatchup:'catchup'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,fen:d.fen,turn:d.turn,ply:d.ply,revision:d.version,status:d.status,lastMove:d.move})},
  '../chess/chessSocketService':{chessSocketService:{emitAck:(event,payload)=>{let resolve;let promise=new Promise(ok=>resolve=ok);acks.push({event,payload,resolve});return promise}}},
  './boardGamePresentationDiagnostics':{emitBoardGamePresentationDiagnostic:()=>{}},
  './boardGameNativeOverlay':{setBoardGameNativeChessState:async state=>{writes.push(state);return {accepted:true}}},
@@ -86,12 +87,12 @@ const tick=async()=>{for(let i=0;i<20;i++)await Promise.resolve()};
   api.syncNativeChessAuthoritativeMove({gameId:snapshot.gameId,version:3,ply:2,fen:'invalid',turn:'w',status:'active',
     move:{from:'e7',to:'e5',color:'w',piece:'p',san:'e5'}});await tick();
   check(writes.at(-1).premoveCount===1,'invalid opponent packet keeps premove for verified resync');
-  check(acks.some(x=>x.event==='resync'),'bad delta requests authoritative room rejoin/resync');
-  const resyncAck=acks.find(x=>x.event==='resync');
-  resyncAck.resolve({ok:true,data:{...snapshot,
+  check(acks.some(x=>x.event==='catchup'||x.event==='resync'),'bad delta requests authoritative catchup or resync');
+  const resyncAck=acks.find(x=>x.event==='catchup'||x.event==='resync');
+  resyncAck.resolve({ok:true,data:{mode:'snapshot',state:{...snapshot,
     revision:3,ply:2,turn:'w',fen:'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2',
     lastMove:{from:'e7',to:'e5',san:'e5'},lastMoveBeforeFen:snapshot.fen,
-  }});
+  }}});
   await tick();
   check(acks.filter(x=>x.event==='move'&&x.payload.from==='d2'&&x.payload.to==='d4').length===1,
     'verified opponent resync executes preserved premove once');

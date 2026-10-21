@@ -46,11 +46,35 @@ internal class XiangqiNativeBoardView(
   private var boardTop = 0f
   private var cell = 1f
   private var boardBottom = 0f
+  // Clock updates repaint only the player HUDs, never all 90 intersections.
+  // Native Android keeps the same Xiangqi View and decoded piece bitmaps.
+  private var clockTickScheduled = false
+  private val clockTick = object: Runnable {
+    override fun run() {
+      clockTickScheduled = false
+      if(!isShown || state?.status !in setOf("active","waiting")) return
+      invalidateClocksOnly()
+      scheduleClockTick()
+    }
+  }
+  private fun invalidateClocksOnly() {
+    if(width <= 0 || height <= 0 || cell <= 1f) { invalidate(); return }
+    val upper = (boardTop-cell*.5f).toInt().coerceIn(0,height)
+    val lower = (boardBottom+cell*.5f).toInt().coerceIn(0,height)
+    invalidate(0,0,width,upper)
+    invalidate(0,lower,width,height)
+  }
+  private fun scheduleClockTick() {
+    if(clockTickScheduled || !isShown || state?.status !in setOf("active","waiting")) return
+    clockTickScheduled=true
+    ui.postDelayed(clockTick,850L)
+  }
   private var lastClockKey = ""
   private var clockAnchor = SystemClock.elapsedRealtime()
   private var readySentFor: String? = null
   private var resignConfirmUntil = 0L
   private var lastRenderSeq = -1
+  private var lastInputBlockedDiagnosticAt = 0L
   private var lastSoundToken = 0
   private var lastSoundGameId: String? = null
   private var audio: SoundPool? = null
@@ -207,6 +231,24 @@ internal class XiangqiNativeBoardView(
   fun bind(next:NativeXiangqiBoardState) {
     ensureAudio()
     if(state?.gameId==next.gameId && next.renderSequence<lastRenderSeq)return
+    val previous = state
+    // Ignore unchanged authoritative piece positions. A new clock baseline,
+    // avatar or display name is HUD-only, not a board rebuild.
+    val hudOnly = previous != null && previous.gameId == next.gameId &&
+      previous.revision == next.revision && previous.status == next.status &&
+      previous.preparationPhase == next.preparationPhase &&
+      previous.turn == next.turn && previous.orientation == next.orientation &&
+      previous.meColor == next.meColor && previous.pieces == next.pieces &&
+      previous.lastFrom == next.lastFrom && previous.lastTo == next.lastTo &&
+      previous.selectedPieceId == next.selectedPieceId &&
+      previous.legalTargets == next.legalTargets &&
+      previous.captureTargets == next.captureTargets &&
+      previous.canMove == next.canMove && previous.canPremove == next.canPremove &&
+      previous.movePending == next.movePending &&
+      previous.premoveTarget == next.premoveTarget &&
+      previous.drawOfferByUid == next.drawOfferByUid &&
+      previous.waitingMessage == next.waitingMessage &&
+      previous.result == next.result && previous.finishReason == next.finishReason
     val key="${next.gameId}:${next.revision}:${next.turn}:${next.status}:${next.redRemainingMs}:${next.blackRemainingMs}:${next.serverNowMs}"
     if(key!=lastClockKey){lastClockKey=key;clockAnchor=SystemClock.elapsedRealtime()}
     if(state?.gameId!=next.gameId){readySentFor=null; clearMove(); lastOutcomeKey=null; resultRevealAt=0L;resultEndCueKey=null}
@@ -227,11 +269,13 @@ internal class XiangqiNativeBoardView(
       resultEndCueKey = if(winningMove) "${next.gameId}:${next.revision}" else null
       resultSparklesStarted = if(winningMove) resultRevealAt else SystemClock.uptimeMillis()
     }
-    invalidate()
+    if (hudOnly) invalidateClocksOnly() else invalidate()
+    scheduleClockTick()
     maybeSendReady()
   }
   fun destroy() {
     ui.removeCallbacksAndMessages(null)
+    clockTickScheduled=false
     audio?.release(); audio=null; samples.clear(); loaded.clear(); pendingCue=null
     for (bmp in pieceBitmaps.values) if (bmp != null && !bmp.isRecycled) bmp.recycle()
     for (bmp in avatarImages.values) if (!bmp.isRecycled) bmp.recycle()
@@ -356,9 +400,7 @@ internal class XiangqiNativeBoardView(
       }
     }
     if(s.status=="waiting") drawBloomPreparation(c,s,contentW,contentH)
-    if(s.status=="waiting"||s.status=="active"){
-      if(isShown)postInvalidateDelayed(850L)
-    }
+    if(s.status=="waiting"||s.status=="active") scheduleClockTick()
   }
   // H22R7: persistent king motif. The red General straddles the top rim of
   // each Xiangqi modal; the top half is OUTSIDE the modal and the lower half
@@ -581,7 +623,16 @@ internal class XiangqiNativeBoardView(
       return true
     }
     resignConfirmUntil=0L;drawOfferConfirmUntil=0L
-    if((!s.canMove&&!s.canPremove)||s.movePending)return true
+    if((!s.canMove&&!s.canPremove)||s.movePending) {
+      // Diagnose native-side input guards once per 2s, without retrying/creating
+      // a match and without writing anything to Firestore.
+      val now = SystemClock.elapsedRealtime()
+      if(s.status == "active" && s.turn == s.meColor && now-lastInputBlockedDiagnosticAt>2000L) {
+        lastInputBlockedDiagnosticAt = now
+        onAction("inputBlocked",s.gameId)
+      }
+      return true
+    }
     val colOnBoard=((x-boardLeft)/cell).roundToInt().coerceIn(0,8)
     val rowOnBoard=((y-boardTop)/cell).roundToInt().coerceIn(0,9)
     val expectedX=boardLeft+colOnBoard*cell;val expectedY=boardTop+rowOnBoard*cell

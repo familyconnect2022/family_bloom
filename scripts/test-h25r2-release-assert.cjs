@@ -1,0 +1,19 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const root=path.resolve(__dirname,'..');
+const src=(p)=>fs.readFileSync(path.join(root,p),'utf8');
+const gate=src('src/components/games/FirebaseBoardInvitationGate.tsx');
+const xiangqi=src('src/services/games/nativeXiangqiGameplayController.ts');
+const chess=src('src/services/games/nativeChessGameplayController.ts');
+const xt=src('server/src/xiangqi/xiangqiSocket.ts');
+const ct=src('server/src/socket/socketServer.ts');
+const kotlin=src('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/XiangqiNativeBoardView.kt');
+assert(!gate.includes('Thử kết nối lại')&&gate.includes('retryTimer=setTimeout')&&gate.includes('await service.connect()'));
+assert(gate.includes("'ACCEPT_REQUESTED','ACCEPTED'")&&gate.includes('forwarded.add(key)'));
+assert(xiangqi.includes('XIANGQI_EVENTS.gameCatchup')&&xt.includes('XIANGQI_EVENTS.gameCatchup'));
+assert(chess.includes('CHESS_EVENTS.gameCatchup')&&ct.includes('socket.on(E.gameCatchup'));
+assert(xiangqi.includes('expectedVersion:g.revision')&&xiangqi.includes('const online = xiangqiSocketService.isConnected()'));
+assert(!xiangqi.includes('!transportOnline || reconciliationPending || movePending'));
+assert(kotlin.includes('invalidateClocksOnly()')&&kotlin.includes('ui.postDelayed(clockTick,850L)')&&!kotlin.includes('postInvalidateDelayed(850L)'));
+const bats=['scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat','scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat','scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat'];
+for(const rel of bats){let b=fs.readFileSync(path.join(root,rel));assert(!/(?<!\r)\n/.test(b.toString()),rel+' CRLF');const x=b.toString();assert(x.includes('test-h25r2-xiangqi-black-turn-reconnect.cjs')&&x.indexOf('test-h25r2-xiangqi-black-turn-reconnect.cjs')>x.indexOf('Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat'));}
+console.log('H25R2 release sync/invitation/native/build guard: 9/9 PASS');

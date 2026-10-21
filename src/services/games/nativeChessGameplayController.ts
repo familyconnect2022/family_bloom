@@ -1,3 +1,4 @@
+import { AppState } from "react-native";
 /**
  * H10 Chess Native gameplay: local-first visual feedback + authoritative socket.
  * Chess has its own lifecycle, no Xiangqi state is held by this controller.
@@ -643,6 +644,41 @@ async function flushBufferedMove() {
   }, 4000);
 }
 
+type ChessCatchup =
+  | { mode: "unchanged"; gameId: string; revision: number; whiteRemainingMs: number|null; blackRemainingMs: number|null; serverNowMs: number }
+  | { mode: "moves"; gameId: string; revision: number; fen: string; moves: ChessMoveDelta[]; whiteRemainingMs: number|null; blackRemainingMs: number|null; serverNowMs: number }
+  | { mode: "snapshot"; state: ChessGameState };
+
+/** Return true only if the native board contains the verified server revision.
+ * The legacy full snapshot remains the fallback for old Render deployments. */
+async function tryChessMoveCatchup(gameId: string): Promise<boolean> {
+  const before = currentState;
+  if (!before || before.gameId !== gameId || before.status !== "active" || bufferedMove || movePending) return false;
+  const reply = await chessSocketService.emitAck<ChessCatchup>(CHESS_EVENTS.gameCatchup,
+    {gameId, revision:before.revision, fen:before.fen, status:before.status}, 3_500);
+  if (!reply.ok || currentState?.gameId !== gameId) return false;
+  const data=reply.data;
+  if (data.mode === "snapshot") { syncNativeChessAuthoritativeState(data.state); return !reconciliationPending; }
+  if (data.gameId !== gameId) return false;
+  if (data.mode === "moves") {
+    for (const delta of data.moves) {
+      if (!currentState || currentState.gameId !== gameId) return false;
+      if (delta.version <= currentState.revision) continue; // live socket packet won the race
+      if (!syncNativeChessAuthoritativeMove(delta)) return false; // illegal/gapped; full fallback
+    }
+    if (currentState!.revision < data.revision ||
+      (currentState!.revision === data.revision && currentState!.fen !== data.fen)) return false;
+  } else if (currentState!.revision < data.revision) return false;
+  // Clock baseline is independent of board pixels. Never clobber a newer live move.
+  if (currentState?.gameId===gameId && currentState.revision===data.revision) {
+    currentState={...currentState, whiteRemainingMs:data.whiteRemainingMs,
+      blackRemainingMs:data.blackRemainingMs, serverNowMs:data.serverNowMs};
+  }
+  reconciliationPending = false;
+  void pushState(data.mode === "moves" ? "delta-catchup" : "clock-only-catchup");
+  return true;
+}
+
 async function resyncCurrent(gameId: string, reason: string) {
   if (resyncInFlight) { resyncRequestedAgain = true; return resyncInFlight; }
   const generation = ++reconciliationSerial;
@@ -653,6 +689,15 @@ async function resyncCurrent(gameId: string, reason: string) {
       // A reconnect loses the old Socket.IO room. Rejoin before resuming,
       // otherwise the server may accept a move while the client sees no delta.
       const familyId = currentState?.familyId;
+      // A live room can catch up using only the missed moves; after a dropped
+      // transport we must first rejoin its Socket.IO room to receive future moves.
+      if (reason !== "transport-reconnected" && await tryChessMoveCatchup(gameId)) {
+        if (generation===reconciliationSerial && currentState?.gameId===gameId) {
+          reconciliationPending=false;
+          if (bufferedMove) void flushBufferedMove();
+        }
+        return;
+      }
       const response = reason === "transport-reconnected" && familyId
         ? await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameJoin, { gameId, familyId }, 20_000)
         : await chessSocketService.emitAck<ChessGameState>(CHESS_EVENTS.gameResync, { gameId }, 12_000);
@@ -960,6 +1005,30 @@ function closeFinishedChessBoard(gameId: string) {
   if (currentState?.gameId !== gameId || currentState.status !== "finished") return;
   closeBoardGamePresentationForGame("chess", gameId);
   clearNativeChessSession(gameId);
+}
+
+/** Keep retained Full/Mini on background; revalidate only on foreground.
+ * Same active socket -> delta replay, disconnected socket -> room rejoin.
+ */
+export function attachNativeChessAppLifecycle() {
+  let last=AppState.currentState;
+  const sub=AppState.addEventListener("change",next=>{
+    if (next===last) return;
+    last=next;
+    const game=currentState;
+    if (!game || (game.status!=="active" && game.status!=="waiting")) return;
+    if (next!=="active") {
+      chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence,{gameId:game.gameId,visible:false});
+      return;
+    }
+    // Never infer presence from the mere Socket.IO connection.
+    chessSocketService.emitBestEffort(CHESS_EVENTS.gameBoardPresence,{gameId:game.gameId,visible:true});
+    void chessSocketService.connect().then(()=>{
+      if (currentState?.gameId===game.gameId && AppState.currentState==='active')
+        return resyncCurrent(game.gameId, "app-foreground");
+    }).catch(()=>undefined);
+  });
+  return ()=>sub.remove();
 }
 
 export function clearNativeChessSession(gameId?: string) {

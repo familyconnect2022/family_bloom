@@ -229,6 +229,7 @@ export const CHESS_EVENTS = {
   gameBoardReady: "chess:game:boardReady",
   gameOver: "chess:game:gameOver",
   gameResync: "chess:game:resync",
+  gameCatchup: "chess:game:catchup",
   gameBoardPresence: "chess:game:boardPresence",
   sessionGetActive: "chess:session:getActive",
   sessionRecover: "chess:session:recover",

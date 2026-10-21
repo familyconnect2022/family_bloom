@@ -115,6 +115,8 @@ node scripts\test-h22r2-cleanup-retention.cjs
 if errorlevel 1 goto :fail
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
 if errorlevel 1 goto :fail
+node scripts\test-h25r2-xiangqi-black-turn-reconnect.cjs
+if errorlevel 1 goto :fail
 node scripts\test-h22-xiangqi-parity.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22r9-chess-assets-royal-highlight.cjs

@@ -75,6 +75,8 @@ if "%NEED_NATIVE_INSTALL%"=="1" (
 
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
 if errorlevel 1 goto :fail
+node scripts\test-h25r2-xiangqi-black-turn-reconnect.cjs
+if errorlevel 1 goto :fail
 node scripts\setup\check-ts-syntax-transpile.js
 if errorlevel 1 goto :fail
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_VERIFY_SERVER_TYPES.bat"

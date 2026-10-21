@@ -102,8 +102,15 @@ async function push(reason: string) {
   const selected = g.board.pieces.find(p => p.id === selectedPieceId);
   if (!selected || selected.color !== me) selectedPieceId = null;
   const selectedOwn = g.board.pieces.find(p => p.id === selectedPieceId);
-  const canPremove = g.status === "active" && !!me && me !== g.board.turn && transportOnline && !movePending && !reconciliationPending;
-  const canMove = g.status === "active" && !!me && me === g.board.turn && transportOnline && !movePending && !reconciliationPending;
+  // A foreground catch-up is read-only and may wait for a sleeping Render instance.
+  // Never lock native taps just because the read is pending: the move command
+  // carries expectedVersion, and the server rejects stale/illegal intentions.
+  // Query the live Socket.IO transport to avoid stale connection flags after
+  // the first connection races with mounting the presentation bridge.
+  const online = xiangqiSocketService.isConnected();
+  transportOnline = online;
+  const canPremove = g.status === "active" && !!me && me !== g.board.turn && online && !movePending;
+  const canMove = g.status === "active" && !!me && me === g.board.turn && online && !movePending;
   const hints = (canMove || canPremove) && selectedOwn && me ? legalForColor(g.board, selectedOwn.id, me) : [];
   const captures = hints.filter(h => g.board.pieces.some(p => p.col === h.col && p.row === h.row && p.color !== me));
   const opponentUid = me === "red" ? g.blackUid : g.redUid;
@@ -248,12 +255,45 @@ export function syncNativeXiangqiAuthoritativeMove(delta: XiangqiMoveDelta) {
   }
 }
 
+type XiangqiCatchup =
+  | {mode:"unchanged";gameId:string;revision:number;redRemainingMs:number|null;blackRemainingMs:number|null;serverNowMs:number}
+  | {mode:"moves";gameId:string;revision:number;moves:XiangqiMoveDelta[];redRemainingMs:number|null;blackRemainingMs:number|null;serverNowMs:number}
+  | {mode:"snapshot";state:XiangqiRealtimeState};
+
+async function tryXiangqiMoveCatchup(gameId:string):Promise<boolean> {
+  const before=state;
+  if (!before || before.gameId!==gameId || before.status!=="active" || movePending) return false;
+  const boardKey=JSON.stringify(before.board.pieces.map(piece=>[piece.id,piece.col,piece.row]));
+  const reply=await xiangqiSocketService.emitAck<XiangqiCatchup>(XIANGQI_EVENTS.gameCatchup,
+    {gameId,revision:before.revision,status:before.status,boardKey},3_500);
+  if (!reply.ok || state?.gameId!==gameId) return false;
+  const data=reply.data;
+  if (data.mode==="snapshot") { syncNativeXiangqiAuthoritativeState(data.state);return true; }
+  if(data.gameId!==gameId)return false;
+  if(data.mode==="moves"){
+    for(const delta of data.moves){
+      if(!state || state.gameId!==gameId)return false;
+      if(delta.version<=state.revision)continue;
+      if(delta.version!==state.revision+1)return false;
+      syncNativeXiangqiAuthoritativeMove(delta);
+    }
+    if(!state || state.revision<data.revision)return false;
+  } else if(state!.revision<data.revision)return false;
+  if(state?.gameId===gameId && state.revision===data.revision){
+    state={...state,redRemainingMs:data.redRemainingMs,blackRemainingMs:data.blackRemainingMs,serverNowMs:data.serverNowMs};
+  }
+  void push(data.mode==="moves"?"delta-catchup":"clock-only-catchup");
+  return true;
+}
+
 export async function resyncXiangqi(gameId: string, reason: string) {
   if (!state || state.gameId !== gameId || reconciliationPending || !transportOnline) return;
   reconciliationPending = true;
   try {
-    const response = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameResync, {gameId});
-    if (response.ok && response.data.gameId === gameId) syncNativeXiangqiAuthoritativeState(response.data);
+    if (!(await tryXiangqiMoveCatchup(gameId))) {
+      const response = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(XIANGQI_EVENTS.gameResync, {gameId});
+      if (response.ok && response.data.gameId === gameId) syncNativeXiangqiAuthoritativeState(response.data);
+    }
   } finally {
     reconciliationPending = false;
     if (state?.gameId === gameId) void push(`resync-${reason}`);
@@ -307,8 +347,18 @@ export async function handleNativeXiangqiAction(event: NativeXiangqiAction) {
     await xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResign, {gameId:g.gameId, requestId:req("resign")});
     return;
   }
+  if (event.action === "inputBlocked") {
+    emitBoardGamePresentationDiagnostic("xiangqi", "XIANGQI_NATIVE_INPUT_GUARD", 
+      `status=${g.status} turn=${g.board.turn} me=${myColor(g)} connected=${xiangqiSocketService.isConnected()} pending=${movePending} catchup=${reconciliationPending}`,
+      {gameId:g.gameId, status:g.status, revision:g.revision});
+    return;
+  }
   if (event.action !== "square" || !Number.isInteger(event.col) || !Number.isInteger(event.row)) return;
-  if (g.status !== "active" || !transportOnline || reconciliationPending || movePending) return;
+  // Reconciliation MUST NOT lock input while a connected live game is already
+  // showing our turn. Authoritative expectedVersion on sendMove prevents abuse.
+  const online = xiangqiSocketService.isConnected();
+  transportOnline = online;
+  if (g.status !== "active" || !online || movePending) return;
   const mine = myColor(g); if (!mine) return;
   const premoving = g.board.turn !== mine;
   const coord = {col:event.col!,row:event.row!};

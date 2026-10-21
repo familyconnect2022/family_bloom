@@ -35,7 +35,7 @@ export type NativeChessAction = {
   source: string;
 };
 
-export type NativeXiangqiAction = { action:"square"|"assetsReady"|"resign"|"drawOffer"|"drawAccept"|"drawDecline"|"resultAck"; gameId:string; col?:number; row?:number; source:string };
+export type NativeXiangqiAction = { action:"square"|"assetsReady"|"resign"|"drawOffer"|"drawAccept"|"drawDecline"|"resultAck"|"inputBlocked"; gameId:string; col?:number; row?:number; source:string };
 export type NativeXiangqiBoardState = {
   gameId:string; revision:number; renderSequence:number; status:string; preparationPhase:"board"|"colors"|"play";
   turn:"red"|"black"; orientation:"red"|"black"; meColor:"red"|"black"|null;

@@ -33,9 +33,10 @@ function harness(color='w'){
  const module={exports:{}};
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const stubs={
+  'react-native':{AppState:{currentState:'active',addEventListener:()=>({remove(){}})}},
   'chess.js':{Chess:ChessMock},
   '@react-native-firebase/auth':{getAuth:()=>({currentUser:{uid}})},
-  '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,revision:d.version,ply:d.ply,turn:d.turn,fen:d.fen,status:d.status,lastMove:d.move})},
+  '../../types/chess':{CHESS_EVENTS:{gameMove:'move',gameResync:'resync',gameJoin:'join',gameCatchup:'catchup'},CHESS_ERROR_COPY:{},applyChessMoveDelta:(old,d)=>({...old,revision:d.version,ply:d.ply,turn:d.turn,fen:d.fen,status:d.status,lastMove:d.move})},
   '../chess/chessSocketService':{chessSocketService:{emitAck:(event,payload)=>{let resolve;const p=new Promise(done=>resolve=done);acks.push({event,payload,resolve});return p}}},
   './boardGamePresentationDiagnostics':{emitBoardGamePresentationDiagnostic:(...args)=>diagnostics.push(args)},
   './boardGameNativeOverlay':{setBoardGameNativeChessState:async v=>{writes.push(v);return{accepted:true}}},
@@ -68,10 +69,10 @@ function harness(color='w'){
  // Contradictory same-revision packets are ignored and repaired via resync.
  const c=harness();c.api.syncNativeChessAuthoritativeState(make(INITIAL,'w',0,1));await tick();
  c.api.syncNativeChessAuthoritativeState(make(WHITE,'b',1,1));await tick();
- check(c.writes.at(-1).fen===INITIAL&&c.acks.length===1&&c.acks[0].event==='resync','Same-revision different FEN cannot flash the board; one resync requested');
+ check(c.writes.at(-1).fen===INITIAL&&c.acks.length===1&&c.acks[0].event==='catchup','Same-revision different FEN cannot flash the board; one authoritative catchup requested');
  c.api.syncNativeChessAuthoritativeState(make(WHITE,'b',1,1));await tick();
  check(c.acks.length===1,'Duplicate contradictory packets do not create resync storm');
- c.acks[0].resolve({ok:true,data:{...make(INITIAL,'w',0,1)}});await tick();
+ c.acks[0].resolve({ok:true,data:{mode:'snapshot',state:{...make(INITIAL,'w',0,1)}}});await tick();
  check(c.writes.at(-1).fen===INITIAL,'Canonical resync ACK preserves the last verified board');
  c.api.clearNativeChessSession();
  // Socket disconnect cannot erase current FEN or open a full-screen overlay.

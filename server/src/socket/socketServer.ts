@@ -4,7 +4,7 @@ import { Chess } from "chess.js";
 import type { Server, Socket } from "socket.io";
 import { ChessGameManager } from "../chess/chessGameManager.js";
 import { ChessPersistenceService } from "../chess/chessPersistenceService.js";
-import { ChessDomainError, type ChessTimeControl, type ClientGameState, type PublicGameState } from "../chess/chessTypes.js";
+import { ChessDomainError, type ChessTimeControl, type ClientGameState, type PublicGameState, type MoveDelta } from "../chess/chessTypes.js";
 import { RematchProposalStore } from "../chess/rematchProposalStore.js";
 import { assertFamilyGameCreationOpen, isFamilyGameCreationOpen } from "../chess/gameHours.js";
 import { adminAuth, adminDb } from "../firebase/firebaseAdmin.js";
@@ -44,6 +44,7 @@ const E = {
   gameReady: "chess:game:ready",
   gameBoardReady: "chess:game:boardReady",
   gameResync: "chess:game:resync",
+  gameCatchup: "chess:game:catchup",
   gameBoardPresence: "chess:game:boardPresence",
   sessionGetActive: "chess:session:getActive",
   sessionRecover: "chess:session:recover",
@@ -208,10 +209,20 @@ function safe<T>(ack: Ack, fn: () => Promise<T>) {
 export function installChessSocket(io: Server<any, any, any, SocketData>) {
   const persistence = new ChessPersistenceService(adminDb);
   const botTimers = new Map<string, { revision: number; timer: NodeJS.Timeout }>();
+  // H26: bounded, per-game move history for foreground delta-only catch-up.
+  // Memory-only: restart or missing revisions fall back to the durable snapshot.
+  const recentChessMoves = new Map<string, MoveDelta[]>();
+  const recordChessMove = (delta: MoveDelta) => {
+    const previous = recentChessMoves.get(delta.gameId) ?? [];
+    const next = previous.filter(m => m.version < delta.version).slice(-15);
+    next.push(delta);
+    recentChessMoves.set(delta.gameId, next);
+    if (recentChessMoves.size > 256) recentChessMoves.delete(recentChessMoves.keys().next().value!);
+  };
   const manager = new ChessGameManager(
     persistence,
     (event) => {
-      if (event.kind === "move") io.to(`chess:game:${event.state.gameId}`).emit(E.gameMoveApplied, event.delta);
+      if (event.kind === "move") { recordChessMove(event.delta); io.to(`chess:game:${event.state.gameId}`).emit(E.gameMoveApplied, event.delta); }
       else io.to(`chess:game:${event.state.gameId}`).emit(E.gameState, toClientGameState(event.state));
       scheduleTestBotAction(event.state);
       if (event.state.status === "finished") void emitPresence(event.state.familyId);
@@ -981,6 +992,34 @@ export function installChessSocket(io: Server<any, any, any, SocketData>) {
       limit(`resync:${uid}`, 12, 10_000);
       const gameId = asId(asRecord(raw).gameId, "gameId");
       return toClientGameState(await requireGameMembership(gameId));
+    }));
+
+    // H26 optional protocol. Older clients continue using gameResync unmodified.
+    socket.on(E.gameCatchup, (raw: unknown, ack: Ack) => safe(ack, async () => {
+      limit(`catchup:${uid}`, 12, 10_000);
+      const payload = asRecord(raw);
+      const gameId = asId(payload.gameId, "gameId");
+      const fromRevision = payload.revision;
+      if (!Number.isSafeInteger(fromRevision) || (fromRevision as number) < 0) throw new ChessDomainError("CHESS_INVALID_REQUEST");
+      const current = toClientGameState(await requireGameMembership(gameId));
+      const snapshot = () => ({mode:"snapshot" as const,state:current});
+      if (current.status !== "active" || payload.status !== current.status || (fromRevision as number) > current.revision) return snapshot();
+      if (fromRevision === current.revision) {
+        if (payload.fen !== current.fen) return snapshot();
+        return {mode:"unchanged" as const,gameId,revision:current.revision,
+          whiteRemainingMs:current.whiteRemainingMs,blackRemainingMs:current.blackRemainingMs,
+          serverNowMs:current.serverNowMs};
+      }
+      const history = recentChessMoves.get(gameId) ?? [];
+      const missing = history.filter(m => m.version > (fromRevision as number) && m.version <= current.revision);
+      if (!missing.length || missing[0].version !== (fromRevision as number)+1 ||
+          missing[missing.length-1].version !== current.revision ||
+          missing.some((m,i) => i>0 && m.version !== missing[i-1].version+1) ||
+          missing[missing.length-1].fen !== current.fen) return snapshot();
+      return {mode:"moves" as const,gameId,moves:missing,
+        revision:current.revision,fen:current.fen,
+        whiteRemainingMs:current.whiteRemainingMs,blackRemainingMs:current.blackRemainingMs,
+        serverNowMs:current.serverNowMs};
     }));
 
     socket.on(E.gameBoardReady, (raw: unknown, ack: Ack) => safe(ack, async () => {

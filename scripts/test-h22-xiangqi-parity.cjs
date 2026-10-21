@@ -246,7 +246,7 @@ async function test(label,action){await action();console.log('PASS',label);passe
    assert(board.includes('drawBloomPreparation(c,s,contentW,contentH)'));
    assert(board.includes('CHUẨN BỊ VÁN CỜ')&&board.includes('BLOOM ARENA'));
    assert(board.includes('val radius=cell*.47025f')&&board.includes('val src=Rect('));
-   assert(board.includes('onSquareTap(')&&board.includes('if((!s.canMove&&!s.canPremove)||s.movePending)return true'));
+   assert(board.includes('onSquareTap(')&&board.includes('if((!s.canMove&&!s.canPremove)||s.movePending) {')&&board.includes('onAction("inputBlocked",s.gameId)')); 
  });
  await test('new H22 native identity cannot be mistaken for H21 APK',()=>{
    const app=JSON.parse(read('app.json'));
