@@ -140,6 +140,14 @@ export default function PlayScreen() {
               onPress={() => router.push("/home-board" as never)}
             />
             <HubCard
+              icon="school-outline"
+              title="Góc học tập Super Bloom"
+              description="Bài học Toán, Tiếng Việt, Văn, Anh, Lí, Hóa từ Bloom Content Studio — học và tự kiểm tra."
+              accent="#FBE3EE"
+              badge="Học ngay"
+              onPress={() => router.push('/learning-library' as never)}
+            />
+            <HubCard
               icon="game-controller-outline"
               title="Trò chơi Nhà Mình"
               description="Cờ vua, Cờ tướng cùng 6 trò gắn kết. Thách đấu tài khoản người thân đang online."

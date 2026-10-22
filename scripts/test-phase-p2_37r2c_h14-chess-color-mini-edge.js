@@ -23,7 +23,7 @@ check(ctl.includes('CHESS_SIDE_OR_TURN_INVALID') && ctl.includes('isConsistentPo
 check(ctl.includes('CHESS_DELTA_TURN_INVALID') && ctl.includes('isLegalServerDelta(currentState, delta)'), 'Move color/turn mismatch rejects delta before applying it');
 check(server.includes('INVITE_COLOR_MISMATCH') && server.includes('moved.color !== color'), 'Server fails closed on bad invite color or move color');
 check(socket.includes('whiteUid: Math.random() < 0.5 ? uid : botUid') && socket.includes('whiteUid: invite.whiteUid, blackUid: invite.blackUid'), 'Server allocates bot sides and preserves assignment into match creation');
-check(JSON.parse(rd('app.json')).expo.android.versionCode===143039 && rail.includes('P2.37R2C-H25-native-1'), 'H14 native source and Android APK identity synchronized');
+check(JSON.parse(rd('app.json')).expo.android.versionCode===143040 && rail.includes('P2.37R2C-H25-native-1'), 'H14 native source and Android APK identity synchronized');
 
 // Runtime: black player is permitted only to select own black pieces, even
 // while White/Bot holds the turn. Premoves are LOCAL and cannot issue a move.
@@ -39,6 +39,7 @@ class ChessMock {
 const mod={exports:{}};
 const js=ts.transpileModule(ctl,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function stub(name){
+ if(name==='react-native')return {AppState:{currentState:'active',addEventListener:()=>({remove(){}})}};
  if(name==='chess.js')return {Chess:ChessMock};
  if(name==='@react-native-firebase/auth')return {getAuth:()=>({currentUser:{uid:currentUid}})};
  if(name==='../../types/chess')return {CHESS_ERROR_COPY:{},CHESS_EVENTS:{gameMove:'move',gameState:'state'},applyChessMoveDelta:(old,d)=>({...old,...d,revision:d.version})};

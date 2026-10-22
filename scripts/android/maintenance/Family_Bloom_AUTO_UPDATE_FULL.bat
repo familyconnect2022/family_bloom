@@ -8,14 +8,44 @@ set "FB_TARGET=%~1"
 if not defined FB_TARGET if exist "%FB_STATE_DIR%\last-target.txt" (
   for /f "usebackq delims=" %%T in ("%FB_STATE_DIR%\last-target.txt") do if not defined FB_TARGET set "FB_TARGET=%%T"
 )
-if not defined FB_TARGET (
-  echo.
-  echo FIRST UPDATE: Enter the path to your EXISTING Family Bloom project.
-  echo Example: D:\FamilyBloom
-  echo This path is saved after a successful update.
-  set /p "FB_TARGET=Old Family Bloom folder: "
-)
+rem Validate BEFORE backup, cleanup, overlay, and before confirming anything.
+rem A relocated or renamed project must trigger a new folder selection,
+rem not an unconditional failure because last-target.txt is stale.
+:validate_or_reselect
+if not defined FB_TARGET goto :choose_target
 set "FB_TARGET=%FB_TARGET:"=%"
+node "%FB_SOURCE%\scripts\maintenance\auto-update-full.cjs" target >nul 2>nul
+if not errorlevel 1 goto :target_ready
+echo.
+echo [TARGET NOT FOUND OR INVALID] The saved/entered project folder cannot be used.
+echo Attempted: "%FB_TARGET%"
+node "%FB_SOURCE%\scripts\maintenance\auto-update-full.cjs" target
+echo [SAFE] No backup, cleanup or copy has started. Choose the CURRENT project folder.
+set "FB_TARGET="
+:choose_target
+echo.
+echo ========================================================
+echo SELECT EXISTING FAMILY BLOOM PROJECT - NOT THE FULL ZIP
+echo The folder must contain package.json and app.config.js.
+echo ========================================================
+set "FB_PICK_FILE=%TEMP%\FamilyBloomTarget_%RANDOM%_%RANDOM%.txt"
+if exist "%FB_PICK_FILE%" del /q "%FB_PICK_FILE%" >nul 2>nul
+where powershell.exe >nul 2>nul
+if errorlevel 1 goto :manual_target
+powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%FB_SOURCE%\scripts\android\maintenance\Select-FamilyBloomProjectFolder.ps1" -OutputFile "%FB_PICK_FILE%"
+if exist "%FB_PICK_FILE%" (
+  for /f "usebackq delims=" %%T in ("%FB_PICK_FILE%") do if not defined FB_TARGET set "FB_TARGET=%%T"
+  del /q "%FB_PICK_FILE%" >nul 2>nul
+)
+if defined FB_TARGET goto :validate_or_reselect
+:manual_target
+echo [INFO] Folder picker unavailable or cancelled. You can enter the path manually.
+echo Example: D:\Project Family Bloom\Bloom
+set /p "FB_TARGET=Existing project folder (or Q to cancel): "
+if /i "%FB_TARGET%"=="Q" goto :cancelled
+if not defined FB_TARGET goto :cancelled
+goto :validate_or_reselect
+:target_ready
 echo.
 echo ========================================================
 echo FAMILY BLOOM - AUTO FULL UPDATE
@@ -28,6 +58,7 @@ if errorlevel 1 (
  echo [ERROR] Node.js is required. Update stopped WITHOUT deleting files.
  goto :fail
 )
+set "FB_THIS_RUN_BACKUP=0"
 node "%FB_SOURCE%\scripts\maintenance\auto-update-full.cjs" check
 if errorlevel 1 goto :fail
 echo.
@@ -44,6 +75,7 @@ echo.
 echo [1/6] Backing up existing project source...
 node "%FB_SOURCE%\scripts\maintenance\auto-update-full.cjs" backup
 if errorlevel 1 goto :fail
+set "FB_THIS_RUN_BACKUP=1"
 echo.
 echo [2/6] Running PRE COPY CLEAN OLD...
 call "%FB_SOURCE%\scripts\android\maintenance\Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat" "%FB_TARGET%" --no-pause
@@ -84,8 +116,13 @@ exit /b 2
 echo.
 echo ========================================================
 echo FAILED: Automatic update stopped. Do NOT build yet.
-echo If cleanup or overlay began, a project-source backup is here:
-if exist "%FB_STATE_DIR%\last-backup.txt" type "%FB_STATE_DIR%\last-backup.txt"
+if "%FB_THIS_RUN_BACKUP%"=="1" (
+  echo This update created a project-source backup here:
+  if exist "%FB_STATE_DIR%\last-backup.txt" type "%FB_STATE_DIR%\last-backup.txt"
+) else (
+  echo Preflight or backup failed BEFORE any cleanup or overlay of the old project.
+  echo Existing project source was not changed by this attempt.
+)
 echo ========================================================
 pause
 exit /b 1

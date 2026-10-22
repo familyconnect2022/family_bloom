@@ -28,6 +28,14 @@ let currentState: ChessGameState | null = null;
 let selectedSquare: Square | null = null;
 let movePending = false;
 let readyPending = false;
+// Each game owns a single server mutation in flight. The same requestId is
+// retained after an uncertain timeout so a retry cannot create another vote.
+type ChessDecision = 'resign' | 'drawOffer' | 'drawAccept' | 'drawReject';
+let chessDecision: {gameId:string;action:ChessDecision;requestId:string} | null = null;
+let chessDecisionBusy = false;
+let chessDecisionError = '';
+let chessDecisionCompleted = '';
+
 // Exactly one automatic READY intent per waiting game; never start clocks locally.
 let readyRequestedForGame: string | null = null;
 let boardReadyRequestedForGame: string | null = null;
@@ -227,6 +235,7 @@ function resetInFlight() {
 function resetForNewGame() {
   resetInFlight();
   readyPending = false;
+  chessDecision = null; chessDecisionBusy = false; chessDecisionError = ''; chessDecisionCompleted = '';
   readyRequestedForGame = null;
   boardReadyRequestedForGame = null;
   boardAssetsReadyForGame = null;
@@ -328,6 +337,9 @@ async function pushState(reason: string) {
     premoveCount: queuedPremoves.length,
     promotionPending: !!pendingPromotion,
     movePending,
+    actionPending: chessDecisionBusy ? chessDecision?.action : "",
+    actionError: chessDecisionError,
+    actionCompleted: chessDecisionCompleted,
     readyPending,
     waitingForMe: state.status === "waiting" && !readyPending,
     whiteRemainingMs: state.whiteRemainingMs,
@@ -989,14 +1001,40 @@ export async function handleNativeChessAction(event: NativeChessAction) {
       ));
       return;
     }
-    const response = await chessSocketService.emitAck<ChessGameState>(
-      eventName,
-      { gameId: active.gameId, requestId: requestId(`native-chess-${event.action}`) },
-      15_000,
-    );
-    if (!response.ok) {
-      emitBoardGamePresentationDiagnostic("chess", "NATIVE_CHESS_ACTION_FAILED", `${event.action}: ${response.errorCode}`, { gameId: active.gameId });
-      return;
+    // One immediate latch for repeated taps, even if native dispatch races.
+    if (chessDecisionBusy) return;
+    const action = event.action as ChessDecision;
+    const previous = chessDecision;
+    chessDecision = previous?.gameId === active.gameId && previous.action === action
+      ? previous : {gameId:active.gameId,action,requestId:requestId(`native-chess-${action}`)};
+    const decision = chessDecision;
+    chessDecisionBusy = true; chessDecisionError = ''; chessDecisionCompleted = '';
+    void pushState("decision-pending");
+    try {
+      const response = await chessSocketService.emitAck<ChessGameState>(
+        eventName,{gameId:active.gameId,requestId:decision.requestId},15_000);
+      if (currentState?.gameId !== active.gameId || chessDecision !== decision) return;
+      if (!response.ok) {
+        chessDecisionError = "Máy chủ chưa xác nhận. Chạm để thử lại.";
+        emitBoardGamePresentationDiagnostic("chess","NATIVE_CHESS_ACTION_FAILED",`${action}: ${response.errorCode}`,{gameId:active.gameId});
+        // A timeout can mean the request applied but its ACK was lost. Read
+        // authoritative state before offering another attempt with SAME ID.
+        void resyncCurrent(active.gameId,"decision-ack-uncertain");
+      } else {
+        chessDecisionCompleted = `${action}:${decision.requestId}`;
+        chessDecision = null;
+        if (response.data) syncNativeChessAuthoritativeState(response.data);
+      }
+    } catch (error) {
+      if (currentState?.gameId === active.gameId && chessDecision === decision) {
+        chessDecisionError = "Kết nối bị gián đoạn. Chạm để thử lại.";
+        void resyncCurrent(active.gameId,"decision-network-uncertain");
+      }
+    } finally {
+      if (currentState?.gameId === active.gameId && (chessDecision === decision || chessDecisionCompleted.endsWith(decision.requestId))) {
+        chessDecisionBusy = false;
+        void pushState("decision-settled");
+      }
     }
   }
 }

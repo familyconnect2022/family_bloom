@@ -1,6 +1,7 @@
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
 import { authService } from "@/services/auth/authService";
+import { internetReachabilityService } from "@/services/network/internetReachabilityService";
 import { familyService } from "@/services/family/familyService";
 import { homeTimeCapsuleService } from "@/services/home/homeTimeCapsuleService";
 import { profileService } from "@/services/profile/profileService";
@@ -300,15 +301,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setShowWelcome(false);
   }, [user]);
 
+  const ensureInternetForAuth = useCallback(async () => {
+    // The 5G/Wi-Fi icon can remain visible when mobile data is exhausted.
+    // Check reachability before opening Google/phone flows; never sign out or
+    // change an existing Firebase identity based on connectivity alone.
+    if (await internetReachabilityService.checkNow({ force: true }) !== "offline") return true;
+    showToast({ type: "warning", title: "Chưa có Internet", message: "Hãy kiểm tra dung lượng 4G/5G hoặc Wi-Fi. Bloom sẽ tự kiểm tra kết nối.", duration: 4000 });
+    return false;
+  }, [showToast]);
+
   const loginWithGoogle = useCallback(async () => {
     try {
+      if (!(await ensureInternetForAuth())) return;
       welcomeRequestedRef.current = true;
       await authService.signInWithGoogle();
     } catch (error) {
       welcomeRequestedRef.current = false;
-      showToast({ ...parseAppError(error), duration: 3500 });
+      // A backend/auth failure is not itself proof that the phone is offline.
+      // Refresh the independent Internet probe to give accurate guidance.
+      if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
+        showToast({ type: "warning", title: "Kết nối Internet bị gián đoạn", message: "Không thể hoàn tất đăng nhập lúc này. Hãy kiểm tra Wi-Fi hoặc dữ liệu di động.", duration: 4000 });
+      } else {
+        showToast({ ...parseAppError(error), duration: 3500 });
+      }
     }
-  }, [showToast]);
+  }, [ensureInternetForAuth, showToast]);
 
   const sendPhoneCode = useCallback(async (phoneNumber: string) => {
     const normalized = authService.normalizePhoneNumber(phoneNumber);
@@ -318,17 +335,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     setIsLoadingPhone(true);
     try {
+      if (!(await ensureInternetForAuth())) return false;
       const result = await authService.sendPhoneCode(normalized);
       setConfirmation(result);
       setPendingPhoneNumber(normalized);
       return true;
     } catch (error) {
-      showToast({ ...parseAppError(error), duration: 3500 });
+      if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
+        showToast({ type: "warning", title: "Mất kết nối khi gửi mã", message: "Vui lòng kiểm tra Internet rồi thử lại.", duration: 4000 });
+      } else {
+        showToast({ ...parseAppError(error), duration: 3500 });
+      }
       return false;
     } finally {
       setIsLoadingPhone(false);
     }
-  }, [showToast]);
+  }, [ensureInternetForAuth, showToast]);
 
   const confirmPhoneCode = useCallback(async (code: string) => {
     if (!confirmation) {
@@ -337,18 +359,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     setIsLoadingPhone(true);
     try {
+      if (!(await ensureInternetForAuth())) return false;
       welcomeRequestedRef.current = true;
       await authService.confirmPhoneCode(confirmation, code);
       setConfirmation(null);
       return true;
     } catch (error) {
       welcomeRequestedRef.current = false;
-      showToast({ ...parseAppError(error), duration: 3500 });
+      if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
+        showToast({ type: "warning", title: "Mất kết nối khi xác nhận", message: "Mã vẫn còn trên màn hình. Hãy kiểm tra Internet rồi thử lại.", duration: 4000 });
+      } else {
+        showToast({ ...parseAppError(error), duration: 3500 });
+      }
       return false;
     } finally {
       setIsLoadingPhone(false);
     }
-  }, [confirmation, showToast]);
+  }, [confirmation, ensureInternetForAuth, showToast]);
 
   const resendPhoneCode = useCallback(async () => {
     if (!pendingPhoneNumber) return false;

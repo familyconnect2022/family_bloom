@@ -92,6 +92,10 @@ internal class ChessNativeBoardView(
   private val bloomHeadline = TextView(context)
   private val bloomMessage = TextView(context)
   private val bloomPrimary = TextView(context)
+  private val bloomSpinner = android.widget.ProgressBar(context)
+  private var localActionInFlight: String? = null
+  private var lastDecisionCompleted = ""
+
   private val bloomSecondary = TextView(context)
   private var bloomPhase = ""
   private var audioReadySentForGame: String? = null
@@ -214,7 +218,8 @@ internal class ChessNativeBoardView(
       gravity = Gravity.CENTER
       textSize = 11f
       setTextColor(Color.parseColor("#854763"))
-      text = "✦  Chạm quân để chọn · Chạm ô để đi  ✦"
+      text = "" // H25 UX: remove text covered by the draw/resign action rail.
+      visibility = View.GONE
       maxLines = 1
       this@ChessNativeBoardView.addView(this)
     }
@@ -259,6 +264,16 @@ internal class ChessNativeBoardView(
     val motion = if (positionChanged && previous != null) planPieceMotion(previous, next) else emptyList()
     if (positionChanged || previous?.orientation != next.orientation) cancelPieceMotion()
     state = next
+    if (next.actionCompleted.isNotBlank() && next.actionCompleted != lastDecisionCompleted) {
+      lastDecisionCompleted = next.actionCompleted
+      pendingConfirmation = null
+      localActionInFlight = null
+      bloomPhase = ""
+    } else if (next.actionError.isNotBlank() && next.actionPending.isBlank()) {
+      localActionInFlight = null
+      bloomPhase = "" // Repaint actionable error, do not freeze a loading control.
+    }
+    if (previous?.gameId != next.gameId) {localActionInFlight = null;lastDecisionCompleted = ""}
     if (boardSize > 0 && previous?.orientation != next.orientation) {
       layoutSquares()
       paintedCells.clear()
@@ -615,7 +630,13 @@ internal class ChessNativeBoardView(
     bloomPanel.addView(bloomMessage, LinearLayout.LayoutParams(-1, dp(101f)))
     bloomPanel.addView(bloomStatus, LinearLayout.LayoutParams(-1, dp(37f)).apply { topMargin = dp(3f) })
     bloomPanel.addView(bloomCountdown, LinearLayout.LayoutParams(-1, dp(38f)).apply { topMargin = dp(2f) })
-    bloomPanel.addView(bloomPrimary, LinearLayout.LayoutParams(-1, dp(51f)).apply { topMargin = dp(11f) })
+    val primaryFrame = FrameLayout(context)
+    primaryFrame.addView(bloomPrimary, FrameLayout.LayoutParams(-1, -1))
+    bloomSpinner.isIndeterminate = true
+    bloomSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+    bloomSpinner.visibility = View.GONE
+    primaryFrame.addView(bloomSpinner, FrameLayout.LayoutParams(dp(22f),dp(22f),Gravity.START or Gravity.CENTER_VERTICAL).apply {leftMargin=dp(20f)})
+    bloomPanel.addView(primaryFrame, LinearLayout.LayoutParams(-1, dp(51f)).apply { topMargin = dp(11f) })
     bloomPanel.addView(bloomSecondary, LinearLayout.LayoutParams(-1, dp(44f)).apply { topMargin = dp(8f) })
     bloomBackdrop.addView(bloomPanel, FrameLayout.LayoutParams(
       LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER
@@ -705,6 +726,8 @@ internal class ChessNativeBoardView(
     bloomSecondary.visibility = View.VISIBLE
     bloomPrimary.setOnClickListener(null)
     bloomSecondary.setOnClickListener(null)
+    bloomSpinner.visibility = View.GONE
+    bloomSecondary.isEnabled = true
   }
 
   private fun updateWaitingStatus(current: NativeChessBoardState) {
@@ -733,6 +756,7 @@ internal class ChessNativeBoardView(
     val phase = when {
       current.status == "finished" -> "finished:${current.gameId}:${current.revision}"
       current.status == "waiting" -> "waiting:${current.gameId}"
+      current.actionPending.isNotBlank() -> "decision:${current.gameId}:${current.actionPending}"
       incomingDraw -> "drawIncoming:${current.gameId}"
       pendingConfirmation?.startsWith("confirmResign") == true -> pendingConfirmation!!
       pendingConfirmation?.startsWith("confirmDraw") == true -> pendingConfirmation!!
@@ -744,7 +768,7 @@ internal class ChessNativeBoardView(
       return
     }
     bloomPhase = phase
-    if (!phase.startsWith("confirm")) pendingConfirmation = null
+    if (!phase.startsWith("confirm") && !phase.startsWith("decision")) pendingConfirmation = null
     bloomBackdrop.visibility = View.VISIBLE
     bloomBackdrop.bringToFront()
     styleBloomDialog(when {
@@ -794,6 +818,16 @@ internal class ChessNativeBoardView(
         bloomCountdown.visibility = View.VISIBLE
         updateWaitingStatus(current)
       }
+      phase.startsWith("decision") -> {
+        bloomEyebrow.text = "✦   BLOOM ARENA   ✦"
+        bloomHeadline.text = "ĐANG XÁC NHẬN"
+        bloomMessage.text = "Đã nhận thao tác của bạn. Máy chủ đang xử lý; bạn không cần bấm thêm."
+        bloomPrimary.text = "Đang xử lý…"
+        bloomPrimary.isEnabled = false
+        bloomPrimary.isClickable = false
+        bloomSecondary.visibility = View.GONE
+        bloomSpinner.visibility = View.VISIBLE
+      }
       phase.startsWith("drawIncoming") -> {
         bloomEyebrow.text = "✦   LỜI ĐỀ NGHỊ   ✦"
 
@@ -801,8 +835,8 @@ internal class ChessNativeBoardView(
         bloomMessage.text = "Đối thủ muốn khép lại ván cờ trong sự trân trọng. Bạn có đồng ý với một kết quả hòa không?"
         bloomPrimary.text = "Đồng ý hòa"
         bloomSecondary.text = "Tiếp tục thi đấu"
-        bloomPrimary.setOnClickListener { emitGameAction("drawAccept") }
-        bloomSecondary.setOnClickListener { emitGameAction("drawReject"); bloomBackdrop.visibility = View.GONE; bloomPhase = "" }
+        bloomPrimary.setOnClickListener { submitDecision("drawAccept") }
+        bloomSecondary.setOnClickListener { submitDecision("drawReject") }
       }
       phase.startsWith("confirmResign") -> {
         bloomEyebrow.text = "✦   MỘT LỰA CHỌN DŨNG CẢM   ✦"
@@ -811,7 +845,7 @@ internal class ChessNativeBoardView(
         bloomMessage.text = "Bạn có chắc muốn xin thua không? Dù kết quả ra sao, Bloom luôn chào đón bạn ở ván tiếp theo."
         bloomPrimary.text = "Xác nhận xin thua"
         bloomSecondary.text = "Tiếp tục chơi"
-        bloomPrimary.setOnClickListener { pendingConfirmation = null; emitGameAction("resign"); bloomBackdrop.visibility = View.GONE; bloomPhase = "" }
+        bloomPrimary.setOnClickListener { submitDecision("resign") }
         bloomSecondary.setOnClickListener { pendingConfirmation = null; bloomBackdrop.visibility = View.GONE; bloomPhase = "" }
       }
       else -> {
@@ -821,10 +855,27 @@ internal class ChessNativeBoardView(
         bloomMessage.text = "Bạn muốn gửi lời đề nghị hòa tới đối thủ? Ván cờ chỉ kết thúc khi cả hai cùng đồng ý."
         bloomPrimary.text = "Gửi lời đề nghị"
         bloomSecondary.text = "Tiếp tục chơi"
-        bloomPrimary.setOnClickListener { pendingConfirmation = null; emitGameAction("drawOffer"); bloomBackdrop.visibility = View.GONE; bloomPhase = "" }
+        bloomPrimary.setOnClickListener { submitDecision("drawOffer") }
         bloomSecondary.setOnClickListener { pendingConfirmation = null; bloomBackdrop.visibility = View.GONE; bloomPhase = "" }
       }
     }
+    if (current.actionError.isNotBlank() && current.status == "active" && !phase.startsWith("decision")) {
+      bloomMessage.text = "${bloomMessage.text}\n\n⚠ ${current.actionError}"
+    }
+  }
+
+  /** Native latches on the FIRST tap, before the JS bridge can respond. */
+  private fun submitDecision(action: String) {
+    if (localActionInFlight != null || state?.actionPending?.isNotBlank() == true) return
+    val s = state ?: return
+    if (s.status != "active") return
+    localActionInFlight = action
+    bloomPrimary.text = "Đang xác nhận…"
+    bloomPrimary.isClickable = false
+    bloomPrimary.isEnabled = false
+    bloomSecondary.isEnabled = false
+    bloomSpinner.visibility = View.VISIBLE
+    emitGameAction(action)
   }
 
   /** Short fireworks burst runs only at a terminal win, never during Mini play. */

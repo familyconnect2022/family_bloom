@@ -1,14 +1,42 @@
 'use strict';
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
-// Build & Share invokes this AFTER its dependency bootstrap on Windows.
-const ts=(()=>{try{return require('typescript');}catch{
-  const {execFileSync}=require('child_process');
-  return require(path.join(execFileSync('npm',['root','-g'],{encoding:'utf8'}).trim(),'typescript'));
-}})();
+// The FULL ZIP preflight must work BEFORE npm install, including on Windows
+// Node 24 where spawning npm by basename can throw ENOENT despite npm.cmd.
+// --source-only validates the guarded code path without TypeScript or child processes.
+// The default (after the dependency bootstrap) runs the real VM/TS behavior tests.
+const sourceOnly = process.argv.includes('--source-only');
+let ts;
+if (!sourceOnly) {
+  try { ts = require('typescript'); }
+  catch (error) {
+    console.error('[FAIL] Xiangqi runtime regression requires project-local TypeScript.');
+    console.error('Run Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat / npm install --include=dev before the runtime gate.');
+    process.exit(1);
+  }
+}
 const root=path.resolve(__dirname,'..');
 const controller=fs.readFileSync(path.join(root,'src/services/games/nativeXiangqiGameplayController.ts'),'utf8');
 const overlay=fs.readFileSync(path.join(root,'modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt'),'utf8');
 const board=fs.readFileSync(path.join(root,'modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/XiangqiNativeBoardView.kt'),'utf8');
+if (sourceOnly) {
+  const checks = [
+    ['black side recognized independently of red', controller.includes('uid === g.redUid ? "red" : uid === g.blackUid ? "black" : null')],
+    ['active turn permits input during background reconciliation', controller.includes('me === g.board.turn && online && !movePending') && !/const canMove\s*=[^;]*reconciliationPending/.test(controller)],
+    ['server-authoritative move sends version', controller.includes('expectedVersion:g.revision')],
+    ['foreground recovery uses server catchup', controller.includes('XIANGQI_EVENTS.gameCatchup')],
+    ['disconnect guards input', controller.includes('setNativeXiangqiTransportConnected')],
+    ['inactive Chess overlay does not intercept Xiangqi taps', overlay.includes('chessLayer.visibility = if (chessActive) View.VISIBLE else View.INVISIBLE')],
+    ['inactive Xiangqi overlay does not intercept Chess taps', overlay.includes('xiangqiLayer.visibility = if (chessActive) View.INVISIBLE else View.VISIBLE')],
+    ['native black coordinate inversion', board.includes('if(flip)8-colOnBoard else colOnBoard,if(flip)9-rowOnBoard else rowOnBoard')],
+    ['native input block is observable', board.includes('onAction("inputBlocked",s.gameId)')],
+  ];
+  for (const [name,ok] of checks) {
+    if (!ok) { console.error('[FAIL] Xiangqi source-only: '+name); process.exit(1); }
+    console.log('[PASS] Xiangqi source-only: '+name);
+  }
+  console.log(`H25R2 XIANGQI PRE-INSTALL: ${checks.length}/${checks.length} PASS (no npm, no TypeScript dependency)`);
+  process.exit(0);
+}
 let connected=true, catchupResolve;
 const sent=[],painted=[];
 const auth={currentUser:{uid:'human-black',displayName:'Tester',photoURL:null}};

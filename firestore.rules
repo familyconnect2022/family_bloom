@@ -2013,6 +2013,47 @@ service cloud.firestore {
       }
     }
 
+    // =====================================================================
+    // BLOOM CONTENT STUDIO L1R7R1 — FIRESTORE RULES (ROOT COLLECTIONS)
+    // Bổ sung độc lập: không thay đổi quyền Family Bloom phía trên.
+    // EDITOR UID: đã cấu hình đúng theo Firebase Authentication > Users
+    // trong Firebase Authentication > Users (KHÔNG PHẢI email).
+    // Tài khoản cần email_verified = true.
+    // Hai collection này hiện CHỈ cho tài khoản biên soạn truy cập.
+    // Chưa cấp quyền đọc cho ứng dụng Family Bloom chính.
+    // =====================================================================
+    function isBloomStudioEditor() {
+      return request.auth != null && request.auth.uid == '5kCsIiIYWFNM0HwW48K51RIz2KF3' && request.auth.token.email_verified == true;
+    }
+    match /bloomStudioLessons/{lessonId} {
+      allow read, delete: if isBloomStudioEditor();
+      allow create, update: if isBloomStudioEditor()
+        && request.resource.data.schema == 'bloom-studio-cloud/1'
+        && request.resource.data.editorUid == request.auth.uid
+        && request.resource.data.reviewStatus in ['draft','in_review','approved']
+        && request.resource.data.entry.status == request.resource.data.reviewStatus;
+    }
+    match /bloomStudioPublishedLessons/{lessonId} {
+      // All Family Bloom readers have a /users/{uid} profile in this Firebase project.
+      // No anonymous read, no read of Studio drafts. Firestore LIST must be paginated.
+      allow get: if isBloomStudioEditor() || (signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && resource.data.reviewStatus == 'approved'
+        && resource.data.entry.status == 'approved');
+      allow list: if isBloomStudioEditor() || (signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && request.query.limit <= 50);
+      allow delete: if isBloomStudioEditor();
+      allow create, update: if isBloomStudioEditor()
+        && request.resource.data.schema == 'bloom-studio-cloud/1'
+        && request.resource.data.editorUid == request.auth.uid
+        && request.resource.data.reviewStatus == 'approved'
+        && request.resource.data.entry.status == 'approved'
+        && request.resource.data.entry.alignment == 'verified'
+        && request.resource.data.content.reviewedAt is string;
+    }
+    // END BLOOM CONTENT STUDIO L1R7R1
+
     match /{document=**} { allow read, write: if false; }
   }
 }

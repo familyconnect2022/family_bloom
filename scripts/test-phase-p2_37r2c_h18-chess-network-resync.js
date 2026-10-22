@@ -116,7 +116,7 @@ function harness(color='w'){
  check(server.includes('lastMoveBeforeFen')&&server.includes('recentHistory[recentHistory.length - 1].before'),'Render snapshot supplies actual predecessor FEN from chess.js history');
  check(bridge.includes('setNativeChessTransportConnected(false)')&&bridge.includes('setNativeChessTransportConnected(true)'),'Transport listener lifecycle connects the native board to network recovery');
  check(read('src/types/chess.ts').includes('lastMoveBeforeFen?: string | null')&&read('modules/family-bloom-overlay/index.ts').includes('motionFromFen?: string | null'),'Client and Native optional backward-compatible recovery fields wired');
- check(read('app.json').includes('"versionCode": 143039')&&read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'),'Native APK identity is current H19, not stale H18');
+ check(read('app.json').includes('"versionCode": 143040')&&read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'),'Native APK identity is current H19, not stale H18');
 }catch(err){failed++;console.error('FAIL H18 executable scenarios:',err.stack||err)}
 console.log(`H18 Chess network recovery: ${failed?'FAIL':'PASS'} (${passed}/${passed+failed})`);process.exitCode=failed?1:0;
 })();

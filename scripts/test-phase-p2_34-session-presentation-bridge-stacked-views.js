@@ -55,7 +55,15 @@ check(botTest.includes('syncXiangqiPresentationFromState(response.data.state)'),
 check(botTest.includes('syncChessPresentationFromState(game.data)'), 'Chess recovery ACK hydrates presentation');
 check(botTest.includes('syncXiangqiPresentationFromState(game.data)'), 'Xiangqi recovery ACK hydrates presentation');
 check(!/testBotChallenge[\s\S]{0,500}activateBoardGamePresentation/.test(botTest), 'outgoing bot challenge does not open Surface before server confirms a game');
-check(homeGames.includes('activateBoardGamePresentation("chess")') && homeGames.includes('activateBoardGamePresentation("xiangqi")'), 'manual Home prototype can still switch the two persistent visual layers');
+// H25R2R2: The Home game cards open the independent lobbies, NOT an unowned
+// persistent board layer. Confirmed gameId/state (or a scoped pending preview)
+// controls the Full/Mini presentation. The old prototype assertion was stale.
+check(
+  homeGames.includes('router.push("/home-chess" as never)') &&
+  homeGames.includes('router.push("/home-xiangqi" as never)') &&
+  !homeGames.includes('activateBoardGamePresentation('),
+  'Home opens independent Chess/Xiangqi lobbies without unowned surface activation',
+);
 
 check(exists('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat'), 'FULL package includes root EAS test-build helper BAT');
 check(exists('eas.json') && read('eas.json').includes('family-bloom-test') && read('eas.json').includes('\"buildType\": \"apk\"'), 'EAS test profile exists for internal Android APK builds');

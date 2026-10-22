@@ -18,6 +18,11 @@ let queuedPremove: {pieceId:string;to:{col:number;row:number}} | null = null;
 let soundCue = "", soundToken = 0;
 const cue = (value:string) => {soundCue=value; soundToken++;};
 let movePending = false;
+type XiangqiDecision = 'resign'|'drawOffer'|'drawAccept'|'drawDecline';
+let xiangqiDecision: {gameId:string;action:XiangqiDecision;requestId:string}|null = null;
+let xiangqiDecisionBusy = false;
+let xiangqiDecisionError = '';
+
 let boardReadyRequested: string | null = null;
 let playReadyRequested: string | null = null;
 let nativeAssetsReady: string | null = null;
@@ -125,6 +130,8 @@ async function push(reason: string) {
     selectedPieceId, legalTargets: hints, captureTargets: captures,
     redRemainingMs: g.redRemainingMs, blackRemainingMs: g.blackRemainingMs, serverNowMs: g.serverNowMs,
     canMove, canPremove, premoveTarget:queuedPremove?.to ?? null, movePending,
+    actionPending: xiangqiDecisionBusy ? xiangqiDecision?.action : '',
+    actionError: xiangqiDecisionError,
     opponentLabel: (g.testBotUid ? "Bloom Bot" : matchedOpponentProfile ? matchedOpponentProfile.name : "Người thân"),
     meLabel: selfProfile?.name || "Bạn", meAvatarUrl: selfProfile?.photo || null,
     opponentAvatarUrl: g.testBotUid ? null : matchedOpponentProfile?.photo || null,
@@ -203,6 +210,7 @@ export function syncNativeXiangqiAuthoritativeState(next: XiangqiRealtimeState) 
   if (fresh) {
     selectedPieceId = null; boardReadyRequested = null; playReadyRequested = null;
     nativeAssetsReady = null; colorNativeFrameReady = null; playReadyScheduled = null; movePending = false; currentMoveRequestId = null;
+    xiangqiDecision = null; xiangqiDecisionBusy = false; xiangqiDecisionError = '';
     queuedPremove = null; soundCue=""; soundToken=0;
   }
   const previous = state;
@@ -328,23 +336,47 @@ export async function handleNativeXiangqiAction(event: NativeXiangqiAction) {
     return;
   }
   if (event.action === "resultAck" && isTerminal(g)) {
-    const response = await xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResultAck,
-      {familyId:g.familyId,gameId:g.gameId});
-    if (!response.ok) return; // keep visible until server acknowledges
-    markXiangqiResultDismissed(g.gameId);
-    closeBoardGamePresentationForGame("xiangqi",g.gameId);
-    clearNativeXiangqiSession(g.gameId);
+    // The result is already terminal/authoritative. Release Full/Mini in the
+    // very first frame; server bookkeeping must not keep the user waiting.
+    const gameId=g.gameId, familyId=g.familyId;
+    markXiangqiResultDismissed(gameId);
+    closeBoardGamePresentationForGame("xiangqi",gameId);
+    clearNativeXiangqiSession(gameId);
+    void xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResultAck,{familyId,gameId},15_000)
+      .then(response=>{if(!response.ok)emitBoardGamePresentationDiagnostic('xiangqi','XIANGQI_RESULT_ACK_BACKGROUND_FAILED',response.errorCode,{gameId});})
+      .catch(error=>emitBoardGamePresentationDiagnostic('xiangqi','XIANGQI_RESULT_ACK_BACKGROUND_FAILED',String(error),{gameId}));
     return;
   }
-  if ((event.action === "drawOffer" || event.action === "drawAccept" || event.action === "drawDecline") && g.status === "active") {
-    const key = event.action === "drawOffer" ? XIANGQI_EVENTS.gameDrawOffer : event.action === "drawAccept" ? XIANGQI_EVENTS.gameDrawAccept : XIANGQI_EVENTS.gameDrawDecline;
-    const reply = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(key, {gameId:g.gameId,requestId:req(event.action)});
-    if (reply.ok && reply.data && state?.gameId === g.gameId) syncNativeXiangqiAuthoritativeState(reply.data);
-    else if (!reply.ok) emitBoardGamePresentationDiagnostic("xiangqi","XIANGQI_DRAW_REJECTED",reply.errorCode,{gameId:g.gameId});
-    return;
-  }
-  if (event.action === "resign" && g.status === "active") {
-    await xiangqiSocketService.emitAck(XIANGQI_EVENTS.gameResign, {gameId:g.gameId, requestId:req("resign")});
+  if ((event.action === "drawOffer" || event.action === "drawAccept" || event.action === "drawDecline" || event.action === "resign") && g.status === "active") {
+    if (xiangqiDecisionBusy) return;
+    const action = event.action as XiangqiDecision;
+    const prior = xiangqiDecision;
+    xiangqiDecision = prior?.gameId === g.gameId && prior.action === action
+      ? prior : {gameId:g.gameId,action,requestId:req(action)};
+    const decision = xiangqiDecision;
+    const key = action === 'resign' ? XIANGQI_EVENTS.gameResign : action === 'drawOffer'
+      ? XIANGQI_EVENTS.gameDrawOffer : action === 'drawAccept' ? XIANGQI_EVENTS.gameDrawAccept : XIANGQI_EVENTS.gameDrawDecline;
+    xiangqiDecisionBusy = true; xiangqiDecisionError = '';
+    void push('decision-pending');
+    try {
+      const reply = await xiangqiSocketService.emitAck<XiangqiRealtimeState>(key, {gameId:g.gameId,requestId:decision.requestId},15_000);
+      if (state?.gameId !== g.gameId || xiangqiDecision !== decision) return;
+      if (reply.ok) {
+        xiangqiDecision = null;
+        if (reply.data) syncNativeXiangqiAuthoritativeState(reply.data);
+      } else {
+        xiangqiDecisionError = 'Máy chủ chưa xác nhận. Chạm để thử lại.';
+        emitBoardGamePresentationDiagnostic('xiangqi','XIANGQI_DECISION_REJECTED',reply.errorCode,{gameId:g.gameId,action});
+        void resyncXiangqi(g.gameId,'decision-ack-uncertain');
+      }
+    } catch (error) {
+      if (state?.gameId === g.gameId && xiangqiDecision === decision) {
+        xiangqiDecisionError = 'Kết nối bị gián đoạn. Chạm để thử lại.';
+        void resyncXiangqi(g.gameId,'decision-network-uncertain');
+      }
+    } finally {
+      if (state?.gameId === g.gameId) {xiangqiDecisionBusy = false; void push('decision-settled');}
+    }
     return;
   }
   if (event.action === "inputBlocked") {
@@ -410,6 +442,7 @@ export function attachNativeXiangqiAppLifecycle() {
 export function clearNativeXiangqiSession(gameId: string) {
   if (state?.gameId !== gameId) return;
   state = null; selectedPieceId = null; movePending = false;
+  xiangqiDecision = null; xiangqiDecisionBusy = false; xiangqiDecisionError = '';
   nativeAssetsReady = null; colorNativeFrameReady = null; boardReadyRequested = null; playReadyRequested = null;
   queuedPremove = null; soundCue=""; soundToken=0;
   currentMoveRequestId = null; ++renderSerial;

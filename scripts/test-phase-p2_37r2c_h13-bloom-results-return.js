@@ -25,7 +25,7 @@ check(storeSource.includes('DISMISSED_RESULT_TTL_MS') && storeSource.includes('d
 check(bridge.includes('wasChessResultDismissed(state.gameId)') && bridge.includes('wasChessResultDismissed(delta.gameId)'), 'late full state AND delta cannot resurrect dismissed Chess result');
 check(client.includes('if (currentState?.gameId !== gameId || currentState.status !== "finished") return;'), 'old game cleanup does not touch a new session');
 check(bat.includes('test-phase-p2_37r2c_h13-bloom-results-return.js'), 'copy-over applies H13 regression gate');
-check(JSON.parse(rd('app.json')).expo.android.versionCode === 143039 && rd('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'), 'new native binary id matches H13 APK');
+check(JSON.parse(rd('app.json')).expo.android.versionCode === 143040 && rd('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'), 'new native binary id matches H13 APK');
 
 const runTs = (source, filename, requireStub) => {
   const mod = {exports:{}};
@@ -75,6 +75,7 @@ try {
   let ackCalls=0;
   const mockSocket = {emitAck:()=>{ackCalls++;return never;}};
   const actor=runTs(client,'nativeChessGameplayController.ts', name => {
+    if (name === 'react-native') return {AppState:{currentState:'active',addEventListener:()=>({remove(){}})}};
     if (name === 'chess.js') return {Chess: class {fen(){return 'start'}}};
     if (name === '@react-native-firebase/auth') return {getAuth:()=>({currentUser:{uid:'me'}})};
     if (name === '../../types/chess') return {CHESS_EVENTS:{gameResultAck:'chess:game:resultAck'},CHESS_ERROR_COPY:{}};

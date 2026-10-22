@@ -8,7 +8,7 @@ cd /d "%PROJECT_ROOT%"
 echo ============================================================
 echo  FAMILY BLOOM H25 - EAS ANDROID TEST BUILD
 echo  Profile : family-bloom-test
-echo  EXPECTED: app 1.3.29 / versionCode 143039
+echo  EXPECTED: app 1.3.30 / versionCode 143040
 echo  Native   : P2.37R2C-H25-native-1
 echo  This helper ALWAYS waits for the new build and clears EAS cache.
 echo ============================================================
@@ -57,8 +57,6 @@ node scripts\test-h23r3-typescript-bootstrap.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h25-firebase-invitation.cjs
 if errorlevel 1 goto :fail
-node scripts\test-h25-runtime-claims.cjs
-if errorlevel 1 goto :fail
 node scripts\test-h25-source-package.cjs
 if errorlevel 1 goto :fail
 node scripts\setup\check-source-import-integrity.js
@@ -74,6 +72,15 @@ if "%NEED_NATIVE_INSTALL%"=="1" (
 )
 
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
+if errorlevel 1 goto :fail
+node scripts\test-h25-runtime-claims.cjs
+if errorlevel 1 goto :fail
+rem H25R2R1: prevent regressions in legacy Chess AppState controller VM mocks and READY gate.
+node scripts\test-h25r2r1-build-share-regression.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r4-touch-feedback.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r5-internet-connectivity.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h25r2-xiangqi-black-turn-reconnect.cjs
 if errorlevel 1 goto :fail
@@ -127,8 +134,8 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.29
-echo   versionCode : 143039
+echo   app version : 1.3.30
+echo   versionCode : 143040
 echo   native ID   : P2.37R2C-H25-native-1
 echo ------------------------------------------------------------
 echo.
@@ -146,7 +153,7 @@ echo ============================================================
 echo [OK] EAS reports the H25 Android build completed successfully.
 echo Install ONLY the APK produced by THIS build.
 echo After install, Game Foundation MUST show:
-echo   ACTUAL versionCode: 143039
+echo   ACTUAL versionCode: 143040
 echo   FamilyBloomOverlay: YES
 echo   native identity: P2.37R2C-H25-native-1
 echo ============================================================

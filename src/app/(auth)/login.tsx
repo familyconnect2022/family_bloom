@@ -2,7 +2,7 @@ import { BloomButton } from "@/components/ui/BloomButtonComponents";
 import { BloomTextInput } from "@/components/ui/BloomInputComponents";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
@@ -16,6 +16,18 @@ export default function Login() {
   const router = useRouter();
   const { loginWithGoogle, sendPhoneCode, isLoadingPhone } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
+  const googleBusyRef = useRef(false);
+  const handleGoogle = async () => {
+    if (googleBusyRef.current || isLoadingPhone) return;
+    googleBusyRef.current = true;
+    setIsLoadingGoogle(true);
+    try { await loginWithGoogle(); }
+    finally {
+      googleBusyRef.current = false;
+      setIsLoadingGoogle(false);
+    }
+  };
 
   const handleSendOTP = async () => {
     const success = await sendPhoneCode(phoneNumber);
@@ -60,6 +72,7 @@ export default function Login() {
             onPress={handleSendOTP}
             customStyle={styles.primaryButton}
             isLoading={isLoadingPhone}
+            disabled={isLoadingGoogle}
           />
 
           <View style={styles.dividerRow}><View style={styles.divider}/><Text style={styles.orText}>HOẶC</Text><View style={styles.divider}/></View>
@@ -68,7 +81,8 @@ export default function Login() {
             icon={<Ionicons name="logo-google" size={22} color={COLORS.white} />}
             customStyle={styles.googleButton}
             disabled={isLoadingPhone}
-            onPress={loginWithGoogle}
+            isLoading={isLoadingGoogle}
+            onPress={handleGoogle}
           />
           <Text style={styles.promise}>Bloom chỉ dùng thông tin cần thiết để giữ đúng ngôi nhà và kỷ niệm của bạn.</Text>
         </View>

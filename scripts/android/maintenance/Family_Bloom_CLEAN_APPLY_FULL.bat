@@ -29,8 +29,6 @@ node scripts\test-h23r3-typescript-bootstrap.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h25-firebase-invitation.cjs
 if errorlevel 1 goto :fail
-node scripts\test-h25-runtime-claims.cjs
-if errorlevel 1 goto :fail
 echo [H21R3] Cleaning invalid Android raw resource left by H21R1/H21R2...
 if exist "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" del /f /q "modules\family-bloom-overlay\android\src\main\res\raw\com.familybloom.keep.xml" >nul 2>nul
 if exist "android\app\src\main\res\raw\com.familybloom.keep.xml" del /f /q "android\app\src\main\res\raw\com.familybloom.keep.xml" >nul 2>nul
@@ -115,6 +113,17 @@ node scripts\test-h22r2-cleanup-retention.cjs
 if errorlevel 1 goto :fail
 call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
 if errorlevel 1 goto :fail
+node scripts\test-h25-runtime-claims.cjs
+if errorlevel 1 goto :fail
+rem H25R2R1: prevent regressions in legacy Chess AppState controller VM mocks and READY gate.
+node scripts\test-h25r2r1-build-share-regression.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r3-windows-npm-preflight.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r4-touch-feedback.cjs
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r5-internet-connectivity.cjs
+if errorlevel 1 goto :fail
 node scripts\test-h25r2-xiangqi-black-turn-reconnect.cjs
 if errorlevel 1 goto :fail
 node scripts\test-h22-xiangqi-parity.cjs
@@ -138,6 +147,8 @@ if errorlevel 1 goto :fail
 node scripts\test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
 if errorlevel 1 goto :fail
 call npm run phaseP2_32:check
+if errorlevel 1 goto :fail
+node scripts\test-h25r2r2-release-preflight.cjs
 if errorlevel 1 goto :fail
 call npm run phaseP2_34:check
 if errorlevel 1 goto :fail

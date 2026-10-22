@@ -25,7 +25,7 @@ check(!native.includes('View(FamilyBloomOverlayHostView::class)') && !native.inc
 check(native.includes('P2.37R2C-H25-native-1') && mod.version==='1.3.18', 'current native identity/module version = H9B-native-1 / 1.3.14');
 check(native.includes('visibility = View.INVISIBLE') && native.includes('Full/Mini containers retained'), 'IDLE/background keeps persistent rail hidden without destroying containers');
 check(native.includes('bringToFront()') && native.includes('Activity.window.decorView'), 'active presentation can rise only inside Android decor hierarchy');
-check(eas.includes('143039') && eas.includes('P2.37R2C-H25-native-1'), 'EAS helper prints exact current app/native identity');
+check(eas.includes('143040') && eas.includes('P2.37R2C-H25-native-1'), 'EAS helper prints exact current app/native identity');
 check(['Family_Bloom_EAS_BUILD_TEST.bat','Family_Bloom_EAS_UPDATE_TEST.bat','Family_Bloom_CLEAN_APPLY_FULL.bat','Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat','Family_Bloom_BUILD_APK_TO_SHARE.bat'].every((name)=>fs.existsSync(path.join(root,name))), 'project root retains requested EAS, cleanup and APK build shortcuts');
 console.log(`\nP2.37R2C-H6 decor rail gate: ${fail?'FAIL':'PASS'} (${pass}/${pass+fail})\n`);
 process.exit(fail?1:0);

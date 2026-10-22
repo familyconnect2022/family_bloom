@@ -71,7 +71,7 @@ check(!native.includes('PopupWindow'), 'Activity-global PopupWindow remains reti
 check(moduleTs.includes('requireOptionalNativeModule') && !moduleTs.includes('requireNativeViewManager') && moduleTs.includes('setFamilyBloomOverlayPresentation'), 'local JS wrapper is module/event only; no native ViewManager enters React tree');
 
 check(screen.includes('JS phase: P2.37R2C-H22R9') && screen.includes('P2.37R2C-H25-native-1'), 'Developer test UI identifies current H22R8 JS/native proof step');
-check(app.expo?.android?.versionCode === 143039 && app.expo?.version === '1.3.29', 'Android binary version bumped to 1.3.29 / 143039');
+check(app.expo?.android?.versionCode === 143040 && app.expo?.version === '1.3.30', 'Android binary version bumped to 1.3.30 / 143040');
 check(pkg.scripts?.['phaseP2_37R2:check']?.includes('test-phase-p2_37r2-full-copy-integrity.js'), 'package exposes current FULL integrity gate');
 check(pkg.scripts?.['eas-build-post-install']?.includes('check-p2_37r2c-native-package.js'), 'EAS post-install uses R2C native autolink proof');
 check(pkg.scripts?.['eas-build-on-success']?.includes('check-p2_37r2c-eas-apk-proof.js'), 'EAS success hook uses R2C APK/Dex proof');

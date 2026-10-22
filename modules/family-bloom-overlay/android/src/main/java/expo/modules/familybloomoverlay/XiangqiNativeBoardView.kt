@@ -94,6 +94,8 @@ internal class XiangqiNativeBoardView(
   private val avatarImages = HashMap<String, Bitmap>()
   private val avatarRequested = HashSet<String>()
   private var drawOfferConfirmUntil = 0L
+  private var localActionInFlight: String? = null
+
   private fun preloadAvatar(url: String?) {
     if (url.isNullOrBlank() || !url.startsWith("https://") || !avatarRequested.add(url)) return
     // Photo download happens off the Android UI thread, once per profile URL.
@@ -232,6 +234,8 @@ internal class XiangqiNativeBoardView(
     ensureAudio()
     if(state?.gameId==next.gameId && next.renderSequence<lastRenderSeq)return
     val previous = state
+    if (previous?.gameId != next.gameId || next.status != "active" || next.actionError.isNotBlank() ||
+      (previous?.actionPending?.isNotBlank() == true && next.actionPending.isBlank())) localActionInFlight = null
     // Ignore unchanged authoritative piece positions. A new clock baseline,
     // avatar or display name is HUD-only, not a board rebuild.
     val hudOnly = previous != null && previous.gameId == next.gameId &&
@@ -245,6 +249,7 @@ internal class XiangqiNativeBoardView(
       previous.captureTargets == next.captureTargets &&
       previous.canMove == next.canMove && previous.canPremove == next.canPremove &&
       previous.movePending == next.movePending &&
+      previous.actionPending == next.actionPending && previous.actionError == next.actionError &&
       previous.premoveTarget == next.premoveTarget &&
       previous.drawOfferByUid == next.drawOfferByUid &&
       previous.waitingMessage == next.waitingMessage &&
@@ -483,21 +488,35 @@ internal class XiangqiNativeBoardView(
     card(top-dp(86f),s.opponentLabel.ifBlank{"Đối thủ"},enemy,true,s.opponentAvatarUrl)
     card(bottom+dp(37f),s.meLabel.ifBlank{"Bạn"},me?:"red",false,s.meAvatarUrl)
     val bottomHint=bottom+dp(115f)
-    if(bottomHint<h()-dp(69f)) {
-      val notice=if(s.status=="active" && s.lastTo!=null)
-        "✦  Nước vừa đi · Xem vòng tròn tím  ✦"
-        else "✦  Chạm quân để chọn · Chạm ô để đi  ✦"
-      centerText(c,notice.take(44),center,bottomHint,10f,color("#8464B3"))
-    }
+    // Keep the band between the action buttons visually clean.
+    if(s.actionError.isNotBlank() && bottomHint<h()-dp(69f))
+      centerText(c,"⚠ Máy chủ chưa xác nhận · hãy thử lại",center,bottomHint,10f,color("#B34D62"))
+  }
+  /** Tiny native spinner, invalidated only around the action rail. */
+  private fun drawDecisionSpinner(c: Canvas, cx:Float, cy:Float, ink:Int) {
+    paint.color=ink
+    paint.style=Paint.Style.STROKE
+    paint.strokeWidth=dp(2.2f)
+    paint.strokeCap=Paint.Cap.ROUND
+    val r=dp(7f)
+    c.drawArc(RectF(cx-r,cy-r,cx+r,cy+r),
+      (SystemClock.uptimeMillis()/3L%360L).toFloat(),260f,false,paint)
+    paint.style=Paint.Style.FILL
   }
   private fun drawBloomActions(c:Canvas,s:NativeXiangqiBoardState,w:Float,boardBottom:Float) {
     val gap=dp(10f);val left=dp(25f);val right=w-dp(25f)
     val half=(right-left-gap)/2f;val y=boardBottom+dp(128f)
     val offered=s.drawOfferByUid!=null && s.drawOfferByUid==s.myUid
+    val waiting=(localActionInFlight ?: s.actionPending).orEmpty()
     box(c,left,y,left+half,y+dp(43f),dp(14f),color("#FFF3F7"),color("#E2B7CC"))
     box(c,left+half+gap,y,right,y+dp(43f),dp(14f),color("#FFF4E5"),color("#DAB89A"))
-    centerText(c,when {offered->"RÚT ĐỀ NGHỊ";SystemClock.elapsedRealtime()<drawOfferConfirmUntil->"XÁC NHẬN HÒA?";else->"XIN HÒA"},left+half/2f,y+dp(27f),11.5f,color("#93476E"),true)
-    centerText(c,if(SystemClock.elapsedRealtime()<resignConfirmUntil)"XÁC NHẬN ĐẦU HÀNG?" else "ĐẦU HÀNG",left+half+gap+half/2f,y+dp(27f),11.5f,color("#955334"),true)
+    centerText(c,when {waiting=="drawOffer"||waiting=="drawDecline"->"◌ ĐANG XỬ LÝ…";offered->"RÚT ĐỀ NGHỊ";SystemClock.elapsedRealtime()<drawOfferConfirmUntil->"XÁC NHẬN HÒA?";else->"XIN HÒA"},left+half/2f,y+dp(27f),11.5f,color("#93476E"),true)
+    centerText(c,if(waiting=="resign")"ĐANG XỬ LÝ…" else if(SystemClock.elapsedRealtime()<resignConfirmUntil)"XÁC NHẬN ĐẦU HÀNG?" else "ĐẦU HÀNG",left+half+gap+half/2f,y+dp(27f),11.5f,color("#955334"),true)
+    if(waiting.isNotBlank()) {
+      val x=if(waiting=="resign")left+half+gap+dp(14f) else left+dp(14f)
+      drawDecisionSpinner(c,x,y+dp(22f),color("#93476E"))
+      postInvalidateDelayed(110L,left.toInt(),y.toInt(),right.toInt(),(y+dp(43f)).toInt())
+    }
   }
   private fun drawBloomDrawProposal(c:Canvas,s:NativeXiangqiBoardState,w:Float,h:Float) {
     val mine=s.drawOfferByUid==s.myUid
@@ -509,14 +528,19 @@ internal class XiangqiNativeBoardView(
     centerText(c,"✦  BLOOM ARENA · XIN HÒA  ✦",x,top+dp(82f),11f,color("#8D476F"),true)
     centerText(c,if(mine)"ĐÃ GỬI LỜI XIN HÒA" else "ĐỐI THỦ XIN HÒA",x,top+dp(131f),18f,color("#823D64"),true)
     centerText(c,if(mine)"Chờ đối thủ trả lời nhé!" else "Bạn muốn kết thúc ván hòa chứ?",x,top+dp(161f),13f,color("#9A6580"))
+    val pending=(localActionInFlight ?: s.actionPending).orEmpty()
     if(mine){
       box(c,l+dp(30f),top+ph-dp(70f),l+pw-dp(30f),top+ph-dp(20f),dp(16f),color("#F5E4EF"),color("#E4BCD0"))
-      centerText(c,"RÚT LỜI XIN HÒA",x,top+ph-dp(39f),12f,color("#8F4571"),true)
+      centerText(c,if(localActionInFlight=="drawDecline"||s.actionPending=="drawDecline")"◌ ĐANG XỬ LÝ…" else "RÚT LỜI XIN HÒA",x,top+ph-dp(39f),12f,color("#8F4571"),true)
     } else {
       box(c,l+dp(20f),top+ph-dp(116f),l+pw-dp(20f),top+ph-dp(68f),dp(15f),color("#9A3974"))
-      centerText(c,"ĐỒNG Ý HÒA",x,top+ph-dp(86f),13f,Color.WHITE,true)
+      centerText(c,if(localActionInFlight=="drawAccept"||s.actionPending=="drawAccept")"◌ ĐANG XÁC NHẬN…" else "ĐỒNG Ý HÒA",x,top+ph-dp(86f),13f,Color.WHITE,true)
       box(c,l+dp(20f),top+ph-dp(61f),l+pw-dp(20f),top+ph-dp(13f),dp(15f),color("#FFF8FA"),color("#E7C7D8"))
-      centerText(c,"TIẾP TỤC CHƠI",x,top+ph-dp(31f),13f,color("#945073"),true)
+      centerText(c,if(localActionInFlight=="drawDecline"||s.actionPending=="drawDecline")"◌ ĐANG XỬ LÝ…" else "TIẾP TỤC CHƠI",x,top+ph-dp(31f),13f,color("#945073"),true)
+    }
+    if(pending.isNotBlank()) {
+      drawDecisionSpinner(c,l+dp(29f),top+ph-dp(if(mine)39f else if(pending=="drawAccept")86f else 31f),color("#93476E"))
+      postInvalidateDelayed(110L,l.toInt(),(top+ph-dp(122f)).toInt(),(l+pw).toInt(),(top+ph).toInt())
     }
   }
   private fun h():Float = height.toFloat()
@@ -587,6 +611,12 @@ internal class XiangqiNativeBoardView(
     val status=if(awaitingPlay)"Chờ xác nhận sẵn sàng" else if(awaitingColors)"Đợi xác nhận màu quân" else "Đang sắp xếp bàn cờ"
     text(c,"●  $status   ${clock(deadline)}",center,statusTop+dp(26f),11f,color("#95517B"),true,true)
   }
+  private fun submitDecision(action: String, gameId: String) {
+    if(localActionInFlight != null || state?.actionPending?.isNotBlank() == true)return
+    localActionInFlight=action
+    invalidate() // visible immediately, before Socket and JS processing
+    onAction(action,gameId)
+  }
   override fun onTouchEvent(event:MotionEvent):Boolean{
     if(event.action!=MotionEvent.ACTION_UP)return true
     val s=state?:return true
@@ -604,20 +634,20 @@ internal class XiangqiNativeBoardView(
       val panelH=if(mine)dp(265f) else dp(316f)
       val top=(height-panelH)/2f
       if(mine) {
-        if(y >= top+panelH-dp(76f) && y<=top+panelH-dp(12f))onAction("drawDecline",s.gameId)
+        if(y >= top+panelH-dp(76f) && y<=top+panelH-dp(12f))submitDecision("drawDecline",s.gameId)
       } else {
-        if(y>=top+panelH-dp(122f) && y<=top+panelH-dp(65f))onAction("drawAccept",s.gameId)
-        else if(y>=top+panelH-dp(64f) && y<=top+panelH)onAction("drawDecline",s.gameId)
+        if(y>=top+panelH-dp(122f) && y<=top+panelH-dp(65f))submitDecision("drawAccept",s.gameId)
+        else if(y>=top+panelH-dp(64f) && y<=top+panelH)submitDecision("drawDecline",s.gameId)
       }
       return true
     }
     if(s.status=="active" && y>=boardBottom+dp(123f) && y<=boardBottom+dp(178f)) {
       val now=SystemClock.elapsedRealtime()
       if(x<width/2f) {
-        if(now<drawOfferConfirmUntil){drawOfferConfirmUntil=0L;onAction("drawOffer",s.gameId)}
+        if(now<drawOfferConfirmUntil){drawOfferConfirmUntil=0L;submitDecision("drawOffer",s.gameId)}
         else {drawOfferConfirmUntil=now+5000L;invalidate();postInvalidateDelayed(5100L)}
       } else {
-        if(now<resignConfirmUntil){resignConfirmUntil=0L;onAction("resign",s.gameId)}
+        if(now<resignConfirmUntil){resignConfirmUntil=0L;submitDecision("resign",s.gameId)}
         else {resignConfirmUntil=now+5000L;invalidate();postInvalidateDelayed(5100L)}
       }
       return true

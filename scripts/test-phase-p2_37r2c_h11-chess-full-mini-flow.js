@@ -64,8 +64,18 @@ check(board.includes('fun parkForMini(') && board.includes('uiHandler.removeCall
 check(native.includes('chessLayer.setBackgroundColor(Color.TRANSPARENT)') && native.includes('fullW - dp(20f)'), 'transparent arena and single 10dp geometry inset');
 check(bridge.includes('offChessInviteExpired') && bridge.includes('offChessInviteRejected') && bridge.includes('dismissPendingChessBoard'), 'global bridge dismisses unconfirmed rejected/expired invite');
 check(screen.includes('useFocusEffect(useCallback(') && screen.includes('subscribeBoardGamePresentationDiagnostics') && screen.includes('chessSocketService.on("state"'), 'hidden developer screen releases diagnostic and game listeners');
-check(serverManager.includes('r.readyUids.has(r.game.whiteUid) && r.readyUids.has(r.game.blackUid)') && serverManager.includes('if (!bothReady) return this.publicState(r)') && serverManager.includes('r.turnStartedMono = r.game.timeControl.kind === "clocked"'), 'server starts the clock only after both players are ready');
-check(native.includes('P2.37R2C-H25-native-1') && app.android.versionCode === 143039 && app.version==='1.3.29', 'new native APK identity is unique');
+// Check the READY method body only: older clock initialization methods also use
+// turnStartedMono, so a whole-file index would compare unrelated code.
+const readyMethod = serverManager.slice(serverManager.indexOf('async markReady('));
+const bothReadyIndex = readyMethod.indexOf('if (!bothReady) {');
+const clockStartIndex = readyMethod.indexOf('r.turnStartedMono = r.game.timeControl.kind === "clocked"');
+check(readyMethod.includes('r.readyUids.has(r.game.whiteUid) && r.readyUids.has(r.game.blackUid)') &&
+  readyMethod.includes('r.game.preparationPhase !== "colors"') &&
+  readyMethod.includes('!r.boardReadyUids.has(r.game.whiteUid) || !r.boardReadyUids.has(r.game.blackUid)') &&
+  bothReadyIndex >= 0 && clockStartIndex > bothReadyIndex &&
+  readyMethod.slice(bothReadyIndex, clockStartIndex).includes('return this.publicState(r);'),
+  'server starts the clock only after both boardReady and playReady phases and both players are ready');
+check(native.includes('P2.37R2C-H25-native-1') && app.android.versionCode === 143040 && app.version==='1.3.30', 'new native APK identity is unique');
 check(['Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat','Family_Bloom_CLEAN_APPLY_FULL.bat','Family_Bloom_BUILD_APK_TO_SHARE.bat','Family_Bloom_EAS_BUILD_TEST.bat','Family_Bloom_EAS_UPDATE_TEST.bat'].every(x=>fs.existsSync(path.join(root,x))), 'FULL COPY includes root BAT entrypoints');
 console.log(`H11 source+store behavioral gate ${bad?'FAIL':'PASS'} (${ok}/${ok+bad})`);
 process.exit(bad?1:0);

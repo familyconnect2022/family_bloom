@@ -122,8 +122,9 @@ function backup() {
   return {backupFolder:dest,...copy};
 }
 try {
-  if(!['check','backup','overlay','verify','remember'].includes(mode))die('Unknown command.');
+  if(!['target','check','backup','overlay','verify','remember'].includes(mode))die('Unknown command.');
   const versions=assertSafe();
+  if(mode==='target')console.log('TARGET PASS',JSON.stringify({source,target,...versions}));
   if(mode==='check') {
     // Run the SAME structure gate that CLEAN APPLY FULL will run after copying.
     // A broken release must be rejected before backup, deletion or overlay.
@@ -139,7 +140,25 @@ try {
     } catch(error) {
       die('Release source fails H25 required-file gate before update. ' + String(error.stdout || error.stderr || error.message).trim().slice(-1200));
     }
-    console.log('PREFLIGHT PASS', JSON.stringify({source,target,...versions,sourceStructure:'PASS'}));
+    // Validate moved/renamed-target recovery without ever modifying a real project.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/test-h25r2r6r1-target-reselection.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Updater moved-target regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2200));
+    }
+    // H25R2R2: P2.34 was previously checked only AFTER backing up and
+    // overlaying the user's project, leaving the update half-applied.
+    // Validate the entire source-only release contract before any mutation.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/test-h25r2r2-release-preflight.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:240000});
+    } catch(error) {
+      die('Release preflight failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-3000));
+    }
+    console.log('PREFLIGHT PASS', JSON.stringify({source,target,...versions,sourceStructure:'PASS',releasePreflight:'PASS'}));
   }
   if(mode==='backup')console.log('BACKUP PASS',JSON.stringify(backup()));
   if(mode==='overlay')console.log('OVERLAY PASS',JSON.stringify(copyTree(source,target,'overlay')));

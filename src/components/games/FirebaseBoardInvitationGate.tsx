@@ -21,7 +21,7 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
   const [records,setRecords]=useState<BoardInvitation[]>([]);
   const [seconds,setSeconds]=useState(0);
   const [foreground,setForeground]=useState(AppState.currentState==='active');
-  const [busy,setBusy]=useState(false);
+  const [busyAction,setBusyAction]=useState<'accept'|'decline'|'cancel'|null>(null);
   const [connectionMessage,setConnectionMessage]=useState('');
   const [transportError,setTransportError]=useState('');
   const timerExpired = useRef(new Set<string>());
@@ -123,10 +123,11 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
 
   const act=async(action:'accept'|'cancel'|'decline'|'expire'|'fail')=>{
     if (!chosen || pendingAction.current) return;
-    pendingAction.current=true;setBusy(true);
+    // Synchronous guard: two taps before React re-renders are still one write.
+    pendingAction.current=true;setBusyAction(action==='accept'||action==='decline'||action==='cancel'?action:null);setTransportError('');
     try {await transitionFirebaseInvitation(familyId,chosen.inviteId,uid,action);}
     catch(error){setTransportError(error instanceof Error?error.message:String(error));}
-    finally{pendingAction.current=false;setBusy(false);}
+    finally{pendingAction.current=false;setBusyAction(null);}
   };
   const person=chosen?(chosen.fromUid===uid?chosen.toDisplayName:chosen.fromDisplayName):'';
   const isInviter=chosen?.fromUid===uid;
@@ -163,9 +164,9 @@ export function FirebaseBoardInvitationGate({uid,familyId,ready}:Props) {
         </View> : inMatch?<View style={styles.progressRow}><ActivityIndicator size="small" color={base}/><Text style={styles.progress}>{connectionMessage || 'Đang chuẩn bị phiên chơi…'}</Text></View>:null}
         {transportError?<Text style={styles.error}>{transportError}</Text>:null}
         {result==='PENDING' && !isInviter ? <View style={styles.actions}>
-          <Pressable disabled={busy||seconds===0} onPress={()=>void act('decline')} style={[styles.button,styles.secondary]}><Text style={styles.secondaryLabel}>Từ chối</Text></Pressable>
-          <Pressable disabled={busy||seconds===0} onPress={()=>void act('accept')} style={[styles.button,{backgroundColor:base}]}><Text style={styles.primaryLabel}>Đồng ý</Text></Pressable>
-        </View>:result==='PENDING' && isInviter?<Pressable disabled={busy} onPress={()=>void act('cancel')} style={[styles.button,styles.secondary,styles.full]}><Text style={styles.secondaryLabel}>Hủy lời mời</Text></Pressable>
+          <Pressable disabled={!!busyAction||seconds===0} onPress={()=>void act('decline')} style={[styles.button,styles.secondary]}>{busyAction==='decline'?<ActivityIndicator size='small' color='#85526A'/>:<Text style={styles.secondaryLabel}>Từ chối</Text>}</Pressable>
+          <Pressable disabled={!!busyAction||seconds===0} onPress={()=>void act('accept')} style={[styles.button,{backgroundColor:base}]}>{busyAction==='accept'?<View style={styles.busyContent}><ActivityIndicator size='small' color='#FFF'/><Text style={styles.primaryLabel}>Đang xác nhận…</Text></View>:<Text style={styles.primaryLabel}>Đồng ý</Text>}</Pressable>
+        </View>:result==='PENDING' && isInviter?<Pressable disabled={!!busyAction} onPress={()=>void act('cancel')} style={[styles.button,styles.secondary,styles.full]}>{busyAction==='cancel'?<View style={styles.busyContent}><ActivityIndicator size='small' color='#85526A'/><Text style={styles.secondaryLabel}>Đang hủy…</Text></View>:<Text style={styles.secondaryLabel}>Hủy lời mời</Text>}</Pressable>
         :done?<Pressable onPress={()=>{acknowledge.add(`${chosen?.inviteId}:${result}`);setSeconds(x=>x+0.00001);}} style={[styles.button,{backgroundColor:base},styles.full]}><Text style={styles.primaryLabel}>Đồng ý</Text></Pressable>
         :null}
       </View>
@@ -186,6 +187,7 @@ const styles=StyleSheet.create({
   progress:{fontSize:12,color:'#967087',textAlign:'center',flexShrink:1},
   error:{fontSize:11,color:'#BC5260',marginTop:10,textAlign:'center'},
   actions:{flexDirection:'row',gap:10,marginTop:19,width:'100%'},
+  busyContent:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
   button:{minHeight:46,borderRadius:16,justifyContent:'center',alignItems:'center',paddingHorizontal:15,flex:1},
   secondary:{backgroundColor:'#FFF0F6',borderWidth:1,borderColor:'#EED5E0'},
   full:{marginTop:20,width:'100%',flex:0},

@@ -23,7 +23,7 @@ const drawableDir = path.join(root, 'modules/family-bloom-overlay/android/src/ma
 const pieceFiles = ['wk','wq','wr','wb','wn','wp','bk','bq','br','bb','bn','bp'].map((x) => `${x}.png`);
 
 check(mod.version === '1.3.18' && native.includes('P2.37R2C-H25-native-1'), 'native module identity is current H9B / 1.3.14');
-check(app.expo.version === '1.3.29' && app.expo.android.versionCode === 143039, 'app identity stays 1.3.29 / 143039');
+check(app.expo.version === '1.3.30' && app.expo.android.versionCode === 143040, 'app identity stays 1.3.30 / 143040');
 check(pieceFiles.every((f) => fs.existsSync(path.join(drawableDir, f))), 'all 12 Chess PNG pieces are bundled in native module');
 // Event additions are additive: H22 registers a separate Xiangqi event without changing Chess.
 // Check the actual Chess contract rather than a hard-coded complete Events(...) string.

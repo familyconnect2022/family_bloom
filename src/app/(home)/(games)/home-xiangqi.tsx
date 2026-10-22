@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { useBloomToast } from "../../../components/ui/BloomToast";
 import { useAuth } from "../../../context/AuthContext";
@@ -31,6 +31,9 @@ export default function XiangqiFamilyLobby() {
   const [sendingUid,setSendingUid]=useState<string|null>(null);
   const [selectedControl,setSelectedControl]=useState("10+0");
   const [recovering,setRecovering]=useState(false);
+  // Refs latch in the same JS tick, before React can paint the busy state.
+  const sendingRef=useRef<string|null>(null);
+  const recoveringRef=useRef(false);
   const alive=useRef(true);
   const familyId=activeFamilyId ?? "";
   const options=XIANGQI_TIME_CONTROLS;
@@ -56,12 +59,12 @@ export default function XiangqiFamilyLobby() {
   },[familyId,user?.uid,showToast]));
 
   const invitePlayer=async(toUid:string)=>{
-    if(!familyId || !online || sendingUid)return;
+    if(!familyId || !online || sendingRef.current)return;
     const player=players.find(p=>p.uid===toUid);
     if(!player || slots[toUid])return;
     const surface=getBoardGamePresentationSnapshot();
     if(surface.activeGameId){showToast({title:"Đang có ván cờ",message:"Hãy trở lại ván đang mở trước khi mời người khác.",type:"warning"});return;}
-    setSendingUid(toUid);
+    sendingRef.current=toUid;setSendingUid(toUid);
     try{
       await createFirebaseInvitation({
         familyId,gameKind:"xiangqi",fromUid:user!.uid,toUid,
@@ -71,12 +74,12 @@ export default function XiangqiFamilyLobby() {
       // Global XiangqiChallengeGate owns the authoritative 60s countdown + cancel.
       showToast({title:"Đã gửi lời thách đấu",message:`Đang chờ ${player.shortName||player.displayName} trả lời trong 60 giây.`,duration:3500});
     }catch(e){showToast({title:"Không gửi được lời mời",message:e instanceof Error?e.message:String(e),type:"warning",duration:4500});}
-    finally{if(alive.current)setSendingUid(null);}
+    finally{sendingRef.current=null;if(alive.current)setSendingUid(null);}
   };
 
   const resume=async()=>{
-    if(!familyId || recovering)return;
-    setRecovering(true);
+    if(!familyId || recoveringRef.current)return;
+    recoveringRef.current=true;setRecovering(true);
     try{
       const response=await xiangqiSocketService.emitAck<{kind:string;gameId?:string;gameKind?:string}>(XIANGQI_EVENTS.sessionRecover,{familyId},20_000);
       if(!response.ok)throw new Error(response.errorCode);
@@ -89,7 +92,7 @@ export default function XiangqiFamilyLobby() {
       else if(response.data.kind==="busy_other_game"){showToast({title:"Đang có ván ở trò khác",message:"Hãy kết thúc hoặc thu nhỏ ván đang chơi trước nhé."});}
       else showToast({title:"Sảnh đã sẵn sàng",message:"Chọn thành viên gia đình để gửi lời mời."});
     }catch(e){showToast({title:"Chưa khôi phục được",message:e instanceof Error?e.message:String(e),type:"warning"});}
-    finally{if(alive.current)setRecovering(false);}
+    finally{recoveringRef.current=false;if(alive.current)setRecovering(false);}
   };
 
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={PALETTE.background}>
@@ -119,8 +122,8 @@ export default function XiangqiFamilyLobby() {
         <Text style={styles.description}>Danh sách thành viên từ Firebase. Có thể mời dù đối phương chưa mở ứng dụng; thời hạn phản hồi là 60 giây.</Text>
         {memberError?<Text style={styles.empty}>Không tải được danh sách tài khoản. Hãy kiểm tra quyền gia đình.</Text>:null}
         {loadingMembers?<Text style={styles.empty}>Đang lấy danh sách thành viên…</Text>:players.length===0?<Text style={styles.empty}>Chưa có tài khoản người thân khác trong gia đình.</Text>:
-          players.map(person=><ArenaPlayerRow key={person.uid} member={person} presence={slots[person.uid]?"busy":undefined} inviteWithoutPresence theme={PALETTE} waiting={sendingUid!==null||!online} onChallenge={()=>void invitePlayer(person.uid)}/>)}
-        <Pressable onPress={()=>void resume()} disabled={recovering} style={[styles.resume,{borderColor:PALETTE.border}]}><Ionicons name="refresh-circle-outline" color={PALETTE.primary} size={23}/><Text style={[styles.resumeText,{color:PALETTE.deep}]}>{recovering?"Đang tìm ván cũ…":"Tiếp tục ván đang chơi"}</Text><Ionicons name="arrow-forward" size={17} color={PALETTE.primary}/></Pressable>
+          players.map(person=><ArenaPlayerRow key={person.uid} member={person} presence={slots[person.uid]?"busy":undefined} inviteWithoutPresence theme={PALETTE} waiting={sendingUid!==null||!online} sending={sendingUid===person.uid} onChallenge={()=>void invitePlayer(person.uid)}/>)}
+        <Pressable onPress={()=>void resume()} disabled={recovering} style={[styles.resume,{borderColor:PALETTE.border}]}>{recovering?<ActivityIndicator size="small" color={PALETTE.primary}/>:<Ionicons name="refresh-circle-outline" color={PALETTE.primary} size={23}/>}<Text style={[styles.resumeText,{color:PALETTE.deep}]}>{recovering?"Đang tìm ván cũ…":"Tiếp tục ván đang chơi"}</Text><Ionicons name="arrow-forward" size={17} color={PALETTE.primary}/></Pressable>
         <View style={[styles.panel,{borderColor:PALETTE.border}]}><Text style={styles.sectionEyebrow}>CÁCH CHƠI CÙNG NHAU</Text>
           <ArenaRuleLine icon="people-outline" theme={PALETTE}>Mời thành viên gia đình qua Firebase, không cần họ đang online.</ArenaRuleLine>
           <ArenaRuleLine icon="notifications-outline" theme={PALETTE}>Người nhận có 60 giây để đồng ý hoặc từ chối.</ArenaRuleLine>

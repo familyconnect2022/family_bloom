@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { FamilyMember } from "../../types";
 
 export type ArenaPalette = { primary: string; deep: string; background: string; surface: string; pale: string; border: string };
@@ -17,8 +17,8 @@ export function memberPresenceText(status: ArenaPresence): string {
     case "reconnecting": return "Đang kết nối lại";
     default: return "Hiện không online"; }
 }
-export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting, inviteWithoutPresence=false }: {
-  member: FamilyMember; presence: ArenaPresence; theme: ArenaPalette; onChallenge: () => void; waiting: boolean; inviteWithoutPresence?: boolean;
+export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting, sending=false, inviteWithoutPresence=false }: {
+  member: FamilyMember; presence: ArenaPresence; theme: ArenaPalette; onChallenge: () => void; waiting: boolean; sending?: boolean; inviteWithoutPresence?: boolean;
 }) {
   const active = inviteWithoutPresence ? presence !== "busy" && presence !== "in_game" : mayChallengeMember(presence);
   const title = names(member);
@@ -30,9 +30,9 @@ export function ArenaPlayerRow({ member, presence, theme, onChallenge, waiting, 
     </View>
     <View style={styles.personText}><Text style={styles.personName} numberOfLines={1}>{title}</Text><Text style={styles.personStatus} numberOfLines={1}>{inviteWithoutPresence && !presence ? "Có thể gửi lời mời · không cần online" : memberPresenceText(presence)}</Text></View>
     <Pressable accessibilityRole="button" accessibilityLabel={`Thách đấu ${title}`} disabled={!active || waiting} onPress={onChallenge}
-      style={({pressed})=>[styles.inviteButton,{backgroundColor:active?theme.primary:"#F0ECED", opacity:waiting?0.5:pressed?0.75:1}]}>
-      <Ionicons name={active?"flash":"lock-closed-outline"} size={14} color={active?"#FFFFFF":"#9D959A"}/>
-      <Text style={[styles.inviteText,{color:active?"#FFFFFF":"#958D94"}]}>{active?"Mời đấu":"Đang bận"}</Text>
+      style={({pressed})=>[styles.inviteButton,{backgroundColor:active?theme.primary:"#F0ECED", opacity:waiting&&!sending?0.5:pressed?0.75:1}]}>
+      {sending ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name={active?"flash":"lock-closed-outline"} size={14} color={active?"#FFFFFF":"#9D959A"}/>}
+      <Text style={[styles.inviteText,{color:active?"#FFFFFF":"#958D94"}]}>{sending?"Đang gửi…":active?"Mời đấu":"Đang bận"}</Text>
     </Pressable>
   </View>;
 }

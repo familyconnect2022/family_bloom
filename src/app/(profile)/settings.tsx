@@ -44,6 +44,8 @@ export default function SettingsScreen(){
       {showDeveloperTools&&<View style={styles.section}>
         <BloomSectionHeader title="Công cụ phát triển" subtitle="Chỉ hiện cho tài khoản nội bộ của Family Bloom"/>
         <BloomCard style={styles.listCard}>
+          <SettingRow accent icon="cloud-outline" title="Bloom Cloud Manager" caption="Kiểm tra Cloudinary Family và nguồn học liệu, không chuyển quota" onPress={()=>router.push('/cloud-manager' as never)}/>
+          <View style={styles.divider}/>
           <SettingRow accent icon="flask-outline" title="Kiểm thử & chẩn đoán" caption="Hiệu năng, thông báo Android và công cụ game — chỉ chạy khi bạn chủ động bấm" onPress={()=>router.push('/developer-tools' as never)}/>
         </BloomCard>
       </View>}

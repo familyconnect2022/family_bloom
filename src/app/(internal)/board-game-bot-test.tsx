@@ -66,7 +66,7 @@ type XiangqiRecovery =
 
 type RecoveryResolution = "active" | "pending_same" | "busy_other" | "finished_unseen" | "none";
 
-const EXPECTED_ANDROID_VERSION_CODE = "143039";
+const EXPECTED_ANDROID_VERSION_CODE = "143040";
 const EXPECTED_NATIVE_IDENTITY = "P2.37R2C-H25-native-1";
 
 const BOT_ACCEPT_RECONCILE_MS = 1_650;

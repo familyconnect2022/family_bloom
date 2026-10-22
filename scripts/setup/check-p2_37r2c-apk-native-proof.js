@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 
-const EXPECTED_VERSION_CODE = '143039';
+const EXPECTED_VERSION_CODE = '143040';
 const EXPECTED_PACKAGE = 'com.familybloom.android';
 const EXPECTED_IDENTITY = 'P2.37R2C-H25-native-1';
 

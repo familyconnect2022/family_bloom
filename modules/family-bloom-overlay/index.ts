@@ -43,7 +43,7 @@ export type NativeXiangqiBoardState = {
   lastFrom:{col:number;row:number}|null; lastTo:{col:number;row:number}|null;
   selectedPieceId:string|null; legalTargets:Array<{col:number;row:number}>;
   captureTargets:Array<{col:number;row:number}>; redRemainingMs:number|null;blackRemainingMs:number|null;
-  serverNowMs:number;canMove:boolean;movePending:boolean;opponentLabel:string;meLabel:string;opponentAvatarUrl:string|null;meAvatarUrl:string|null;myUid:string|null;drawOfferByUid:string|null;waitingMessage:string;
+  serverNowMs:number;canMove:boolean;movePending:boolean;actionPending?:string;actionError?:string;opponentLabel:string;meLabel:string;opponentAvatarUrl:string|null;meAvatarUrl:string|null;myUid:string|null;drawOfferByUid:string|null;waitingMessage:string;
   waitingRemainingMs:number|null;result:"red"|"black"|"draw"|null;finishReason:string|null;
   canPremove:boolean;premoveTarget:{col:number;row:number}|null;soundCue:string;soundToken:number;
 };
@@ -75,6 +75,10 @@ export type NativeChessBoardState = {
   soundToken: number;
   serverNowMs: number;
   movePending: boolean;
+  /** In-flight server mutation for native loading; never a predicted result. */
+  actionPending?: string;
+  actionError?: string;
+  actionCompleted?: string;
   readyPending: boolean;
   waitingForMe: boolean;
   whiteRemainingMs: number | null;

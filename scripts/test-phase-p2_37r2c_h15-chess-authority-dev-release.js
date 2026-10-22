@@ -43,7 +43,7 @@ if(beforePin===undefined)delete process.env.FAMILY_BLOOM_DEVELOPER_UID;else proc
 const gate=moduleFromTS(priv);
 check(gate.isVerifiedDeveloperAccount({uid:'u1',email:'Huynh235@Gmail.Com',emailVerified:true}) && !gate.isVerifiedDeveloperAccount({uid:'u2',email:'friend@gmail.com',emailVerified:true}) && !gate.isVerifiedDeveloperAccount({uid:'u1',email:'huynh235@gmail.com',emailVerified:false}), 'Release UI shows tests for exact verified Firebase account only');
 check(kotlin.includes('"victory" -> {') && kotlin.includes('"draw" -> {') && kotlin.includes('"loss" -> {') && kotlin.includes('"#FFE1A3"') && kotlin.includes('"#C9E6FA"') && kotlin.includes('"#DAEBD7"'), 'Win/draw/loss have visibly distinct Kotlin background palettes');
-check(app.expo.android.versionCode===143039 && rd('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'), 'H15 Android and native identities synchronized');
+check(app.expo.android.versionCode===143040 && rd('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt').includes('P2.37R2C-H25-native-1'), 'H15 Android and native identities synchronized');
 
 const initial='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const afterWhite='rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
@@ -58,6 +58,7 @@ class ChessMock{
 }
 const base={gameId:'H15-test',familyId:'f',whiteUid:'bot',blackUid:'me',testBotUid:'bot',status:'active',fen:initial,turn:'w',revision:1,ply:0,whiteRemainingMs:600000,blackRemainingMs:600000,serverNowMs:100};
 const game=moduleFromTS(controller,{
+ 'react-native':{AppState:{currentState:'active',addEventListener:()=>({remove(){}})}},
  'chess.js':{Chess:ChessMock},'@react-native-firebase/auth':{getAuth:()=>({currentUser:{uid:'me'}})},
  '../../types/chess':{CHESS_ERROR_COPY:{},CHESS_EVENTS:{gameMove:'move',gameResync:'resync'},applyChessMoveDelta:(s,d)=>({...s,fen:d.fen,turn:d.turn,revision:d.version,ply:d.ply,lastMove:d.move})},
  '../chess/chessSocketService':{chessSocketService:{emitAck:async(e,p)=>{emitted.push({e,p});return {ok:false,errorCode:'CHESS_NOT_YOUR_TURN'};}}},

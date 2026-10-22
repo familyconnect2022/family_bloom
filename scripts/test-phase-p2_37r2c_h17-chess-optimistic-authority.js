@@ -46,6 +46,9 @@ function makeChessHarness(uid='me') {
   const mod = {exports:{}};
   const js = ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const stub = key => {
+    // Mock the exact React Native AppState API used by the Chess controller.
+    // Never load real Android/RN modules inside a Node-only release gate.
+    if (key==='react-native') return {AppState:{currentState:'active',addEventListener:()=>({remove(){}})}};
     if (key==='chess.js') return {Chess:ChessMock};
     if (key==='@react-native-firebase/auth') return {getAuth:()=>({currentUser:{uid:uidNow}})};
     if (key==='../../types/chess') return {CHESS_ERROR_COPY:{},CHESS_EVENTS:{gameMove:'move',gameResync:'resync'},
@@ -134,7 +137,7 @@ try {
     rail.includes('state.renderSequence < (latestChessState?.renderSequence ?: 0)') && nativeState.includes('renderSequence'),
     'Older JS->Kotlin bind cannot overwrite a newer preview/confirmation');
   check(read('server/src/chess/chessGameManager.ts').includes('sourcePiece.color !== color'), 'Server color and legal move defense preserved');
-  check(read('app.json').includes('"versionCode": 143039') && rail.includes('P2.37R2C-H25-native-1'), 'H17 APK identity prevents stale H16 native install');
+  check(read('app.json').includes('"versionCode": 143040') && rail.includes('P2.37R2C-H25-native-1'), 'H17 APK identity prevents stale H16 native install');
 } catch (error) {failed++;console.error('FAIL H17 runtime',error?.stack||error);}
 console.log(`H17 client-first server-authoritative Chess: ${failed?'FAIL':'PASS'} (${passed}/${passed+failed})`);
 process.exitCode=failed?1:0;

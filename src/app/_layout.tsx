@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { BloomAppBootstrap } from "../components/system/BloomAppBootstrap";
+import { BloomInternetBanner } from "../components/system/BloomInternetBanner";
 import { DeferredFamilyPrewarm } from "../components/system/DeferredFamilyPrewarm";
 import { BoardGamePresentationRoot } from "../components/games/BoardGamePresentationRoot";
 import { FirebaseBoardInvitationGate } from "../components/games/FirebaseBoardInvitationGate";
@@ -197,6 +198,9 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsules" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule-compose" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule/[capsuleId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(home)/(learning)/learning-library" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(home)/(learning)/learning-lesson" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen name="(profile)/cloud-manager" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(games)/home-games" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(games)/home-chess" options={{ animation: BLOOM_MOTION.screen.animation }} />
       <Stack.Screen name="(home)/(games)/home-xiangqi" options={{ animation: BLOOM_MOTION.screen.animation }} />
@@ -291,6 +295,7 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
           ) : null}
         </View>
         {authenticatedGameShellReady ? <BoardGamePresentationRoot key={`game-host:${sessionKey}`} /> : null}
+        <BloomInternetBanner />
       </GestureHandlerRootView>
     </FamilyRealtimeProvider>
   );
