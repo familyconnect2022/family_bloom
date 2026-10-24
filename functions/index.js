@@ -7,6 +7,7 @@ initializeApp();
 const db = getFirestore();
 
 const REGION = "asia-southeast1";
+const { developerIdentity, featureOn } = require("./cloudFeatureFlags");
 const ALLOWED_ROLES = new Set(["owner", "admin"]);
 const {
   PARENT_SUBTYPES,
@@ -553,6 +554,20 @@ const mutationHandlers = {
   },
 };
 
+// Small authenticated readiness handshake; safe on Spark because undeployed endpoints do not respond.
+exports.bloomCloudReadiness = onRequest({ region: REGION, cors: true, memory: "256MiB", maxInstances: 2 }, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (req.method === "OPTIONS") { res.set("Access-Control-Allow-Origin", "*"); res.set("Access-Control-Allow-Headers", "Authorization"); res.set("Access-Control-Allow-Methods", "GET, OPTIONS"); res.status(204).send(""); return; }
+  if (req.method !== "GET") { res.status(405).json({ ok: false }); return; }
+  try {
+    const token = getBearer(req);
+    if (!token) { res.status(401).json({ ok: false }); return; }
+    const decoded = await getAuth().verifyIdToken(token);
+    if (!developerIdentity(decoded)) { res.status(403).json({ ok: false }); return; }
+    res.status(200).json({ ok: true, service: "family-bloom-blaze-ready-v1" });
+  } catch { res.status(401).json({ ok: false }); }
+});
+
 exports.familyGraphMutation = onRequest({ region: REGION, cors: true, timeoutSeconds: 60, memory: "256MiB" }, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (req.method === "OPTIONS") {
@@ -567,6 +582,7 @@ exports.familyGraphMutation = onRequest({ region: REGION, cors: true, timeoutSec
     return;
   }
   try {
+    if (!(await featureOn("cloudFunctionsEnabled"))) { res.status(503).json({ ok: false, code: "GRAPH_BACKEND_UNAVAILABLE" }); return; }
     const action = requiredText(req.body?.action, "PERSON_INVALID_DATA", 80);
     const familyId = cleanFamilyId(req.body?.familyId);
     const handler = mutationHandlers[action];

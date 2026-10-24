@@ -4,6 +4,7 @@ import { CreateProfileInput, Family, FamilyMember, UserFamilyMembership, UserPro
 import { normalizeUserProfile } from "../../utils/profile";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { createFamilyCodeCandidate } from "../../utils/family";
+import { familyIntroDocId, validateFamilyIntroName } from "../../utils/familyIntroduction";
 import { AppError } from "../../types/errors";
 
 const nowIso = () => new Date().toISOString();
@@ -36,6 +37,9 @@ const createFamilyTransaction = async (
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const familyCode = createFamilyCodeCandidate(name);
     const familyCodeRef = doc(db, FIRESTORE_PATHS.familyCode(familyCode));
+    const introName = `Nhà-${familyRef.id.slice(0,10)}`;
+    const introNameKey = familyIntroDocId(introName);
+    const introNameRef = doc(db, FIRESTORE_PATHS.familyIntroName(introNameKey));
     const now = nowIso();
 
     try {
@@ -48,13 +52,15 @@ const createFamilyTransaction = async (
         );
         if (!profile) throw new AppError("USER_PROFILE_NOT_FOUND", "PROFILE");
 
-        const codeSnap = await tx.get(familyCodeRef);
-        if (codeSnap.exists()) return null;
+        const [codeSnap, introSnap] = await Promise.all([tx.get(familyCodeRef), tx.get(introNameRef)]);
+        if (codeSnap.exists() || introSnap.exists()) return null;
 
         const family: Family = {
           id: familyRef.id,
           name,
           familyCode,
+          introName,
+          introNameKey,
           ownerId: uid,
           createdAt: now,
           updatedAt: now,
@@ -76,6 +82,7 @@ const createFamilyTransaction = async (
           ownerId: uid,
           createdAt: now,
         });
+        tx.set(introNameRef, { id: introNameKey, name: introName, familyId: familyRef.id, familyName: name, ownerId: uid, createdAt: now });
         tx.set(memberRef, removeUndefinedDeep(member));
         tx.set(membershipRef, membership);
         if (existingProfile) {
@@ -128,6 +135,46 @@ export const familyService = {
       if (result) return result;
     }
     throw new AppError("FAMILY_CODE_GENERATION_FAILED", "FAMILY");
+  },
+
+  /** Only a verified family admin may reserve a new introduction name.
+   * The registry uses an atomic Firestore transaction and case-sensitive document ID.
+   * Legacy familyCode remains usable after rename; pending join requests remain untouched.
+   */
+  async updateFamilyIntroName(familyId: string, uid: string, input: string): Promise<string> {
+    const name = validateFamilyIntroName(input);
+    const db = getFirestore();
+    const key = familyIntroDocId(name);
+    const familyRef = doc(db, FIRESTORE_PATHS.family(familyId));
+    const memberRef = doc(db, FIRESTORE_PATHS.familyMember(familyId, uid));
+    const newRef = doc(db, FIRESTORE_PATHS.familyIntroName(key));
+    const legacyCodeRef = name.includes('/') ? null : doc(db, FIRESTORE_PATHS.familyCode(name));
+    try {
+      return await runTransaction(db, async tx => {
+        const [familySnap, memberSnap, newSnap, legacySnap] = await Promise.all([
+          tx.get(familyRef), tx.get(memberRef), tx.get(newRef), legacyCodeRef ? tx.get(legacyCodeRef) : Promise.resolve(null),
+        ]);
+        if (!familySnap.exists()) throw new AppError('FAMILY_NOT_FOUND', 'FAMILY');
+        const family = familySnap.data() as Family;
+        const role = memberSnap.exists() ? (memberSnap.data() as FamilyMember).role : null;
+        if (family.ownerId !== uid && role !== 'owner' && role !== 'admin') throw new Error('Chỉ quản trị viên của nhà mới được đổi tên giới thiệu.');
+        if (family.introName === name) return name;
+        if (newSnap.exists() && newSnap.data()?.familyId !== familyId) throw new Error('Tên giới thiệu này đã được nhà khác sử dụng.');
+        if (legacySnap?.exists() && legacySnap.data()?.familyId !== familyId) throw new Error('Tên giới thiệu này đã được nhà khác sử dụng.');
+        const oldKey = family.introNameKey;
+        const oldRef = oldKey && oldKey !== key ? doc(db, FIRESTORE_PATHS.familyIntroName(oldKey)) : null;
+        const oldSnap = oldRef ? await tx.get(oldRef) : null;
+        const now = nowIso();
+        if (!newSnap.exists()) tx.set(newRef, { id: key, name, familyId, familyName: family.name, ownerId: family.ownerId, createdAt: now });
+        tx.update(familyRef, { introName: name, introNameKey: key, updatedAt: now });
+        if (oldRef && oldSnap?.exists() && oldSnap.data()?.familyId === familyId) tx.delete(oldRef);
+        return name;
+      });
+    } catch (error) {
+      const code = String((error as { code?: string })?.code || '').toLowerCase();
+      if (code.includes('permission-denied')) throw new Error('Không thể đổi tên. Hãy kiểm tra quyền admin và triển khai Firestore Rules mới.');
+      throw error;
+    }
   },
 
   async createFamilyWithOwner(uid: string, input: CreateProfileInput): Promise<UserProfile> {

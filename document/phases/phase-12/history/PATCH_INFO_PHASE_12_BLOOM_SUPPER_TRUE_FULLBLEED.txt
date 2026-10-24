@@ -23,7 +23,7 @@ Thay đổi chính
 - Feed/Event cards được bọc inset riêng để không dính cạnh.
 
 3) Regression guard
-- scripts/test-phase12-bloom-supper-fullbleed.js
+- scripts/tests/history/test-phase12-bloom-supper-fullbleed.js
 - Kiểm tra mọi ScreenContainer edgeToEdgeTop đều có edgeToEdgeHorizontal.
 - Kiểm tra 3 tab không còn heroBleed shim.
 - Kiểm tra BloomHeroHeader tách artwork full-bleed và inner readable padding.

@@ -56,7 +56,10 @@ secrets/
 .secrets/
 
 # IMPORTANT for Family Bloom:
-# google-services.json is intentionally NOT ignored because the Android build expects it in source.
+# Bao mat: khong dua cau hinh Firebase Android cua nguoi dung len Git.
+# File van phai ton tai tai root project luc build; .easignore duoc quan ly rieng.
+/google-services.json
+/android/app/google-services.json
 # iOS Firebase/native config is intentionally not shipped in the Android/Web project.
 
 # ------------------------------------------------------------

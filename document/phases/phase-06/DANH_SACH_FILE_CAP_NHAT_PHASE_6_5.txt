@@ -6,7 +6,7 @@ NEW
 src/components/familyGraph/FamilyPersonMultiPicker.tsx
 src/hooks/family/useFamilyPersonDirectory.ts
 src/hooks/family/useFamilyPersonIntegrations.ts
-scripts/test-familyGraphPhase65.js
+scripts/tests/features/test-familyGraphPhase65.js
 document/phases/phase-06/PHASE_6_5_PERSON_EXPERIENCE_FAMILY_INTEGRATION.md
 document/phases/phase-06/BUILD_CHECK_REPORT_PHASE_6_5.txt
 document/phases/phase-06/DANH_SACH_FILE_CAP_NHAT_PHASE_6_5.txt

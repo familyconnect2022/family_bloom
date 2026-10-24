@@ -1,6 +1,7 @@
 import { limit,orderBy,where } from "firebase/firestore";
 import { useEffect,useMemo,useState } from "react";
 import { BLOOM_RECIPES_V1 } from "../../data/kitchen/bloomRecipesV1";
+import { ENABLE_FAMILY_BULLETIN } from "../../constants/featureFlags";
 import { useWebAuth } from "../context/WebAuthContext";
 import { useWebFamily } from "../context/WebFamilyContext";
 import { useWebCollection } from "../hooks/useWebCollection";
@@ -17,19 +18,22 @@ type FundSummary={balanceVnd?:number;totalIncomeVnd?:number;totalExpenseVnd?:num
 type FundTx={id:string;type?:"income"|"expense";amountVnd?:number;category?:string;note?:string;occurredOn?:string;createdByName?:string};
 type KitchenPref={tags?:string[]};
 type Section="feed"|"games"|"fund"|"whisper"|"poll"|"kitchen"|"capsule";
-const SECTIONS:Array<{key:Section;label:string;icon:string}>=[{key:"feed",label:"Bảng tin",icon:"☀"},{key:"games",label:"Trò chơi",icon:"♟"},{key:"fund",label:"Quỹ",icon:"₫"},{key:"whisper",label:"Thì thầm",icon:"☁"},{key:"poll",label:"Cùng quyết định",icon:"✓"},{key:"kitchen",label:"Bếp",icon:"⌂"},{key:"capsule",label:"Hộp thời gian",icon:"🎁"}];
+const SECTIONS:Array<{key:Section;label:string;icon:string}>=[
+ ...(ENABLE_FAMILY_BULLETIN ? [{key:"feed" as const,label:"Bảng tin",icon:"☀"}] : []),
+ {key:"games",label:"Trò chơi",icon:"♟"},{key:"fund",label:"Quỹ",icon:"₫"},{key:"poll",label:"Cùng quyết định",icon:"✓"},{key:"whisper",label:"Thì thầm",icon:"☁"},{key:"kitchen",label:"Bếp",icon:"⌂"},{key:"capsule",label:"Hộp thời gian",icon:"🎁"}
+];
 const EMOJI:Record<string,string>={heart:"❤️",love:"🥰",smile:"😊",touched:"🥹",sad:"😢",hug:"🤗",thanks:"🙏",laugh:"😂",flower:"🌸",sparkles:"✨"};
 export default function PlayWebPage(){
- const auth=useWebAuth();const f=useWebFamily();const familyId=f.activeFamilyId;const uid=auth.user?.uid||"";const name=f.profile?.displayName||auth.user?.displayName||"Thành viên";const [section,setSection]=useState<Section>("feed");
+ const auth=useWebAuth();const f=useWebFamily();const familyId=f.activeFamilyId;const uid=auth.user?.uid||"";const name=f.profile?.displayName||auth.user?.displayName||"Thành viên";const [section,setSection]=useState<Section>(ENABLE_FAMILY_BULLETIN ? "feed" : "games");
  const whisperQ=useMemo(()=>uid?[where("viewerUids","array-contains",uid),orderBy("createdAt","desc"),limit(30)]:[],[uid]);const whispers=useWebCollection<Whisper>(familyId&&uid?`families/${familyId}/homeWhispers`:null,whisperQ);
  const pollQ=useMemo(()=>uid?[where("eligibleUids","array-contains",uid),limit(40)]:[],[uid]);const polls=useWebCollection<Poll>(familyId&&uid?`families/${familyId}/homePolls`:null,pollQ);
  const capRecvQ=useMemo(()=>uid?[where("recipientUids","array-contains",uid),limit(50)]:[],[uid]);const capMineQ=useMemo(()=>uid?[where("createdByUid","==",uid),limit(50)]:[],[uid]);const capRecv=useWebCollection<Capsule>(familyId&&uid?`families/${familyId}/homeTimeCapsules`:null,capRecvQ);const capMine=useWebCollection<Capsule>(familyId&&uid?`families/${familyId}/homeTimeCapsules`:null,capMineQ);const capsules=useMemo(()=>Array.from(new Map([...capRecv.items,...capMine.items].map(x=>[x.id,x])).values()).sort((a,b)=>ts(b.createdAt)-ts(a.createdAt)),[capMine.items,capRecv.items]);
  const fund=useWebDocument<FundSummary>(familyId?`families/${familyId}/homeFundMeta/summary`:null);const fundQ=useMemo(()=>[orderBy("occurredOn","desc"),limit(30)],[]);const fundRows=useWebCollection<FundTx>(familyId?`families/${familyId}/homeFundTransactions`:null,fundQ);const pref=useWebDocument<KitchenPref>(familyId&&uid?`families/${familyId}/homeKitchenPreferences/${uid}`:null);
  return <WebPage eyebrow="NHÀ MÌNH" title="Nơi Nhà Mình cùng chơi, cùng bàn và cùng giữ những điều riêng" subtitle="Thì thầm một lời, cùng quyết định, nấu một món ngon, góp vào Quỹ hay rủ nhau chơi một ván cờ." >
   <DataError message={whispers.error||polls.error||capRecv.error||capMine.error||fund.error||fundRows.error||pref.error}/>
-  <div style={topRows}>{SECTIONS.slice(0,3).map((x,i)=><button key={x.key} style={{...topCard,background:["#fde9ef","#f4efff","#fff1df"][i],...(section===x.key?topActive:null)}} onClick={()=>setSection(x.key)}><span style={topIcon}>{x.icon}</span><div><b>{x.label}</b><div style={muted}>{x.key==="feed"?`${whispers.items.length+polls.items.length} cập nhật`:x.key==="games"?"6 trò gia đình":money(fund.data?.balanceVnd||0)}</div></div><span style={{marginLeft:"auto"}}>›</span></button>)}</div>
+  <div style={topRows}>{SECTIONS.slice(0,3).map((x,i)=><button key={x.key} style={{...topCard,background:["#fde9ef","#f4efff","#fff1df"][i],...(section===x.key?topActive:null)}} onClick={()=>setSection(x.key)}><span style={topIcon}>{x.icon}</span><div><b>{x.label}</b><div style={muted}>{x.key==="feed"?`${whispers.items.length+polls.items.length} cập nhật`:x.key==="games"?"6 trò gia đình":x.key==="poll"?"Cùng lựa chọn":money(fund.data?.balanceVnd||0)}</div></div><span style={{marginLeft:"auto"}}>›</span></button>)}</div>
   <div style={rail}>{SECTIONS.map(x=><button className="bloom-chip" data-active={section===x.key} key={x.key} onClick={()=>setSection(x.key)}>{x.icon} {x.label}</button>)}</div>
-  {section==="feed"?<Feed whispers={whispers.items} polls={polls.items} capsules={capsules} uid={uid} onGo={setSection}/>:null}
+  {ENABLE_FAMILY_BULLETIN && section==="feed"?<Feed whispers={whispers.items} polls={polls.items} capsules={capsules} uid={uid} onGo={setSection}/>:null}
   {section==="games"?<Games/>:null}
   {section==="fund"?<Fund familyId={familyId} uid={uid} name={name} summary={fund.data} rows={fundRows.items}/>:null}
   {section==="whisper"?<Whispers familyId={familyId} uid={uid} name={name} members={f.members} items={whispers.items}/>:null}

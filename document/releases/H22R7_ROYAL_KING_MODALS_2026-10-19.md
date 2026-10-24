@@ -13,7 +13,7 @@ Ngày 19/10/2026. Nền H22R6 FULL. Bản H22R7 là **FULL CODE** độc lập, 
 
 ## Kiểm tra tự động (không phải chạy trên máy Android)
 
-- Kiểm tra mới `node scripts/test-h22r7-royal-bloom-modals.cjs`: **20/20 PASS**. Hard gate trong cả `Build & Share` và EAS helper.
+- Kiểm tra mới `node scripts/tests/release/test-h22r7-royal-bloom-modals.cjs`: **20/20 PASS**. Hard gate trong cả `Build & Share` và EAS helper.
 - Bộ hồi quy từ H22R6: 19/19 suite PASS, gồm Xiangqi parity 26/26, bot invite 10/10, source imports, TS syntax 299/299, Gradle-resource names, native identity and Build & Share BAT CRLF.
 - Định danh hiện rõ trong tài khoản developer test giúp xác nhận APK đúng `143035 / P2.37R2C-H22R7-native-1`.
 - **Chưa biên dịch Gradle APK và chưa có test tương tác thực tế trên máy Android** trong môi trường này. Test nguồn/cú pháp Kotlin bằng kiểm tra tĩnh không phải xác nhận build Kotlin thành công.

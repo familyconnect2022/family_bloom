@@ -14,7 +14,7 @@ firestore.rules
 functions/index.js
 functions/pushNotifications.js
 package.json
-scripts/test-phase14c-home-functional-v1.js
+scripts/tests/history/test-phase14c-home-functional-v1.js
 src/app/(tabs)/play.tsx
 src/app/(home)/(kitchen)/home-kitchen/[recipeId].tsx
 src/app/(home)/(kitchen)/home-kitchen/index.tsx

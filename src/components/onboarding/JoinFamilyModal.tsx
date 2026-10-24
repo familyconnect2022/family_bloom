@@ -21,7 +21,7 @@ export function JoinFamilyModal({ visible, dismissWelcome }: { visible: boolean;
   const handleSubmit = async () => {
     if (!user || !userProfile || loading) return;
     if (!familyId.trim()) {
-      showToast({ type: "warning", title: "Mình còn thiếu mã nhà", message: "Nhập mã người thân gửi cho bạn rồi thử lại nhé." });
+      showToast({ type: "warning", title: "Mình còn thiếu tên giới thiệu", message: "Nhập đúng tên giới thiệu mà người thân đã chia sẻ nhé." });
       return;
     }
     setLoading(true);
@@ -51,8 +51,8 @@ export function JoinFamilyModal({ visible, dismissWelcome }: { visible: boolean;
             </>
           ) : (
             <>
-              <Text style={styles.body}>Nhập mã nhà người thân gửi cho bạn. Một lời nhắn nhỏ sẽ giúp cả nhà nhận ra bạn nhanh hơn.</Text>
-              <BloomTextInput label="Mã nhà" value={familyId} onChangeText={setFamilyId} autoCapitalize="none" autoCorrect={false} placeholder="Mã nhà của bạn 🌸" leftIcon="key-outline" />
+              <Text style={styles.body}>Nhập đúng tên giới thiệu của nhà, bao gồm chữ hoa, chữ thường, dấu tiếng Việt và ký hiệu. Một lời nhắn nhỏ sẽ giúp gia đình nhận ra bạn nhanh hơn.</Text>
+              <BloomTextInput label="Tên giới thiệu của nhà" value={familyId} onChangeText={setFamilyId} autoCapitalize="none" autoCorrect={false} placeholder="Ví dụ: Nhà Bắp 🌷" leftIcon="key-outline" />
               <BloomTextInput label="Lời nhắn (không bắt buộc)" value={message} onChangeText={setMessage} placeholder="Ví dụ: Mình là con của cô Lan…" multiline leftIcon="chatbubble-ellipses-outline" helperText="Chỉ cần một câu thân quen là đủ." />
               <BloomButton title={loading ? "Đang gửi lời…" : "Gửi lời xin vào nhà"} onPress={handleSubmit} disabled={loading} customStyle={styles.button} />
               {loading && <ActivityIndicator color={COLORS.primary} style={styles.loader} />}

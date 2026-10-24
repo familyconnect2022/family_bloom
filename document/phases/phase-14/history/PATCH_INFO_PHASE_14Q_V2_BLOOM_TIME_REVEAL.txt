@@ -19,7 +19,7 @@ Main changes
 
 Files replaced/added by this patch
 - src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx
-- scripts/test-phase14q-time-capsule-reveal.js
+- scripts/tests/history/test-phase14q-time-capsule-reveal.js
 - document/phases/phase-14/time-capsule/PHASE_14Q_V2_BLOOM_TIME_REVEAL_REDESIGN.md
 - PHASE_14Q_V2_DEVICE_CHECKLIST.txt
 - PHASE_14Q_V2_VALIDATION_REPORT.txt

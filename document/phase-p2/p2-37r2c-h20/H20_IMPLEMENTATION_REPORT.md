@@ -13,7 +13,7 @@
 4. App/native identity bumped and verifier + BAT identity strings synchronized; Build & Share and CLEAN APPLY include `chess:h20:check`. No gameplay server, schema, auth, or Xiangqi rules changes.
 
 ## Verification in this environment
-- `scripts/test-phase-p2_37r2c_h20-mini-premove-isolation.js`: executable controller replay and source-isolation checks, 16/16 PASS.
+- `scripts/tests/history/test-phase-p2_37r2c_h20-mini-premove-isolation.js`: executable controller replay and source-isolation checks, 16/16 PASS.
 - H10, H12, H14, H16, H17, H18, H19 suite results: PASS.
 - Source import graph and TypeScript transpile: PASS.
 - H14R1 build BAT gate, native package preflight, FULL source integrity gate: PASS.

@@ -10,7 +10,7 @@ Build & Share stopped at `Build entrypoint audit: FAIL (36 BAT files)` before Gr
 - `scripts/setup/check-build-entrypoints.js`: continue strict CRLF, `npm run` and `node *.js` validation for ALL canonical BAT entrypoints. A missing or invalid canonical entrypoint still FAILS the build.
 - Unknown BATs are reported by exact relative path as `WARN UNMANAGED BAT`, not executed or trusted; they no longer block a build of the official entrypoints merely because they exist in an overlay directory. No files are deleted.
 - When a canonical BAT fails the audit, repeat all `FAIL` diagnostics at the bottom before `Build entrypoint audit: FAIL` so that the first error is visible even in the last console screen.
-- Run the H14R1 fixture test as part of `CLEAN APPLY FULL` and release APK build: `node scripts/test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js`.
+- Run the H14R1 fixture test as part of `CLEAN APPLY FULL` and release APK build: `node scripts/tests/history/test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js`.
 - Updated H14R1 label for Build & Share. **NO app runtime, Kotlin, Firebase, server or app identity changes** from H14; same `versionCode 143024`.
 
 ## Applying H14R1 to the existing Windows project

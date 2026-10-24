@@ -98,7 +98,7 @@ export class ChessGameManager {
       fen: chess.fen(), pgn: chess.pgn(), turn: "w", revision: 1,
       whiteRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
-      timeControl, awayBudgetByUid: {}, readyUids: [], preparationPhase: options?.testBotUid ? "board" : "colors", result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
+      timeControl, awayBudgetByUid: {}, readyUids: [], preparationPhase: "board", result: null, finishReason: null, lastMove: null, drawOfferByUid: null,
       recentRequestIds: [...new Set([...(createRequestId ? [createRequestId] : []), ...(options?.additionalRequestIds ?? [])])].slice(-24), testBotUid: options?.testBotUid ?? null, isTestGame: !!options?.testBotUid, createdAt: now, startedAt: null, endedAt: null, updatedAt: now,
     };
     await this.persistence.createWithLocks(game);
@@ -107,7 +107,7 @@ export class ChessGameManager {
       chess,
       turnStartedMono: null,
       connectedUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
-      boardReadyUids: new Set(options?.testBotUid ? [options.testBotUid] : [whiteUid,blackUid]),
+      boardReadyUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
       readyUids: new Set(options?.testBotUid ? [options.testBotUid] : []),
       captures: emptyCaptureSummary(),
       boardAwayByUid: new Map(),

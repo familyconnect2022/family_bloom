@@ -13,7 +13,7 @@ src/types/familyGraphQuery.ts
 src/types/index.ts
 
 TEST / DEV:
-scripts/test-familyGraphQueryEngine.js
+scripts/tests/features/test-familyGraphQueryEngine.js
 scripts/benchmark-familyGraphPhase63.js
 
 DOCUMENTATION:

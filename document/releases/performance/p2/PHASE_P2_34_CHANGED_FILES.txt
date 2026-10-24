@@ -14,7 +14,7 @@ CHANGED
 
 ADDED
 - src/services/games/boardGamePresentationBridge.ts
-- scripts/test-phase-p2_34-session-presentation-bridge-stacked-views.js
+- scripts/tests/history/test-phase-p2_34-session-presentation-bridge-stacked-views.js
 - scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat
 - eas.json
 - scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat

@@ -17,7 +17,7 @@ Error: unknown mock react-native
 
 - H17, H15, H14, H13: mock AppState với `{ currentState:'active', addEventListener:()=>({remove(){}}) }` trong sandbox; không cần tải React Native thật trong Node.
 - H11: cập nhật assert kiểm tra đúng `markReady()` hai giai đoạn (both `boardReady` rồi `playReady`), bảo đảm `turnStartedMono` chỉ được thiết lập sau khi cả hai đã Ready. Bỏ đối chiếu string cũ `if (!bothReady) return ...` vốn không còn khớp do persist READY giữa các lần reconnect. Giữ kiểm tra quyền clock ở server, không bỏ test.
-- Thêm `scripts/test-h25r2r1-build-share-regression.cjs` thực thi đầy đủ H11, H13, H14, H15, H17, kiểm tra mock và kiểm tra thứ tự các BAT. Được gọi sau bước bảo đảm TypeScript ở 4 luồng: Build & Share, direct Release, EAS Build, Clean Apply.
+- Thêm `scripts/tests/release/test-h25r2r1-build-share-regression.cjs` thực thi đầy đủ H11, H13, H14, H15, H17, kiểm tra mock và kiểm tra thứ tự các BAT. Được gọi sau bước bảo đảm TypeScript ở 4 luồng: Build & Share, direct Release, EAS Build, Clean Apply.
 - Thêm file gate mới vào kiểm tra độ đầy đủ của FULL source. Giữ CRLF Windows ở các BAT.
 
 ## Các kiểm tra đã chạy thực tế trong môi trường soạn mã
@@ -40,6 +40,6 @@ Error: unknown mock react-native
 
 1. Giải nén FULL ZIP H25R2R1 riêng ngoài thư mục dự án cũ.
 2. Chạy `Family_Bloom_AUTO_UPDATE_FULL.bat` để backup, clean, overlay, verify, clean apply. Cập nhật giữ cấu hình Firebase và bí mật cục bộ.
-3. Trong dự án được cập nhật, có thể chạy `node scripts\test-h25r2r1-build-share-regression.cjs` để kiểm chứng sớm; nếu báo thiếu `typescript`, chạy `npm install` rồi thử lại.
+3. Trong dự án được cập nhật, có thể chạy `node scripts\tests\release\test-h25r2r1-build-share-regression.cjs` để kiểm chứng sớm; nếu báo thiếu `typescript`, chạy `npm install` rồi thử lại.
 4. Chạy `Family_Bloom_BUILD_APK_TO_SHARE.bat`. Theo dõi lỗi **đầu tiên** nếu còn.
 5. Đây chỉ là sửa **mã kiểm tra và BAT**: không cần deploy lại Firebase Index/Rules hay Render chỉ vì bản H25R2R1.

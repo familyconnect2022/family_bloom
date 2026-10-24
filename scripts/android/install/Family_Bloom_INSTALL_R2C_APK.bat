@@ -6,7 +6,7 @@ cd /d "%PROJECT_ROOT%"
 
 echo ============================================================
 echo FAMILY BLOOM P2.37R2C-H9B - INSTALL DEVELOPMENT CLIENT APK
-echo Expected versionCode: 143040
+echo Expected versionCode: 143042
 echo ============================================================
 echo.
 where adb >nul 2>&1

@@ -3,107 +3,107 @@
   "environment": "Linux source-only; Node global TypeScript; not Windows/Gradle",
   "checks": [
     {
-      "script": "scripts/test-phase-p2_12_5-remote-apk-share-build.js",
+      "script": "scripts/tests/history/test-phase-p2_12_5-remote-apk-share-build.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_12_6-build-dependency-contract.js",
+      "script": "scripts/tests/history/test-phase-p2_12_6-build-dependency-contract.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_12_7-expo-asset-peer-contract.js",
+      "script": "scripts/tests/history/test-phase-p2_12_7-expo-asset-peer-contract.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js",
+      "script": "scripts/tests/history/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_32-client-game-reset-foundation.js",
+      "script": "scripts/tests/history/test-phase-p2_32-client-game-reset-foundation.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_34-session-presentation-bridge-stacked-views.js",
+      "script": "scripts/tests/history/test-phase-p2_34-session-presentation-bridge-stacked-views.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_35-already-in-game-recovery-surface.js",
+      "script": "scripts/tests/history/test-phase-p2_35-already-in-game-recovery-surface.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2-full-copy-integrity.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c-binary-identity-lock.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h10-chess-native-latency.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h12-chess-safe-turns-results.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h12-chess-safe-turns-results.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h13-bloom-results-return.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h13-bloom-results-return.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h14-chess-color-mini-edge.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h14-chess-color-mini-edge.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h15-chess-authority-dev-release.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js",
       "passed": true,
       "errors": []
     },
@@ -118,7 +118,7 @@
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h14r1-build-entrypoints-copy-over.js",
       "passed": true,
       "errors": []
     },
@@ -128,12 +128,12 @@
       "errors": []
     },
     {
-      "script": "scripts/test-phase13-release-readiness.js",
+      "script": "scripts/tests/history/test-phase13-release-readiness.js",
       "passed": true,
       "errors": []
     },
     {
-      "script": "scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js",
+      "script": "scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js",
       "passed": true,
       "errors": []
     }

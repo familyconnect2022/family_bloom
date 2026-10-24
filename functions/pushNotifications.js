@@ -4,6 +4,7 @@ const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
 const REGION = "asia-southeast1";
+const { featureOn } = require("./cloudFeatureFlags");
 const HOUR = 60 * 60 * 1000;
 const INVALID_TOKEN_CODES = new Set([
   "messaging/registration-token-not-registered",
@@ -68,6 +69,7 @@ const cleanupInvalidTokens = async (tokenDocs, response) => {
 };
 
 const sendToUid = async (uid, payload, category = "always") => {
+  if (!(await featureOn("remotePushEnabled"))) return { sent: 0, skipped: true };
   const db = getFirestore();
   const profileSnap = await db.doc(`users/${uid}`).get();
   const profile = profileSnap.exists ? profileSnap.data() : {};
@@ -132,6 +134,7 @@ const adminUidsForFamily = async (familyId) => {
 exports.pushFamilyActivityCreated = onDocumentCreated(
   { document: "families/{familyId}/activities/{activityId}", region: REGION, retry: false },
   async (event) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const activity = event.data?.data();
     if (!activity || activity.badgeEligible !== true) return;
     const familyId = event.params.familyId;
@@ -150,6 +153,7 @@ exports.pushFamilyActivityCreated = onDocumentCreated(
 exports.pushTargetActivityCreated = onDocumentCreated(
   { document: "families/{familyId}/members/{uid}/activities/{activityId}", region: REGION, retry: false },
   async (event) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const activity = event.data?.data();
     if (!activity || activity.badgeEligible !== true) return;
     const uid = event.params.uid;
@@ -166,6 +170,7 @@ exports.pushTargetActivityCreated = onDocumentCreated(
 exports.pushJoinRequestCreated = onDocumentCreated(
   { document: "families/{familyId}/joinRequests/{uid}", region: REGION, retry: false },
   async (event) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const request = event.data?.data();
     if (!request || request.status !== "pending") return;
     const { familyId, uid } = event.params;
@@ -191,6 +196,7 @@ exports.pushJoinRequestCreated = onDocumentCreated(
 exports.pushGraphProposalCreated = onDocumentCreated(
   { document: "families/{familyId}/graphProposals/{proposalId}", region: REGION, retry: false },
   async (event) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const proposal = event.data?.data();
     if (!proposal || proposal.status !== "pending") return;
     const { familyId, proposalId } = event.params;
@@ -303,6 +309,7 @@ const deleteJobsForEvent = async (eventPath) => {
 exports.syncEventPushJobs = onDocumentWritten(
   { document: "families/{familyId}/events/{eventId}", region: REGION, retry: false },
   async (change) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const { familyId, eventId } = change.params;
     const path = `families/${familyId}/events/${eventId}`;
     await deleteJobsForEvent(path);
@@ -364,6 +371,7 @@ const scheduleNextYear = async (job, event) => {
 exports.dispatchSmartReminderPush = onSchedule(
   { schedule: "every 15 minutes", region: REGION, timeZone: "Asia/Ho_Chi_Minh", memory: "256MiB" },
   async () => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const db = getFirestore();
     const due = await db.collection("pushJobs")
       .where("dueAt", "<=", Timestamp.now())
@@ -418,6 +426,7 @@ exports._test = { buildJobs, reminderCopy, nextOccurrence, categoryForEvent, imp
 exports.pushDirectWhisperCreated = onDocumentCreated(
   { document: "users/{uid}/homeInbox/{eventId}", region: REGION, retry: false },
   async (event) => {
+    if (!(await featureOn("remotePushEnabled"))) return;
     const inbox = event.data?.data();
     const uid = clean(event.params.uid);
     const eventId = clean(event.params.eventId);

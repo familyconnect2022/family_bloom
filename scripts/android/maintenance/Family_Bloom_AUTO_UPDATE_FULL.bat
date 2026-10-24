@@ -77,6 +77,10 @@ node "%FB_SOURCE%\scripts\maintenance\auto-update-full.cjs" backup
 if errorlevel 1 goto :fail
 set "FB_THIS_RUN_BACKUP=1"
 echo.
+echo [BAO TRI] Don cac duong dan BAT/test cu SAU KHI SAO LUU...
+node "%FB_SOURCE%\scripts\maintenance\retire-legacy-script-paths.cjs" "%FB_TARGET%"
+if errorlevel 1 goto :fail
+echo.
 echo [2/6] Running PRE COPY CLEAN OLD...
 call "%FB_SOURCE%\scripts\android\maintenance\Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat" "%FB_TARGET%" --no-pause
 if errorlevel 1 goto :fail
@@ -92,7 +96,7 @@ node "%FB_TARGET%\scripts\maintenance\check-project-structure.js"
 if errorlevel 1 goto :fail
 echo.
 echo [5/6] Running CLEAN APPLY FULL on updated project...
-call "%FB_TARGET%\Family_Bloom_CLEAN_APPLY_FULL.bat" --no-pause
+call "%FB_TARGET%\scripts\android\maintenance\Family_Bloom_CLEAN_APPLY_FULL.bat" --no-pause
 if errorlevel 1 goto :fail
 echo.
 echo [6/6] Saving target location for next time...

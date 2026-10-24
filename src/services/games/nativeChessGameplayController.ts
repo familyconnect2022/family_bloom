@@ -320,7 +320,9 @@ async function pushState(reason: string) {
     motionFromFen: !showOptimistic && recoveryMotion?.revision === state.revision &&
       recoveryMotion.afterFen === state.fen ? recoveryMotion.beforeFen : null,
     renderSequence: serial,
-    orientation: verifiedSide(state) ?? "w",
+    // One authenticated color for both the player's clock and the physical
+    // chessboard. Never derive orientation from the turn/FEN or opponent.
+    orientation: mine ?? "w",
     status: state.status === "active" && (!mine || !transportOnline || reconciliationPending)
       ? "syncing" : state.status,
     turn: state.turn,

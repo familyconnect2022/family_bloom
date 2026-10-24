@@ -23,11 +23,11 @@ The chooser never modifies a project and does not alter saved target paths by it
 - `scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat` — validate/reselect target before mutations.
 - `scripts/android/maintenance/Select-FamilyBloomProjectFolder.ps1` — GUI folder picker with terminal fallback.
 - `scripts/maintenance/auto-update-full.cjs` — read-only `target` mode and source regression gate.
-- `scripts/test-h25r2r6r1-target-reselection.cjs` — 15 independent checks for moved paths, mistaken folder, version safety, no premature writes.
+- `scripts/tests/release/test-h25r2r6r1-target-reselection.cjs` — 15 independent checks for moved paths, mistaken folder, version safety, no premature writes.
 
 ## Validation performed
 
-- `node scripts/test-h25r2r6r1-target-reselection.cjs` → 15/15 PASS.
+- `node scripts/tests/release/test-h25r2r6r1-target-reselection.cjs` → 15/15 PASS.
 - `FB_SOURCE=... FB_TARGET=... node scripts/maintenance/auto-update-full.cjs check` with a synthetic existing project → PASS (before mutations).
 - Existing H25 preflight/source structure tests → PASS.
 - ZIP contents and hashes verified after extraction separately.

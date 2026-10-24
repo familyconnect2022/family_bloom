@@ -45,6 +45,9 @@ export interface Family {
   name: string;
   /** Mã dễ nhớ, duy nhất để thành viên dùng khi gia nhập. */
   familyCode: string;
+  /** Tên giới thiệu để tìm nhà và gửi yêu cầu gia nhập; không thay familyId/mã cũ. */
+  introName?: string;
+  introNameKey?: string;
   ownerId: string;
   createdAt: string;
   updatedAt: string;

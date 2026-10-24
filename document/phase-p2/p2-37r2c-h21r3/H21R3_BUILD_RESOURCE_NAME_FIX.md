@@ -19,7 +19,7 @@ The H21R1 audio-protection update accidentally added `com.familybloom.keep.xml` 
 3. Update `scripts/setup/check-board-audio-apk.js` to check `keep.xml` and still reject missing compiled SoundPool resources. The guard still runs after Gradle and before any APK is shared.
 4. Add `scripts/setup/check-android-resource-names.js` to reject invalid filenames in native module and generated app before running Gradle.
 5. Remove stale invalid raw resource during PRE_COPY_CLEAN, CLEAN_APPLY and release preflight, so FULL copy-over onto H21R1/H21R2 does not retain the obsolete XML.
-6. Align P2.12.5 and H21R1 audio gate expectations with valid Android resource names; add `scripts/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs`, which reproduces the invalid filename failure and verifies audio staging in an isolated simulated generated Android project.
+6. Align P2.12.5 and H21R1 audio gate expectations with valid Android resource names; add `scripts/tests/history/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs`, which reproduces the invalid filename failure and verifies audio staging in an isolated simulated generated Android project.
 
 ## Tests in code environment
 

@@ -27,10 +27,10 @@ Phase 12 chuẩn hóa các luồng có nội dung dài thành **full-screen page
 Chạy:
 
 ```bash
-node scripts/test-phase12-fullscreen-flow-ui.js
+node scripts/tests/history/test-phase12-fullscreen-flow-ui.js
 node scripts/test-phase11-final-performance-gate.js
-node scripts/test-phase112b-harness.js
-node scripts/test-phase112b-firebase-e2e.js
+node scripts/tests/history/test-phase112b-harness.js
+node scripts/tests/history/test-phase112b-firebase-e2e.js
 ```
 
 Phase 11 performance và notification/E2E foundation không bị thay đổi bởi patch UI này.

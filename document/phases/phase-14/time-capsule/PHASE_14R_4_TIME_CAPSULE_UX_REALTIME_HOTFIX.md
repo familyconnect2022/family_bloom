@@ -36,9 +36,9 @@ This remains the current **local-first notification architecture**. Once the rec
 
 ## Validation
 
-- `node scripts/test-phase14r-time-capsule-functional.js` → 49 PASS / 0 FAIL
-- `node scripts/test-phase14r4-time-capsule-ux-realtime.js` → 14 PASS / 0 FAIL
-- `node scripts/test-phase14q-time-capsule-reveal.js` → 34 PASS / 0 FAIL
+- `node scripts/tests/history/test-phase14r-time-capsule-functional.js` → 49 PASS / 0 FAIL
+- `node scripts/tests/history/test-phase14r4-time-capsule-ux-realtime.js` → 14 PASS / 0 FAIL
+- `node scripts/tests/history/test-phase14q-time-capsule-reveal.js` → 34 PASS / 0 FAIL
 - `node scripts/test-phase14r3-dev-firebase-lock-gate.js` → 8 PASS / 0 FAIL
 - TypeScript parser check on all changed TS/TSX files → no syntax/parse errors.
 

@@ -43,7 +43,7 @@ Hai video thực tế do người dùng cung cấp: `6444.mp4` (~217 giây) và 
 
 - TypeScript: `transpileModule` kiểm **cú pháp** 292/292 file `.ts/.tsx` thành công, **không phải kiểm tra type semantic đầy đủ**.
 - Import cục bộ: 1.719 import được kiểm tra theo source.
-- Test source/state store `scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js`: **28/28 PASS** trước khi bổ sung wording toast, sau đó chạy lại trong vòng kiểm thử cuối.
+- Test source/state store `scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js`: **28/28 PASS** trước khi bổ sung wording toast, sau đó chạy lại trong vòng kiểm thử cuối.
 - Bộ check H8, H9A, H9B, H10, H10R2, H11 cùng kiểm tra cấu trúc/source, binary lock, assets audio và BAT entrypoint: PASS. Bản chụp console đầy đủ `H11_STATIC_VALIDATION.txt` cùng thư mục.
 - Âm thanh MP3 đã kiểm tra tồn tại/định dạng và tổng dung lượng; **không** xác minh độ trễ audio trên điện thoại.
 
@@ -79,4 +79,4 @@ Hai video thực tế do người dùng cung cấp: `6444.mp4` (~217 giây) và 
 - `modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt`
 - `modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/NativeChessBoardState.kt`
 - `modules/family-bloom-overlay/index.ts`
-- `scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js` và một số gates/build helpers, `package.json`, `app.json`.
+- `scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js` và một số gates/build helpers, `package.json`, `app.json`.

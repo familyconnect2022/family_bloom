@@ -115,7 +115,7 @@ There is no fixed artificial tabbar delay in the normal path. Ionicons/font read
 
 New gate:
 
-`scripts/test-phase-p2_12-bsh-persistent-surfaces-retained-graph.js`
+`scripts/tests/history/test-phase-p2_12-bsh-persistent-surfaces-retained-graph.js`
 
 It verifies:
 

@@ -16,7 +16,7 @@
 - Device verification is still required to confirm the exact first-login stacking behavior.
 
 ## Regression tests
-- `node scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js` checks 12 actual PNGs, mat/board Z-order, board caches, promotion, welcome viewport bounding, and session gate.
+- `node scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js` checks 12 actual PNGs, mat/board Z-order, board caches, promotion, welcome viewport bounding, and session gate.
 - Test is called by FULL CLEAN APPLY and the Android release APK build entrypoints before Gradle.
 - Prior H4/H7/H8/H9A/H9B/H10 source checks remain unchanged.
 

@@ -1308,8 +1308,8 @@ src/services/familyGraph/familyGraphMutationService.ts   # reuse latest safe del
 ### Tests
 
 ```text
-scripts/test-familyGraphQueryEngine.js
-scripts/test-familyGraphLayout.js
+scripts/tests/features/test-familyGraphQueryEngine.js
+scripts/tests/features/test-familyGraphLayout.js
 scripts/benchmark-familyGraphPhase63.js
 ```
 
@@ -1957,7 +1957,7 @@ Quy tắc:
 ```text
 src/components/familyGraph/familyGraphConnectorRouting.ts   NEW
 src/components/familyGraph/FamilyGraphPrototype.tsx         MODIFY
-scripts/test-familyGraphLayout.js                            MODIFY
+scripts/tests/features/test-familyGraphLayout.js                            MODIFY
 ```
 
 ## Regression gate

@@ -1,10 +1,11 @@
 @echo off
-setlocal EnableExtensions
-cd /d "%~dp0"
-if not exist "%~dp0scripts\android\eas\Family_Bloom_EAS_BUILD_TEST.bat" (
-  echo [ERROR] Family Bloom FULL source files are incomplete: scripts\android\eas\Family_Bloom_EAS_BUILD_TEST.bat
+setlocal EnableExtensions DisableDelayedExpansion
+rem Stable root launcher; maintenance and build logic stays under scripts\android.
+set "FB_ROOT=%~dp0"
+if not exist "%FB_ROOT%scripts\android\eas\Family_Bloom_EAS_BUILD_TEST.bat" (
+  echo [ERROR] Missing FULL CODE helper. Extract the complete ZIP.
   pause
   exit /b 1
 )
-call "%~dp0scripts\android\eas\Family_Bloom_EAS_BUILD_TEST.bat" %*
+call "%FB_ROOT%scripts\android\eas\Family_Bloom_EAS_BUILD_TEST.bat" %*
 exit /b %errorlevel%

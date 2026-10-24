@@ -24,7 +24,7 @@ function normalize(p) { const v = fs.realpathSync.native(p); return process.plat
 function nested(parent, child) { return child.startsWith(parent + path.sep); }
 function assertSafe() {
   if (!process.env.FB_TARGET?.trim()) die('Missing target project path.');
-  const required = ['package.json','app.json','app.config.js', 'Family_Bloom_CLEAN_APPLY_FULL.bat',
+  const required = ['package.json','app.json','app.config.js', 'scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat',
     'scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat',
     'scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat',
     'scripts/maintenance/backup-legacy-project-notes.js'];
@@ -126,6 +126,41 @@ try {
   const versions=assertSafe();
   if(mode==='target')console.log('TARGET PASS',JSON.stringify({source,target,...versions}));
   if(mode==='check') {
+    // H25R2R7R2R3R2: a clean FULL ZIP has no client Firebase config. Verify
+    // build redirection safely before any mutation of the user's project.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3r2-build-config-routing.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Clean ZIP Build & Share routing regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2600));
+    }
+    // H25R2R7R2R3R4: config da CO trong Family_bloom_V2 nhung BAT root nham project.
+    // Kiem tra duong dan Auto Update da luu va project duoc chon truoc khi sao luu.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3r4-build-existing-json.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Existing Firebase JSON build routing regression failed BEFORE backup/overlay. ' +
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // H25R2R7R2R3R4: kiem thu khoi phuc Firebase Android truoc khi dong cham project cu.
+    // Hoan toan offline: dung cac JSON gia lap trong TEMP; khong ghi secret.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3r4-firebase-recovery.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Firebase Android recovery regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // R3R5: check new BAT/test directory layout before touching the old project.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3r5-script-layout.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Script/BAT layout regression failed BEFORE backup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
+    }
     // Run the SAME structure gate that CLEAN APPLY FULL will run after copying.
     // A broken release must be rejected before backup, deletion or overlay.
     try {
@@ -135,14 +170,14 @@ try {
       die('Release source fails structure:check before update. ' + String(error.stdout || error.stderr || error.message).trim().slice(-1200));
     }
     try {
-      execFileSync(process.execPath,[path.join(source,'scripts/test-h25-source-package.cjs')],
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25-source-package.cjs')],
         {cwd:source,encoding:'utf8',stdio:'pipe'});
     } catch(error) {
       die('Release source fails H25 required-file gate before update. ' + String(error.stdout || error.stderr || error.message).trim().slice(-1200));
     }
     // Validate moved/renamed-target recovery without ever modifying a real project.
     try {
-      execFileSync(process.execPath,[path.join(source,'scripts/test-h25r2r6r1-target-reselection.cjs')],
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r6r1-target-reselection.cjs')],
         {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
     } catch(error) {
       die('Updater moved-target regression failed BEFORE backup/cleanup/overlay. ' +
@@ -152,11 +187,128 @@ try {
     // overlaying the user's project, leaving the update half-applied.
     // Validate the entire source-only release contract before any mutation.
     try {
-      execFileSync(process.execPath,[path.join(source,'scripts/test-h25r2r2-release-preflight.cjs')],
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r2-release-preflight.cjs')],
         {cwd:source,encoding:'utf8',stdio:'pipe',timeout:240000});
     } catch(error) {
       die('Release preflight failed BEFORE backup/cleanup/overlay. ' +
         (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-3000));
+    }
+    // H25R2R7R1: verify disabled bulletin + retained learning without node_modules.
+    // Run BEFORE any backup/cleanup, the same way as the other source-only gates.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r1-bulletin-deferred.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Deferred bulletin release gate failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // H25R2R7R2R1: prevents the former release:check failure and protects
+    // runtime Family Graph services before any existing project is changed.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r1-flags-regression.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Feature-flag regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // H25R2R7R2: module-isolated Study Q&A and Firestore Rules preflight (no TypeScript).
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2-study-qa.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Study Q&A source/rules preflight failed BEFORE backup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // H25R2R7R2R2: prevent Android native dialogs and keyboard-covered Study inputs.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r2-study-ux.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Study UX regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // H25R2R7R2R3: protect low-memory, opt-in native formula editor and slot persistence.
+    // Works before node_modules, backup and overlay. Full dynamic checks run after npm install.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3-visual-formulas.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Visual formula regression failed BEFORE backup/cleanup/overlay. ' +
+        (String(error.stdout || '') + '\n' + String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-h25r2r7r2r3r3-compound-formulas.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Compound formula preflight failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // R3R6: lightweight mathematical typesetting + published lesson regression.
+    // Dependency-free so a fresh FULL ZIP is valid before node_modules exists.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-native-math-lessons.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Super Bloom math/lesson gate failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // R3R7: regression for math spacing/root alignment and study emoji rights.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-math-reactions-r3r7.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Study math/reaction preflight failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2400));
+    }
+    // R3R8 chemistry is pure and its source-only test works before installing dependencies.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-chemistry-safe-r3r8.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Chemistry safety gate failed BEFORE backup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
+    }
+    // R3R9: check simple inline chemistry and resilient preview before any backup or overlay.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-inline-chemical-follow-r3r9.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Study inline formula gate failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
+    }
+    // R3R14: validate bundled welcome artwork, approved text and safe animation
+    // BEFORE making a backup or changing the existing project. No npm install needed.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-r3r14-welcome-envelope-motion.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('R3R14 welcome-letter package preflight failed BEFORE backup/overlay. ' +
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2500));
+    }
+    // R3R14R1: prevent another welcome touch regression BEFORE copying source.
+    // This static gate is dependency-free (Windows may have no node_modules yet).
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-r3r14r1-welcome-touch-static.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('R3R14R1 welcome touch preflight failed BEFORE backup/overlay. ' +
+        (String(error.stdout || '')+'\n'+String(error.stderr || error.message || '')).trim().slice(-2500));
+    }
+    // R3R11: source-only mathematical layout gate BEFORE user backup or overlay.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-math-typesetting-r3r11.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Math limit/matrix/radical gate failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
+    }
+    // R3R10: ordered prose/formula blocks and ⇒/⇔ semantics, no dependencies.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-super-bloom-solution-blocks-r3r10.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Structured solution preflight failed BEFORE backup/cleanup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
     }
     console.log('PREFLIGHT PASS', JSON.stringify({source,target,...versions,sourceStructure:'PASS',releasePreflight:'PASS'}));
   }

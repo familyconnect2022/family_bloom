@@ -21,8 +21,8 @@
 - COMPLETED: Firestore invitation hidden; game result is primarily shown by native game presentation/recovery. Result-after-kill and interruption behavior must still be validated on devices.
 
 ## 3. Các kiểm tra thực hiện ở môi trường này
-- `node scripts/test-h25-firebase-invitation.cjs`: **38/38 PASS** (static contracts, assets, rules, release gates, distinct game ownership).
-- `node scripts/test-h25-runtime-claims.cjs`: **7/7 PASS** (fake Firestore/Admin, A/B concurrent claims, restart recovery, terminal rejection, unauthorized rejection, slot release).
+- `node scripts/tests/release/test-h25-firebase-invitation.cjs`: **38/38 PASS** (static contracts, assets, rules, release gates, distinct game ownership).
+- `node scripts/tests/release/test-h25-runtime-claims.cjs`: **7/7 PASS** (fake Firestore/Admin, A/B concurrent claims, restart recovery, terminal rejection, unauthorized rejection, slot release).
 - Static `node scripts/test-*` called directly by Build & Share, Release and EAS BAT: **35/35 command-level PASS**.
 - `node scripts/setup/check-ts-syntax-transpile.js`: **305/305 source files** parse/transpile.
 - `node scripts/setup/check-source-import-integrity.js`: **305 files / 1823 imports** resolve statically.
@@ -42,7 +42,7 @@
 ## 5. Hướng dẫn triển khai trên máy của bạn (khi về máy)
 1. Back up existing H23R3 source and server deployment settings; preserve Firebase Auth, Firestore data and credentials.
 2. Extract H25 FULL ZIP; run `Family_Bloom_AUTO_UPDATE_FULL.bat` in extracted folder (per copy-over workflow). If using copy-overlay manually, run cleanup BAT first. Keep root .gitignore.
-3. Run `node scripts/test-h25-firebase-invitation.cjs` and `node scripts/test-h25-runtime-claims.cjs`.
+3. Run `node scripts/tests/release/test-h25-firebase-invitation.cjs` and `node scripts/tests/release/test-h25-runtime-claims.cjs`.
 4. Confirm `google-services.json` already exists at the project root and matches your Firebase project (the H23R3 base ZIP excluded it). Back up existing Firestore rules and indexes, deploy **both** `firestore.rules` and `firestore.indexes.json` to the SAME Firebase project as Android: `firebase deploy --only firestore:rules,firestore:indexes --project YOUR_PROJECT_ID`. Do **NOT** deploy H25 rules to another project or skip the index. This requires authenticated Firebase CLI.
 5. Deploy **H25 `server/`** to Render. Wait for `npm run typecheck` / `npm run build` there and healthy deployment. Check environment Firebase Admin secrets/config and service URL.
 6. Run `Family_Bloom_BUILD_APK_TO_SHARE.bat` on Windows. Script compiles native Release APK from scratch, prevents stale APK reuse, verifies source/copy SHA-256, then writes `C:\FamilyBloomShare\apk\Family_Bloom_LATEST.apk` and `.sha256` only after SUCCESS.

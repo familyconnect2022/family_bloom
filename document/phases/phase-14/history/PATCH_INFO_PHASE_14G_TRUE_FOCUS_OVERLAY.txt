@@ -5,9 +5,9 @@ Base required: Family_Bloom_Phase_14F_GRAPH_FOCUS_ISOLATION_DEFAULT3_FULL_2026-0
 Changed:
 - src/components/familyGraph/FamilyGraphPrototype.tsx
 - src/app/(family)/(graph)/family-graph.tsx
-- scripts/test-phase14e-music-card-graph-focus.js (updated regression assertions)
-- scripts/test-phase14f-graph-focus-isolation.js (updated regression assertions)
-- scripts/test-phase14g-true-focus-overlay.js
+- scripts/tests/history/test-phase14e-music-card-graph-focus.js (updated regression assertions)
+- scripts/tests/history/test-phase14f-graph-focus-isolation.js (updated regression assertions)
+- scripts/tests/history/test-phase14g-true-focus-overlay.js
 - package.json (phase14g:check script only)
 - document/phases/phase-14/home/PHASE_14G_TRUE_FOCUS_OVERLAY.md
 - PHASE_14G_DEVICE_CHECKLIST.txt

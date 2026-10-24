@@ -15,7 +15,7 @@ CHANGED  scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
 ADDED    scripts/setup/check-p2_37-apk-native-class.js
 ADDED    scripts/setup/check-p2_37-native-autolink.js
 CHANGED  scripts/setup/cleanup-overlay-routes.js
-ADDED    scripts/test-phase-p2_37-authenticated-native-sibling-presentation.js
+ADDED    scripts/tests/history/test-phase-p2_37-authenticated-native-sibling-presentation.js
 CHANGED  src/app/(internal)/board-game-bot-test.tsx
 CHANGED  src/app/_layout.tsx
 CHANGED  src/components/games/BoardGamePresentationRoot.android.tsx

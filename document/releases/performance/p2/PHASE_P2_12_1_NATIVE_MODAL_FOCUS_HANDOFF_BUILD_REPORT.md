@@ -35,7 +35,7 @@ The P2.12 portal controller also used two independent updates (`setContent()` th
 
 ## Verification
 
-New gate: `scripts/test-phase-p2_12_1-native-modal-focus-handoff.js`
+New gate: `scripts/tests/history/test-phase-p2_12_1-native-modal-focus-handoff.js`
 
 It verifies the native-modal handoff contract, Android no-timer fallback, atomic portal presentation, direct branch fallback, retained-render invariants, TS/TSX transpilation, and package/BAT registration.
 

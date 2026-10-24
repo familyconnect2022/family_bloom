@@ -9,7 +9,7 @@ The original H25 ZIP contained the root Windows BAT launchers but omitted **all*
 - Restored 66 missing source files from the H23R3 full-source baseline (H25's stated parent); includes 18 Android BAT helpers, 47 native Kotlin/Gradle/assets/audio files, and Android script documentation.
 - Synchronized native Kotlin identity, Build & Share/EAS helper messages, APK install/device verifier to H25 version 1.3.29 / versionCode 143039 / native `P2.37R2C-H25-native-1`.
 - Wired H25 Firebase invitation and mock-Admin regression tests into CLEAN APPLY, Build & Share, direct release and EAS build preflight.
-- Added `scripts/test-h25-source-package.cjs` for cross-folder BAT/native source completeness; automatic updater now checks it before making any changes.
+- Added `scripts/tests/release/test-h25-source-package.cjs` for cross-folder BAT/native source completeness; automatic updater now checks it before making any changes.
 - Existing H25 Chess/Xiangqi game and Firestore/server invitation logic is carried byte-for-byte from the original H25 ZIP. No change to APK applicationId or Firebase project.
 
 ## Usage

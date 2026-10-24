@@ -25,6 +25,7 @@ import { BloomTimePicker } from "../../components/ui/BloomTimePicker";
 import { BloomFullScreenFlow } from "../../components/ui/BloomFullScreenFlow";
 import { BloomCard, BloomEmptyState, BloomSectionHeader } from "../../components/ui/BloomPageComponents";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
+import { BloomActionCard } from "../../components/ui/BloomActionCard";
 import { StatusBar } from "expo-status-bar";
 import { useBloomToast } from "../../components/ui/BloomToast";
 import { useBloomDialog } from "../../components/ui/BloomDialogProvider";
@@ -232,11 +233,7 @@ const PlannerShell = memo(function PlannerShell({
         variant="event"
         compact
         roundedBottom
-        right={(
-          <Pressable onPress={onCreate} accessibilityRole="button" accessibilityLabel="Tạo sự kiện mới" style={({ pressed }) => [styles.heroAddButton, pressed && styles.pressed]}>
-            <Ionicons name="add" size={25} color={COLORS.primaryText} />
-          </Pressable>
-        )}
+
       />
 
       <View style={styles.topInset}>
@@ -353,12 +350,11 @@ const CalendarPanel = memo(function CalendarPanel({
         onSelectDay={onSelectDay}
         onMoveMonth={onMoveMonth}
       />
+      <BloomActionCard testID="planner-create-event" icon="calendar-outline" title="Thêm sự kiện" subtitle="Hẹn một ngày vui để cả nhà cùng mong chờ" onPress={onCreate} />
       <View style={styles.sectionHeaderWrap}>
         <BloomSectionHeader
           title={`Ngày ${selectedDay}/${month}`}
           subtitle={selectedEvents.length ? `${selectedEvents.length} sự kiện trong ngày` : "Một ngày đang thật nhẹ nhàng"}
-          actionLabel="Thêm sự kiện"
-          onAction={onCreate}
         />
       </View>
     </View>
@@ -1138,7 +1134,7 @@ const styles = StyleSheet.create({
   moderationHint: { marginTop: 2, color: COLORS.secondaryText, fontSize: 10, lineHeight: 14 },
   hiddenCount: { minWidth: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
   hiddenCountText: { color: COLORS.primary, fontSize: 11, fontWeight: "900" },
-  calendarCard: { padding: 13, marginBottom: 20 },
+  calendarCard: { padding: 13, marginBottom: 12 },
   calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   monthButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
   monthCopy: { alignItems: "center" },
@@ -1148,14 +1144,14 @@ const styles = StyleSheet.create({
   weekLabel: { width: "14.2857%", textAlign: "center", color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "800" },
   daysGrid: { flexDirection: "row", flexWrap: "wrap" },
   daySlot: { width: "14.2857%", height: 48, alignItems: "center", justifyContent: "center" },
-  dayCircle: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
-  daySelected: { backgroundColor: COLORS.primary },
+  dayCircle: { width: 38, height: 38, borderRadius: 999, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  daySelected: { backgroundColor: COLORS.primary, borderRadius: 999, borderWidth: 1, borderColor: "#D45D88", overflow: "hidden" },
   dayToday: { borderWidth: 1.5, borderColor: COLORS.primary },
   dayText: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "700" },
   daySelectedText: { color: COLORS.white, fontWeight: "900" },
   eventDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary, position: "absolute", bottom: 3 },
   eventDotSelected: { backgroundColor: COLORS.primaryText },
-  sectionHeaderWrap: { marginTop: 2 },
+  sectionHeaderWrap: { marginTop: 22 },
   sectionHeaderList: { backgroundColor: COLORS.background, paddingTop: 10, paddingHorizontal: 16 },
   itemGap: { height: 10 },
   sectionGap: { height: 10 },

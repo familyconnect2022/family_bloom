@@ -2,7 +2,7 @@ import { useTabStartupTask } from "../../context/TabStartupContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { memo, useState } from "react";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
@@ -53,9 +53,12 @@ const compactMomentTime = (iso: string) => {
     : date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
 };
 
-function DashboardEventRow({ event, creatorName, onPress }: { event: FamilyEvent; creatorName?: string; onPress: () => void }) {
+function DashboardEventRow({ event, creatorName, onPress, featured = false }: { event: FamilyEvent; creatorName?: string; onPress: () => void; featured?: boolean }) {
+  const eventDate = new Date(event.dateISO);
+  const clock = !event.allDay && Number.isFinite(eventDate.getTime())
+    ? eventDate.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : null;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.eventRow, pressed && styles.rowPressed]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.eventRow, featured && styles.eventRowFeatured, pressed && styles.rowPressed]}>
       <View style={styles.eventDateBox}>
         <Text style={styles.eventDay}>{String(event.day).padStart(2, "0")}</Text>
         <Text style={styles.eventMonth}>TH{event.month}</Text>
@@ -67,7 +70,8 @@ function DashboardEventRow({ event, creatorName, onPress }: { event: FamilyEvent
         </Text>
         {!!creatorName && <Text style={styles.eventCreator}>Gieo bởi {creatorName}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />
+      {clock && <View style={styles.eventClock}><Ionicons name="time-outline" size={13} color={COLORS.primary} /><Text style={styles.eventClockText}>{clock}</Text></View>}
+      <Ionicons name="chevron-forward" size={17} color={COLORS.secondaryText} />
     </Pressable>
   );
 }
@@ -273,7 +277,7 @@ const HomeUpcomingIsland = memo(function HomeUpcomingIsland({
       <BloomSectionHeader
         title="Sắp tới trong nhà"
         subtitle="Những ngày cả nhà đang cùng mong chờ"
-        actionLabel="Mở lịch"
+        actionIcon="calendar-outline"
         onAction={() => router.push("/planner")}
       />
       {events.length ? (
@@ -282,6 +286,7 @@ const HomeUpcomingIsland = memo(function HomeUpcomingIsland({
             <View key={event.id}>
               <DashboardEventRow
                 event={event}
+                featured={index === 0}
                 creatorName={memberByUid.get(event.createdByUid)?.shortName || memberByUid.get(event.createdByUid)?.displayName}
                 onPress={() => router.push(`/event/${event.id}` as never)}
               />
@@ -306,7 +311,7 @@ const HomeMomentsIsland = memo(function HomeMomentsIsland({ moments, loading }: 
   const router = useRouter();
   return (
     <View style={styles.section}>
-      <BloomSectionHeader title="Kỷ niệm mới nở" subtitle="Một vài điều vừa được giữ lại cho nhà mình" actionLabel="Xem tường nhà" onAction={() => router.push("/moments")} />
+      <BloomSectionHeader title="Kỷ niệm mới nở" subtitle="Một vài điều vừa được giữ lại cho nhà mình" actionIcon="images-outline" onAction={() => router.push("/moments")} />
       {moments.length ? (
         <View style={styles.momentGrid}>
           {moments.slice(0, 4).map((post) => <DashboardMomentCard key={post.id} post={post} onPress={() => router.push("/moments")} />)}
@@ -326,8 +331,6 @@ const HomeMembersIsland = memo(function HomeMembersIsland({ members, loading }: 
       <BloomSectionHeader
         title="Mọi người trong nhà"
         subtitle={members.length ? `${members.length} người đang cùng vun một mái nhà` : "Những gương mặt thân quen sẽ hiện ở đây"}
-        actionLabel="Xem cả nhà"
-        onAction={() => router.push("/family")}
       />
       {visibleMembers.length ? (
         <BloomCard style={styles.memberStripCard}>
@@ -344,6 +347,9 @@ const HomeMembersIsland = memo(function HomeMembersIsland({ members, loading }: 
             ))}
           </View>
           {members.length > visibleMembers.length && <Text style={styles.memberExtra}>Và {members.length - visibleMembers.length} người thương khác 🌷</Text>}
+          <Pressable accessibilityRole="button" accessibilityLabel="Xem tất cả thành viên" onPress={() => router.push("/family")} style={styles.memberViewAll}>
+            <Ionicons name="people-circle-outline" size={20} color={COLORS.primary} /><Text style={styles.memberViewAllText}>Xem thành viên</Text><Ionicons name="arrow-forward" size={17} color={COLORS.primary} />
+          </Pressable>
         </BloomCard>
       ) : loading ? <HomeSectionSkeleton kind="members" /> : (
         <BloomEmptyState icon="people-outline" title="Mái nhà đang chờ thêm người thương" description="Khi có thành viên, những gương mặt thân quen sẽ hiện ở đây." compact />
@@ -355,6 +361,7 @@ const HomeMembersIsland = memo(function HomeMembersIsland({ members, loading }: 
 export default function HomeScreen() {
   useTabStartupTask("home");
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
   const [familySwitcherVisible, setFamilySwitcherVisible] = useState(false);
   const { user, userProfile, families } = useAuth();
   const activeMembership = families.find((item) => item.familyId === userProfile?.activeFamilyId);
@@ -392,10 +399,10 @@ export default function HomeScreen() {
           subtitle="Từ chuyện nhỏ hôm nay đến những điều muốn giữ thật lâu — mọi góc của Nhà Mình đều đang nở ở đây."
           variant="living"
           roundedBottom
-          footer={
+          topLeft={
             <Pressable
               onPress={() => setFamilySwitcherVisible(true)}
-              style={({ pressed }) => [styles.heroFamilyPill, pressed && styles.rowPressed]}
+              style={({ pressed }) => [styles.heroFamilyPill, { width: Math.max(115, Math.min(224, screenWidth - 160)) }, pressed && styles.rowPressed]}
             >
               <View style={styles.heroFamilyIcon}><Ionicons name="home" size={17} color={COLORS.primaryText} /></View>
               <View style={styles.heroFamilyCopy}>
@@ -432,7 +439,7 @@ export default function HomeScreen() {
           <BloomSectionHeader
             title="Nhà Mình đang nở"
             subtitle="Những góc nhỏ để cùng sẻ chia, cùng chơi và cùng giữ điều đáng nhớ"
-            actionLabel="Mở Nhà Mình"
+            actionIcon="arrow-forward-circle-outline"
             onAction={() => router.push("/play" as never)}
           />
           <View style={styles.featureGrid}>
@@ -459,7 +466,8 @@ export default function HomeScreen() {
             <BloomQuickAction icon="images-outline" label="Khoảnh khắc" caption="Giữ lại chuyện nhỏ hôm nay" onPress={() => router.push("/moments")} />
             <BloomQuickAction icon="calendar-outline" label="Lịch nhà" caption="Nhớ những ngày quan trọng" onPress={() => router.push("/planner")} />
             <BloomQuickAction icon="people-outline" label="Cây nhà" caption="Ghé thăm mọi người" onPress={() => router.push("/family")} />
-            <BloomQuickAction icon="chatbubbles-outline" label="Trò chuyện" caption="Một góc để luôn gần nhau" onPress={() => router.push("/chat")} />
+            {/* Trò chuyện đang tạm ẩn; giữ route/feature để phát triển trong giai đoạn sau. */}
+            <BloomQuickAction icon="school-outline" label="Góc học tập" caption="Mỗi ngày một điều mới" onPress={() => router.push("/learning-library" as never)} />
           </View>
         </View>
 
@@ -476,11 +484,11 @@ const styles = StyleSheet.create({
   pageBody: { marginTop: -24, paddingHorizontal: 16, paddingTop: 30, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: COLORS.background },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 9 },
   avatar: { borderColor: COLORS.white, borderWidth: 2 },
-  heroFamilyPill: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.82)", borderWidth: 1, borderColor: "rgba(255,255,255,0.96)", shadowColor: "#8D5169", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
+  heroFamilyPill: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.82)", borderWidth: 1, borderColor: "rgba(255,255,255,0.96)", shadowColor: "#8D5169", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   heroFamilyIcon: { width: 36, height: 36, borderRadius: 14, backgroundColor: "#FFEAF1", alignItems: "center", justifyContent: "center" },
   heroFamilyCopy: { flex: 1, minWidth: 0 },
-  heroFamilyEyebrow: { color: COLORS.primary, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.8 },
-  heroFamilyName: { marginTop: 2, color: COLORS.primaryText, fontSize: 12.5, fontWeight: "900" },
+  heroFamilyEyebrow: { color: COLORS.primary, fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
+  heroFamilyName: { marginTop: 2, color: COLORS.primaryText, fontSize: 11.5, fontWeight: "900" },
   homePillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: -10, marginBottom: 27 },
   familyHero: { marginBottom: 16, padding: 18 },
   familyHeroTop: { flexDirection: "row", alignItems: "center" },
@@ -494,7 +502,7 @@ const styles = StyleSheet.create({
   summaryIcon: { width: 34, height: 34, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface },
   summaryValue: { marginTop: 9, color: COLORS.primaryText, fontSize: 21, fontWeight: "900" },
   summaryLabel: { marginTop: 2, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 14 },
-  section: { marginBottom: 27 },
+  section: { marginBottom: 24 },
   featureGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 },
   featureCard: { width: "48.3%", minHeight: 156, padding: 15 },
   featureTop: { minHeight: 42, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
@@ -505,6 +513,9 @@ const styles = StyleSheet.create({
   featureCaption: { marginTop: 5, color: COLORS.secondaryText, fontSize: 10.6, lineHeight: 15.5 },
   featureArrow: { marginTop: 10, alignSelf: "flex-end", width: 28, height: 28, borderRadius: 14, backgroundColor: "#FFF0F5", alignItems: "center", justifyContent: "center" },
   compactCard: { paddingVertical: 4, paddingHorizontal: 13 },
+  eventRowFeatured: { marginHorizontal: -7, paddingHorizontal: 7, borderRadius: 16, backgroundColor: "#FFF0F5", borderWidth: 1, borderColor: "#EFB5CC" },
+  eventClock: { alignItems: "center", gap: 2, padding: 6, backgroundColor: "#FFE5F0", borderRadius: 10 },
+  eventClockText: { fontSize: 11, fontWeight: "900", color: COLORS.primaryText },
   eventRow: { minHeight: 79, flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 10 },
   eventDateBox: { width: 48, height: 54, borderRadius: 16, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
   eventDay: { color: COLORS.primaryText, fontSize: 18, fontWeight: "900" },
@@ -540,11 +551,13 @@ const styles = StyleSheet.create({
   momentCaption: { marginTop: 4, minHeight: 32, color: COLORS.primaryText, fontSize: 11.5, lineHeight: 16 },
   momentTime: { marginTop: 7, color: COLORS.secondaryText, fontSize: 10 },
   memberStripCard: { padding: 14 },
-  memberStrip: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 13 },
-  memberMini: { width: "30.5%", alignItems: "center" },
+  memberStrip: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: 13 },
+  memberMini: { width: "29.5%", alignItems: "center" },
   memberMiniAvatar: { width: 54, height: 54, borderRadius: 20, overflow: "hidden", backgroundColor: COLORS.accentBg, alignItems: "center", justifyContent: "center" },
   memberInitial: { color: COLORS.primaryText, fontSize: 18, fontWeight: "900" },
   memberMiniName: { marginTop: 6, width: "100%", color: COLORS.primaryText, fontSize: 10.5, fontWeight: "800", textAlign: "center" },
+  memberViewAll: { marginTop: 15, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 13, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  memberViewAllText: { color: COLORS.primary, fontWeight: "900", fontSize: 12 },
   memberExtra: { marginTop: 13, color: COLORS.secondaryText, fontSize: 10.5, textAlign: "center" },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
   skeletonCard: { borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, paddingHorizontal: 13, overflow: "hidden" },

@@ -76,11 +76,13 @@ export function BloomSectionHeader({
   title,
   subtitle,
   actionLabel,
+  actionIcon,
   onAction,
 }: {
   title: string;
   subtitle?: string;
   actionLabel?: string;
+  actionIcon?: IoniconName;
   onAction?: () => void;
 }) {
   return (
@@ -89,9 +91,9 @@ export function BloomSectionHeader({
         <Text style={styles.sectionTitle}>{title}</Text>
         {!!subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
       </View>
-      {!!actionLabel && !!onAction && (
-        <Pressable onPress={onAction} hitSlop={10} style={({ pressed }) => pressed && styles.pressedOpacity}>
-          <Text style={styles.sectionAction}>{actionLabel}</Text>
+      {!!onAction && (!!actionLabel || !!actionIcon) && (
+        <Pressable accessibilityRole="button" accessibilityLabel={actionLabel || "Xem chi tiết"} onPress={onAction} hitSlop={8} style={({ pressed }) => [actionIcon && styles.sectionIconButton, pressed && styles.pressedOpacity]}>
+          {actionIcon ? <Ionicons name={actionIcon} size={22} color={COLORS.primary} /> : <Text style={styles.sectionAction}>{actionLabel}</Text>}
         </Pressable>
       )}
     </View>
@@ -343,6 +345,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: COLORS.secondaryText,
   },
+  sectionIconButton: { width: 43, height: 43, borderRadius: 16, backgroundColor: "#FFE6EF", borderWidth: 1, borderColor: "#F2C3D4", alignItems: "center", justifyContent: "center" },
   sectionAction: {
     color: COLORS.primary,
     fontSize: 13,

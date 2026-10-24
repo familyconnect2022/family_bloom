@@ -78,7 +78,7 @@ src/components/familyGraph/familyGraphLiveAdapter.ts
 src/components/ui/BloomConfirmDialog.tsx
 src/constants/appConfiguration.ts
 src/services/familyGraph/familyGraphMutationService.ts
-scripts/test-familyGraphLayout.js
+scripts/tests/features/test-familyGraphLayout.js
 document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
 ```
 

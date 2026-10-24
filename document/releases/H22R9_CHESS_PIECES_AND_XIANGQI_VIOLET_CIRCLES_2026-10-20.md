@@ -10,7 +10,7 @@ Release date: 2026-10-20  |  Base: H22R8 FULL  |  Android version: 1.3.27 / 1430
    - `assets/images/chess/pieces-png-default/{wk,wq,wr,wb,wn,wp,bk,bq,br,bb,bn,bp}.png` (React Native)
    - `modules/family-bloom-overlay/android/src/main/res/drawable-nodpi/{...}.png` (Android native)
    The source ZIP is not altered, nor are board geometry, hit-targets, renderer ownership or server move semantics.
-4. Added strict H22R9 PNG/header/hash gate: `node scripts/test-h22r9-chess-assets-royal-highlight.cjs`. Included in native share BAT, EAS build BAT, Clean Apply BAT and EAS post-install.
+4. Added strict H22R9 PNG/header/hash gate: `node scripts/tests/release/test-h22r9-chess-assets-royal-highlight.cjs`. Included in native share BAT, EAS build BAT, Clean Apply BAT and EAS post-install.
 5. Bumped `app.json`, Kotlin native identity, binary proof, device verify BAT, EAS expected artifact identity and release helper text consistently.
 
 ## Gate results

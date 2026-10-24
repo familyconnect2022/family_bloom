@@ -2,6 +2,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { findRawTextRisks } = require('./native-jsx-raw-text-guard.cjs');
 let ts;
 try { ts = require('typescript'); }
 catch (error) {
@@ -25,6 +26,18 @@ function walk(dir) {
     if (!/\.(?:ts|tsx)$/.test(entry.name)) continue;
     total++;
     const source = fs.readFileSync(full, 'utf8');
+    // React Native JSX runtime guard: a bare space between sibling expressions
+    // becomes a raw string child of View, and crashes even when TSX transpiles.
+    const rel = path.relative(root, full).replace(/\\/g, '/');
+    if (full.endsWith('.tsx') && !rel.startsWith('src/web/')) {
+      const risks = findRawTextRisks(ts, full, source);
+      if (risks.length > 0) {
+        failed++;
+        for (const risk of risks) {
+          console.error(`FAIL RN JSX raw text: ${rel}:${risk.line}:${risk.column} in <${risk.parent}>; replace inline gap with a newline or wrap real text in <Text>`);
+        }
+      }
+    }
     const output = ts.transpileModule(source, {
       compilerOptions: {
         jsx: ts.JsxEmit.ReactJSX,

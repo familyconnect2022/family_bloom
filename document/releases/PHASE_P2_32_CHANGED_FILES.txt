@@ -5,7 +5,7 @@ ADDED (6)
 document/releases/PHASE_P2_32_CHANGED_FILES.txt
 document/releases/PHASE_P2_32_CLIENT_GAME_RESET_FOUNDATION.md
 document/releases/PHASE_P2_32_RETIRED_CLIENT_REGRESSION_SCRIPTS.txt
-scripts/test-phase-p2_32-client-game-reset-foundation.js
+scripts/tests/history/test-phase-p2_32-client-game-reset-foundation.js
 src/app/(internal)/board-game-bot-test.tsx
 src/types/xiangqiBoardProtocol.ts
 
@@ -19,10 +19,10 @@ scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
 scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
 scripts/setup/check-board-audio-integrity.js
 scripts/setup/cleanup-overlay-routes.js
-scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
-scripts/test-phase-p2_12_5-remote-apk-share-build.js
-scripts/test-phase17_9w1-web-companion.js
-scripts/test-phase17_9w2-web-parity.js
+scripts/tests/history/test-phase-p2_12_4-build-integrity-chess-audio.js
+scripts/tests/history/test-phase-p2_12_5-remote-apk-share-build.js
+scripts/tests/history/test-phase17_9w1-web-companion.js
+scripts/tests/history/test-phase17_9w2-web-parity.js
 src/app/(home)/(games)/home-games.tsx
 src/app/(internal)/developer-tools.tsx
 src/app/(tabs)/_layout.tsx

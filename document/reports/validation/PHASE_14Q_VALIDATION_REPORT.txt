@@ -23,7 +23,7 @@ CHANGED / ADDED FILES
 - src/app/(tabs)/play.tsx
 - src/app/(home)/home-time-capsule-demo.tsx
 - src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx
-- scripts/test-phase14q-time-capsule-reveal.js
+- scripts/tests/history/test-phase14q-time-capsule-reveal.js
 - package.json
 - PATCH_INFO_PHASE_14Q_TIME_CAPSULE_REVEAL_PROTOTYPE.txt
 - PHASE_14Q_TIME_CAPSULE_DEVICE_CHECKLIST.txt

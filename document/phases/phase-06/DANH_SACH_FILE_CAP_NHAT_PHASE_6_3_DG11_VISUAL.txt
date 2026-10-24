@@ -25,9 +25,9 @@ functions/test-familyGraphCore.js
 
 TEST / DEV:
 scripts/phase2-static-check.js
-scripts/test-familyGraphBatchRelationships.js
-scripts/test-familyGraphQueryEngine.js
-scripts/test-familyGraphLayout.js
+scripts/tests/features/test-familyGraphBatchRelationships.js
+scripts/tests/features/test-familyGraphQueryEngine.js
+scripts/tests/features/test-familyGraphLayout.js
 scripts/benchmark-familyGraphPhase63.js
 
 DOCUMENTATION:

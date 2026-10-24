@@ -12,7 +12,8 @@ export type LessonBlock =
   | {kind:'callout'; tone:'story'|'activity'|'remember'|'tip'|'challenge'|'example'; blocks:LessonBlock[]}
   | {kind:'quote'; text:string}
   | {kind:'image'; alt:string; url:string}
-  | {kind:'divider'};
+  | {kind:'divider'}
+  | {kind:'math';tex:string};
 
 export function inlineTokens(source:string):InlineToken[] {
   const output:InlineToken[]=[];
@@ -27,6 +28,7 @@ export function inlineTokens(source:string):InlineToken[] {
   }
   return output;
 }
+const displayMathStart=/^(?:\$\$|\\\[)/;
 const listPattern=/^(?:[-*]\s+|\d+[.)]\s+)/;
 const imagePattern=/^!\[([^\]]*)\]\((https:\/\/[^\s)]+)\)$/;
 const calloutPattern=/^:::(story|activity|remember|tip|challenge|example)$/;
@@ -34,7 +36,7 @@ const isTableRow=(s:string)=>/^\|.+\|$/.test(s);
 const isSeparator=(s:string)=>/^\|[\s:\-|]+\|$/.test(s)&&s.includes('-');
 const cells=(s:string)=>s.replace(/^\||\|$/g,'').split('|').map(x=>x.trim());
 function special(s:string):boolean {
-  return /^#{1,3}\s+/.test(s)||/^>\s?/.test(s)||/^(?:---+|\*\*\*+)\s*$/.test(s)||listPattern.test(s)||isTableRow(s)||!!s.match(imagePattern)||!!s.match(calloutPattern);
+  return /^#{1,3}\s+/.test(s)||/^>\s?/.test(s)||/^(?:---+|\*\*\*+)\s*$/.test(s)||listPattern.test(s)||isTableRow(s)||!!s.match(imagePattern)||!!s.match(calloutPattern)||displayMathStart.test(s);
 }
 export function parseLessonBlocks(markdown:string, maxBlocks=350):LessonBlock[] {
   const lines=markdown.replace(/\r\n?/g,'\n').split('\n');
@@ -42,6 +44,22 @@ export function parseLessonBlocks(markdown:string, maxBlocks=350):LessonBlock[] 
   while(i<lines.length && blocks.length<maxBlocks){
     const raw=lines[i].trim();
     if(!raw){i++;continue;}
+    // Dedicated display math: $$...$$ or \[...\], including multiline formulae.
+    if(displayMathStart.test(raw)){
+      const square=raw.startsWith('\\['),begin=square?'\\[':'$$',end=square?'\\]':'$$';
+      const content:string[]=[];
+      let remaining=raw.slice(begin.length);i++;
+      if(remaining.includes(end)){content.push(remaining.slice(0,remaining.indexOf(end)));}
+      else {
+        if(remaining)content.push(remaining);
+        while(i<lines.length && content.join('').length<4000){
+          remaining=lines[i++];const stop=remaining.indexOf(end);
+          if(stop>=0){content.push(remaining.slice(0,stop));break;}
+          content.push(remaining);
+        }
+      }
+      blocks.push({kind:'math',tex:content.join(' ').trim().slice(0,2400)});continue;
+    }
     const co=raw.match(calloutPattern);
     if(co){
       const body:string[]=[];i++;

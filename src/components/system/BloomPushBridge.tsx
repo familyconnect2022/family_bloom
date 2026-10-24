@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import { watchCloudFeatureSwitches } from "../../services/cloud/cloudFeatureService";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef } from "react";
 import { AppState, Platform } from "react-native";
@@ -32,6 +33,7 @@ export function BloomPushBridge() {
   const router = useRouter();
   const { user, userProfile, families, activeFamilyId, switchFamily } = useAuth();
   const { showToast } = useBloomToast();
+  useEffect(() => watchCloudFeatureSwitches(user?.uid), [user?.uid]);
   const openingRef = useRef(false);
   const initialHandledRef = useRef(false);
 

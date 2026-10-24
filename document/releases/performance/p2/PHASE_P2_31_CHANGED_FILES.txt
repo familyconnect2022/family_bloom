@@ -18,9 +18,9 @@ CHANGED
 - scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
 - scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
 - scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
-- scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
-- scripts/test-phase17_9w1-web-companion.js
-- scripts/test-phase17_9w2-web-parity.js
+- scripts/tests/history/test-phase-p2_12_4-build-integrity-chess-audio.js
+- scripts/tests/history/test-phase17_9w1-web-companion.js
+- scripts/tests/history/test-phase17_9w2-web-parity.js
 - src/app/(chess)/chess-challenge/[inviteId].tsx
 - src/app/(chess)/chess-game/[gameId].tsx
 - src/app/(home)/(games)/home-games.tsx

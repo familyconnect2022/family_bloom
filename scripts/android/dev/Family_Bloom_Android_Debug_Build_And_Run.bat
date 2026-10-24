@@ -138,9 +138,9 @@ call npm run phaseP2_12_8:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_32:check
 if errorlevel 1 goto :fail
-node scripts\test-h25r2r2-release-preflight.cjs
+node scripts\tests\release\test-h25r2r2-release-preflight.cjs
 if errorlevel 1 goto :fail
-node scripts\test-h25r2r5-internet-connectivity.cjs --source-only
+node scripts\tests\release\test-h25r2r5-internet-connectivity.cjs --source-only
 if errorlevel 1 goto :fail
 call npm run phaseP2_34:check
 if errorlevel 1 goto :fail

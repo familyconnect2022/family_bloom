@@ -27,7 +27,7 @@ Kế thừa **H12 FULL CODE**; không viết lại game engine, không sửa ser
 - applicationId: `com.familybloom.android` (không đổi).
 - App version: **1.3.13**, Android versionCode **143023**.
 - Native identity: **P2.37R2C-H13-native-1**, local native module **1.3.11**.
-- Các verifier build/identity và BAT cập nhật đúng H13. Bổ sung `scripts/test-phase-p2_37r2c_h13-bloom-results-return.js` vào Clean Apply, EAS và APK build preflight.
+- Các verifier build/identity và BAT cập nhật đúng H13. Bổ sung `scripts/tests/history/test-phase-p2_37r2c_h13-bloom-results-return.js` vào Clean Apply, EAS và APK build preflight.
 - Không cần redeploy Render cho **các thay đổi H13 riêng lẻ**; vẫn cần server H12 để giữ các sửa lỗi Bot/ván cờ H12. H13 sửa native Kotlin nên cần build APK mới (OTA JS đơn thuần không thay thế được Kotlin).
 
 ## Kiểm tra nguồn

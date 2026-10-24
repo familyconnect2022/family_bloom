@@ -35,7 +35,7 @@ for %%F in (
 )
 
 echo.
-node scripts\test-h22r2-cleanup-retention.cjs --quick
+node scripts\tests\release\test-h22r2-cleanup-retention.cjs --quick
 if errorlevel 1 goto :fail
 
 echo [1/4] Source/import graph...
@@ -44,21 +44,21 @@ if errorlevel 1 goto :fail
 
 echo.
 echo [2/4] P2.37R2C-H13 FULL copy/native integrity...
-node scripts\test-phase-p2_37r2-full-copy-integrity.js
+node scripts\tests\history\test-phase-p2_37r2-full-copy-integrity.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c-binary-identity-lock.js
+node scripts\tests\history\test-phase-p2_37r2c-binary-identity-lock.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c_h6-decor-rail-isolation.js
+node scripts\tests\history\test-phase-p2_37r2c_h6-decor-rail-isolation.js
 if errorlevel 1 exit /b 1
-node scripts\test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+node scripts\tests\history\test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c_h8-native-chess-tap-move.js
+node scripts\tests\history\test-phase-p2_37r2c_h8-native-chess-tap-move.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+node scripts\tests\history\test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c_h12-chess-safe-turns-results.js
+node scripts\tests\history\test-phase-p2_37r2c_h12-chess-safe-turns-results.js
 if errorlevel 1 goto :fail
-node scripts\test-phase-p2_37r2c_h13-bloom-results-return.js
+node scripts\tests\history\test-phase-p2_37r2c_h13-bloom-results-return.js
 if errorlevel 1 goto :fail
 
 echo.

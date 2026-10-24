@@ -16,15 +16,15 @@ Android: `1.3.24`, `versionCode=143034`, native ID `P2.37R2C-H22R6-native-1`.
 
 ## Source checks
 
-- `node scripts/test-h22r6-xiangqi-bloom-motion.cjs`: 18/18 PASS.
-- `node scripts/test-h22-xiangqi-parity.cjs`: 26/26 PASS.
-- `node scripts/test-h22r1-bot-invite-countdown.cjs`: 10/10 PASS.
-- `node scripts/test-h22r3-windows-build-preflight.cjs`: 7/7 PASS.
-- `node scripts/test-phase-p2_37r2c-binary-identity-lock.js`: 14/14 PASS.
-- `node scripts/test-phase-p2_37r2-full-copy-integrity.js`: 31/31 PASS.
+- `node scripts/tests/release/test-h22r6-xiangqi-bloom-motion.cjs`: 18/18 PASS.
+- `node scripts/tests/release/test-h22-xiangqi-parity.cjs`: 26/26 PASS.
+- `node scripts/tests/release/test-h22r1-bot-invite-countdown.cjs`: 10/10 PASS.
+- `node scripts/tests/release/test-h22r3-windows-build-preflight.cjs`: 7/7 PASS.
+- `node scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js`: 14/14 PASS.
+- `node scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js`: 31/31 PASS.
 - `node scripts/setup/check-ts-syntax-transpile.js`: 299/299 JS/TS/TSX transpile checks PASS.
 - `node scripts/setup/check-android-resource-names.js`: 38 valid Android resource names, all 11 expected MP3 assets PASS.
-- `node scripts/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs`: 10/10 PASS.
+- `node scripts/tests/history/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs`: 10/10 PASS.
 - Detailed test output in `document/releases/H22R6_TEST_LOG.txt`.
 
 ## Limitations and correct install

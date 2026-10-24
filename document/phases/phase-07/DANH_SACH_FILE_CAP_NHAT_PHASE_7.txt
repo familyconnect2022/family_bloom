@@ -4,7 +4,7 @@ ADDED
 src/components/family/FamilySwitcherModal.tsx
 src/app/(family)/(membership)/family-select.tsx
 src/app/(family)/(membership)/family-memberships.tsx
-scripts/test-phase7-multifamily.js
+scripts/tests/history/test-phase7-multifamily.js
 document/phases/phase-06/PHASE_6_5_CLOSED.md
 document/phases/phase-06/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_PHASE_6_5_CLOSED.md
 document/phases/phase-07/PHASE_7_MULTI_FAMILY_EXPERIENCE_ISOLATION.md

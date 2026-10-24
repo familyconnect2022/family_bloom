@@ -11,9 +11,9 @@ A follow-on H13 executable test mocked the historical Chess-only presentation br
 
 ## Changes
 
-- `scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js`: require the actual `onChessAction` event, `setChessBoardState` handler and emitted event, allowing additive Xiangqi native events. Verify distinct Xiangqi board, actions and socket controller; the Chess controller must not use the Xiangqi socket or vice versa.
-- `scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js`: assert the actual dedicated Xiangqi native board layout rather than the retired probe-only `configureGameLayer` call.
-- `scripts/test-phase-p2_37r2c_h13-bloom-results-return.js`: stub the new isolated Xiangqi presentation controller for the H13 Chess-only behavioral test, preserving the rest of the executable test.
+- `scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js`: require the actual `onChessAction` event, `setChessBoardState` handler and emitted event, allowing additive Xiangqi native events. Verify distinct Xiangqi board, actions and socket controller; the Chess controller must not use the Xiangqi socket or vice versa.
+- `scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js`: assert the actual dedicated Xiangqi native board layout rather than the retired probe-only `configureGameLayer` call.
+- `scripts/tests/history/test-phase-p2_37r2c_h13-bloom-results-return.js`: stub the new isolated Xiangqi presentation controller for the H13 Chess-only behavioral test, preserving the rest of the executable test.
 
 No app, game, Firebase, server, native Kotlin, resources or build BAT behavior changed.
 

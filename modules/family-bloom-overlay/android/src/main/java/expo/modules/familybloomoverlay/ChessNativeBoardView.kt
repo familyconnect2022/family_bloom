@@ -62,6 +62,9 @@ internal class ChessNativeBoardView(
   private var lastOpponentLineKey = ""
   private var state: NativeChessBoardState? = null
   private var boardSize = 0
+  // Do not confuse the latest JSON orientation with the physical positions of
+  // the 64 retained square Views. parkForMini updates JSON but never lays out.
+  private var laidOutSquares: ChessSquareLayoutIdentity? = null
   // Cached native cell paint. React/JS state changes no longer redraw 64
   // ImageViews or allocate 64 drawables for a single square highlight.
   private val paintedCells = HashMap<String, String>()
@@ -274,7 +277,11 @@ internal class ChessNativeBoardView(
       bloomPhase = "" // Repaint actionable error, do not freeze a loading control.
     }
     if (previous?.gameId != next.gameId) {localActionInFlight = null;lastDecisionCompleted = ""}
-    if (boardSize > 0 && previous?.orientation != next.orientation) {
+    // A Mini/IDLE state may have already changed `state.orientation` without
+    // changing the retained square views. Compare against PHYSICAL layout,
+    // never previous JSON. Also account for a fresh game and board resize.
+    val facing = chessFacingForPlayer(next.orientation, next.meColor)
+    if (boardSize > 0 && chessSquareLayoutIsStale(laidOutSquares, next.gameId, facing, boardSize)) {
       layoutSquares()
       paintedCells.clear()
       lastBoardPaintKey = ""
@@ -1056,7 +1063,12 @@ internal class ChessNativeBoardView(
     if (width < dp(200f) || height < dp(300f)) return
     val expected = min(width - dp(8f), height - (dp(52f) + dp(52f) * 2 + dp(66f) + dp(7f) * 5) - dp(4f))
       .coerceAtLeast(dp(72f))
-    if (boardSize != expected || board.width != expected || board.height != expected || paintedCells.size != 64) {
+    val current = state
+    val staleSquares = current != null && chessSquareLayoutIsStale(
+      laidOutSquares, current.gameId,
+      chessFacingForPlayer(current.orientation, current.meColor), boardSize,
+    )
+    if (boardSize != expected || board.width != expected || board.height != expected || paintedCells.size != 64 || staleSquares) {
       layoutChildren(width, height)
       requestLayout()
     }
@@ -1067,11 +1079,10 @@ internal class ChessNativeBoardView(
     val current = state
     if (boardSize <= 0) return
     val cell = boardSize / 8
-    val files = if (current?.orientation == "b") "hgfedcba" else "abcdefgh"
-    val ranks = if (current?.orientation == "b") (1..8).toList() else (8 downTo 1).toList()
-    for ((row, rank) in ranks.withIndex()) {
-      for ((col, file) in files.withIndex()) {
-        val square = "$file$rank"
+    val facing = chessFacingForPlayer(current?.orientation ?: "w", current?.meColor)
+    for (row in 0..7) {
+      for (col in 0..7) {
+        val square = chessSquareAtScreenCell(facing, row, col)
         val holder = cells[square] ?: continue
         holder.layoutParams = LayoutParams(
           if (col == 7) boardSize - cell * 7 else cell,
@@ -1086,6 +1097,8 @@ internal class ChessNativeBoardView(
         hints[square]?.layoutParams = LayoutParams(hintSize, hintSize, Gravity.CENTER)
       }
     }
+    // Record only after all 64 holders received their coordinates.
+    laidOutSquares = ChessSquareLayoutIdentity(current?.gameId ?: "", facing, boardSize)
   }
 
   private fun render() {

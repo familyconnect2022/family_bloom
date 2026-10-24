@@ -33,7 +33,7 @@
       "sizeBytes": 212,
       "sha256": "ecf8dfab7ee88ed3aaef317ed3ca608475956225bcae2e99d96b866b52d0fe83"
     },
-    "scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js": {
+    "scripts/tests/history/test-phase-p2_37r2c_h16-chess-smooth-motion.js": {
       "sizeBytes": 4471,
       "sha256": "c70b5456f7f78281b9be69feace91347105927004a14df300c6db0b90f8557ac"
     }

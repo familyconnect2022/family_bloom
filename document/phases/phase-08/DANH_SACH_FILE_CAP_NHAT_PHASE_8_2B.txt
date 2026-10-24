@@ -9,7 +9,7 @@ src/app/(tabs)/moments.tsx
 src/app/(tabs)/planner.tsx
 
 TEST
-scripts/test-phase82b-first-frame.js
+scripts/tests/history/test-phase82b-first-frame.js
 
 DOCUMENT
 PATCH_INFO.txt

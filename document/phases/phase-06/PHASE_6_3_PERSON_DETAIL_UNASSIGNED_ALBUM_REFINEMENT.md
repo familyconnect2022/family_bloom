@@ -19,7 +19,7 @@ Không đổi schema, Rules, Functions, permission hoặc persisted relationship
 - `src/components/familyGraph/FamilyGraphPersonSheet.tsx`
 - `src/hooks/family/useFamilyPersonContent.ts`
 - `src/services/familyGraph/familyPersonContentService.ts`
-- `scripts/test-familyGraphLayout.js`
+- `scripts/tests/features/test-familyGraphLayout.js`
 
 ## Album fix
 

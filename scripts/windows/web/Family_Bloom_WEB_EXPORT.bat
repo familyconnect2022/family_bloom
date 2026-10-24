@@ -30,11 +30,11 @@ if "%NEED_WEB_INSTALL%"=="1" (
   if errorlevel 1 goto :fail
 )
 
-node scripts\test-phase17_9w1-web-companion.js
+node scripts\tests\history\test-phase17_9w1-web-companion.js
 if errorlevel 1 goto :fail
-node scripts\test-phase17_9w2-web-parity.js
+node scripts\tests\history\test-phase17_9w2-web-parity.js
 if errorlevel 1 goto :fail
-node scripts\test-phase17_9w3-web-stability-visual-rebuild.js
+node scripts\tests\history\test-phase17_9w3-web-stability-visual-rebuild.js
 if errorlevel 1 goto :fail
 
 if exist dist rmdir /s /q dist

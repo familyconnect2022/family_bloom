@@ -117,112 +117,112 @@
       "change": "modified"
     },
     {
-      "path": "scripts/test-familyGraphBatchRelationships.js",
+      "path": "scripts/tests/features/test-familyGraphBatchRelationships.js",
       "sha256": "2c2e9533cc33696d8de0dcf0010b8802e67a15ae0b1270640dc3b1db4240d0b5",
       "change": "modified"
     },
     {
-      "path": "scripts/test-familyGraphPhase64.js",
+      "path": "scripts/tests/features/test-familyGraphPhase64.js",
       "sha256": "7f7c54f8ed439b79fd535073fa2c0a57413911ebfca98346da4ed7e4fa052424",
       "change": "modified"
     },
     {
-      "path": "scripts/test-familyGraphQueryEngine.js",
+      "path": "scripts/tests/features/test-familyGraphQueryEngine.js",
       "sha256": "d4ba269d1db47f6f152904370ca494168e390931ea4432f1b2df16aae330fc48",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2-full-copy-integrity.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js",
       "sha256": "a78d5c36fd3ab54319f7e56ae2365e2179cf074ea130f781855933f3565d4743",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c-binary-identity-lock.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
       "sha256": "81eada215f1acc95d27e86574122cd016f4234ad61f83d1191f0a4524f99c491",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h10-chess-native-latency.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js",
       "sha256": "c17fde23dd4195969d86fd33111a0721dfdc2c090e45297113162a308ed7173a",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js",
       "sha256": "a347697f676532fb36f239fb225229647398de669f818e65d2c02609ce53d2d7",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h12-chess-safe-turns-results.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h12-chess-safe-turns-results.js",
       "sha256": "ed8fe5021de73feb2aa3b9b910768e9d98fd2aa87037a1a614c48da3b6dc5089",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h13-bloom-results-return.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h13-bloom-results-return.js",
       "sha256": "91ea1dda48f591da9c3de0cd30aa17e0d884d63799f55bab0a34f2a7bb487b97",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h14-chess-color-mini-edge.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h14-chess-color-mini-edge.js",
       "sha256": "00b11c67a42bde17be52ea3771396ce2b83d6ccbbb7cdec136a099aadadae24d",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h15-chess-authority-dev-release.js",
       "sha256": "e1f0dd12c848733aad2da3f142346418939d8ec0be6e0672637032c2c48d2b8e",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h16-chess-smooth-motion.js",
       "sha256": "11fd6dabefe9eac9141edeac4057fb762ae8f3d7dfee871e69f2a5b5acdbdee0",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h17-chess-optimistic-authority.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h17-chess-optimistic-authority.js",
       "sha256": "1a2289ab682732257231cab433a0008bdac1acdc16273a94355f6d0a6189a446",
       "change": "added"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js",
       "sha256": "1cb8b3db7696d3343fe9126fa8d279df66976afb5209686e77b4b557c725c1a0",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h5-root-slot-offscreen-idle.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h5-root-slot-offscreen-idle.js",
       "sha256": "13f2a7617e33e49fdf56af6a54d9f57736bab2feb5ba5d90013de7e6d7e63790",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
       "sha256": "8ec8554b93b323bb7f6a26b886099a01978d5628f0c46be476977683e615e46b",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
       "sha256": "e03ba29619c0a3a5126664650f69c88cc9df38fa8b6b1ca0ed9143c0fa1f3480",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
       "sha256": "ea064886684170a45621055bf676b338c13f92512fc1ebc85007c57cce0c199f",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
       "sha256": "993e6d9ba83f6c0e1ae1422d319b6791876c2af4728d6b1ba5fb329cd14e6697",
       "change": "modified"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
       "sha256": "8de7493dfd5f0a148fd3c9e417842b1f4ef4e907d980da1ace41afadac2a2fac",
       "change": "modified"
     },
     {
-      "path": "scripts/test-proposalCloud-emulator.js",
+      "path": "scripts/tests/features/test-proposalCloud-emulator.js",
       "sha256": "2c4b7bc6121abb993aef1ccca02c033bd549d808fcd4ab3397dcd896e6e936bf",
       "change": "modified"
     },
     {
-      "path": "scripts/test-proposals-emulator.js",
+      "path": "scripts/tests/features/test-proposals-emulator.js",
       "sha256": "f6f2629224da2729aabb3be74940f64e32c7e4284de7aa4cd9483bcf724f68c3",
       "change": "modified"
     },

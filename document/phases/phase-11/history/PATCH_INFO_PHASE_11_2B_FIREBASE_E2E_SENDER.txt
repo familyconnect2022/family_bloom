@@ -21,4 +21,4 @@ Safety:
 
 Contract tests:
 - npm run test:phase112b:e2e
-- node scripts/test-phase112b-harness.js
+- node scripts/tests/history/test-phase112b-harness.js

@@ -71,6 +71,63 @@ if not defined UPDATE_MESSAGE (
 )
 
 echo.
+rem R3R8: test safe chemistry before publishing OTA.
+node scripts\tests\release\test-super-bloom-chemistry-safe-r3r8.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem thu Hoa hoc that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R9: kiem tra nhap sau phan so va xem truoc.
+node scripts\tests\release\test-super-bloom-inline-chemical-follow-r3r9.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem thu chen them cong thuc that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R10: bai giai co doan chu, cong thuc, ⇒/⇔ tren cung Firestore blocks.
+node scripts\tests\release\test-super-bloom-solution-blocks-r3r10.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem thu bai giai co cau truc that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R11: mathematical limit/matrix/radical/vector regression.
+node scripts\tests\release\test-super-bloom-math-typesetting-r3r11.cjs
+if errorlevel 1 (
+  echo [DUNG] Loi bo cuc cong thuc. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R12: letter, case-sensitive family introduction and joined square-root.
+rem R3R14: ensure letter animation and assets before OTA.
+node scripts\tests\release\test-r3r14-welcome-envelope-motion.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem thu Thu Ngo R3R14 that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R14R1: dependency-free Android touch layer guard.
+node scripts\tests\release\test-r3r14r1-welcome-touch-static.cjs
+if errorlevel 1 (
+  echo [DUNG] Thu Ngo khong nhan cham. Khong publish OTA.
+  pause
+  exit /b 1
+)
+node scripts\tests\release\test-r3r12-family-intro-letter-radical.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem thu R3R12 that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+rem R3R13: verify remote feature gate, Firebase auth and deploy helper before OTA.
+node scripts\tests\release\test-r3r13-blaze-ready.cjs
+if errorlevel 1 (
+  echo [DUNG] Kiem tra Blaze/FCM that bai. Khong publish OTA.
+  pause
+  exit /b 1
+)
+echo.
 echo Se publish:
 echo   Channel : family-bloom-test
 echo   Platform: android

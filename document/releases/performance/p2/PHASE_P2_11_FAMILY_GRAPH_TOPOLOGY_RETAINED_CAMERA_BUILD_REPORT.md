@@ -77,7 +77,7 @@ The preparation layer remains above the branch until visual readiness completes,
 
 Dedicated P2.11 gate:
 
-`scripts/test-phase-p2_11-family-graph-topology-retained-camera.js`
+`scripts/tests/history/test-phase-p2_11-family-graph-topology-retained-camera.js`
 
 It covers three topology cases:
 

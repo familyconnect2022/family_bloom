@@ -20,7 +20,7 @@ Ngày: 19/10/2026  |  Nền: H21R6 FULL CODE  |  Bản nguồn mới: H22
 
 ## Kiểm tra thực tế trong môi trường tạo nguồn
 
-- `node scripts/test-h22-xiangqi-parity.cjs`: **21/21 PASS** — kiểm thử runtime server bằng TypeScript transpile/mocks và các kiểm tra contract client/native/tài nguyên/build.
+- `node scripts/tests/release/test-h22-xiangqi-parity.cjs`: **21/21 PASS** — kiểm thử runtime server bằng TypeScript transpile/mocks và các kiểm tra contract client/native/tài nguyên/build.
 - Bộ kiểm thử cũ của Chess H15–H21R5, binary identity, Build & Share contract và tài nguyên Android: chạy kiểm tra hồi quy trong môi trường này; kết quả được rà trước khi đóng gói.
 - Không thực hiện build Gradle APK hoặc deploy Render live trong môi trường đóng gói do không có Android SDK/toolchain và server credentials. Việc kiểm thử tự động **không có nghĩa đã xác nhận APK cài trên điện thoại chạy hoàn hảo**.
 

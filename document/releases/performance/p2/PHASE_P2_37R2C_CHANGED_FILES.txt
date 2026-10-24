@@ -14,9 +14,9 @@ modules/family-bloom-overlay/package.json
 modules/family-bloom-overlay/android/build.gradle
 modules/family-bloom-overlay/android/src/main/AndroidManifest.xml
 modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt
-scripts/test-phase-p2_37-authenticated-native-sibling-presentation.js
-scripts/test-phase-p2_37r2-full-copy-integrity.js
-scripts/test-phase-p2_37r2c-binary-identity-lock.js
+scripts/tests/history/test-phase-p2_37-authenticated-native-sibling-presentation.js
+scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js
+scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js
 scripts/setup/check-p2_37r2c-native-package.js
 scripts/setup/check-p2_37r2c-apk-native-proof.js
 scripts/setup/check-p2_37r2c-eas-apk-proof.js

@@ -12,7 +12,7 @@ A device may display 5G/Wi-Fi while having no actual Internet (exhausted mobile 
 - `src/app/_layout.tsx`: banner positioned above the navigation/game siblings and is available before login.
 - `src/context/AuthContext.tsx`: check reachability before Google sign-in, sending phone verification and confirming OTP. On network failures, show actionable Vietnamese copy; errors with confirmed Internet continue through existing Firebase error handling. No forced sign-out or credential reset.
 - `src/app/(auth)/login.tsx`: immediate Google button loading + synchronous re-entry latch, and disable concurrent phone/login buttons.
-- `scripts/test-h25r2r5-internet-connectivity.cjs`: preinstall source-only checks and dependency-aware JS VM tests. 20/20 total PASS including offline, captive portal, one-endpoint recovery, concurrent requests and offline→online. Added to H25 preflight, EAS, Clean Apply, Build & Share, direct APK release. Debug preflight runs source-only before dependencies.
+- `scripts/tests/release/test-h25r2r5-internet-connectivity.cjs`: preinstall source-only checks and dependency-aware JS VM tests. 20/20 total PASS including offline, captive portal, one-endpoint recovery, concurrent requests and offline→online. Added to H25 preflight, EAS, Clean Apply, Build & Share, direct APK release. Debug preflight runs source-only before dependencies.
 
 ## Validation executed
 - Internet connectivity preinstall + runtime: 20/20 PASS.

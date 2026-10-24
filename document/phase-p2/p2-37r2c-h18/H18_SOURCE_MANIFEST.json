@@ -54,7 +54,7 @@
       "sha256": "c3712162296870bdf97dce67443665fc671b5473836658d42a62099de0b59274"
     },
     {
-      "path": "scripts/test-phase-p2_37r2c_h18-chess-network-resync.js",
+      "path": "scripts/tests/history/test-phase-p2_37r2c_h18-chess-network-resync.js",
       "sha256": "6d7e5b45adc73049f1d39904b7227cee1896724eba5c39a9f61e2d3cbecbb8f0"
     },
     {

@@ -9,7 +9,7 @@ Changed/new files relative to Phase 14U + Render devDependencies hotfix baseline
 6. package.json
 7. scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
 8. scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
-9. scripts/test-phase14t-home-games.js
+9. scripts/tests/history/test-phase14t-home-games.js
 10. scripts/test-phase14v-family-game-policy.js
 11. server/src/chess/chessTypes.ts
 12. server/src/chess/gameHours.ts

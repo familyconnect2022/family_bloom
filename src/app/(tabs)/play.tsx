@@ -8,6 +8,7 @@ import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { BloomCard, BloomSectionHeader } from "../../components/ui/BloomPageComponents";
 import { COLORS } from "../../constants/theme";
+import { ENABLE_FAMILY_BULLETIN } from "../../constants/featureFlags";
 import { useAuth } from "../../context/AuthContext";
 import { useTabLiveEffect } from "../../context/TabRuntimeContext";
 import { homeTimeCapsuleService, isTimeCapsuleOpen, timeCapsuleOpenMillis } from "../../services/home/homeTimeCapsuleService";
@@ -126,97 +127,41 @@ export default function PlayScreen() {
         />
 
         <View style={styles.pageBody}>
-          <BloomSectionHeader
-            title="Góc Nhà Mình"
-            subtitle="Tin tức, trò chơi và quỹ chung — ba nơi cả nhà ghé thường xuyên nhất."
-          />
-          <View style={styles.list}>
-            <HubCard
-              icon="notifications-outline"
-              title="Bảng tin Nhà Mình"
-              description="Thông báo, lời nhắc và những chuyện cả nhà cần cùng để ý."
-              accent="#FFF0F4"
-              badge="Xem ngay"
-              onPress={() => router.push("/home-board" as never)}
-            />
-            <HubCard
-              icon="school-outline"
-              title="Góc học tập Super Bloom"
-              description="Bài học Toán, Tiếng Việt, Văn, Anh, Lí, Hóa từ Bloom Content Studio — học và tự kiểm tra."
-              accent="#FBE3EE"
-              badge="Học ngay"
-              onPress={() => router.push('/learning-library' as never)}
-            />
-            <HubCard
-              icon="game-controller-outline"
-              title="Trò chơi Nhà Mình"
-              description="Cờ vua, Cờ tướng cùng 6 trò gắn kết. Thách đấu tài khoản người thân đang online."
-              accent="#FFF0D9"
-              badge="Chơi ngay"
-              onPress={() => router.push("/home-games" as never)}
-            />
-            <HubCard
-              icon="wallet-outline"
-              title="Quỹ gia đình"
-              description="Thủ quỹ, nhóm giữ quỹ, thu chi, dấu chân và thống kê Ngày/Tháng/Năm."
-              accent="#E8F7F2"
-              badge="Dùng ngay"
-              onPress={() => router.push("/home-fund" as never)}
-            />
-          </View>
-          <BloomCard style={styles.welcomeCard}>
-            <View style={styles.welcomeIcon}><Ionicons name="home" size={25} color={COLORS.primaryText} /></View>
-            <View style={styles.welcomeCopy}>
-              <Text style={styles.welcomeKicker}>HÔM NAY Ở {familyName.toLocaleUpperCase("vi")}</Text>
-              <Text style={styles.welcomeTitle}>Chào {name} 🌷</Text>
-              <Text style={styles.welcomeText}>Không cần có việc lớn. Một câu hỏi vui hay một lời nhỏ cũng đủ làm ngôi nhà gần nhau hơn.</Text>
+          <View style={styles.group}>
+            <BloomSectionHeader title="Chung một mái nhà" subtitle="Cùng chăm lo, cùng quyết định những việc của nhà" />
+            <View style={styles.list}>
+              {ENABLE_FAMILY_BULLETIN && (
+                <HubCard icon="megaphone-outline" title="Bảng tin Nhà Mình" description="Những tin chung của gia đình: sự kiện quan trọng và kỷ niệm cả nhà cần biết." accent="#FFF0F4" badge="Tin chung" onPress={() => router.push("/home-board" as never)} />
+              )}
+              <HubCard icon="wallet-outline" title="Quỹ gia đình" description="Cùng ghi nhận thu chi, giữ quỹ minh bạch và xem dấu chân quỹ chung." accent="#E8F7F2" onPress={() => router.push("/home-fund" as never)} />
+              <HubCard icon="stats-chart-outline" title="Cùng quyết định" description="Mời cả nhà chọn Đồng ý hoặc Không đồng ý trước hạn hẹn." accent="#F6E8FF" onPress={() => router.push("/home-polls" as never)} />
             </View>
-          </BloomCard>
-
-          <BloomSectionHeader title="Cùng nhau trong nhà" subtitle="Ba không gian đầu tiên của Nhà Mình đã có thể dùng thật" />
-          <View style={styles.list}>
-            <HubCard
-              icon="chatbubble-ellipses-outline"
-              title="Thì thầm"
-              description="Gửi riêng cho một người thân hoặc chia sẻ với cả nhà, kèm cảm xúc và tim phản hồi."
-              accent="#FFE3EC"
-              badge="Dùng ngay"
-              onPress={() => router.push("/home-whispers" as never)}
-            />
-            <HubCard
-              icon="stats-chart-outline"
-              title="Cùng quyết định"
-              description="Mời cả nhà hoặc một nhóm từ 3 người cùng chọn Đồng ý/Không đồng ý trước ngày hết hạn."
-              accent="#F6E8FF"
-              badge="Dùng ngay"
-              onPress={() => router.push("/home-polls" as never)}
-            />
-            <HubCard
-              icon="restaurant-outline"
-              title="Bếp Nhà Mình"
-              description="100 món Việt được Bloom chuẩn bị sẵn, thay đổi theo ngày và có thể dịu dàng theo khẩu vị của từng người."
-              accent="#E8F5EB"
-              badge="Dùng ngay"
-              onPress={() => router.push("/home-kitchen" as never)}
-            />
           </View>
-
-          <BloomSectionHeader title="Một lời dành cho tương lai" subtitle="Chọn người nhận, cất lời nhắn đến đúng ngày rồi mở ra theo một trong ba sắc thái: Ấm áp · Trang trọng · Rộn ràng" />
-          <View style={styles.list}>
-            <HubCard
-              icon={timeCapsuleHub.attention ? "gift" : "gift-outline"}
-              title="Hộp thời gian"
-              description={timeCapsuleHub.attention
-                ? "Có một chiếc hộp đang cần bạn để ý. Chạm để xem ngay, không cần vào trong mới biết trạng thái."
-                : "Gửi một lời cho tương lai, ẩn hoàn toàn hoặc báo trước, rồi để Bloom mở đúng khoảnh khắc đã hẹn."}
-              accent={timeCapsuleHub.attention ? "#FFD4E1" : "#FFE1E5"}
-              badge={timeCapsuleHub.badge}
-              statusLine={timeCapsuleHub.statusLine}
-              attention={timeCapsuleHub.attention}
-              onPress={() => router.push("/home-time-capsules" as never)}
-            />
+          <View style={styles.group}>
+            <BloomSectionHeader title="Giờ vui của cả nhà" subtitle="Một ván cờ, một tiếng cười, thêm chút gần nhau" />
+            <View style={styles.list}>
+              <HubCard icon="game-controller-outline" title="Trò chơi Nhà Mình" description="Cờ vua, Cờ tướng và những trò chơi gắn kết người thân." accent="#FFF0D9" badge="Cùng chơi" onPress={() => router.push("/home-games" as never)} />
+            </View>
           </View>
-
+          <View style={styles.group}>
+            <BloomSectionHeader title="Vườn tri thức nở hoa" subtitle="Mỗi ngày khám phá thêm một điều thú vị" />
+            <View style={styles.list}>
+              <HubCard icon="school-outline" title="Góc học tập Super Bloom" description="Học Toán, Tiếng Việt, Văn, Anh, Lí, Hóa theo bài đã xuất bản từ Bloom Content Studio." accent="#FBE3EE" badge="Học ngay" onPress={() => router.push("/learning-library" as never)} />
+            </View>
+          </View>
+          <View style={styles.group}>
+            <BloomSectionHeader title="Lời thương cất giữ" subtitle="Có những lời dành cho hiện tại, có những lời chờ mai sau" />
+            <View style={styles.list}>
+              <HubCard icon="chatbubble-ellipses-outline" title="Thì thầm" description="Gửi điều nhỏ bé tới riêng một người thân hoặc cả nhà." accent="#FFE3EC" onPress={() => router.push("/home-whispers" as never)} />
+              <HubCard icon={timeCapsuleHub.attention ? "gift" : "gift-outline"} title="Hộp thời gian" description={timeCapsuleHub.attention ? "Có chiếc hộp đã đến lúc mở. Chạm để xem những lời gửi từ trước." : "Gửi một lời cho tương lai, rồi để Bloom mở đúng ngày đã hẹn."} accent={timeCapsuleHub.attention ? "#FFD4E1" : "#FFE1E5"} badge={timeCapsuleHub.badge} statusLine={timeCapsuleHub.statusLine} attention={timeCapsuleHub.attention} onPress={() => router.push("/home-time-capsules" as never)} />
+            </View>
+          </View>
+          <View style={styles.group}>
+            <BloomSectionHeader title="Bếp ấm thơm nhà" subtitle="Món ngon và câu chuyện quanh mâm cơm" />
+            <View style={styles.list}>
+              <HubCard icon="restaurant-outline" title="Bếp Nhà Mình" description="Khám phá những món Việt và chọn bữa ngon theo khẩu vị của nhà." accent="#E8F5EB" onPress={() => router.push("/home-kitchen" as never)} />
+            </View>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -225,7 +170,8 @@ export default function PlayScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 32 },
-  pageBody: { paddingHorizontal: 16, paddingTop: 18, gap: 18 },
+  pageBody: { paddingHorizontal: 16, paddingTop: 23, paddingBottom: 20, gap: 24 },
+  group: { gap: 12 },
   welcomeCard: { flexDirection: "row", gap: 12, alignItems: "flex-start", backgroundColor: COLORS.surfaceFocus },
   welcomeIcon: { width: 48, height: 48, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.78)", alignItems: "center", justifyContent: "center" },
   welcomeCopy: { flex: 1 },

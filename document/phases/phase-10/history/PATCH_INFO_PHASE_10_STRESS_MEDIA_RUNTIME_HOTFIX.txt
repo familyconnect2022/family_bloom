@@ -8,7 +8,7 @@ Changed:
   - removes render-time dependency on imported syntheticMediaUriFor helper
   - uses bundled local static images for Timeline and Memory Book stress rows
   - keeps test media visible while remaining RAM/local-only
-- scripts/test-phase10-stress-media-runtime-hotfix.js
+- scripts/tests/history/test-phase10-stress-media-runtime-hotfix.js
 - document/phases/phase-10/PHASE_10_STRESS_MEDIA_RUNTIME_HOTFIX.md
 
 No production data-path, Firebase, Cloudinary, listener, Graph algorithm, or authorization changes.

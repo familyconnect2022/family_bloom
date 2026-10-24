@@ -14,10 +14,10 @@ Base: H25R2R3 Windows NPM ENOENT Safe Updater. This is a gameplay-UX-only releas
 
 ## Verification run
 
-- `node scripts/test-h25r2r4-touch-feedback.cjs --source-only`: 11/11 source-contract checks; does **not** need npm or TypeScript, and is included in the pre-copy updater preflight.
-- `node scripts/test-h25r2r4-touch-feedback.cjs`: 21/21 total (11 source + 10 VM behavioral): repeated Chess draw offer and Xiangqi resignation, pending frames, ACK timeout, request-ID reuse, and successful server confirmation.
-- `node scripts/test-h25r2r2-release-preflight.cjs`: 8/8 pre-copy gates.
-- `node scripts/test-h22r8-xiangqi-ux-draw.cjs`: 16/16; legacy expectation for the now-removed passive hint was updated, preserving all actual draw/move colors and geometry.
+- `node scripts/tests/release/test-h25r2r4-touch-feedback.cjs --source-only`: 11/11 source-contract checks; does **not** need npm or TypeScript, and is included in the pre-copy updater preflight.
+- `node scripts/tests/release/test-h25r2r4-touch-feedback.cjs`: 21/21 total (11 source + 10 VM behavioral): repeated Chess draw offer and Xiangqi resignation, pending frames, ACK timeout, request-ID reuse, and successful server confirmation.
+- `node scripts/tests/release/test-h25r2r2-release-preflight.cjs`: 8/8 pre-copy gates.
+- `node scripts/tests/release/test-h22r8-xiangqi-ux-draw.cjs`: 16/16; legacy expectation for the now-removed passive hint was updated, preserving all actual draw/move colors and geometry.
 - Existing H25 Firebase, H25R2 black-side, H17–H21 Chess reconnect/offline and H22 native Xiangqi checks remain in release/build scripts.
 
 ## Release and deployment

@@ -1,10 +1,11 @@
 @echo off
-setlocal EnableExtensions
-cd /d "%~dp0"
-if not exist "%~dp0scripts\android\build\Family_Bloom_Android_Release_Build_APK_And_Share.bat" (
-  echo [ERROR] Family Bloom FULL source files are incomplete: scripts\android\build\Family_Bloom_Android_Release_Build_APK_And_Share.bat
+setlocal EnableExtensions DisableDelayedExpansion
+rem Stable root launcher; maintenance and build logic stays under scripts\android.
+set "FB_ROOT=%~dp0"
+if not exist "%FB_ROOT%scripts\android\build\Family_Bloom_BUILD_APK_TO_SHARE.bat" (
+  echo [ERROR] Missing FULL CODE helper. Extract the complete ZIP.
   pause
   exit /b 1
 )
-call "%~dp0scripts\android\build\Family_Bloom_Android_Release_Build_APK_And_Share.bat" %*
+call "%FB_ROOT%scripts\android\build\Family_Bloom_BUILD_APK_TO_SHARE.bat" %*
 exit /b %errorlevel%

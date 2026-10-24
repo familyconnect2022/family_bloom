@@ -18,8 +18,8 @@ src/services/familyGraph/crossFamilyGraphBridge.ts             [NEW]
 src/constants/featureFlags.ts
 
 TESTS
-scripts/test-phase7-multifamily.js
-scripts/test-phase8-reliability.js                             [NEW]
+scripts/tests/history/test-phase7-multifamily.js
+scripts/tests/history/test-phase8-reliability.js                             [NEW]
 
 DOCUMENTATION
 document/phases/phase-08/PHASE_8_3_TO_8_5_RELIABILITY_POLISH_REALTIME.md       [NEW]

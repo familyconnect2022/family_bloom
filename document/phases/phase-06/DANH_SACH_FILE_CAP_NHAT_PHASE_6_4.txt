@@ -6,8 +6,8 @@ src/components/familyGraph/familyGraphLiveAdapter.ts
 src/components/familyGraph/familyGraphSpatialGrid.ts
 src/components/familyGraph/familyGraphViewport.ts
 src/components/familyGraph/FamilyGraphPrototype.tsx
-scripts/test-familyGraphLayout.js
-scripts/test-familyGraphPhase64.js
+scripts/tests/features/test-familyGraphLayout.js
+scripts/tests/features/test-familyGraphPhase64.js
 document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
 document/phases/phase-06/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_PHASE_6_3_CLOSED.md
 document/phases/phase-06/PHASE_6_4_LARGE_TREE_PROGRESSIVE_INTERACTION.md

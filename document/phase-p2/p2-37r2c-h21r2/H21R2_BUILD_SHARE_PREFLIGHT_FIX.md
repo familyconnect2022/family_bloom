@@ -15,7 +15,7 @@
 - No guard is disabled; failure to stage or verify actual Android resources still blocks publication.
 
 ## Validation limits
-Run `node scripts/test-phase-p2_12_5-remote-apk-share-build.js`, `node scripts/test-phase-p2_12_4-build-integrity-chess-audio.js`, `node scripts/test-phase-p2_37r2c_h21r1-audio-packaging.cjs`. These are **static/source tests only**. A real Windows Gradle build is still required to verify the finished APK.
+Run `node scripts/tests/history/test-phase-p2_12_5-remote-apk-share-build.js`, `node scripts/tests/history/test-phase-p2_12_4-build-integrity-chess-audio.js`, `node scripts/tests/history/test-phase-p2_37r2c_h21r1-audio-packaging.cjs`. These are **static/source tests only**. A real Windows Gradle build is still required to verify the finished APK.
 
 ## Install
 Backup H21R1, use the bundled full copy-over BAT, overlay H21R2 FULL CODE, run CLEAN APPLY then BUILD APK TO SHARE. No Render redeploy; no OTA-only update for this workflow (this patch affects build scripts only).

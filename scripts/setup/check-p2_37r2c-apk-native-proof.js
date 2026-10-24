@@ -6,9 +6,9 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 
-const EXPECTED_VERSION_CODE = '143040';
+const EXPECTED_VERSION_CODE = '143042';
 const EXPECTED_PACKAGE = 'com.familybloom.android';
-const EXPECTED_IDENTITY = 'P2.37R2C-H25-native-1';
+const EXPECTED_IDENTITY = 'P2.37R2C-H25-native-3';
 
 const apk = process.argv[2];
 if (!apk) { console.error('FAIL usage: node scripts/setup/check-p2_37r2c-apk-native-proof.js <apk>'); process.exit(2); }

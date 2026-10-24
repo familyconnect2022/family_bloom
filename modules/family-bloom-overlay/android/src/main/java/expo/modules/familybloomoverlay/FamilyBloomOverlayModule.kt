@@ -19,7 +19,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private const val FAMILY_BLOOM_OVERLAY_NATIVE_IDENTITY = "P2.37R2C-H25-native-1"
+private const val FAMILY_BLOOM_OVERLAY_NATIVE_IDENTITY = "P2.37R2C-H25-native-3"
 
 private data class PresentationCommand(
   val mode: String,
@@ -316,6 +316,19 @@ private class FamilyBloomOverlayRail(
   )
 
   private var miniDockRight = true
+  // Independent gesture-presentation state. No Chess/Xiangqi board or session data is shared.
+  private var chessMiniPeeked = false
+  private var xiangqiMiniPeeked = false
+  private var miniGestureStartAt = 0L
+  private fun isMiniPeeked() = if (kind == "xiangqi") xiangqiMiniPeeked else chessMiniPeeked
+  private fun setMiniPeeked(peeked: Boolean) {
+    if (kind == "xiangqi") xiangqiMiniPeeked = peeked else chessMiniPeeked = peeked
+  }
+  // Keep 40% inside the physical viewport: off-screen rail portions never steal touches.
+  private fun dockedMiniX(viewportW: Int, w: Int, right: Boolean, peek: Boolean): Int {
+    val hidden = if (peek) (w * 0.60f).roundToInt() else 0
+    return if (right) viewportW - w + hidden else -hidden
+  }
   private var miniY = 0f
   private var miniTouchStartX = 0f
   private var miniTouchStartY = 0f
@@ -694,7 +707,7 @@ private class FamilyBloomOverlayRail(
     val maxY = max(minY, viewportH - insetBottom - miniH - verticalGap)
     if (miniY <= 0f) miniY = min(maxY, max(minY, (viewportH * 0.64f).roundToInt())).toFloat()
     miniY = miniY.coerceIn(minY.toFloat(), maxY.toFloat())
-    val x = if (miniDockRight) (viewportW - miniW).coerceAtLeast(0) else 0
+    val x = dockedMiniX(viewportW, miniW, miniDockRight, isMiniPeeked())
 
     setRailBounds(x, miniY.roundToInt(), miniW, miniH)
     miniContainer.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -1137,6 +1150,8 @@ private class FamilyBloomOverlayRail(
     miniContainer.setOnTouchListener { _, event ->
       when (event.actionMasked) {
         MotionEvent.ACTION_DOWN -> {
+          miniGestureStartAt = event.eventTime
+          this@FamilyBloomOverlayRail.animate().cancel()
           miniTouchStartX = event.rawX
           miniTouchStartY = event.rawY
           miniStartX = this@FamilyBloomOverlayRail.x
@@ -1155,7 +1170,8 @@ private class FamilyBloomOverlayRail(
           val viewportH = viewportHeight()
           val minY = max(verticalGap, dp(insetTopDp.toFloat()) + verticalGap)
           val maxY = max(minY, viewportH - dp(insetBottomDp.toFloat()) - h - verticalGap)
-          val nextX = (miniStartX + dx).coerceIn(0f, (viewportW - w).coerceAtLeast(0).toFloat())
+          val peekWidth = (w * 0.60f).roundToInt()
+          val nextX = (miniStartX + dx).coerceIn(-peekWidth.toFloat(), (viewportW - w + peekWidth).toFloat())
           val nextY = (miniStartY + dy).coerceIn(minY.toFloat(), maxY.toFloat())
           this@FamilyBloomOverlayRail.x = nextX
           this@FamilyBloomOverlayRail.y = nextY
@@ -1168,12 +1184,22 @@ private class FamilyBloomOverlayRail(
           } else {
             val w = width.coerceAtLeast(1)
             val viewportW = viewportWidth()
-            miniDockRight = this@FamilyBloomOverlayRail.x + w / 2f >= viewportW / 2f
+            // A deliberate fling toward either edge activates Edge Peek; slow drag
+            // settles fully visible. A drag starting at a peek can pull it back out.
+            val dx = event.rawX - miniTouchStartX
+            val elapsed = (event.eventTime - miniGestureStartAt).coerceAtLeast(1L)
+            val velocityX = dx * 1000f / elapsed.toFloat()
+            val fling = kotlin.math.abs(velocityX) >= dp(450f)
+            miniDockRight = if (fling) velocityX > 0f else this@FamilyBloomOverlayRail.x + w / 2f >= viewportW / 2f
+            val peek = fling || (if (miniDockRight) this@FamilyBloomOverlayRail.x > viewportW - w / 2f else this@FamilyBloomOverlayRail.x < -w / 2f)
+            setMiniPeeked(peek)
             miniY = this@FamilyBloomOverlayRail.y
-            val targetX = if (miniDockRight) (viewportW - w).coerceAtLeast(0) else 0
-            this@FamilyBloomOverlayRail.animate().x(targetX.toFloat()).setDuration(180L).start()
-            emit("NATIVE_HOST_MINI_SNAPPED", "Mini snapped to ${if (miniDockRight) "right" else "left"} edge", siblingPayload() + mapOf(
+            val targetX = dockedMiniX(viewportW, w, miniDockRight, peek)
+            this@FamilyBloomOverlayRail.animate().x(targetX.toFloat()).setDuration(if (peek) 260L else 190L)
+              .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            emit("NATIVE_HOST_MINI_SNAPPED", "Mini ${if (peek) "peek 60%" else "fully visible"} at ${if (miniDockRight) "right" else "left"} edge", siblingPayload() + mapOf(
               "miniYDp" to pxToDp(miniY.roundToInt()),
+              "peekPercent" to if (peek) 60 else 0,
             ))
           }
           true

@@ -31,6 +31,7 @@ export default function FamilyScreen() {
   useTabStartupTask("family");
   const router = useRouter();
   const [familySwitcherVisible, setFamilySwitcherVisible] = useState(false);
+  const [memberPageSize, setMemberPageSize] = useState(18);
   const { user, userProfile, families } = useAuth();
   const membership = families.find((item) => item.familyId === userProfile?.activeFamilyId);
   const isAdmin = membership?.role === "admin" || membership?.role === "owner";
@@ -67,26 +68,6 @@ export default function FamilyScreen() {
         />
 
         <View style={styles.pageBody}>
-        <BloomCard tone="accent" style={styles.activeFamilyCard} onPress={() => setFamilySwitcherVisible(true)}>
-          <View style={styles.familyTop}>
-            <View style={styles.familyIcon}>
-              <Ionicons name="home" size={25} color={COLORS.primaryText} />
-            </View>
-            <View style={styles.familyCopy}>
-              <Text style={styles.familyLabel}>NHÀ ĐANG XEM</Text>
-              <Text style={styles.familyName}>{membership?.familyName || "Gia đình của mình"}</Text>
-            </View>
-            <Ionicons name="chevron-down" size={20} color={COLORS.primaryText} />
-          </View>
-          <View style={styles.pills}>
-            <BloomPill
-              icon="shield-checkmark-outline"
-              label={membership?.role ? roleLabel[membership.role] ?? "Thành viên" : "Thành viên"}
-            />
-            <BloomPill icon="layers-outline" label={`${families.length || 1} nhà`} />
-          </View>
-        </BloomCard>
-
         <Pressable
           onPress={() => router.push({ pathname: "/memory-book", params: { scope: "family" } } as never)}
           style={({ pressed }) => [styles.timelineHero, pressed && styles.timelineHeroPressed]}
@@ -114,13 +95,35 @@ export default function FamilyScreen() {
         </Pressable>
 
         <View style={styles.section}>
+          <BloomSectionHeader title={isAdmin?"Quản lý nhà":"Cùng xây phả hệ"} subtitle={isAdmin?"Những việc giúp mái nhà luôn gọn gàng":"Góp phần lưu lại thông tin của gia đình"} />
+          {isAdmin&&<BloomCard onPress={() => router.push("/family-join-requests")} style={styles.managementCard}>
+            <View style={styles.managementIcon}><Ionicons name="person-add-outline" size={22} color={COLORS.primary}/></View>
+            <View style={styles.managementCopy}>
+              <Text style={styles.managementTitle}>Duyệt thành viên</Text>
+              <ReviewNotice status={pendingReviews.joins}/>
+              <Text style={styles.managementText}>Xem hồ sơ của những người đang xin vào nhà.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.secondaryText}/>
+          </BloomCard>}
+          <BloomCard onPress={() => router.push("/family-graph-proposals" as never)} style={[styles.managementCard,{marginTop:isAdmin?12:0}]}>
+            <View style={styles.managementIcon}><Ionicons name={isAdmin?"checkmark-done-outline":"chatbubble-ellipses-outline"} size={22} color={COLORS.primary}/></View>
+            <View style={styles.managementCopy}>
+              <Text style={styles.managementTitle}>Góp ý phả hệ</Text>
+              {isAdmin&&<ReviewNotice status={pendingReviews.proposals}/>}
+              <Text style={styles.managementText}>{isAdmin?"Xem và chăm chút những góp ý của cả nhà":"Đề xuất cập nhật người và quan hệ"}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.secondaryText}/>
+          </BloomCard>
+        </View>
+
+        <View style={styles.section}>
           <BloomSectionHeader
             title="Thành viên trong nhà"
             subtitle={sortedMembers.length ? `${sortedMembers.length} người đang cùng ở trong tổ ấm này` : "Bloom đang tải danh sách thành viên"}
           />
           {sortedMembers.length ? (
             <BloomCard style={styles.membersCard}>
-              {sortedMembers.map((member, index) => (
+              {sortedMembers.slice(0, memberPageSize).map((member, index) => (
                 <View key={member.uid}>
                   <Pressable
                     onPress={() => router.push(`/member/${member.uid}` as never)}
@@ -144,9 +147,15 @@ export default function FamilyScreen() {
                     </View>
                     <Ionicons name="chevron-forward" size={17} color={COLORS.secondaryText} />
                   </Pressable>
-                  {index < sortedMembers.length - 1 && <View style={styles.memberDivider} />}
+                  {index < Math.min(sortedMembers.length, memberPageSize) - 1 && <View style={styles.memberDivider} />}
                 </View>
               ))}
+              {sortedMembers.length > memberPageSize && (
+                <Pressable accessibilityRole="button" accessibilityLabel="Tải thêm thành viên" onPress={() => setMemberPageSize(n => n + 18)} style={styles.loadMembersButton}>
+                  <Ionicons name="chevron-down-circle-outline" color={COLORS.primary} size={20} />
+                  <Text style={styles.loadMembersText}>Xem thêm {Math.min(18, sortedMembers.length - memberPageSize)} thành viên</Text>
+                </Pressable>
+              )}
             </BloomCard>
           ) : (
             <BloomEmptyState
@@ -156,28 +165,6 @@ export default function FamilyScreen() {
               compact
             />
           )}
-        </View>
-
-        <View style={styles.section}>
-          <BloomSectionHeader title={isAdmin?"Quản lý nhà":"Cùng xây phả hệ"} subtitle={isAdmin?"Những việc giúp mái nhà luôn gọn gàng":"Góp phần lưu lại thông tin của gia đình"} />
-          {isAdmin&&<BloomCard onPress={() => router.push("/family-join-requests")} style={styles.managementCard}>
-            <View style={styles.managementIcon}><Ionicons name="person-add-outline" size={22} color={COLORS.primary}/></View>
-            <View style={styles.managementCopy}>
-              <Text style={styles.managementTitle}>Duyệt thành viên</Text>
-              <ReviewNotice status={pendingReviews.joins}/>
-              <Text style={styles.managementText}>Xem hồ sơ của những người đang xin vào nhà.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.secondaryText}/>
-          </BloomCard>}
-          <BloomCard onPress={() => router.push("/family-graph-proposals" as never)} style={[styles.managementCard,{marginTop:isAdmin?12:0}]}>
-            <View style={styles.managementIcon}><Ionicons name={isAdmin?"checkmark-done-outline":"chatbubble-ellipses-outline"} size={22} color={COLORS.primary}/></View>
-            <View style={styles.managementCopy}>
-              <Text style={styles.managementTitle}>Góp ý phả hệ</Text>
-              {isAdmin&&<ReviewNotice status={pendingReviews.proposals}/>}
-              <Text style={styles.managementText}>{isAdmin?"Xem và chăm chút những góp ý của cả nhà":"Đề xuất cập nhật người và quan hệ"}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.secondaryText}/>
-          </BloomCard>
         </View>
 
         <View style={styles.section}>
@@ -336,6 +323,8 @@ const styles = StyleSheet.create({
   timelineHeroText: { marginTop: 3, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 14, fontWeight: "600" },
 
   membersCard: { paddingVertical: 4, paddingHorizontal: 14 },
+  loadMembersButton: { minHeight: 51, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: COLORS.border },
+  loadMembersText: { fontSize: 12, color: COLORS.primary, fontWeight: "900" },
   memberRow: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 10 },
   memberRowPressed: { opacity: 0.68 },
   memberAvatar: { width: 46, height: 46, borderRadius: 17, backgroundColor: COLORS.accentBg, overflow: "hidden", alignItems: "center", justifyContent: "center" },

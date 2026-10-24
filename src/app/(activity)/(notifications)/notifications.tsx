@@ -18,7 +18,8 @@ import { momentDeepLinkCache } from "../../../services/moments/momentDeepLinkCac
 import type { FamilyActivity } from "../../../types";
 
 type ActivityWithFamily = FamilyActivity & { familyName: string; isUnread: boolean; isSmartReminder?: boolean };
-type ActivitySection = { title: string; data: ActivityWithFamily[] };
+type ActivityGrouped = ActivityWithFamily & { groupedCount: number };
+type ActivitySection = { title: string; data: ActivityGrouped[] };
 type NotificationsCacheEntry = { items: ActivityWithFamily[]; loadedAt: number };
 
 const NOTIFICATIONS_FOCUS_TTL_MS = 30_000;
@@ -28,13 +29,35 @@ const dayBucket = (iso: string) => {
   const value = new Date(iso);
   if (Number.isNaN(value.getTime())) return "Trước đó";
   const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startValue = new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-  const diff = Math.round((startToday - startValue) / 86400000);
-  if (diff <= 0) return "Hôm nay";
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return "Hôm nay";
   if (diff === 1) return "Hôm qua";
-  if (diff < 7) return "Tuần này";
-  return "Trước đó";
+  return value.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+/** Keep each underlying activity/source together, never merge unrelated events. */
+export const buildActivitySections = (items: ActivityWithFamily[]): ActivitySection[] => {
+  const buckets = new Map<string, Map<string, ActivityGrouped>>();
+  for (const item of [...items].sort((a,b) => b.createdAt.localeCompare(a.createdAt))) {
+    const day = dayBucket(item.createdAt);
+    const dayGroups = buckets.get(day) ?? new Map<string, ActivityGrouped>();
+    if (!buckets.has(day)) buckets.set(day, dayGroups);
+    // Only a stable source can be grouped; source-less entries remain distinct.
+    const groupKey = item.sourceId && item.sourceType
+      ? `${item.familyId}:${item.sourceType}:${item.sourceId}`
+      : `${item.familyId}:notification:${item.id}`;
+    const existing = dayGroups.get(groupKey);
+    if (existing) {
+      existing.groupedCount++;
+      existing.isUnread = existing.isUnread || item.isUnread;
+    } else dayGroups.set(groupKey, { ...item, groupedCount: 1 });
+  }
+  return [...buckets].map(([title, groups]) => ({
+    title: title === "Hôm nay" ? `Hôm nay · ${groups.size} câu chuyện` : title,
+    data: [...groups.values()],
+  }));
 };
 
 const iconFor = (activity: FamilyActivity): keyof typeof Ionicons.glyphMap => {
@@ -149,15 +172,7 @@ export default function Notifications() {
     if (stale) void load({ blocking: itemsRef.current.length === 0 });
   }, [cacheKey, load]));
 
-  const sections = useMemo<ActivitySection[]>(() => {
-    const order = ["Hôm nay", "Hôm qua", "Tuần này", "Trước đó"];
-    const grouped = new Map<string, ActivityWithFamily[]>();
-    items.forEach((item) => {
-      const key = dayBucket(item.createdAt);
-      grouped.set(key, [...(grouped.get(key) ?? []), item]);
-    });
-    return order.map((title) => ({ title, data: grouped.get(title) ?? [] })).filter((section) => section.data.length > 0);
-  }, [items]);
+  const sections = useMemo(() => buildActivitySections(items), [items]);
 
   const waitForOverlayPaint = useCallback(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
@@ -230,7 +245,7 @@ export default function Notifications() {
         compact
         right={<BloomIconButton icon="options-outline" size={19} onPress={() => router.push("/notification-preferences" as never)} customStyle={styles.headerAction} />}
       />
-      <View style={styles.body}>
+      <View style={styles.listBody}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => `${item.familyId}:${item.audience}:${item.targetUid || "family"}:${item.id}`}
@@ -277,7 +292,7 @@ export default function Notifications() {
                 </View>
                 <Text style={styles.title}>{item.title}</Text>
                 {!!item.body && <Text style={styles.body} numberOfLines={3}>{item.body}</Text>}
-                <Text style={styles.time}>{item.isSmartReminder ? "Nhắc hôm nay" : timeText(item.createdAt)}</Text>
+                <View style={styles.notificationFooter}><Text style={styles.time}>{item.isSmartReminder ? "Nhắc hôm nay" : timeText(item.createdAt)}</Text>{item.groupedCount > 1 && <Text style={styles.groupCount}>+{item.groupedCount - 1} cập nhật cùng sự kiện</Text>}</View>
               </View>
               {openingId === item.id ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />}
             </Pressable>
@@ -297,14 +312,16 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  headerAction: { width: 40, height: 40, borderRadius: 16 },
-  body: { flex: 1, paddingHorizontal: 16, paddingTop: 14 },
+  headerAction: { width: 56, height: 56, borderRadius: 21 },
+  listBody: { flex: 1, paddingHorizontal: 18, paddingTop: 14 },
   content: { paddingBottom: 34 },
   intro: { marginBottom: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, padding: 14, flexDirection: "row", gap: 10, alignItems: "flex-start" },
   introText: { flex: 1, color: COLORS.secondaryText, fontSize: 11, lineHeight: 16, fontWeight: "600" },
   loading: { minHeight: 180, alignItems: "center", justifyContent: "center", gap: 10 },
   loadingText: { color: COLORS.secondaryText, fontSize: 11.5, fontWeight: "700" },
-  sectionHeader: { backgroundColor: COLORS.background, paddingTop: 8, paddingBottom: 9 },
+  sectionHeader: { backgroundColor: COLORS.background, paddingTop: 16, paddingBottom: 11, paddingHorizontal: 1 },
+  notificationFooter: { marginTop: 5, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 },
+  groupCount: { color: COLORS.primary, fontSize: 10, fontWeight: "900", backgroundColor: "#FFE6F0", paddingHorizontal: 9, paddingVertical: 5, borderRadius: 11 },
   sectionTitle: { color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
   itemGap: { height: 10 },
   card: { minHeight: 96, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, padding: 13, flexDirection: "row", alignItems: "center", gap: 11 },

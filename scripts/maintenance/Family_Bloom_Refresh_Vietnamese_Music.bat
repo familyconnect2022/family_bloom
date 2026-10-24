@@ -14,7 +14,7 @@ if errorlevel 1 goto :fail
 
 echo.
 echo [Family Bloom] Static validation...
-node scripts\test-phase14l-dynamic-vietnamese-catalog.js
+node scripts\tests\history\test-phase14l-dynamic-vietnamese-catalog.js
 if errorlevel 1 goto :fail
 
 echo.

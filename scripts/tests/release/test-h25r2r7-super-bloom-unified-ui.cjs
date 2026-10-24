@@ -1,0 +1,44 @@
+#!/usr/bin/env node
+'use strict';
+const __legacyScriptsDir = require('node:path').resolve(__dirname, '..', '..');
+/** No dependencies, safe during FULL ZIP Auto Update source preflight. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const base=path.resolve(__legacyScriptsDir,'..');
+const rd=f=>fs.readFileSync(path.join(base,f),'utf8');
+const home=rd('src/app/(tabs)/index.tsx');
+const notice=rd('src/app/(activity)/(notifications)/notifications.tsx');
+const moments=rd('src/app/(tabs)/moments.tsx');
+const comment=rd('src/components/moments/MomentCard.tsx');
+const planner=rd('src/app/(tabs)/planner.tsx');
+const family=rd('src/app/(tabs)/family.tsx');
+const play=rd('src/app/(tabs)/play.tsx');
+const board=rd('src/app/(home)/(board)/home-board.tsx');
+const rail=rd('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
+const picker=rd('src/components/family/FamilySwitcherModal.tsx');
+let pass=0;
+function check(label,fn){fn();console.log(`[H25R2R7 PASS ${++pass}] ${label}`)}
+check('notifications: distinct container/body style avoids padding override',()=>{assert(notice.includes('styles.listBody'));assert(notice.includes('listBody: { flex: 1, paddingHorizontal: 18'));assert.equal((notice.match(/^  body:/gm)||[]).length,1)});
+check('notifications: exact day groups, chronological order, same-source aggregation',()=>{for(const marker of ['buildActivitySections','toLocaleDateString("vi-VN", { weekday:','sourceType}:${item.sourceId}','groupedCount++','sort((a,b) => b.createdAt.localeCompare(a.createdAt))'])assert(notice.includes(marker))});
+check('notifications: section header summarizes today',()=>assert(notice.includes('Hôm nay · ${groups.size} câu chuyện')));
+check('notifications: settings and back buttons share 56px frame',()=>{assert(notice.includes('headerAction: { width: 56, height: 56'));assert(rd('src/components/ui/BloomHeroHeader.tsx').includes('navButton: { width: 56, height: 56'))});
+check('Home: left family chip opposite notification',()=>{assert(home.includes('topLeft={'));assert(home.includes('screenWidth - 160'));assert(home.includes('<HomeActivityBell'));});
+check('Home: compact icon navigation replaces text CTA',()=>{for(const marker of ['actionIcon="calendar-outline"','actionIcon="images-outline"','actionIcon="arrow-forward-circle-outline"'])assert(home.includes(marker))});
+check('Home: upcoming event highlights next card and clock at right',()=>{assert(home.includes('featured={index === 0}'));assert(home.includes('styles.eventRowFeatured'));assert(home.includes('styles.eventClock'));assert(home.includes('!event.allDay'))});
+check('Home: stable two row member grid, visible view-members card CTA',()=>{assert(home.includes('justifyContent: "flex-start", gap: 13'));assert(home.includes('styles.memberViewAll'));assert(!home.includes('actionLabel="Xem cả nhà"'))});
+check('Home: chat hidden, learning quick action live',()=>{assert(!home.includes('label="Trò chuyện"'));assert(home.includes('label="Góc học tập"'));});
+check('Moments: hero + is replaced with accessible full-width action card',()=>{assert(moments.includes('testID="moment-create-action"'));assert(!moments.includes('right={\n          <Pressable'));});
+check('Moments: six helper icons only within composer, not feed',()=>{for(const text of ['Niềm vui','Sum vầy','Chuyến đi','Sinh nhật','Yêu thương','Dấu mốc'])assert(moments.includes(`title: "${text}"`));assert(moments.indexOf('styles.promptGrid')>moments.indexOf('{modal && <BloomFullScreenFlow'))});
+check('Moments: count only emphasized if >0',()=>assert(comment.includes('(post.commentCount || 0) > 0 && styles.statsCommentsActive')));
+check('Planner: selected date is rounded on Android',()=>{assert(planner.includes('daySelected: { backgroundColor: COLORS.primary, borderRadius: 999'));assert(planner.includes('dayCircle: { width: 38, height: 38, borderRadius: 999'))});
+check('Planner: create action directly below calendar grid',()=>{const a=planner.indexOf('<CalendarMonthGrid');const b=planner.indexOf('testID="planner-create-event"');const c=planner.indexOf('<BloomSectionHeader',b);assert(a>=0&&b>a&&c>b)});
+check('Family: active family duplication removed',()=>assert(!family.includes('NHÀ ĐANG XEM')));
+check('Family: management before member list',()=>assert(family.indexOf('title={isAdmin?"Quản lý nhà"')<family.indexOf('title="Thành viên trong nhà"')));
+check('Family: incremental batches, family switcher virtualized',()=>{assert(family.includes('sortedMembers.slice(0, memberPageSize)'));assert(family.includes('setMemberPageSize(n => n + 18)'));assert(picker.includes('<FlatList'));assert(picker.includes('windowSize={5}'))});
+check('Play: five semantic groups in intended order',()=>{const titles=['Chung một mái nhà','Giờ vui của cả nhà','Vườn tri thức nở hoa','Lời thương cất giữ','Bếp ấm thơm nhà'];let previous=-1;for(const title of titles){const index=play.indexOf(`title="${title}"`);assert(index>previous);previous=index};assert(!play.includes('title="Góc Nhà Mình"'))});
+check('Play: no duplicate welcome card, decision in group one',()=>{assert(!play.includes('<BloomCard style={styles.welcomeCard}>'));assert(play.indexOf('title="Cùng quyết định"')<play.indexOf('title="Giờ vui của cả nhà"'))});
+check('Board: no placeholder/mock cards, bounded real family data',()=>{assert(board.includes('eventService.listReminderWindow'));assert(board.includes('momentsService.listFamilyTimelineOnce(familyId, 18)'));assert(!board.includes('FEED_PREVIEW'));assert(board.includes('useFocusEffect'));assert(board.includes('CACHE_MS'))});
+check('Mini: 60% offscreen, 40% visible and tappable',()=>{for(const marker of ['w * 0.60f','dockedMiniX(viewportW, w, miniDockRight, peek)','action("restore", "decor-rail-mini-tap")','DecelerateInterpolator'])assert(rail.includes(marker))});
+check('Mini: per-game edge-peek flag, neither timer nor game state overwritten',()=>{assert(rail.includes('chessMiniPeeked = false'));assert(rail.includes('xiangqiMiniPeeked = false'));assert(rail.includes('private fun setMiniPeeked'));assert(rail.includes('miniClockHandler.postDelayed(miniTick, 1_000L)'))});
+check('Single branded action style used by Planner/Moments',()=>{const c=rd('src/components/ui/BloomActionCard.tsx');assert(c.includes('accessibilityRole="button"'));assert(c.includes('minHeight: 86'));assert(c.includes('marginBottom: 14'));assert(moments.includes('<BloomActionCard'));assert(planner.includes('<BloomActionCard'))});
+check('APK native identity advanced',()=>{const app=JSON.parse(rd('app.json')).expo;assert.equal(app.version,'1.3.32');assert.equal(app.android.versionCode,143042);assert(rail.includes('P2.37R2C-H25-native-3'))});
+console.log(`H25R2R7 SUPER BLOOM UNIFIED UI: ${pass}/${pass} PASS`);

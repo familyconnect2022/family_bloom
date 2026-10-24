@@ -30,6 +30,7 @@ import { BloomButton } from "../../components/ui/BloomButtonComponents";
 import { BloomTextInput } from "../../components/ui/BloomInputComponents";
 import { BloomFullScreenFlow } from "../../components/ui/BloomFullScreenFlow";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
+import { BloomActionCard } from "../../components/ui/BloomActionCard";
 import { StatusBar } from "expo-status-bar";
 import { useBloomDialog } from "../../components/ui/BloomDialogProvider";
 import {
@@ -187,6 +188,7 @@ export default function MomentsScreen() {
   const [modal, setModal] = useState(false);
   const [composerDirty, setComposerDirty] = useState(false);
   const [caption, setCaption] = useState("");
+  const [memoryPrompt, setMemoryPrompt] = useState<string | null>(null);
   const [selected, setSelected] = useState<MediaFile[]>([]);
   const [personIds, setPersonIds] = useState<string[]>([]);
   const [timelineAudience, setTimelineAudience] = useState<"self" | "family" | "persons">("self");
@@ -463,13 +465,14 @@ export default function MomentsScreen() {
   };
 
   const removeSelected = (id: string) => { setComposerDirty(true); setSelected((current) => current.filter((item) => item.id !== id)); };
-  const openComposer = () => {
+  const openComposer = useCallback(() => {
     setPersonIds([]);
+    setMemoryPrompt(null);
     setTimelineAudience("self");
     setNotifyFamily(false);
     setComposerDirty(false);
     setModal(true);
-  };
+  }, []);
 
   const closeComposerNow = useCallback(() => {
     setModal(false);
@@ -800,16 +803,6 @@ export default function MomentsScreen() {
         variant="moment"
         compact
         roundedBottom
-        right={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Chia sẻ khoảnh khắc"
-            onPress={openComposer}
-            style={({ pressed }) => [styles.heroCompose, pressed && styles.composePressed]}
-          >
-            <Ionicons name="add" size={25} color={COLORS.primaryText} />
-          </Pressable>
-        }
       />
 
       <View style={styles.headerInset}>
@@ -826,6 +819,8 @@ export default function MomentsScreen() {
             label={hasMore ? `${moments.length} gần nhất` : `${moments.length + familyPending.length} khoảnh khắc`}
           />
         </BloomCard>
+
+        <BloomActionCard testID="moment-create-action" icon="images-outline" title="Thêm kỷ niệm" subtitle="Một bức ảnh, một câu chuyện hay lời thương để cả nhà giữ lại" onPress={openComposer} />
 
         {canModerate && (
           <Pressable
@@ -844,7 +839,7 @@ export default function MomentsScreen() {
         )}
       </View>
     </View>
-  ), [canModerate, familyPending.length, hasMore, hiddenPosts.length, membership?.familyName, moments.length]);
+  ), [canModerate, familyPending.length, hasMore, hiddenPosts.length, membership?.familyName, moments.length, openComposer]);
 
   const listEmpty = useCallback(() => {
     if (loading) {
@@ -1177,6 +1172,26 @@ export default function MomentsScreen() {
                 containerStyle={styles.captionField}
               />
 
+              <View style={styles.promptBlock}>
+                <Text style={styles.promptHeading}>CHỌN MỘT Ý TƯỞNG ĐỂ BẮT ĐẦU <Ionicons name="sparkles-outline" size={13} /></Text>
+                <Text style={styles.promptSub}>6 biểu tượng gợi ý chỉ hiện khi thêm kỷ niệm, không hiển thị trên bài đăng.</Text>
+                <View style={styles.promptGrid}>
+                  {([
+                    { id: "joy", icon: "happy-outline", title: "Niềm vui", starter: "Hôm nay cả nhà vui vì " },
+                    { id: "together", icon: "people-outline", title: "Sum vầy", starter: "Một khoảnh khắc sum vầy: " },
+                    { id: "trip", icon: "airplane-outline", title: "Chuyến đi", starter: "Chuyến đi đáng nhớ: " },
+                    { id: "birthday", icon: "gift-outline", title: "Sinh nhật", starter: "Một ngày sinh nhật thật thương: " },
+                    { id: "gratitude", icon: "heart-outline", title: "Yêu thương", starter: "Điều mình muốn nói với nhà: " },
+                    { id: "milestone", icon: "ribbon-outline", title: "Dấu mốc", starter: "Hôm nay đánh dấu một điều đặc biệt: " },
+                  ] as const).map((idea) => (
+                    <Pressable key={idea.id} accessibilityRole="button" accessibilityLabel={`Gợi ý ${idea.title}`} onPress={() => { setMemoryPrompt(idea.id); setCaption(value => value.trim() ? value : idea.starter); setComposerDirty(true); }} style={[styles.promptChoice, memoryPrompt === idea.id && styles.promptChoiceActive]}>
+                      <Ionicons name={idea.icon} size={22} color={COLORS.primary} />
+                      <Text style={styles.promptChoiceText}>{idea.title}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
               <View style={styles.timelineTargetBlock}>
                 <Text style={styles.timelineTargetLabel}>KỶ NIỆM NÀY THUỘC VỀ</Text>
                 <Text style={styles.timelineTargetHint}>Chỉ quyết định nơi xuất hiện trên Dòng thời gian, không thay đổi quyền xem bài.</Text>
@@ -1330,7 +1345,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   composePressed: { opacity: 0.76, transform: [{ scale: 0.97 }] },
-  familyStrip: { flexDirection: "row", alignItems: "center", gap: 11, marginBottom: 18, padding: 14 },
+  familyStrip: { flexDirection: "row", alignItems: "center", gap: 11, marginBottom: 14, padding: 14 },
+  promptBlock: { gap: 9, marginBottom: 15 },
+  promptHeading: { fontSize: 11, fontWeight: "900", color: COLORS.primaryText, letterSpacing: 0.5 },
+  promptSub: { fontSize: 10.5, color: COLORS.secondaryText },
+  promptGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
+  promptChoice: { width: "31%", minHeight: 78, paddingVertical: 10, borderRadius: 17, borderWidth: 1, borderColor: COLORS.border, backgroundColor: "#FFF4F8", alignItems: "center", justifyContent: "center", gap: 6 },
+  promptChoiceActive: { borderColor: COLORS.primary, backgroundColor: "#FFE0EB" },
+  promptChoiceText: { color: COLORS.primaryText, fontSize: 11, fontWeight: "800" },
   familyStripIcon: {
     width: 42,
     height: 42,

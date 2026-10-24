@@ -22,6 +22,7 @@ export const FIRESTORE_PATHS = {
   family: (familyId: string) => `families/${familyId}`,
   familyCode: (familyCode: string) => `family_codes/${familyCode}`,
   familyCodes: () => "family_codes",
+  familyIntroName: (key: string) => `family_intro_names/${key}`,
   familyMembers: (familyId: string) => `families/${familyId}/members`,
   familyMember: (familyId: string, uid: string) => `families/${familyId}/members/${uid}`,
 

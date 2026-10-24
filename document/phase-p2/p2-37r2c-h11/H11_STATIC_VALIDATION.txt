@@ -42,23 +42,23 @@ PASS Family_Bloom_EAS_UPDATE_TEST.bat uses Windows CRLF
 PASS Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat uses Windows CRLF
 PASS scripts/android/build/Family_Bloom_Android_Build_APK_ONLY.bat uses Windows CRLF
 PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat uses Windows CRLF
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_5-remote-apk-share-build.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_6-build-dependency-contract.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_7-expo-asset-peer-contract.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_32-client-game-reset-foundation.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_34-session-presentation-bridge-stacked-views.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_35-already-in-game-recovery-surface.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h10-chess-native-latency.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js
-PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_12_5-remote-apk-share-build.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_12_6-build-dependency-contract.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_12_7-expo-asset-peer-contract.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_32-client-game-reset-foundation.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_34-session-presentation-bridge-stacked-views.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_35-already-in-game-recovery-surface.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js
+PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/tests/history/test-phase-p2_37r2c_h3h1-windows-gradle-preflight.js
 PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-source-import-integrity.js
 PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-p2_37r2-local-install.js
 PASS scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat references node script scripts/setup/check-p2_37r2c-native-package.js
@@ -87,7 +87,7 @@ PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references 
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/cleanup-overlay-routes.js
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-board-audio-apk.js
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-h10-native-kotlin-when.js
-PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
+PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-p2_37r2-local-install.js
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-expo-dependencies.js
 PASS scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat references node script scripts/setup/check-package-lock.js
@@ -138,14 +138,14 @@ PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat uses Windows CRLF
 PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-source-import-integrity.js
 PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-p2_37r2-local-install.js
 PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-ts-syntax-transpile.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
-PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/test-phase-p2_37r2c_h10-chess-native-latency.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
+PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js
 PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-board-audio-apk.js
 PASS scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat references node script scripts/setup/check-p2_37r2c-native-package.js
 PASS scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat uses Windows CRLF
@@ -173,12 +173,12 @@ PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references no
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-p2_37r2-local-install.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-expo-dependencies.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-package-lock.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_5-remote-apk-share-build.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_6-build-dependency-contract.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_7-expo-asset-peer-contract.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_12_4-build-integrity-chess-audio.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_12_5-remote-apk-share-build.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_12_6-build-dependency-contract.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_12_7-expo-asset-peer-contract.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_12_8-windows-expo-doctor-node-cli-launch.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-source-import-integrity.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-ts-syntax-transpile.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-p2_37r2c-native-package.js
@@ -186,19 +186,19 @@ PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references no
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-board-audio-integrity.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-board-audio-apk.js
 PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/setup/check-build-entrypoints.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w1-web-companion.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w2-web-parity.js
-PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase17_9w1-web-companion.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase17_9w2-web-parity.js
+PASS scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat references node script scripts/tests/history/test-phase17_9w3-web-stability-visual-rebuild.js
 PASS scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat uses Windows CRLF
 PASS scripts/android/verify/Family_Bloom_VERIFY_DEVICE_BINARY_R2C.bat uses Windows CRLF
 PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat uses Windows CRLF
 PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-source-import-integrity.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2-full-copy-integrity.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c-binary-identity-lock.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js
-PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js
+PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
 PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-ts-syntax-transpile.js
 PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/maintenance/check-project-structure.js
 PASS scripts/android/verify/Family_Bloom_VERIFY_FULL_SOURCE.bat references node script scripts/setup/check-build-entrypoints.js
@@ -212,7 +212,7 @@ PASS scripts/maintenance/Family_Bloom_Cleanup_Generated_JS.bat uses Windows CRLF
 PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat uses Windows CRLF
 PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/music/refresh-vietnamese-music-catalog.js
 PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/music/audit-audius-vietnamese-catalog.js
-PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/test-phase14l-dynamic-vietnamese-catalog.js
+PASS scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat references node script scripts/tests/history/test-phase14l-dynamic-vietnamese-catalog.js
 PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat uses Windows CRLF
 PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references npm script phaseP2_12_8:check
 PASS scripts/setup/Family_Bloom_Install_And_Doctor.bat references npm script doctor:native-check
@@ -229,21 +229,21 @@ PASS scripts/setup/Family_Bloom_Sync_Dependencies.bat references node script scr
 PASS scripts/setup/settup.bat uses Windows CRLF
 PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat uses Windows CRLF
 PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/check-web-firebase-version.js
-PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w1-web-companion.js
-PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w2-web-parity.js
-PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/tests/history/test-phase17_9w1-web-companion.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/tests/history/test-phase17_9w2-web-parity.js
+PASS scripts/windows/web/Family_Bloom_WEB_EXPORT.bat references node script scripts/tests/history/test-phase17_9w3-web-stability-visual-rebuild.js
 PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat uses Windows CRLF
 PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/check-web-firebase-version.js
-PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w1-web-companion.js
-PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w2-web-parity.js
-PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/test-phase17_9w3-web-stability-visual-rebuild.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/tests/history/test-phase17_9w1-web-companion.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/tests/history/test-phase17_9w2-web-parity.js
+PASS scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat references node script scripts/tests/history/test-phase17_9w3-web-stability-visual-rebuild.js
 PASS audited 32 BAT files
 
 Build entrypoint audit: PASS (32 BAT files)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2-full-copy-integrity.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js =====
 
 Family Bloom P2.37R2C-H6 — FULL copy/import/native integrity gate
 
@@ -284,7 +284,7 @@ P2.37R2C-H6 FULL copy/import/native integrity gate: PASS (31/31)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c-binary-identity-lock.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js =====
 
 Family Bloom P2.37R2C-H6 — binary identity lock
 
@@ -308,7 +308,7 @@ P2.37R2C-H6 binary identity lock: PASS (14/14)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js =====
 
 Family Bloom P2.37R2C-H6 — Activity decor rail / React-Yoga isolation
 
@@ -330,7 +330,7 @@ P2.37R2C-H6 decor rail gate: PASS (12/12)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js =====
 
 Family Bloom P2.37R2C-H7 — tab navigator flex layout regression guard
 
@@ -349,7 +349,7 @@ P2.37R2C-H7 tab navigator flex gate: PASS (9/9)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js =====
 
 Family Bloom P2.37R2C-H9B — native Chess authoritative tap-to-move
 
@@ -377,7 +377,7 @@ P2.37R2C-H8 native Chess gate: PASS (18/18)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js =====
 
 Family Bloom P2.37R2C-H9B — Mini lifecycle + bounded native rail
 
@@ -404,7 +404,7 @@ P2.37R2C-H9B Mini lifecycle/performance gate: PASS (17/17)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js =====
 
 Family Bloom P2.37R2C-H9B — Bloom Super Hero Native UI
 
@@ -438,7 +438,7 @@ H9B Bloom Super Hero UI gate: PASS (24/24)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h10-chess-native-latency.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js =====
 Family Bloom H10 | Chess local-first / native UI guards
 PASS distinct APK identity
 PASS native binary tag synchronized
@@ -461,7 +461,7 @@ H10 guards: PASS (17/17)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h10r2-board-layer-welcome.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js =====
 Family Bloom H10R2 | Native board Z-order + post-auth welcome guards
 PASS background mat does not cover 64 cells via positive native Z
 PASS board draws after background mat
@@ -489,7 +489,7 @@ H10R2 guard: PASS (22/22)
 
 
 EXIT_CODE=0
-===== RUN scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js =====
+===== RUN scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js =====
 PASS tap opens Chess Full immediately without Socket ACK
 PASS double invite cannot replace pending preview
 PASS server game id replaces pending id without unminimizing

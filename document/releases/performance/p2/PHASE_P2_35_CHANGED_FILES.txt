@@ -18,7 +18,7 @@ MODIFIED
   - Windows CRLF retained
 
 ADDED
-- scripts/test-phase-p2_35-already-in-game-recovery-surface.js
+- scripts/tests/history/test-phase-p2_35-already-in-game-recovery-surface.js
 - document/releases/performance/p2/PHASE_P2_35_ALREADY_IN_GAME_RECOVERY_SURFACE_BUILD_REPORT.md
 - document/releases/performance/p2/PHASE_P2_35_CHANGED_FILES.txt
 

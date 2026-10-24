@@ -10,7 +10,7 @@ Lỗi Metro: `Screen names must be unique` trỏ tới `src/app/_layout.tsx:163`
 
 - Xóa **chỉ** cặp `<Stack.Screen>` bị lặp trong `src/app/_layout.tsx`. Vẫn giữ một route Chess và một route Xiangqi; không thay đổi trang quản lý sảnh hoặc logic realtime.
 - Thêm `scripts/setup/check-expo-route-uniqueness.cjs`: quét mọi `_layout.tsx|js` thuộc `src/app`, kiểm tra các tên `Stack.Screen`/`Tabs.Screen`/`Drawer.Screen` trùng trong *cùng* file và báo chính xác tên, vị trí dòng. Không yêu cầu node_modules.
-- Thêm `scripts/test-h23r1-expo-router-unique.cjs` với ca kiểm thử âm tính: tạo route trùng sẽ phải fail; sửa route phải pass.
+- Thêm `scripts/tests/release/test-h23r1-expo-router-unique.cjs` với ca kiểm thử âm tính: tạo route trùng sẽ phải fail; sửa route phải pass.
 - Chặn lỗi từ trước khi build/launch trong Clean Apply, Build & Share, EAS, Debug BAT và Metro BAT; npm `start`/`android` cũng được kiểm tra qua `prestart`/`preandroid`.
 - H23 Family Arena check và EAS post-install gọi route gate tự động.
 

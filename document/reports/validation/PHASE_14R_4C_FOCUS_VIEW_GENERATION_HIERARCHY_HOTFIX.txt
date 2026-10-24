@@ -29,7 +29,7 @@ Nguyễn Thị Lan + Nguyễn Vũ Đôn
 Expected generations: 1 / 2 / 3 / 4.
 
 VALIDATION
-PASS node scripts/test-familyGraphLayout.js
+PASS node scripts/tests/features/test-familyGraphLayout.js
 PASS phase14f:check — 21 PASS / 0 FAIL
 PASS phase14j:check — 18 PASS / 0 FAIL
 PASS phase14n:check — 13 PASS / 0 FAIL

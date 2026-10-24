@@ -48,7 +48,7 @@ P2.11.2 fixes the Focus card transform at translate `(0,0)` and scale `1` for th
 
 ## New P2.11.2 regression gate
 
-`scripts/test-phase-p2_11_2-bsh-focus-runtime-presentation.js`
+`scripts/tests/history/test-phase-p2_11_2-bsh-focus-runtime-presentation.js`
 
 The gate verifies, among other invariants:
 

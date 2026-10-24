@@ -98,7 +98,7 @@ export class XiangqiGameManager {
     const id = randomUUID(); const now = iso(); const bot = options?.testBotUid ?? null;
     const game: PersistedXiangqiGame = {
       id, familyId, redUid, blackUid, playerUids: [redUid, blackUid],
-      status: "waiting", preparationPhase: options?.testBotUid ? "board" : "colors", board: createInitialXiangqiState(), revision: 1,
+      status: "waiting", preparationPhase: "board", board: createInitialXiangqiState(), revision: 1,
       redRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       blackRemainingMs: timeControl.kind === "clocked" ? timeControl.initialMs : null,
       timeControl, result: null, finishReason: null, drawOfferByUid: null, awayBudgetByUid: {},
@@ -108,7 +108,7 @@ export class XiangqiGameManager {
     await this.persistence.createWithLocks(game);
     const runtime: Runtime = {
       game, turnStartedMono: null, connectedUids: new Set(bot ? [bot] : []),
-      boardReadyUids: new Set(bot ? [bot] : [redUid,blackUid]), readyUids: new Set(bot ? [bot] : []),
+      boardReadyUids: new Set(bot ? [bot] : []), readyUids: new Set(bot ? [bot] : []),
       boardAwayByUid: new Map(), awayRemainingByUid: new Map(),
     };
     this.games.set(id, runtime);

@@ -1,21 +1,21 @@
 All 19 release check groups PASS; source/static tests only, not a Gradle APK run.
 
-scripts/test-h22r6-xiangqi-bloom-motion.cjs	PASS	H22R6 Xiangqi visual/motion/sound release gate: 18/18 PASS
-scripts/test-h22-xiangqi-parity.cjs	PASS	H22 Xiangqi server/native/build parity: 26/26 PASS
-scripts/test-h22r1-bot-invite-countdown.cjs	PASS	H22R1 Bloom Bot invite deadline/UI: 10/10 PASS
-scripts/test-h22r2-cleanup-retention.cjs	PASS	H22R2 safe source retention: PASS
-scripts/test-h22r3-windows-build-preflight.cjs	PASS	H22R3 Windows Build & Share preflight: 7/7 PASS
-scripts/test-phase-p2_37r2c-binary-identity-lock.js	PASS	
-scripts/test-phase-p2_37r2-full-copy-integrity.js	PASS	
-scripts/test-phase-p2_37r2c_h6-decor-rail-isolation.js	PASS	
-scripts/test-phase-p2_37r2c_h11-chess-full-mini-flow.js	PASS	H11 source+store behavioral gate PASS (28/28)
-scripts/test-phase-p2_37r2c_h15-chess-authority-dev-release.js	PASS	H15 authority + Release developer access: PASS (27/27)
-scripts/test-phase-p2_37r2c_h16-chess-smooth-motion.js	PASS	H16 Chess native smoothness source gate: PASS (16/16)
-scripts/test-phase-p2_37r2c_h17-chess-optimistic-authority.js	PASS	H17 client-first server-authoritative Chess: PASS (23/23)
-scripts/test-phase-p2_37r2c_h18-chess-network-resync.js	PASS	H18 Chess network recovery: PASS (25/25)
-scripts/test-phase-p2_37r2c_h20-mini-premove-isolation.js	PASS	H20 Mini/premove isolation: PASS (16/16)
-scripts/test-phase-p2_37r2c_h21r5-durable-recovery.cjs	PASS	H21R5 durable cold-recovery checks 14/14 PASS
+scripts/tests/release/test-h22r6-xiangqi-bloom-motion.cjs	PASS	H22R6 Xiangqi visual/motion/sound release gate: 18/18 PASS
+scripts/tests/release/test-h22-xiangqi-parity.cjs	PASS	H22 Xiangqi server/native/build parity: 26/26 PASS
+scripts/tests/release/test-h22r1-bot-invite-countdown.cjs	PASS	H22R1 Bloom Bot invite deadline/UI: 10/10 PASS
+scripts/tests/release/test-h22r2-cleanup-retention.cjs	PASS	H22R2 safe source retention: PASS
+scripts/tests/release/test-h22r3-windows-build-preflight.cjs	PASS	H22R3 Windows Build & Share preflight: 7/7 PASS
+scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js	PASS	
+scripts/tests/history/test-phase-p2_37r2-full-copy-integrity.js	PASS	
+scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js	PASS	
+scripts/tests/history/test-phase-p2_37r2c_h11-chess-full-mini-flow.js	PASS	H11 source+store behavioral gate PASS (28/28)
+scripts/tests/history/test-phase-p2_37r2c_h15-chess-authority-dev-release.js	PASS	H15 authority + Release developer access: PASS (27/27)
+scripts/tests/history/test-phase-p2_37r2c_h16-chess-smooth-motion.js	PASS	H16 Chess native smoothness source gate: PASS (16/16)
+scripts/tests/history/test-phase-p2_37r2c_h17-chess-optimistic-authority.js	PASS	H17 client-first server-authoritative Chess: PASS (23/23)
+scripts/tests/history/test-phase-p2_37r2c_h18-chess-network-resync.js	PASS	H18 Chess network recovery: PASS (25/25)
+scripts/tests/history/test-phase-p2_37r2c_h20-mini-premove-isolation.js	PASS	H20 Mini/premove isolation: PASS (16/16)
+scripts/tests/history/test-phase-p2_37r2c_h21r5-durable-recovery.cjs	PASS	H21R5 durable cold-recovery checks 14/14 PASS
 scripts/setup/check-source-import-integrity.js	PASS	PASS all literal source imports resolve and all external packages are declared
 scripts/setup/check-ts-syntax-transpile.js	PASS	PASS TS/TSX syntax transpile: 299/299 files
 scripts/setup/check-android-resource-names.js	PASS	PASS Android AAPT2 resource filename gate: 38 files valid; 11/11 MP3 + res/raw/keep.xml protected
-scripts/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs	PASS	H21R3 Android Resource/AAPT2 Gate: 10/10 PASS
+scripts/tests/history/test-phase-p2_37r2c_h21r3-android-aapt-audio.cjs	PASS	H21R3 Android Resource/AAPT2 Gate: 10/10 PASS

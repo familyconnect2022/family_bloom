@@ -1,10 +1,11 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
-cd /d "%~dp0"
-if not exist "%~dp0scripts\android\maintenance\Family_Bloom_AUTO_UPDATE_FULL.bat" (
-  echo [ERROR] Missing Family Bloom automatic updater. Extract the FULL ZIP first.
+rem Stable root launcher; maintenance and build logic stays under scripts\android.
+set "FB_ROOT=%~dp0"
+if not exist "%FB_ROOT%scripts\android\maintenance\Family_Bloom_AUTO_UPDATE_FULL.bat" (
+  echo [ERROR] Missing FULL CODE helper. Extract the complete ZIP.
   pause
   exit /b 1
 )
-call "%~dp0scripts\android\maintenance\Family_Bloom_AUTO_UPDATE_FULL.bat" "%~1"
+call "%FB_ROOT%scripts\android\maintenance\Family_Bloom_AUTO_UPDATE_FULL.bat" %*
 exit /b %errorlevel%

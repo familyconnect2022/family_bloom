@@ -108,7 +108,7 @@ The interruptible BSH builder now has an additional boundary around Geometry:
 
 New gate:
 
-`scripts/test-phase-p2_11_4-bsh-retained-chunks-interruptible-focus.js`
+`scripts/tests/history/test-phase-p2_11_4-bsh-retained-chunks-interruptible-focus.js`
 
 It verifies:
 

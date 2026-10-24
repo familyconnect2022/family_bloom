@@ -10,8 +10,8 @@ Mã H10 cũ sử dụng `when (square)` với nhánh `current.queuedPremoveSquar
 
 - `ChessNativeBoardView.kt`: chuyển từ `when (square)` sang `when { ... }` với tất cả điều kiện Boolean. Thứ tự ưu tiên tô màu vẫn giữ: ô chọn → ô chiếu → premove → nước vừa đi → màu gốc.
 - `scripts/setup/check-h10-native-kotlin-when.js`: bổ sung preflight để phát hiện hồi quy ngay khi chạy BAT build Release.
-- `scripts/test-phase-p2_37r2c_h10-chess-native-latency.js`: bổ sung assertion vào kiểm tra H10.
-- `scripts/test-phase-p2_37r2c_h8-native-chess-tap-move.js`: cập nhật kiểm tra H8 tương thích kiểu viết Kotlin đúng, không kiểm tra chuỗi sai cũ.
+- `scripts/tests/history/test-phase-p2_37r2c_h10-chess-native-latency.js`: bổ sung assertion vào kiểm tra H10.
+- `scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js`: cập nhật kiểm tra H8 tương thích kiểu viết Kotlin đúng, không kiểm tra chuỗi sai cũ.
 - `scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat`: gọi preflight trước các bước Gradle.
 
 Đây là **FULL CODE H10 sửa Kotlin**, không phải ZIP patch. Giữ nguyên app version `1.3.10`, `versionCode=143020` và Native ID `P2.37R2C-H10-native-1` vì chỉ sửa lỗi không biên dịch của chính H10.

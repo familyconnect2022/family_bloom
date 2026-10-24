@@ -12,7 +12,7 @@ The P2.34 test now confirms the two lobby routes **and rejects unowned manual pr
 
 ## Preventing the same failure from changing the existing project
 
-`auto-update-full.cjs check` now runs `scripts/test-h25r2r2-release-preflight.cjs` before the BAT advances to step 1/6 (backup), step 2/6 (clean old project) or step 3/6 (overlay). The preflight includes P2.34, P2.35, H25 Firebase invitations, source ZIP completeness, H25R2 Xiangqi black-turn input, current P2.37R2C native identity and BAT/EAS gate wiring.
+`auto-update-full.cjs check` now runs `scripts/tests/release/test-h25r2r2-release-preflight.cjs` before the BAT advances to step 1/6 (backup), step 2/6 (clean old project) or step 3/6 (overlay). The preflight includes P2.34, P2.35, H25 Firebase invitations, source ZIP completeness, H25R2 Xiangqi black-turn input, current P2.37R2C native identity and BAT/EAS gate wiring.
 
 `CLEAN APPLY`, `Build & Share`, `Debug` and `eas-build-post-install` also invoke the preflight; the BAT files retain Windows CRLF line endings. A separate wiring test ensures the gate cannot be silently omitted in later packaging.
 

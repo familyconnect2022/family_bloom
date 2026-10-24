@@ -6,7 +6,7 @@ src/components/familyGraph/familyGraphLiveAdapter.ts
 src/components/familyGraph/FamilyGraphPersonSheet.tsx
 src/hooks/family/useFamilyPersonContent.ts
 src/services/familyGraph/familyPersonContentService.ts
-scripts/test-familyGraphLayout.js
+scripts/tests/features/test-familyGraphLayout.js
 document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
 document/phases/phase-06/PHASE_6_3_PERSON_DETAIL_UNASSIGNED_ALBUM_REFINEMENT.md
 document/phases/phase-06/BUILD_CHECK_REPORT_PHASE_6_3_PERSON_DETAIL_REFINEMENT.txt

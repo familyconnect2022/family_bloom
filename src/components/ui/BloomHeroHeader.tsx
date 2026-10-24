@@ -195,6 +195,7 @@ export type BloomHeroHeaderProps = {
   onBack?: () => void;
   backDisabled?: boolean;
   right?: ReactNode;
+  topLeft?: ReactNode;
   /** Optional live content (family switcher, small status pills) anchored inside the hero. */
   footer?: ReactNode;
   compact?: boolean;
@@ -440,6 +441,7 @@ export function BloomHeroHeader({
   onBack,
   backDisabled = false,
   right,
+  topLeft,
   footer,
   compact = false,
   roundedBottom = false,
@@ -495,7 +497,7 @@ export function BloomHeroHeader({
             >
               <Ionicons name="arrow-back" size={27} color="#71304B" />
             </Pressable>
-          ) : <View style={styles.navPlaceholder} />}
+          ) : topLeft ? <View style={styles.topLeft}>{topLeft}</View> : <View style={styles.navPlaceholder} />}
 
           <View style={styles.topSpacer} />
           {right ? <View style={styles.right}>{right}</View> : <View style={styles.navPlaceholder} />}
@@ -538,7 +540,8 @@ const styles = StyleSheet.create({
   topRow: { minHeight: 56, flexDirection: "row", alignItems: "center", zIndex: 4 },
   navButton: { width: 56, height: 56, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.87)", borderWidth: 1, borderColor: "rgba(255,255,255,0.96)", shadowColor: "#7E5260", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 },
   navPlaceholder: { width: 56, height: 56 },
-  topSpacer: { flex: 1 },
+  topSpacer: { flex: 1, minWidth: 6 },
+  topLeft: { flexShrink: 1, minWidth: 0 },
   right: { minWidth: 56, minHeight: 56, alignItems: "flex-end", justifyContent: "center" },
   copy: { marginTop: 24, maxWidth: "64%", zIndex: 3 },
   copyCompact: { marginTop: 15, maxWidth: "66%" },

@@ -67,7 +67,7 @@ A-to-B navigation inside the same Focus portal also cancels the previous Person'
 
 ## New P2.11.3 regression gate
 
-`scripts/test-phase-p2_11_3-bsh-cancel-first-focus.js`
+`scripts/tests/history/test-phase-p2_11_3-bsh-cancel-first-focus.js`
 
 The gate verifies:
 

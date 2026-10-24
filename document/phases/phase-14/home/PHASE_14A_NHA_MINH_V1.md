@@ -34,6 +34,6 @@ Deploy `firestore.rules` before testing Thì thầm / Cùng quyết định agai
 ## Regression contract
 Run:
 
-`node scripts/test-phase14a-nha-minh-v1.js`
+`node scripts/tests/history/test-phase14a-nha-minh-v1.js`
 
 Expected: 13/13 PASS.

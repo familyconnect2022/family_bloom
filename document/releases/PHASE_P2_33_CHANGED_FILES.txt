@@ -16,7 +16,7 @@ ADDED:
   + assets/xiangqi/red_horse.png
   + assets/xiangqi/red_soldier.png
   + document/releases/PHASE_P2_33_PERSISTENT_FULL_MINI_PRESENTATION_FOUNDATION.md
-  + scripts/test-phase-p2_33-persistent-full-mini-presentation.js
+  + scripts/tests/history/test-phase-p2_33-persistent-full-mini-presentation.js
   + src/components/games/BoardGamePresentationRoot.tsx
   + src/services/games/boardGamePresentationStore.ts
 
@@ -44,7 +44,7 @@ CHANGED:
   * scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
   * scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
   * scripts/setup/cleanup-overlay-routes.js
-  * scripts/test-phase-p2_12_4-build-integrity-chess-audio.js
-  * scripts/test-phase-p2_32-client-game-reset-foundation.js
+  * scripts/tests/history/test-phase-p2_12_4-build-integrity-chess-audio.js
+  * scripts/tests/history/test-phase-p2_32-client-game-reset-foundation.js
   * src/app/(home)/(games)/home-games.tsx
   * src/app/_layout.tsx

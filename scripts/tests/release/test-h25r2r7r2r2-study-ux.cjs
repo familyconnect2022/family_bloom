@@ -1,0 +1,27 @@
+/** Source-only Study Q&A UX regression. Safe before npm install and Auto Update backup. */
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const get=p=>fs.readFileSync(p,'utf8');
+const d=get('src/app/(home)/(learning)/study-question-detail.tsx');
+const list=get('src/app/(home)/(learning)/study-questions.tsx');
+const c=get('src/app/(home)/(learning)/study-question-compose.tsx');
+const composer=get('src/features/study/StudyComposer.tsx');
+const feedback=get('src/features/study/studyFeedback.ts');
+const kb=get('src/components/layout/BloomKeyboardScreen.tsx');
+const rules=get('firestore.rules');
+let passed=0; const check=(name,fn)=>{fn();passed++;console.log(`PASS ${passed}: ${name}`)};
+check('Study question editor uses existing keyboard-safe screen',()=>assert(c.includes('<BloomKeyboardScreen')));
+check('Answer/comment editor uses existing keyboard-safe screen',()=>assert(d.includes('<BloomKeyboardScreen')));
+check('Body focus requests scroll into view',()=>assert(composer.includes('onFocus={()=>revealInput(bodyRef.current,64)}')));
+check('Title focus requests scroll into view',()=>assert(c.includes('onFocus={()=>revealInput(inputRef.current,32)}')));
+check('Comment focus requests scroll into view',()=>assert(d.includes('onFocus={()=>revealInput(commentRef.current,38)}')));
+check('Existing keyboard reserve handles Android keyboards',()=>{assert(kb.includes('keyboardReserve'));assert(kb.includes('keyboardDidShow'));});
+check('No native Alert in new Study Q&A UI',()=>{for(const source of [c,d,composer])assert(!source.includes('Alert.alert(')&&!source.match(/\bAlert\s*,/));});
+check('All Study Q&A dialogs use Bloom Toast',()=>{assert(c.includes('useBloomToast'));assert(d.includes('useBloomToast'));assert(composer.includes('useBloomToast'));assert(composer.includes('showStudyError('));});
+check('Firestore permissions mapped to friendly message',()=>{assert(feedback.includes('permission-denied'));assert(!composer.includes("String((err as Error)?.message||err)"));});
+check('Question title validates before image upload',()=>{assert(composer.indexOf('validateBeforeUpload()')<composer.indexOf('mediaService.uploadImage'));assert(c.includes('titleRef.current?.focus()'));});
+check('Unsuccessful publish does not discard body draft',()=>{assert(composer.includes('bloom.study.draft:${uid}:${familyId}:${draftKey}'));const catchPart=composer.split('}catch(err){')[1].split('}finally{')[0];assert(!catchPart.includes('removeItem('));});
+check('Rules allow member-created family-scoped questions',()=>{assert(rules.includes('match /studyQuestions/{questionId}'));assert(rules.includes('request.resource.data.authorUid == request.auth.uid'));assert(rules.includes('request.resource.data.createdAt == request.time'));});
+check('Study feed/detail do not expose raw Firestore errors',()=>{assert(list.includes("studyErrorMessage(e,'tải câu hỏi')"));assert(d.includes("studyErrorMessage(e,'tải câu hỏi')"));});
+check('Legacy home owner without members document may also write Study content',()=>{for(const p of ['firestore.rules','firestore.cloud.rules']){const r=get(p);const a=r.slice(r.indexOf('match /studyQuestions/{questionId}'),r.indexOf('match /moments/{postId}'));assert(!a.includes('if member(familyId)'));assert(a.includes('allow create: if familyAccess(familyId)'));assert(a.includes('request.resource.data.authorUid == request.auth.uid'));}});
+check('Rules deployment command remains available',()=>assert(fs.existsSync('scripts/firebase/Family_Bloom_Deploy_Firestore_Rules.bat')));
+console.log(`STUDY UX REGRESSION ${passed}/${passed} PASS`);

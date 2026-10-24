@@ -5,6 +5,7 @@ import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { FamilyJoinRequest, UserFamilyMembership, UserProfile, FamilyMember } from "../../types";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { AppError } from "../../types/errors";
+import { familyIntroCharacters, familyIntroDocId } from "../../utils/familyIntroduction";
 
 const nowIso = () => new Date().toISOString();
 
@@ -22,15 +23,19 @@ export const familyJoinService = {
    */
   async requestToJoin(uid: string, familyKeyInput: string, profile: UserProfile, message?: string): Promise<FamilyJoinRequest> {
     const familyKey = familyKeyInput.trim();
-    if (!familyKey || familyKey.includes("/") || familyKey.length > 200) throw new AppError("FAMILY_ID_REQUIRED", "FAMILY");
+    if (!familyKey || familyKey.length > 200) throw new AppError("FAMILY_ID_REQUIRED", "FAMILY");
     const db = getFirestore();
-    // Resolve only the public alias; an applicant cannot read the private family
-    // or members collection. Preserve case for Firestore document IDs.
-    const code = await getDoc(doc(db, FIRESTORE_PATHS.familyCode(familyKey.toLowerCase())));
-    const aliases = code.exists() ? null : await getDocs(query(
+    // Resolve exact, case-sensitive introduction name FIRST (including symbols and spaces).
+    // Old familyCode and familyId remain supported for previously shared invitations.
+    const intro = familyIntroCharacters(familyKey) <= 20
+      ? await getDoc(doc(db, FIRESTORE_PATHS.familyIntroName(familyIntroDocId(familyKey)))) : null;
+    const code = !intro?.exists() && !familyKey.includes('/')
+      ? await getDoc(doc(db, FIRESTORE_PATHS.familyCode(familyKey))) : null;
+    const aliases = !intro?.exists() && !code?.exists() ? await getDocs(query(
       collection(db, FIRESTORE_PATHS.familyCodes()), where("familyId", "==", familyKey), limit(1),
-    ));
-    const alias = code.exists() ? code.data() : aliases?.docs[0]?.data();
+    )) : null;
+    const alias = intro?.exists() ? intro.data() : code?.exists() ? code.data() : aliases?.docs[0]?.data();
+    if (!alias && familyKey.includes('/')) throw new AppError("FAMILY_NOT_FOUND", "FAMILY");
     const familyId = String(alias?.familyId || familyKey);
     const requestRef = doc(db, FIRESTORE_PATHS.familyJoinRequest(familyId, uid));
     const membershipRef = doc(db, FIRESTORE_PATHS.userMembership(uid, familyId));

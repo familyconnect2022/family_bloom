@@ -1,7 +1,7 @@
 # Family Bloom H25R2R3 — Fix update preflight npm ENOENT on Windows
 
 ## Observed
-`spawnSync npm ENOENT` in `scripts/test-h25r2-xiangqi-black-turn-reconnect.cjs` running against a freshly extracted FULL ZIP on Windows/Node 24.
+`spawnSync npm ENOENT` in `scripts/tests/release/test-h25r2-xiangqi-black-turn-reconnect.cjs` running against a freshly extracted FULL ZIP on Windows/Node 24.
 
 ## Root cause
 The H25R2R2 updater advertised a dependency-free preflight, but its Xiangqi test attempted to load TypeScript globally by invoking `execFileSync('npm', ['root','-g'])` when project-local node_modules had not yet been installed. On Windows, this invocation can fail with ENOENT: npm is a `npm.cmd` shim, not a native executable. Merely changing to npm.cmd would not make this pre-install test genuinely dependency-free.

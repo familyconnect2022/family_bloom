@@ -26,6 +26,7 @@ import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import { profileService } from "../../services/profile/profileService";
 import type { BloodType, Gender } from "../../types/user";
+import { familyIntroCharacters, FAMILY_INTRO_MAX } from "../../utils/familyIntroduction";
 
 const roleLabel: Record<string, string> = {
   owner: "Chủ nhà",
@@ -75,14 +76,27 @@ export default function Profile() {
 
   const [inviteFamily, setInviteFamily] = useState<Family | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [editIntro, setEditIntro] = useState(false);
+  const [introDraft, setIntroDraft] = useState("");
+  const canEditIntro = membership?.role === "admin" || membership?.role === "owner" || inviteFamily?.ownerId === user?.uid;
   useEffect(() => {
     let active = true;
     setInviteFamily(null);
     if (activeFamilyId) void familyService.getFamily(activeFamilyId)
-      .then(value => { if (active) setInviteFamily(value); })
+      .then(async value => {
+        // Legacy families get a unique generated invitation name on first admin visit.
+        // This never changes the old familyCode, ID, membership or pending requests.
+        if (value && !value.introName && user?.uid && (membership?.role === 'admin' || membership?.role === 'owner' || value.ownerId === user.uid)) {
+          try {
+            await familyService.updateFamilyIntroName(activeFamilyId, user.uid, `Nhà-${activeFamilyId.slice(0,10)}`);
+            value = await familyService.getFamily(activeFamilyId);
+          } catch { /* Old codes remain valid; admin can use the manual editor after rules deploy. */ }
+        }
+        if (active) setInviteFamily(value);
+      })
       .catch(error => { if (active) showToast({ ...parseAppError(error) }); });
     return () => { active = false; };
-  }, [activeFamilyId, showToast]);
+  }, [activeFamilyId, membership?.role, user?.uid, showToast]);
   const createInviteCode = async () => {
     if (!activeFamilyId || inviteBusy) return;
     setInviteBusy(true);
@@ -91,6 +105,21 @@ export default function Profile() {
       setInviteFamily(await familyService.getFamily(activeFamilyId));
     } catch (error) { showToast({ ...parseAppError(error) }); }
     finally { setInviteBusy(false); }
+  };
+  const saveIntroductionName = async () => {
+    if (!activeFamilyId || !user?.uid || inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      await familyService.updateFamilyIntroName(activeFamilyId, user.uid, introDraft);
+      setInviteFamily(await familyService.getFamily(activeFamilyId));
+      setEditIntro(false);
+      showToast({ title: "Đã cập nhật tên giới thiệu 🌸", message: "Người thân có thể dùng tên mới để xin vào nhà." });
+    } catch (error) { showToast({ type: "warning", title: "Chưa đổi được tên", message: error instanceof Error ? error.message : "Vui lòng thử lại." }); }
+    finally { setInviteBusy(false); }
+  };
+  const copyIntroductionName = async () => {
+    const value = inviteFamily?.introName || inviteFamily?.familyCode;
+    if (value) { await Clipboard.setStringAsync(value); showToast({ message: "Đã sao chép tên giới thiệu 🌸" }); }
   };
   const copyHouseCode = async () => {
     if (!inviteFamily?.familyCode) return;
@@ -278,7 +307,7 @@ export default function Profile() {
           <View style={styles.section}>
             <BloomSectionHeader
               title="Mời người thân vào nhà"
-              subtitle="Chia sẻ Mã nhà để người thân tìm đúng mái nhà của bạn. Nếu cần, bạn vẫn có thể chia sẻ mã đầy đủ ở ngay bên dưới."
+              subtitle="Người thân nhập tên giới thiệu để gửi lời xin gia nhập, sau đó admin duyệt."
             />
             <BloomCard tone="soft" style={styles.familyInviteCard}>
               <View style={styles.familyInviteTop}>
@@ -302,7 +331,20 @@ export default function Profile() {
                   <Text style={styles.copyFamilyIdText}>Sao chép</Text>
                 </Pressable>
               </View>
-              <Text style={styles.familyInviteHint}>Mã nhà</Text>
+              <Text style={styles.familyInviteHint}>Tên giới thiệu để xin vào nhà (phân biệt HOA/thường)</Text>
+              <View style={styles.familyIdRow}>
+                <Text selectable style={[styles.familyIdText, { flex: 1 }]}>{inviteFamily?.introName || inviteFamily?.familyCode || "Chưa có tên giới thiệu"}</Text>
+                {(inviteFamily?.introName || inviteFamily?.familyCode) && <Pressable accessibilityRole="button" onPress={() => void copyIntroductionName()} style={styles.copyFamilyIdButton}>
+                  <Ionicons name="copy-outline" size={17} color={COLORS.white} /><Text style={styles.copyFamilyIdText}>Sao chép</Text>
+                </Pressable>}
+              </View>
+              {canEditIntro && !editIntro && <BloomButton title="Đổi tên giới thiệu" onPress={() => { setIntroDraft(inviteFamily?.introName || inviteFamily?.familyCode || ""); setEditIntro(true); }} />}
+              {canEditIntro && editIntro && <View style={{ gap: 9, marginVertical: 8 }}>
+                <BloomTextInput label="Tên mới" value={introDraft} onChangeText={setIntroDraft} autoCorrect={false} autoCapitalize="none" placeholder="Ví dụ: Nhà Bắp 🌷" helperText={`${familyIntroCharacters(introDraft)}/${FAMILY_INTRO_MAX} ký tự · Có dấu, khoảng trắng, ký hiệu đặc biệt · Phân biệt hoa/thường`} />
+                <BloomButton title="Lưu tên giới thiệu" disabled={inviteBusy || familyIntroCharacters(introDraft.trim()) > FAMILY_INTRO_MAX || !introDraft.trim()} isLoading={inviteBusy} onPress={() => void saveIntroductionName()} />
+                <BloomButton title="Huỷ đổi tên" disabled={inviteBusy} onPress={() => setEditIntro(false)} />
+              </View>}
+              <Text style={styles.familyInviteHint}>Mã nhà cũ (vẫn dùng được)</Text>
               <View style={styles.familyIdRow}>
                 <Text selectable style={styles.familyIdText}>{inviteFamily?.familyCode || "Chưa có mã nhà"}</Text>
                 {!!inviteFamily?.familyCode && <Pressable accessibilityRole="button" accessibilityLabel="Sao chép mã nhà" onPress={() => void copyHouseCode()} style={styles.copyFamilyIdButton}>

@@ -198,6 +198,32 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/media_assets/$(assetId)).data.status == 'attached';
     }
 
+    // Developer-only runtime Cloud gate. Backend ALSO enforces feature flags.
+    // Never let ordinary family admins or a changed profile grant global privileges.
+    function isVerifiedBloomDeveloper() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'huynh235@gmail.com';
+    }
+    function validBloomSwitches() {
+      return request.resource.data.keys().hasAll([
+        'schemaVersion', 'cloudFunctionsEnabled', 'remotePushEnabled', 'updatedByUid', 'updatedAt'
+      ])
+      && request.resource.data.keys().hasOnly([
+        'schemaVersion', 'cloudFunctionsEnabled', 'remotePushEnabled', 'updatedByUid', 'updatedAt'
+      ])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.cloudFunctionsEnabled is bool
+      && request.resource.data.remotePushEnabled is bool
+      && request.resource.data.updatedByUid == request.auth.uid
+      && auditIso(request.resource.data.updatedAt);
+    }
+    match /system/featureSwitches {
+      allow get: if signedIn();
+      allow list, delete: if false;
+      allow create, update: if isVerifiedBloomDeveloper() && validBloomSwitches();
+    }
+
     match /users/{uid} {
       allow create: if self(uid) && request.resource.data.uid == uid;
       allow read: if self(uid);
@@ -363,6 +389,28 @@ service cloud.firestore {
               || (p.action == 'update' && p.applied.createdByUid == p.before.createdByUid && p.applied.createdAt == p.before.createdAt))));
     }
 
+    // Public directory of case-sensitive invitation names. Mutations are atomic
+    // with families/{id}. The deterministic URI-encoded key supports all symbols.
+    match /family_intro_names/{nameKey} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && nameKey.matches('^v1_.*$')
+        && request.resource.data.id == nameKey
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 20
+        && request.resource.data.familyId is string
+        && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.ownerId
+        && (request.auth.uid == request.resource.data.ownerId || graphAdmin(request.resource.data.familyId))
+        && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.introName == request.resource.data.name
+        && getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.introNameKey == nameKey;
+      allow update: if false;
+      allow delete: if signedIn()
+        && graphAdmin(resource.data.familyId)
+        && getAfter(/databases/$(database)/documents/families/$(resource.data.familyId)).data.introNameKey != nameKey;
+    }
+
     match /family_codes/{familyCode} {
       // Alias duy nhất để người dùng tra familyId khi gia nhập. Đây không phải dữ liệu riêng tư.
       allow read: if signedIn();
@@ -514,7 +562,18 @@ service cloud.firestore {
       }
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.id == familyId;
       allow read: if familyAccess(familyId);
-      allow update: if owner(familyId)
+      allow update: if (
+        (owner(familyId)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['introName','introNameKey']))
+        || (graphAdmin(familyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['introName','introNameKey','updatedAt'])
+          && request.resource.data.keys().hasAll(['introName','introNameKey'])
+          && request.resource.data.introName is string
+          && request.resource.data.introName.size() > 0
+          && request.resource.data.introName.size() <= 20
+          && getAfter(/databases/$(database)/documents/family_intro_names/$(request.resource.data.introNameKey)).data.familyId == familyId
+          && getAfter(/databases/$(database)/documents/family_intro_names/$(request.resource.data.introNameKey)).data.name == request.resource.data.introName)
+      )
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.id == resource.data.id;
       // Production safety: recursive family deletion needs a trusted backend.
@@ -1844,6 +1903,83 @@ service cloud.firestore {
 
         allow delete: if familyAccess(familyId)
           && resource.data.createdByUid == request.auth.uid;
+      }
+
+      // H25R2R7R2 Super Bloom family study Q&A. No global query or listener.
+      function validStudyBlocks(blocks) {
+        return blocks is list && blocks.size() >= 1 && blocks.size() <= 24;
+      }
+      function validStudyImages(images) {
+        return images is list && images.size() <= 3;
+      }
+      match /studyQuestions/{questionId} {
+        allow get: if familyAccess(familyId);
+        allow list: if familyAccess(familyId) && request.query.limit <= 30;
+        allow create: if familyAccess(familyId)
+          && request.resource.data.keys().hasOnly(['familyId','authorUid','authorName','title','subject','grade','blocks','imageUrls','createdAt','acceptedAnswerId'])
+          && request.resource.data.keys().hasAll(['familyId','authorUid','authorName','title','subject','grade','blocks','imageUrls','createdAt','acceptedAnswerId'])
+          && request.resource.data.familyId == familyId
+          && request.resource.data.authorUid == request.auth.uid
+          && nonEmptyString(request.resource.data.authorName,80)
+          && nonEmptyString(request.resource.data.title,160)
+          && request.resource.data.subject in ['math','physics','chemistry','vietnamese','literature','english','other']
+          && request.resource.data.grade is int && request.resource.data.grade >= 1 && request.resource.data.grade <= 12
+          && validStudyBlocks(request.resource.data.blocks)
+          && validStudyImages(request.resource.data.imageUrls)
+          && request.resource.data.acceptedAnswerId == ''
+          && request.resource.data.createdAt == request.time;
+        // Accept exactly one existing answer; no edits to another member's question.
+        allow update: if familyAccess(familyId)
+          && resource.data.authorUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedAnswerId'])
+          && nonEmptyString(request.resource.data.acceptedAnswerId,160)
+          && exists(/databases/$(database)/documents/families/$(familyId)/studyQuestions/$(questionId)/answers/$(request.resource.data.acceptedAnswerId));
+        // Preserve answer/comment threads. No client cascade deletion.
+        allow delete: if false;
+        match /answers/{answerId} {
+          allow get: if familyAccess(familyId);
+          allow list: if familyAccess(familyId) && request.query.limit <= 30;
+          allow create: if familyAccess(familyId)
+            && exists(/databases/$(database)/documents/families/$(familyId)/studyQuestions/$(questionId))
+            && request.resource.data.keys().hasOnly(['authorUid','authorName','blocks','imageUrls','createdAt'])
+            && request.resource.data.keys().hasAll(['authorUid','authorName','blocks','imageUrls','createdAt'])
+            && request.resource.data.authorUid == request.auth.uid
+            && nonEmptyString(request.resource.data.authorName,80)
+            && validStudyBlocks(request.resource.data.blocks)
+            && validStudyImages(request.resource.data.imageUrls)
+            && request.resource.data.createdAt == request.time;
+          allow update, delete: if false;
+          match /comments/{commentId} {
+            allow get: if familyAccess(familyId);
+            allow list: if familyAccess(familyId) && request.query.limit <= 30;
+            allow create: if familyAccess(familyId)
+              && exists(/databases/$(database)/documents/families/$(familyId)/studyQuestions/$(questionId)/answers/$(answerId))
+              && request.resource.data.keys().hasOnly(['authorUid','authorName','body','createdAt'])
+              && request.resource.data.authorUid == request.auth.uid
+              && nonEmptyString(request.resource.data.authorName,80)
+              && nonEmptyString(request.resource.data.body,1000)
+              && request.resource.data.createdAt == request.time;
+            allow update,delete: if false;
+          }
+          match /reactions/{reactionUid} {
+            allow get: if familyAccess(familyId) && request.auth.uid == reactionUid;
+            allow list: if false;
+            // One reaction document per signed-in family member and answer.
+            // Legacy heart docs without `reaction` remain readable.
+            allow create: if familyAccess(familyId) && request.auth.uid == reactionUid
+              && request.resource.data.keys().hasOnly(['uid','reaction','createdAt'])
+              && request.resource.data.keys().hasAll(['uid','reaction','createdAt'])
+              && request.resource.data.uid == reactionUid
+              && request.resource.data.reaction in ['heart','like','laugh','wow','clap','flower']
+              && request.resource.data.createdAt == request.time;
+            allow update: if familyAccess(familyId) && request.auth.uid == reactionUid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reaction'])
+              && request.resource.data.uid == resource.data.uid
+              && request.resource.data.createdAt == resource.data.createdAt
+              && request.resource.data.reaction in ['heart','like','laugh','wow','clap','flower'];
+            allow delete: if familyAccess(familyId) && request.auth.uid == reactionUid;
+          }
+        }
       }
 
       match /moments/{postId} {

@@ -54,6 +54,9 @@ internal class XiangqiNativeBoardView(
       clockTickScheduled = false
       if(!isShown || state?.status !in setOf("active","waiting")) return
       invalidateClocksOnly()
+      // Re-offer native readiness after a missed JS event or app-clone resume.
+      // This is local-only; the independent controller validates phase and UID.
+      maybeSendReady()
       scheduleClockTick()
     }
   }
@@ -72,6 +75,7 @@ internal class XiangqiNativeBoardView(
   private var lastClockKey = ""
   private var clockAnchor = SystemClock.elapsedRealtime()
   private var readySentFor: String? = null
+  private var lastAssetsReadyEmitAt = 0L
   private var resignConfirmUntil = 0L
   private var lastRenderSeq = -1
   private var lastInputBlockedDiagnosticAt = 0L
@@ -290,8 +294,10 @@ internal class XiangqiNativeBoardView(
   fun ensureRecoveredGeometry(){maybeSendReady();invalidate()}
   private fun maybeSendReady() {
     val s=state?:return
-    if(!s.gameId.startsWith("pending-") && width>=dp(200f) && height>=dp(300f) && loaded.size==audioMap.size && readySentFor!=s.gameId) {
+    if(s.status=="waiting" && !s.gameId.startsWith("pending-") && width>=dp(200f) && height>=dp(300f) && loaded.size==audioMap.size &&
+      (readySentFor!=s.gameId || SystemClock.elapsedRealtime()-lastAssetsReadyEmitAt>=5000L)) {
       readySentFor=s.gameId
+      lastAssetsReadyEmitAt=SystemClock.elapsedRealtime()
       // Native view and all PNGs have been decoded, measured, and painted. Wait
       // two choreographer frames before making the first server readiness intent.
       post { post { if(state?.gameId==s.gameId)onAssetsReady(s.gameId) } }

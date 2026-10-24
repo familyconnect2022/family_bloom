@@ -15,9 +15,9 @@ Native identity: P2.37R2C-H22R5-native-2
 
 ## Kiểm tra trong môi trường đóng gói
 
-- `node scripts/test-h22-xiangqi-parity.cjs`: 26/26 PASS, gồm test runtime server với virtual bot và hồi quy màu/chuẩn bị/premove.
-- `node scripts/test-h22r1-bot-invite-countdown.cjs`: 10/10 PASS.
-- `node scripts/test-h22r3-windows-build-preflight.cjs`: 7/7 PASS.
+- `node scripts/tests/release/test-h22-xiangqi-parity.cjs`: 26/26 PASS, gồm test runtime server với virtual bot và hồi quy màu/chuẩn bị/premove.
+- `node scripts/tests/release/test-h22r1-bot-invite-countdown.cjs`: 10/10 PASS.
+- `node scripts/tests/release/test-h22r3-windows-build-preflight.cjs`: 7/7 PASS.
 - 15 nhóm test chạy qua: H22R5/H22R1/H22R2/H22R3, native binary lock, integrity, H6, H11, H17, H20, H21R5, source imports, Android resource names, native package checks, TS syntax; 0 nhóm thất bại.
 - `node scripts/setup/check-ts-syntax-transpile.js`: 299/299 TS/TSX files transpile.
 - Android AAPT2 source gate: 38 tên tài nguyên được kiểm tra; 11/11 âm thanh và cấu trúc res/raw hợp lệ.

@@ -7,9 +7,9 @@ Runtime source
 - src/hooks/family/usePendingFamilyReviews.ts
 
 Tests
-- scripts/test-phase82c-tab-regression.js (new)
-- scripts/test-phase82b-first-frame.js (historical entry now delegates to current 8.2C gate)
-- scripts/test-phase8-reliability.js
+- scripts/tests/history/test-phase82c-tab-regression.js (new)
+- scripts/tests/history/test-phase82b-first-frame.js (historical entry now delegates to current 8.2C gate)
+- scripts/tests/history/test-phase8-reliability.js
 
 Documentation
 - PATCH_INFO.txt

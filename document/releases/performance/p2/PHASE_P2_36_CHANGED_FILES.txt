@@ -8,7 +8,7 @@ ADDED
 - src/components/games/BoardGamePresentationRoot.android.tsx
 - src/services/games/boardGameNativeOverlay.ts
 - src/services/games/boardGamePresentationDiagnostics.ts
-- scripts/test-phase-p2_36-android-native-presentation-plane.js
+- scripts/tests/history/test-phase-p2_36-android-native-presentation-plane.js
 - document/releases/performance/p2/PHASE_P2_36_ANDROID_NATIVE_PRESENTATION_PLANE_BUILD_REPORT.md
 - document/releases/performance/p2/PHASE_P2_36_CHANGED_FILES.txt
 

@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+'use strict';
+const __legacyScriptsDir = require('node:path').resolve(__dirname, '..', '..');
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const root = path.resolve(__legacyScriptsDir, '..');
+const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
+const ts = require('typescript');
+let passed = 0;
+function check(label, truth) { assert.ok(truth, label); passed++; console.log(`PASS H23R2 ${String(passed).padStart(2,'0')} - ${label}`); }
+// Execute the real lease module, not a mock of its algorithm.
+const moduleFile = path.join(root, 'server/src/games/developerDualAppPresence.ts');
+const js = ts.transpileModule(fs.readFileSync(moduleFile,'utf8'), {fileName:moduleFile,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const m = new Module(moduleFile, module); m.filename = moduleFile; m.paths = module.paths; m._compile(js, moduleFile);
+const lease = m.exports;
+const uid = 'dev_uid', family = 'family_a', other = 'family_b', start=Date.now();
+const touched=[];lease.onDualAppPresenceChange(f=>touched.push(f));
+check('Developer lease initially absent',!lease.hasDualAppLease(uid,family));
+const issued=lease.setDualAppLease(uid,family,true,start);
+check('Lease exactly 180 seconds, no arbitrary clock time supplied by client',issued.expiresAt===start+180000);
+check('Lease visible only for that UID/family',lease.hasDualAppLease(uid,family,start)&&!lease.hasDualAppLease('other_uid',family,start)&&!lease.hasDualAppLease(uid,other,start));
+check('Lease visible at 179999ms',lease.hasDualAppLease(uid,family,start+179999));
+check('Lease expires at exact authoritative deadline',!lease.hasDualAppLease(uid,family,start+180000));
+check('Presence collection only contains active lease',lease.listDualAppLeaseUids(family,start).includes(uid)&&!lease.listDualAppLeaseUids(family,start+180000).includes(uid));
+lease.setDualAppLease(uid,family,false,start);
+check('Explicit disable revokes lease and broadcasts to watchers',!lease.hasDualAppLease(uid,family,start)&&touched.length===2&&touched.every(f=>f===family));
+const chess=read('server/src/socket/socketServer.ts'), xq=read('server/src/xiangqi/xiangqiSocket.ts'), ui=read('src/app/(internal)/developer-tools.tsx'), gate=read('src/components/games/ChessChallengeGate.tsx');
+check('Server validates verified Firebase developer identity',chess.includes('socket.data.developerAuthorized')&&chess.includes('isVerifiedDeveloperIdentity(decoded)'));
+check('Server demands authenticated family membership and joined family',chess.includes('await requireMember(uid, familyId);')&&chess.includes('socket.data.appFamilyId !== familyId'));
+check('Server denies game-active background test lease',chess.includes('payload.enabled && await resolveCurrentGameForUid(uid)'));
+check('Both game presence pipelines include short lease',chess.includes('listDualAppLeaseUids(familyId)')&&xq.includes('listDualAppLeaseUids(familyId)'));
+check('Both game invite handlers allow lease recipient',chess.includes('|| hasDualAppLease(uid, familyId)')&&xq.includes('||hasDualAppLease(uid,familyId)'));
+check('Both game app joins replay unexpired invitation',chess.includes('invite.expiresAt > Date.now()')&&xq.includes('invite.expiresAt>Date.now()'));
+check('Non-developer account cannot toggle background lease',ui.includes('isVerifiedDeveloperAccount(user)')&&gate.includes('isDualAppTestOn(uid)'));
+check('Lease packet before appLeave and only outside active game',gate.indexOf('DEV_DUAL_APP_LEASE_EVENT, { familyId, enabled: true }')<gate.indexOf('CHESS_EVENTS.appLeave, { familyId }')&&gate.includes('if (!gameId || gameId.startsWith("pending-chess:"))'));
+const presence=read('src/components/games/FamilyBoardGameLobbyVisuals.tsx');
+check('UI shows background test distinctly from true foreground presence',presence.includes('test_background')&&presence.includes('Thử nghiệm ứng dụng kép'));
+check('Normal game-away presence remains independent',!read('server/src/chess/chessGameManager.ts').includes('hasDualAppLease')&&!read('server/src/xiangqi/xiangqiGameManager.ts').includes('hasDualAppLease'));
+check('Family lobby does not access scopeActive before declaration', ['chess','xiangqi'].every(name=>!read(`src/app/(home)/(games)/home-${name}.tsx`).includes('scopeActive=true;\n    setConnecting(true);\n    setPresence({});\n    let scopeActive=true;')));
+console.log(`PASS H23R2 dual-app presence: ${passed}/${passed}`);

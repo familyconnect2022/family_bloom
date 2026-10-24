@@ -1,8 +1,8 @@
 Phase 14R.4 — changed/new files
 
 package.json
-scripts/test-phase14r-time-capsule-functional.js
-scripts/test-phase14r4-time-capsule-ux-realtime.js
+scripts/tests/history/test-phase14r-time-capsule-functional.js
+scripts/tests/history/test-phase14r4-time-capsule-ux-realtime.js
 src/app/(home)/(time-capsule)/home-time-capsules.tsx
 src/app/(home)/(time-capsule)/home-time-capsule-compose.tsx
 src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx

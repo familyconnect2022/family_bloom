@@ -610,7 +610,7 @@ function MomentCardComponent({
           <Text style={styles.statsText}>{reactionCount ? `${reactionCount} cảm xúc` : "Hãy là người đầu tiên thả cảm xúc"}</Text>
         </Pressable>
         <Pressable onPress={() => setShowComments((current) => !current)} hitSlop={7}>
-          <Text style={styles.statsText}>{post.commentCount || 0} bình luận</Text>
+          <Text style={[styles.statsText, (post.commentCount || 0) > 0 && styles.statsCommentsActive]}>{post.commentCount || 0} bình luận</Text>
         </Pressable>
       </View>
 
@@ -979,6 +979,7 @@ const styles = StyleSheet.create({
   statEmojiOverlap: { marginLeft: -6 },
   statEmojiText: { fontSize: 11 },
   statsText: { fontSize: 11.5, color: COLORS.secondaryText },
+  statsCommentsActive: { fontWeight: "900", color: COLORS.primary, backgroundColor: "#FFE6F0", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, overflow: "hidden" },
   postMenuBackdrop: { flex: 1, backgroundColor: BLOOM_SUPPER.modal.backdrop, justifyContent: "flex-end" },
   postMenuSheet: { backgroundColor: BLOOM_SUPPER.surface.card, borderTopLeftRadius: BLOOM_SUPPER.radius.modal, borderTopRightRadius: BLOOM_SUPPER.radius.modal, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28, gap: 8 },
   editSheet: { backgroundColor: BLOOM_SUPPER.surface.card, borderTopLeftRadius: BLOOM_SUPPER.radius.modal, borderTopRightRadius: BLOOM_SUPPER.radius.modal, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28 },

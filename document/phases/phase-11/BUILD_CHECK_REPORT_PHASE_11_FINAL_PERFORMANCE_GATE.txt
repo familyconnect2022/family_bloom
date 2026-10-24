@@ -17,11 +17,11 @@ IMPLEMENTED
 CHECKS PASSED
 1) node scripts/test-phase11-final-performance-gate.js
    PASS Phase 11 Final Performance Gate automation + safety + coverage contracts
-2) node scripts/test-phase112b-harness.js
+2) node scripts/tests/history/test-phase112b-harness.js
    PASS Phase 11.2B harness safety + automated regression + report contracts
-3) node scripts/test-phase112b-firebase-e2e.js
+3) node scripts/tests/history/test-phase112b-firebase-e2e.js
    PASS Phase 11.2B Firebase E2E sender + cleanup safety contracts
-4) node scripts/test-phase10-performance-lab-hotfix.js
+4) node scripts/tests/history/test-phase10-performance-lab-hotfix.js
    Phase 10 Performance Lab hotfix contracts PASS
 5) TypeScript parser/transpile check on all 5 changed TS/TSX runtime files
    PASS
