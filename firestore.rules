@@ -233,9 +233,9 @@ service cloud.firestore {
         && (!request.resource.data.keys().hasAny(['activeFamilyId'])
           || !resource.data.keys().hasAny(['activeFamilyId'])
           || request.resource.data.activeFamilyId == resource.data.activeFamilyId
-          || (request.resource.data.activeFamilyId is string
-            && exists(/databases/$(database)/documents/users/$(uid)/memberships/$(request.resource.data.activeFamilyId))
-            && exists(/databases/$(database)/documents/families/$(request.resource.data.activeFamilyId)/members/$(uid))));
+         || (request.resource.data.activeFamilyId is string
+          && getAfter(/databases/$(database)/documents/users/$(uid)/memberships/$(request.resource.data.activeFamilyId)) != null
+          && getAfter(/databases/$(database)/documents/families/$(request.resource.data.activeFamilyId)/members/$(uid)) != null));
       allow delete: if self(uid);
 
       match /memberships/{familyId} {

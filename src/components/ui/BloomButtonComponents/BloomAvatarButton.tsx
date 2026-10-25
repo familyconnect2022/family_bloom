@@ -40,7 +40,6 @@ export const BloomAvatarButton: React.FC<BloomAvatarButtonProps> = ({
   ...rest
 }) => {
   const { scaleAnim, handlePressIn, handlePressOut } = useBloomTouchAnimation(disabled);
-
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Pressable

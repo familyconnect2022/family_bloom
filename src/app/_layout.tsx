@@ -10,8 +10,6 @@ import { DeferredFamilyPrewarm } from "../components/system/DeferredFamilyPrewar
 import { BoardGamePresentationRoot } from "../components/games/BoardGamePresentationRoot";
 import { FirebaseBoardInvitationGate } from "../components/games/FirebaseBoardInvitationGate";
 
-
-
 import { closeBoardGamePresentation } from "../services/games/boardGamePresentationStore";
 import { BloomPushBridge } from "../components/system/BloomPushBridge";
 import { MediaViewerProvider } from "../components/media/MediaViewerProvider";
@@ -53,22 +51,28 @@ const RootRouteGate = ({
   const router = useRouter();
   const { ready: tabsReady, release: releaseTabStartup } = useTabStartup();
   const rootSegment = segments[0];
+  const leafSegment = segments[segments.length - 1] as string | undefined;
 
   // P2.4: route-segment churn is isolated in this tiny gate. Switching between
   // the five tab routes no longer re-renders the Root Stack or global hosts.
   useEffect(() => {
-    if (authStatus === "initializing" || profileStatus === "loading" || membershipStatus === "loading") {
+    if (
+      authStatus === "initializing" ||
+      profileStatus === "loading" ||
+      membershipStatus === "loading"
+    ) {
       setNavigationStable(false);
       return;
     }
 
-    const hasValidActiveFamily = !!activeFamilyId && families.some((item) => item.familyId === activeFamilyId);
+    const hasValidActiveFamily =
+      !!activeFamilyId && families.some((item) => item.familyId === activeFamilyId);
     const inAuthGroup = rootSegment === "(auth)";
     const inTabs = rootSegment === "(tabs)";
-    const onCreateProfile = rootSegment === "create-profile";
-    const onFamilyGateway = rootSegment === "family-gateway";
-    const onFamilySelect = rootSegment === "family-select";
-    const onFamilyMemberships = rootSegment === "family-memberships";
+    const onCreateProfile = leafSegment === "create-profile";
+    const onFamilyGateway = leafSegment === "family-gateway";
+    const onFamilySelect = leafSegment === "family-select";
+    const onFamilyMemberships = leafSegment === "family-memberships";
     let target: string | null = null;
     let targetMode: "replace" | "navigate" = "replace";
 
@@ -81,7 +85,13 @@ const RootRouteGate = ({
     } else if (profileStatus === "ready" && !hasValidActiveFamily) {
       if (!onFamilyGateway) target = "/family-gateway";
     } else if (profileStatus === "ready" && hasValidActiveFamily) {
-      if (inAuthGroup || onCreateProfile || onFamilyGateway || onFamilySelect || (!inTabs && !rootSegment)) {
+      if (
+        inAuthGroup ||
+        onCreateProfile ||
+        onFamilyGateway ||
+        onFamilySelect ||
+        (!inTabs && !rootSegment)
+      ) {
         target = "/(tabs)";
       } else if (familyTransition && !inTabs) {
         target = "/(tabs)";
@@ -114,17 +124,32 @@ const RootRouteGate = ({
     router,
     setNavigationStable,
     user,
+    leafSegment,
   ]);
 
   useEffect(() => {
-    if (!familyTransition || !activeFamilyId || familyTransition.targetFamilyId !== activeFamilyId) return;
+    if (!familyTransition || !activeFamilyId || familyTransition.targetFamilyId !== activeFamilyId)
+      return;
     if (rootSegment === "(tabs)" && tabsReady && navigationStable) completeFamilyTransition();
-  }, [activeFamilyId, completeFamilyTransition, familyTransition, navigationStable, rootSegment, tabsReady]);
+  }, [
+    activeFamilyId,
+    completeFamilyTransition,
+    familyTransition,
+    navigationStable,
+    rootSegment,
+    tabsReady,
+  ]);
 
   return null;
 };
 
-const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeReady: boolean; criticalVisualAssetsReady: boolean }) => {
+const RootNavigator = ({
+  runtimeReady,
+  criticalVisualAssetsReady,
+}: {
+  runtimeReady: boolean;
+  criticalVisualAssetsReady: boolean;
+}) => {
   useEffect(() => runtimeDiagnosticsService.installGlobalHandler(), []);
   const {
     user,
@@ -140,18 +165,17 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
   const [navigationStable, setNavigationStable] = useState(false);
   const { ready: activeSurfaceReady, chromeReady: tabBarVisualReady } = useTabStartup();
 
-  const nativeBootReady = authStatus !== "initializing"
-    && profileStatus !== "loading"
-    && membershipStatus !== "loading"
-    && navigationStable;
+  const nativeBootReady =
+    authStatus !== "initializing" &&
+    profileStatus !== "loading" &&
+    membershipStatus !== "loading" &&
+    navigationStable;
 
   // P2.12: do not release the native splash until the persistent bottom chrome
   // has actually laid out and painted. Font readiness alone does not prove the
   // tabbar has pixels on screen and previously exposed a white strip at boot.
-  const firstVisualReady = nativeBootReady
-    && criticalVisualAssetsReady
-    && activeSurfaceReady
-    && tabBarVisualReady;
+  const firstVisualReady =
+    nativeBootReady && criticalVisualAssetsReady && activeSurfaceReady && tabBarVisualReady;
 
   useEffect(() => {
     if (!firstVisualReady) return;
@@ -171,59 +195,182 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
     >
       <Stack.Screen name="(auth)" options={{ animation: "none", freezeOnBlur: true }} />
       <Stack.Screen name="(tabs)" options={{ freezeOnBlur: true, animation: "none" }} />
-      <Stack.Screen name="(profile)/create-profile" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen
+        name="(profile)/create-profile"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
       <Stack.Screen name="(family)/(membership)/family-gateway" options={{ headerShown: false }} />
       <Stack.Screen name="(family)/(membership)/family-select" options={{ headerShown: false }} />
-      <Stack.Screen name="(family)/(membership)/family-memberships" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(profile)/profile" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(profile)/settings" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(internal)/developer-tools" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(internal)/board-game-bot-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(activity)/(notifications)/notifications" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(activity)/(notifications)/notification-preferences" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(membership)/family-join-requests" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/family-timeline" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(activity)/event/[eventId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/member/[uid]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(graph)/family-graph" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(graph)/family-graph-proposals" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(graph)/family-graph-admin" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(graph)/family-graph-person-editor" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(family)/(graph)/family-graph-relationship-editor" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen
+        name="(family)/(membership)/family-memberships"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(profile)/profile"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(profile)/settings"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(internal)/developer-tools"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(internal)/board-game-bot-test"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(activity)/(notifications)/notifications"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(activity)/(notifications)/notification-preferences"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(membership)/family-join-requests"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/family-timeline"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(activity)/event/[eventId]"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/member/[uid]"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(graph)/family-graph"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(graph)/family-graph-proposals"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(graph)/family-graph-admin"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(graph)/family-graph-person-editor"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(family)/(graph)/family-graph-relationship-editor"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
       <Stack.Screen name="(chat)/chat/index" />
-      <Stack.Screen name="(home)/(whispers)/home-whispers" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(polls)/home-polls" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(kitchen)/home-kitchen/index" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(kitchen)/home-kitchen/[recipeId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(time-capsule)/home-time-capsules" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(time-capsule)/home-time-capsule-compose" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(time-capsule)/home-time-capsule/[capsuleId]" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(learning)/learning-library" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(learning)/learning-lesson" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(learning)/study-questions" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(learning)/study-question-compose" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(learning)/study-question-detail" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(profile)/cloud-manager" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(games)/home-games" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(games)/home-chess" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(games)/home-xiangqi" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(games)/home-game-create" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(fund)/home-fund" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(home)/(board)/home-board" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(memories)/memory-book" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(internal)/performance-graph-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
-      <Stack.Screen name="(internal)/performance-data-test" options={{ animation: BLOOM_MOTION.screen.animation }} />
+      <Stack.Screen
+        name="(home)/(whispers)/home-whispers"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(polls)/home-polls"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(kitchen)/home-kitchen/index"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(kitchen)/home-kitchen/[recipeId]"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(time-capsule)/home-time-capsules"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(time-capsule)/home-time-capsule-compose"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(time-capsule)/home-time-capsule/[capsuleId]"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(learning)/learning-library"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(learning)/learning-lesson"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(learning)/study-questions"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(learning)/study-question-compose"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(learning)/study-question-detail"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(profile)/cloud-manager"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(games)/home-games"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(games)/home-chess"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(games)/home-xiangqi"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(games)/home-game-create"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(fund)/home-fund"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(home)/(board)/home-board"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(memories)/memory-book"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(internal)/performance-graph-test"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
+      <Stack.Screen
+        name="(internal)/performance-data-test"
+        options={{ animation: BLOOM_MOTION.screen.animation }}
+      />
     </Stack>
   );
 
   return (
     <View style={styles.rootNavigatorHost} collapsable={false}>
-      <RootRouteGate navigationStable={navigationStable} setNavigationStable={setNavigationStable} />
+      <RootRouteGate
+        navigationStable={navigationStable}
+        setNavigationStable={setNavigationStable}
+      />
       <View style={styles.navigationPlane} collapsable={false}>
         {navigationStack}
       </View>
       {familyTransition ? (
-        <BloomAppBootstrap ready={false} message={`Đang vào ${familyTransition.targetFamilyName}…`} />
+        <BloomAppBootstrap
+          ready={false}
+          message={`Đang vào ${familyTransition.targetFamilyName}…`}
+        />
       ) : null}
       {runtimeReady ? <BloomPushBridge /> : null}
       <WelcomeModal
@@ -237,7 +384,10 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
 
 function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsReady: boolean }) {
   const { user, activeFamilyId } = useAuth();
-  const sessionKey = useMemo(() => `${user?.uid ?? "guest"}:${activeFamilyId ?? "no-family"}`, [activeFamilyId, user?.uid]);
+  const sessionKey = useMemo(
+    () => `${user?.uid ?? "guest"}:${activeFamilyId ?? "no-family"}`,
+    [activeFamilyId, user?.uid],
+  );
   const authenticatedGameShellReady = !!user && !!activeFamilyId;
   const [backgroundWarmReady, setBackgroundWarmReady] = useState(false);
 
@@ -288,16 +438,25 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
       <GestureHandlerRootView style={styles.gestureRoot}>
         <View style={styles.familySessionPlane} collapsable={false}>
           <TabStartupProvider key={sessionKey} enabled={authenticatedGameShellReady}>
-            <RootNavigator runtimeReady={backgroundWarmReady} criticalVisualAssetsReady={criticalVisualAssetsReady} />
+            <RootNavigator
+              runtimeReady={backgroundWarmReady}
+              criticalVisualAssetsReady={criticalVisualAssetsReady}
+            />
           </TabStartupProvider>
           <DeferredFamilyPrewarm ready={backgroundWarmReady} />
           {authenticatedGameShellReady && user && activeFamilyId ? (
             <>
-              <FirebaseBoardInvitationGate uid={user.uid} familyId={activeFamilyId} ready={backgroundWarmReady} />
+              <FirebaseBoardInvitationGate
+                uid={user.uid}
+                familyId={activeFamilyId}
+                ready={backgroundWarmReady}
+              />
             </>
           ) : null}
         </View>
-        {authenticatedGameShellReady ? <BoardGamePresentationRoot key={`game-host:${sessionKey}`} /> : null}
+        {authenticatedGameShellReady ? (
+          <BoardGamePresentationRoot key={`game-host:${sessionKey}`} />
+        ) : null}
         <BloomInternetBanner />
       </GestureHandlerRootView>
     </FamilyRealtimeProvider>
@@ -311,24 +470,29 @@ export default function RootLayout() {
   return (
     <BloomToastProvider>
       <BloomDialogProvider>
-      <MediaViewerProvider>
-        <AuthProvider>
-          <MomentPublishProvider>
-            <HomeMusicPlayerProvider>
-              <FamilySession criticalVisualAssetsReady={criticalVisualAssetsReady} />
-            </HomeMusicPlayerProvider>
-          </MomentPublishProvider>
-        </AuthProvider>
-      </MediaViewerProvider>
+        <MediaViewerProvider>
+          <AuthProvider>
+            <MomentPublishProvider>
+              <HomeMusicPlayerProvider>
+                <FamilySession criticalVisualAssetsReady={criticalVisualAssetsReady} />
+              </HomeMusicPlayerProvider>
+            </MomentPublishProvider>
+          </AuthProvider>
+        </MediaViewerProvider>
       </BloomDialogProvider>
     </BloomToastProvider>
   );
 }
 
-
 const styles = StyleSheet.create({
   gestureRoot: { flex: 1 },
   familySessionPlane: { flex: 1, alignSelf: "stretch", position: "relative" },
-  rootNavigatorHost: { flex: 1, alignSelf: "stretch", position: "relative", overflow: "hidden", backgroundColor: "#FDECF3" },
+  rootNavigatorHost: {
+    flex: 1,
+    alignSelf: "stretch",
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#FDECF3",
+  },
   navigationPlane: { flex: 1, alignSelf: "stretch", position: "relative", overflow: "hidden" },
 });
