@@ -36,10 +36,10 @@ test('radical is continuous and scales with content height in unified renderer',
   for(const piece of ['RootSegment','RootInk','onLayout={e=>','borderTopWidth:stroke','case \'root\':return <RootInk'])assert(renderer.includes(piece),piece);
   assert(!renderer.includes('rootGlyph'));assert(renderer.includes('NativeFormula'));assert(renderer.includes('StudyBlocksView'));
 });
-test('root BAT launchers and build gates ship together',()=>{
-  const launchers=['Family_Bloom_AUTO_UPDATE_FULL.bat','Family_Bloom_BUILD_APK_TO_SHARE.bat','Family_Bloom_EAS_BUILD_TEST.bat','Family_Bloom_EAS_UPDATE_TEST.bat'];
+test('canonical script BAT entrypoints and build gates ship together',()=>{
+  const launchers=['scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat','scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat','scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat'];
   const manifest=JSON.parse(read('scripts/setup/bat-entrypoints-manifest.json'));
-  for(const name of launchers){assert(manifest.batFiles.includes(name));assert(read(name).includes('scripts\\android\\'));}
+  for(const name of launchers){assert(manifest.batFiles.includes(name));assert(read(name).includes('PROJECT_ROOT') || read(name).includes('FB_SOURCE') || read(name).includes('BUILD_SOURCE'));}
   for(const name of ['scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat','scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat'])assert(read(name).includes('test-r3r12-family-intro-letter-radical.cjs'),name);
 });
 let ts;try{ts=require('typescript')}catch{}

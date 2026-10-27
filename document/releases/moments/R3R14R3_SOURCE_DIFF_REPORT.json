@@ -1,0 +1,30 @@
+{
+  "sourceZip": "FAMILY_BLOOM.zip",
+  "originalFileCount": 1426,
+  "retainedFileCount": 1426,
+  "missingFiles": [],
+  "changedFiles": [
+    ".env.example",
+    "app.json",
+    "package.json",
+    "src/app/(tabs)/moments.tsx",
+    "src/app/_layout.tsx",
+    "src/context/MomentPublishContext.tsx",
+    "src/services/media/cloudinaryService.ts",
+    "src/services/media/mediaService.ts",
+    "src/types/media.ts"
+  ],
+  "newFiles": [
+    "document/releases/moments/FAMILY_BLOOM_R3R14R3_MOMENT_CANCEL_10_MEDIA.md",
+    "scripts/tests/release/test-r3r14r3-moment-preview-cancel.cjs",
+    "src/components/moments/MomentUploadToast.tsx",
+    "src/services/media/momentMediaApi.ts",
+    "src/services/moments/momentUploadToastStore.ts",
+    "vercel-media/api/cron/cleanup.js",
+    "vercel-media/api/media/cleanup.js",
+    "vercel-media/api/media/sign.js",
+    "vercel-media/lib/media.js",
+    "vercel-media/package.json",
+    "vercel-media/vercel.json"
+  ]
+}

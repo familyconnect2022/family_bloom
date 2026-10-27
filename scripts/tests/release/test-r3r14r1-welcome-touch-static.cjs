@@ -41,8 +41,8 @@ check('stale animations cannot commit after user switch',()=>{
 check('the welcome letter keeps all 14 approved paragraphs',()=>{
   for(const text of JSON.parse(read('document/releases/r3r14/approved-letter-paragraphs.snapshot.json'))) assert(code.includes(text),text.slice(0,40));
 });
-check('unchanged root Android identity and 4 root BAT wrappers',()=>{
+check('unchanged Android identity and no duplicate root BAT wrappers',()=>{
   assert.equal(JSON.parse(read('app.json')).expo.android.package,'com.familybloom.android');
-  assert.equal(fs.readdirSync(root).filter(x=>x.toLowerCase().endsWith('.bat')).length,4);
+  assert.equal(fs.readdirSync(root).filter(x=>x.toLowerCase().endsWith('.bat')).length,0);
 });
 console.log(`R3R14R1 STATIC TOUCH: ${passed}/${passed} PASS`);

@@ -157,6 +157,13 @@ export const mediaService = {
     });
   },
 
+  async markDeleted(assetId: string): Promise<void> {
+    await updateDoc(doc(getFirestore(), FIRESTORE_PATHS.mediaAsset(assetId)), {
+      status: "deleted",
+      updatedAt: now(),
+    });
+  },
+
   async markCleanupPending(assetId: string): Promise<void> {
     await updateDoc(doc(getFirestore(), FIRESTORE_PATHS.mediaAsset(assetId)), {
       status: "cleanup_pending",
@@ -172,6 +179,7 @@ export const mediaService = {
     file: MediaFile,
     context: MediaUploadContext,
     onProgress?: (value: number) => void,
+    options?: { signal?: AbortSignal; onAssetCreated?: (asset: MediaAsset) => void },
   ): Promise<{ asset: MediaAsset; result: UploadResult }> {
     if (!context.ownerUid) {
       throw new AppError("PROFILE_NOT_FOUND", "PROFILE");
@@ -186,9 +194,10 @@ export const mediaService = {
       file,
     );
 
+    options?.onAssetCreated?.(asset);
     let result: UploadResult | null = null;
     try {
-      result = await cloudinaryService.upload(file, context, onProgress);
+      result = await cloudinaryService.upload(file, context, onProgress, { signal: options?.signal, assetId: asset.id });
       try {
         await this.setUploaded(asset.id, result);
       } catch (metadataError) {
@@ -205,7 +214,8 @@ export const mediaService = {
       const checkpoint = (error as { managedUploadCheckpoint?: unknown } | null)?.managedUploadCheckpoint;
       if (checkpoint) throw error;
       try {
-        await this.markFailed(asset.id);
+        if (options?.signal?.aborted) await this.markCleanupPending(asset.id);
+        else await this.markFailed(asset.id);
       } catch {
         // Preserve the original provider/network error; lifecycle record can be inspected later.
       }

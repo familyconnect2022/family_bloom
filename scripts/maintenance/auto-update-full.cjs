@@ -161,6 +161,23 @@ try {
       die('Script/BAT layout regression failed BEFORE backup/overlay. '+
         (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
     }
+    // R3R14R3R2: verify the new platform BATs and menu BEFORE touching old source.
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-r3r14r3r2-dev-platform-menu.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Android/iOS/Web menu regression failed BEFORE backup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2400));
+    }
+    try {
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/release/test-r3r14r3r3-menu-gates.cjs')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+      execFileSync(process.execPath,[path.join(source,'scripts/tests/history/test-phase13-release-readiness.js')],
+        {cwd:source,encoding:'utf8',stdio:'pipe',timeout:30000});
+    } catch(error) {
+      die('Menu/Firebase Spark-safe release gate failed BEFORE backup/overlay. '+
+        (String(error.stdout||'')+'\n'+String(error.stderr||error.message||'')).trim().slice(-2600));
+    }
     // Run the SAME structure gate that CLEAN APPLY FULL will run after copying.
     // A broken release must be rejected before backup, deletion or overlay.
     try {

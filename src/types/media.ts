@@ -1,6 +1,6 @@
 export type MediaType = "image" | "video";
 export type MediaPurpose = "avatar" | "event" | "calendar" | "moment" | "album" | "document" | "chat";
-export type MediaStatus = "uploading" | "uploaded" | "attached" | "failed" | "cleanup_pending";
+export type MediaStatus = "uploading" | "uploaded" | "attached" | "failed" | "cleanup_pending" | "cleanup_needs_review" | "deleted";
 export type MediaEntityType = "user" | "person" | "event" | "calendar" | "moment" | "album" | "document" | "chat";
 export type MediaProvider = "cloudinary";
 
@@ -33,6 +33,8 @@ export interface UploadResult {
   publicId: string;
   thumbnailUrl: string;
   resourceType: MediaType;
+  /** Ephemeral Cloudinary token: 10-minute delete window; NEVER store in Firestore. */
+  deleteToken?: string;
 }
 
 /** Durable lifecycle record independent of the Cloudinary provider. */

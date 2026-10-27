@@ -13,7 +13,12 @@ import { StatusBar } from "expo-status-bar";
 import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
 import { BloomKeyboardScreen } from "../../components/layout/BloomKeyboardScreen";
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // Danh sách sở thích mẫu
 const GENDER_OPTIONS = [
@@ -116,172 +121,169 @@ export default function CreateProfileScreen() {
   };
 
   return (
-    <BloomKeyboardScreen rootStyle={styles.container} contentContainerStyle={styles.scrollContent}>
-      <StatusBar style="dark" />
-      <BloomHeroHeader
-        eyebrow="CHÀO MỪNG BẠN ĐẾN BLOOM"
-        title="Để cả nhà nhận ra bạn ngay từ lần đầu"
-        subtitle="Thêm vài điều thân thuộc về bạn. Sau khi lưu, bạn có thể tạo một mái nhà mới hoặc xin gia nhập gia đình đã có."
-        variant="profile"
-      />
-
-      {/* ================= FORM NHẬP LIỆU ================= */}
-      <View style={styles.formContainer}>
-        {/* Avatar Căn Giữa Cắt Lên Header */}
-        <View style={styles.avatarWrapper}>
-          <BloomAvatarButton
-            source={avatarUri ? { uri: avatarUri } : null}
-            text={user?.displayName || "Khách"}
-            size={140}
-            onPress={() => handleSelectAvatar(setAvatarUri)}
-            showOnlineIndicator={true}
-            customStyle={styles.avatarButton}
-          />
-          <View
-            style={[
-              styles.cameraBadge,
-              {
-                backgroundColor: userProfile?.avatarUrl
-                  ? COLORS.primary
-                  : getColorByName(user?.displayName || "Khách"),
-              },
-            ]}
-          >
-            <Ionicons name="camera" size={16} color={COLORS.white} />
-          </View>
-        </View>
-
-        {/* Các trường thông tin */}
-        <View style={styles.inputsWrapper}>
-          {/* 1. Họ và tên & Biệt danh */}
-          <BloomTextInput
-            label="Họ và tên"
-            placeholder="Tên bạn trong nhà 🌷"
-            leftIcon="person-outline"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <BloomTextInput
-            label="Tên gọi thân mật (Biệt danh, không bắt buộc)"
-            placeholder="Bloom nên gọi bạn là gì nhở?"
-            leftIcon="happy-outline"
-            value={nickname}
-            onChangeText={setNickname}
-          />
-
-          {/* 2. Chọn Giới Tính */}
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Giới tính</Text>
-            <View style={styles.genderContainer}>
-              {GENDER_OPTIONS.map((item) => {
-                const isSelected = gender === item.key;
-                return (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={[styles.genderOption, isSelected && styles.genderOptionSelected]}
-                    onPress={() => setGender(item.key)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.genderText, isSelected && styles.genderTextSelected]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 3. Ngày sinh & Số điện thoại */}
-          <BloomDatePicker
-            label="Ngày sinh nhật"
-            selectedDate={birthDate}
-            onDateChange={setBirthDate}
-            placeholder="Chọn ngày bạn cất tiếng khóc chào đời"
-            leftIcon="gift-outline"
-          />
-
-          <BloomTextInput
-            label="Số điện thoại"
-            placeholder="Số để nhà mình tìm nhau"
-            leftIcon="call-outline"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          {/* 4. Nhóm máu */}
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Nhóm máu</Text>
-            <View style={styles.interestChipsContainer}>
-              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "other"].map((item) => {
-                const selected = bloodType === item;
-                return (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                    onPress={() => setBloodType(item as typeof bloodType)}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                      {item === "other" ? "Khác" : item}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 5. Nơi ở / Địa chỉ */}
-          <BloomTextInput
-            label="Tỉnh / Thành phố đang sống"
-            placeholder="Bạn đang ở đâu nè?"
-            leftIcon="location-outline"
-            value={location}
-            onChangeText={setLocation}
-          />
-
-          {/* 6. Sở thích (Tags Select) */}
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Sở thích của bạn</Text>
-            <View style={styles.interestChipsContainer}>
-              {INTEREST_OPTIONS.map((item) => {
-                const isSelected = selectedInterests.includes(item.id);
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => toggleInterest(item.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 7. Tiểu sử ngắn */}
-          <BloomTextInput
-            label="Đôi nét về bạn (Bio)"
-            placeholder="Chia sở một vài điều đáng yêu về bản thân..."
-            leftIcon="heart-outline"
-            multiline={true}
-            value={bio}
-            onChangeText={setBio}
-          />
-        </View>
-
-        {/* Nút Hoàn Tất */}
-        <BloomButton
-          title="Hoàn tất & Bắt đầu 🚀"
-          variant="primary"
-          isLoading={isLoading}
-          onPress={handleSaveProfile}
-          customStyle={styles.submitButton}
+    <BloomKeyboardScreen
+      rootStyle={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
+        <StatusBar translucent backgroundColor="transparent" style="dark" />
+        <BloomHeroHeader
+          eyebrow="CHÀO MỪNG BẠN ĐẾN BLOOM"
+          title="Để cả nhà nhận ra bạn ngay từ lần đầu"
+          subtitle="Thêm vài điều thân thuộc về bạn. Sau khi lưu, bạn có thể tạo một mái nhà mới hoặc xin gia nhập gia đình đã có."
+          variant="profile"
         />
-      </View>
+
+        {/* ================= FORM NHẬP LIỆU ================= */}
+        <View style={styles.formContainer}>
+          {/* Avatar Căn Giữa Cắt Lên Header */}
+          <View style={styles.avatarWrapper}>
+            <BloomAvatarButton
+              source={avatarUri ? { uri: avatarUri } : null}
+              text={user?.displayName || "Khách"}
+              size={140}
+              onPress={() => handleSelectAvatar(setAvatarUri)}
+              showOnlineIndicator={true}
+              customStyle={styles.avatarButton}
+            />
+            <View
+              style={[
+                styles.cameraBadge,
+                {
+                  backgroundColor: userProfile?.avatarUrl
+                    ? COLORS.primary
+                    : getColorByName(user?.displayName || "Khách"),
+                },
+              ]}
+            >
+              <Ionicons name="camera" size={16} color={COLORS.white} />
+            </View>
+          </View>
+
+          {/* Các trường thông tin */}
+          <View style={styles.inputsWrapper}>
+            {/* 1. Họ và tên & Biệt danh */}
+            <BloomTextInput
+              label="Họ và tên"
+              placeholder="Tên bạn trong nhà 🌷"
+              leftIcon="person-outline"
+              value={name}
+              onChangeText={setName}
+            />
+
+            <BloomTextInput
+              label="Tên gọi thân mật (Biệt danh, không bắt buộc)"
+              placeholder="Bloom nên gọi bạn là gì nhở?"
+              leftIcon="happy-outline"
+              value={nickname}
+              onChangeText={setNickname}
+            />
+
+            {/* 2. Chọn Giới Tính */}
+            <View style={styles.fieldSection}>
+              <Text style={styles.fieldLabel}>Giới tính</Text>
+              <View style={styles.genderContainer}>
+                {GENDER_OPTIONS.map((item) => {
+                  const isSelected = gender === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[styles.genderOption, isSelected && styles.genderOptionSelected]}
+                      onPress={() => setGender(item.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.genderText, isSelected && styles.genderTextSelected]}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 3. Ngày sinh & Số điện thoại */}
+            <BloomDatePicker
+              label="Ngày sinh nhật"
+              selectedDate={birthDate}
+              onDateChange={setBirthDate}
+              placeholder="Chọn ngày bạn cất tiếng khóc chào đời"
+              leftIcon="gift-outline"
+            />
+
+            <BloomTextInput
+              label="Số điện thoại"
+              placeholder="Số để nhà mình tìm nhau"
+              leftIcon="call-outline"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+            />
+
+            {/* 4. Nhóm máu */}
+            <View style={styles.fieldSection}>
+              <Text style={styles.fieldLabel}>Nhóm máu</Text>
+              <View style={styles.interestChipsContainer}>
+                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "other"].map((item) => {
+                  const selected = bloodType === item;
+                  return (
+                    <TouchableOpacity key={item} style={[styles.chip, selected && styles.chipSelected]} onPress={() => setBloodType(item as typeof bloodType)}>
+                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{item === "other" ? "Khác" : item}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 5. Nơi ở / Địa chỉ */}
+            <BloomTextInput
+              label="Tỉnh / Thành phố đang sống"
+              placeholder="Bạn đang ở đâu nè?"
+              leftIcon="location-outline"
+              value={location}
+              onChangeText={setLocation}
+            />
+
+            {/* 6. Sở thích (Tags Select) */}
+            <View style={styles.fieldSection}>
+              <Text style={styles.fieldLabel}>Sở thích của bạn</Text>
+              <View style={styles.interestChipsContainer}>
+                {INTEREST_OPTIONS.map((item) => {
+                  const isSelected = selectedInterests.includes(item.id);
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => toggleInterest(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 7. Tiểu sử ngắn */}
+            <BloomTextInput
+              label="Đôi nét về bạn (Bio)"
+              placeholder="Chia sở một vài điều đáng yêu về bản thân..."
+              leftIcon="heart-outline"
+              multiline={true}
+              value={bio}
+              onChangeText={setBio}
+            />
+          </View>
+
+          {/* Nút Hoàn Tất */}
+          <BloomButton
+            title="Hoàn tất & Bắt đầu 🚀"
+            variant="primary"
+            isLoading={isLoading}
+            onPress={handleSaveProfile}
+            customStyle={styles.submitButton}
+          />
+        </View>
     </BloomKeyboardScreen>
   );
 }
@@ -290,7 +292,7 @@ export default function CreateProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.softSurface,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
     paddingTop: 26,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    backgroundColor: COLORS.softSurface,
+    backgroundColor: COLORS.background,
   },
   avatarWrapper: {
     alignItems: "center",

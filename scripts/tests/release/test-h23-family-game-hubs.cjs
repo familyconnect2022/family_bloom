@@ -25,6 +25,6 @@ for(const name of names){
  ok(`original ${name}.png 192x192 RGBA identity on both platforms`,a.equals(b)&&a.readUInt32BE(16)===192&&a.readUInt32BE(20)===192&&a[25]===6&&crypto.createHash('sha256').update(a).digest('hex')===manifest.pieces[name].sha256);
 }
 const app=JSON.parse(read('app.json')).expo, nativeModule=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
-ok('APK native identity updated for asset replacement',app.version==='1.3.32'&&app.android.versionCode===143042&&nativeModule.includes('P2.37R2C-H25-native-3'));
+ok('APK native identity updated for asset replacement',app.version==='1.3.33'&&app.android.versionCode===143043&&nativeModule.includes('P2.37R2C-H25-native-3'));
 ok('production home game entrypoints no longer activate prototype board',!home.includes('activateBoardGamePresentation('));
 console.log('PASS H23 family arena routes/auth presence/restored chess sprites');

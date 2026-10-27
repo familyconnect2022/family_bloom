@@ -64,9 +64,9 @@ test('Android back, reduced motion, and failed images have safe fallback', () =>
   assert(component.includes('openingWatchdog.current = setTimeout'));
   assert(!component.includes('!assetsReady')); 
 });
-test('root BAT entrypoints remain 4 and project identity remains stable', () => {
-  const rootBat = fs.readdirSync(root).filter(f => f.endsWith('.bat'));
-  assert.equal(rootBat.length, 4);
+test('no duplicate BAT launchers remain at root; Android identity remains stable', () => {
+  const rootBat = fs.readdirSync(root).filter(f => f.toLowerCase().endsWith('.bat'));
+  assert.equal(rootBat.length, 0);
   assert.equal(JSON.parse(read('app.json')).expo.android.package, 'com.familybloom.android');
 });
 test('R3R14 is invoked from release, EAS and OTA preflight before build', () => {

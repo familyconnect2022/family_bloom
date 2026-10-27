@@ -2,14 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+
     function self(uid) { return signedIn() && request.auth.uid == uid; }
+
     function member(familyId) {
       return signedIn() && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
     }
+
     // ownerId là người tạo nhà và cũng là admin duy nhất trong Phase 2.
     function owner(familyId) {
       return signedIn() && get(/databases/$(database)/documents/families/$(familyId)).data.ownerId == request.auth.uid;
     }
+
     // Chấp nhận owner cũ để không làm hỏng dữ liệu đã tạo ở checkpoint trước.
     function admin(familyId) {
       return signedIn() && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid)).data.role in ['owner', 'admin'];

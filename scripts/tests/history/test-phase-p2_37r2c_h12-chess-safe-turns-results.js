@@ -43,6 +43,6 @@ check(board.includes('promotionRow') && board.includes('setImageResource(pieceDr
 check(board.includes('bloomHeadline.text = "🌸 Đang chuẩn bị"') && board.includes('waiting'), 'board preparation overlay masks initial piece-load flash');
 check(test.includes('Bloom Bot mời bạn!') && test.includes('chessReject') && test.includes('CHESS_EVENTS.inviteReject') && test.includes('setChessInviteEnded('), 'Bloom Bot invitation/decline and rejection are handled');
 check(!board.includes('boardMat.background = roundedStroke(') && !board.includes('"#F3B949" else'), 'yellow chessboard outline removed');
-check(test.includes('P2.37R2C-H25-native-3') && JSON.parse(read('app.json')).expo.android.versionCode===143042, 'new Android native identity for H12 is explicit');
+check(test.includes('P2.37R2C-H25-native-3') && JSON.parse(read('app.json')).expo.android.versionCode===143043, 'new Android native identity for H12 is explicit');
 check(read('scripts/tests/history/test-phase-p2_32-client-game-reset-foundation.js').includes('native presentation functions are allowed'), 'P2.32 verification accepts new native presentation functions without allowing legacy imports');
 console.log(`H12 safety/result source gate: ${fail?'FAIL':'PASS'} (${pass}/${pass+fail})`);process.exit(fail?1:0);

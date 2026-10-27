@@ -76,7 +76,7 @@ check(readyMethod.includes('r.readyUids.has(r.game.whiteUid) && r.readyUids.has(
   bothReadyIndex >= 0 && clockStartIndex > bothReadyIndex &&
   readyMethod.slice(bothReadyIndex, clockStartIndex).includes('return this.publicState(r);'),
   'server starts the clock only after both boardReady and playReady phases and both players are ready');
-check(native.includes('P2.37R2C-H25-native-3') && app.android.versionCode === 143042 && app.version==='1.3.32', 'new native APK identity is unique');
+check(native.includes('P2.37R2C-H25-native-3') && app.android.versionCode === 143043 && app.version==='1.3.33', 'new native APK identity is unique');
 check(['scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat','scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat','scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat','scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat'].every(x=>fs.existsSync(path.join(root,x))), 'FULL COPY includes purpose-grouped BAT entrypoints');
 console.log(`H11 source+store behavioral gate ${bad?'FAIL':'PASS'} (${ok}/${ok+bad})`);
 process.exit(bad?1:0);

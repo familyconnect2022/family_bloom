@@ -1,0 +1,8 @@
+{
+  "name": "family-bloom-moment-media-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "dependencies": { "firebase-admin": "^13.4.0" }
+}

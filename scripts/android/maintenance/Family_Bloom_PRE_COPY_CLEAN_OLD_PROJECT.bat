@@ -244,6 +244,8 @@ echo       Preserved copies live under document\legacy-import\pre-copy when need
 
 echo [5/6] Removing retired root BAT entrypoints and clearing build caches...
 for %%F in (
+  "Family_Bloom_AUTO_UPDATE_FULL.bat"
+  "Family_Bloom_BUILD_APK_TO_SHARE.bat"
   "Family_Bloom_BUILD_APK_AND_SHARE.bat"
   "Family_Bloom_CLEAN_APPLY_FULL.bat"
   "Family_Bloom_EAS_BUILD_TEST.bat"

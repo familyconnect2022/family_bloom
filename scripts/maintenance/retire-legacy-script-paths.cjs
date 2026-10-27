@@ -12,7 +12,10 @@ if(!process.argv[2]||dest===root||!fs.existsSync(path.join(dest,'package.json'))
  JSON.parse(fs.readFileSync(path.join(dest,'package.json'),'utf8')).name!=='family-bloom'){
  console.error('[DUNG] Chi duoc don source project Family Bloom DA SAO LUU, khong duoc don thu muc FULL ZIP.');process.exit(2);
 }
-const items=[...Object.keys(manifest.movedFiles).map(n=>'scripts/'+n),...manifest.retiredRootBat];
+const items=[...Object.keys(manifest.movedFiles).map(n=>'scripts/'+n),...manifest.retiredRootBat,
+  'scripts/android/build/Family_Bloom_Android_Test_App_CLEAN_RELEASE.bat',
+  'scripts/android/build/Family_Bloom_Android_Build_APK_ONLY.bat',
+  'scripts/setup/settup.bat'];
 let removed=0,absent=0;
 for(const rel of items){
  const full=path.join(dest,rel);

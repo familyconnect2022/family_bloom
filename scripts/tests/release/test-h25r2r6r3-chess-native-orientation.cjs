@@ -60,9 +60,9 @@ test('server remains authoritative for frozen colors and two-stage readiness',()
 });
 test('new APK identity distinguishes Kotlin fix from previous installed native binary',()=>{
  const app=JSON.parse(read('app.json')).expo;
- assert.equal(app.version,'1.3.32');assert.equal(app.android.versionCode,143042);
+ assert.equal(app.version,'1.3.33');assert.equal(app.android.versionCode,143043);
  assert(rail.includes('P2.37R2C-H25-native-3'));
  const eas=read('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat');
- assert(eas.includes('143042'));assert(eas.includes('P2.37R2C-H25-native-3'));
+ assert(eas.includes('143043'));assert(eas.includes('P2.37R2C-H25-native-3'));
 });
 console.log(`H25R2R6R3 CHESS NATIVE ORIENTATION: ${total}/${total} PASS`);

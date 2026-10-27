@@ -27,5 +27,5 @@ check('Both ends outlined after pieces',xq.includes('for (point in lastMovePoint
 check('Single purple palette regardless of moving side',xq.includes('#366F4EB1') && xq.includes('#9B7954BC') && !xq.includes('Xem viền xanh') && !xq.includes('moveAccent'));
 check('No changes to Xiangqi board-square/touch topology',xq.includes('onSquareTap(if(flip)8-colOnBoard') && xq.includes('cell=min((contentW-dp(58f))/8f'));
 const app=JSON.parse(read('app.json')), mod=read('modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/FamilyBloomOverlayModule.kt');
-check('native binary version increments on PNG+Kotlin change',app.expo.version==='1.3.32' && app.expo.android.versionCode===143042 && mod.includes('P2.37R2C-H25-native-3'));
+check('native binary version increments on PNG+Kotlin change',app.expo.version==='1.3.33' && app.expo.android.versionCode===143043 && mod.includes('P2.37R2C-H25-native-3'));
 console.log('H23 reverted Chess assets / Xiangqi highlight gate PASS');

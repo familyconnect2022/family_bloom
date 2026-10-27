@@ -25,6 +25,8 @@ node scripts\setup\check-expo-route-uniqueness.cjs
 if errorlevel 1 goto :fail
 node scripts\tests\release\test-h25r2r7r2r3r5-script-layout.cjs
 if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r14r3r2-dev-platform-menu.cjs
+if errorlevel 1 goto :fail
 node scripts\tests\release\test-h22r3-windows-build-preflight.cjs
 if errorlevel 1 goto :fail
 node scripts\tests\release\test-h23r3-typescript-bootstrap.cjs
@@ -154,6 +156,8 @@ node scripts\tests\history\test-phase-p2_12_8-windows-expo-doctor-node-cli-launc
 if errorlevel 1 goto :fail
 call npm run phaseP2_32:check
 if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r14r3r3-menu-gates.cjs
+if errorlevel 1 goto :fail
 node scripts\tests\release\test-h25r2r2-release-preflight.cjs
 if errorlevel 1 goto :fail
 node scripts\tests\release\test-h25r2r7r1-bulletin-deferred.cjs
@@ -205,6 +209,11 @@ if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C_H10:check
 if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c_h10r2-board-layer-welcome.js
+if errorlevel 1 goto :fail
+rem Current Thư Ngỏ must be tappable and dismissible; validate the real callbacks.
+node scripts\tests\release\test-r3r14r1-welcome-touch-static.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r14r1-welcome-touch-runtime.cjs
 if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c_h11-chess-full-mini-flow.js
 if errorlevel 1 goto :fail

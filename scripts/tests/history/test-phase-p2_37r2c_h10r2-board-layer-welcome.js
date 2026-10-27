@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 const __legacyScriptsDir = require('node:path').resolve(__dirname, '..', '..');
-// H10R2 source contract. On-device rendering still requires a new native APK.
+// H10R2 native contract + current R3R14 Thư Ngỏ UI contract. Do NOT lock to retired button text.
+// This is a source-level guard; R3R14R1 runtime tests independently simulate touch/continue. On-device rendering still requires a native APK.
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__legacyScriptsDir, '..');
@@ -25,9 +26,9 @@ for (const piece of ['wk','wq','wr','wb','wn','wp','bk','bq','br','bb','bn','bp'
   const file = path.join(root, 'modules/family-bloom-overlay/android/src/main/res/drawable-nodpi', piece+'.png');
   check(fs.existsSync(file) && fs.readFileSync(file).subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'native piece drawable '+piece+' is valid PNG');
 }
-check(welcome.includes('useWindowDimensions()') && welcome.includes('width: windowWidth, height: windowHeight'), 'welcome overlay bounded to real device window during auth transition');
+check(welcome.includes('useWindowDimensions()') && welcome.includes('const sceneSize = { width, height }') && welcome.includes('styles.overlay, sceneSize') && welcome.includes('StyleSheet.absoluteFillObject'), 'Thư Ngỏ overlay is bounded to the current device window during auth transition');
 check(welcome.includes('StyleSheet.absoluteFillObject') && welcome.includes('accessibilityViewIsModal') && !welcome.includes('<Modal'), 'in-tree welcome retained to protect H4 zero-height navigation regression');
-check(welcome.includes('onPress={onContinue}') && welcome.includes('Vào tổ ấm ngay'), 'welcome remains actionable/dismissible');
+check(welcome.includes('onPress={openLetter}') && welcome.includes('onPress={continueIntoFamily}') && welcome.includes('title="Bước vào mái nhà Family Bloom"') && welcome.includes('testID="welcome-envelope-open"'), 'Thư Ngỏ opens on tap and retains a working, explicitly dismissible reading state');
 check(auth.includes('if (profile?.activeFamilyId) setShowWelcome(true)') && auth.includes('setShowWelcome(false)'), 'welcome remains intentional per sign-in, not every app restore');
 check(layout.includes('visible={showWelcome && firstVisualReady && !!user && !!activeFamilyId}'), 'greeting deferred until first auth navigation paint');
 console.log(`H10R2 guard: ${failed ? 'FAIL' : 'PASS'} (${passed}/${passed+failed})`);

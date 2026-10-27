@@ -105,8 +105,8 @@ if errorlevel 1 goto :fail
 echo.
 echo ========================================================
 echo PASS: Family Bloom FULL source is updated and CLEAN APPLY passed.
-echo Build your APK using Family_Bloom_BUILD_APK_TO_SHARE.bat
- echo inside the updated project.
+echo Build APK: scripts\android\build\Family_Bloom_BUILD_APK_TO_SHARE.bat
+echo Run menu: scripts\android\Family_Bloom_MENU.bat
 echo ========================================================
 if exist "%FB_STATE_DIR%\last-backup.txt" type "%FB_STATE_DIR%\last-backup.txt"
 echo.

@@ -31,6 +31,6 @@ check(planner.includes('ChessPieceMotionLeg(rookFrom, rookTo, rook)') && planner
 check(planner.includes('val promotion =') && planner.includes("piece.lowercaseChar() == 'p'"), 'promotion sprite moves pawn then shows final server piece');
 check(state.includes('fen: showOptimistic ? optimisticFen! : state.fen,') && state.includes('isLegalServerDelta(currentState, delta)') && state.includes('pendingBaseRevision === state.revision'), 'H17 preserves authoritative server FEN while allowing guarded client-only optimistic paint');
 check(native.includes('if (mode == "full" && kind == "chess") chessBoard.bind(state)') && native.includes('else chessBoard.parkForMini(state)'), 'Mini parks board rather than redrawing 64 cells');
-check(app.version === '1.3.32' && app.android.versionCode === 143042 && pkg.version === '1.3.18' && native.includes('P2.37R2C-H25-native-3'), 'H16 APK/native identity is consistent');
+check(app.version === '1.3.33' && app.android.versionCode === 143043 && pkg.version === '1.3.18' && native.includes('P2.37R2C-H25-native-3'), 'H16 APK/native identity is consistent');
 console.log(`H16 Chess native smoothness source gate: ${failed?'FAIL':'PASS'} (${success}/${success+failed})`);
 process.exit(failed?1:0);

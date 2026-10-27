@@ -39,7 +39,7 @@ try{
  check('Nhan ra config con lai trong android/app',run('candidate').stdout.trim()===path.join(project,'android','app','google-services.json'));
  check('Chon source trong project khong lam sua file goi FULL',fs.existsSync(path.join(root,'package.json')));
  const bat=fs.readFileSync(path.join(root,'scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat'),'utf8');
- check('Root BAT chuyen build ve project cai dat va phuc hoi truoc build',bat.includes('redirect-source')&&bat.includes('Family_Bloom_ENSURE_FIREBASE_ANDROID_CONFIG.bat')&&bat.includes('last-target.txt'));
+ check('BAT Build trong scripts chuyen ve project cai dat va phuc hoi truoc build',bat.includes('redirect-source')&&bat.includes('Family_Bloom_ENSURE_FIREBASE_ANDROID_CONFIG.bat')&&bat.includes('last-target.txt'));
  const native=fs.readFileSync(path.join(root,'scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat'),'utf8');
  check('Build release kiem tra config truoc bo test nang',native.indexOf('Family_Bloom_ENSURE_FIREBASE_ANDROID_CONFIG.bat')<native.indexOf('test-h25-firebase-invitation.cjs'));
  const redir=path.join(root,'scripts/android/build/resolve-build-target.cjs');

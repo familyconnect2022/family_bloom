@@ -7,7 +7,7 @@ cd /d "%PROJECT_ROOT%"
 echo ============================================================
 echo FAMILY BLOOM P2.37R2C-H12 - VERIFY INSTALLED ANDROID BINARY
 echo Expected package     : com.familybloom.android
-echo Expected versionCode : 143042
+echo Expected versionCode : 143043
 echo Expected native ID   : P2.37R2C-H25-native-3
 echo ============================================================
 echo.
@@ -29,9 +29,9 @@ if errorlevel 1 (
 
 set "TMP=%TEMP%\family_bloom_r2c_dumpsys_%RANDOM%.txt"
 adb shell dumpsys package com.familybloom.android > "%TMP%" 2>nul
-findstr /R /C:"versionCode=143042\>" "%TMP%" >nul 2>&1
+findstr /R /C:"versionCode=143043\>" "%TMP%" >nul 2>&1
 if errorlevel 1 (
-  echo [FAIL] Installed package is NOT versionCode 143042.
+  echo [FAIL] Installed package is NOT versionCode 143043.
   echo.
   echo Android reports:
   findstr /I /C:"versionCode=" /C:"versionName=" "%TMP%"
@@ -42,7 +42,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [PASS] Android package versionCode = 143042
+echo [PASS] Android package versionCode = 143043
 findstr /I /C:"versionCode=" /C:"versionName=" "%TMP%"
 del /q "%TMP%" >nul 2>&1
 echo.

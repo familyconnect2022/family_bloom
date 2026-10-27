@@ -43,10 +43,10 @@ const k = read('modules/family-bloom-overlay/android/src/main/java/expo/modules/
 const eas = read('scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat');
 const share = read('scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat');
 const app = JSON.parse(read('app.json')).expo;
-if(app.version !== '1.3.32' || app.android.versionCode !== 143042 ||
+if(app.version !== '1.3.33' || app.android.versionCode !== 143043 ||
    !k.includes('P2.37R2C-H25-native-3') ||
-   !eas.includes('P2.37R2C-H25-native-3') || !eas.includes('143042') ||
-   !share.includes('test-h25-firebase-invitation.cjs') || !share.includes('143042')){
+   !eas.includes('P2.37R2C-H25-native-3') || !eas.includes('143043') ||
+   !share.includes('test-h25-firebase-invitation.cjs') || !share.includes('143043')){
   console.error('[H25 RELEASE INCOMPLETE] Artifact identity or H25 build gate mismatch');process.exit(1);
 }
-console.log('[H25 SOURCE PACKAGE PASS]',required.length,'required files, app 1.3.32 / 143042 / H25 native identity');
+console.log('[H25 SOURCE PACKAGE PASS]',required.length,'required files, app 1.3.33 / 143043 / H25 native identity');

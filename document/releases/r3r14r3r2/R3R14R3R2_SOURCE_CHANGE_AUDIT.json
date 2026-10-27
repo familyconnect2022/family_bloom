@@ -1,0 +1,25 @@
+{
+  "base_zip": "FAMILY_BLOOM_R3R14R3R1_FIX_AUTO_UPDATE_SCRIPT_ONLY_FULL_CODE_2026-10-27.zip",
+  "base_file_count": 1436,
+  "preserved_all_base_files": 1436,
+  "base_files_modified": [
+    "scripts/android/Family_Bloom_MENU.bat",
+    "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
+    "scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat",
+    "scripts/maintenance/auto-update-full.cjs",
+    "scripts/setup/bat-entrypoints-manifest.json",
+    "scripts/tests/history/test-phase-p2_37r2c_h10r2-board-layer-welcome.js",
+    "scripts/tests/release/test-r3r13-blaze-ready.cjs"
+  ],
+  "added": [
+    "document/releases/moments/R3R14R3R2_FIX_WELCOME_GATE_DEV_MENU_2026-10-27.md",
+    "document/releases/r3r14r3r2/R3R14R3R2_FIX_REPORT.md",
+    "scripts/tests/release/test-r3r14r3r2-dev-platform-menu.cjs",
+    "scripts/android/build/Family_Bloom_IOS_RUN_TEST.bat",
+    "scripts/android/build/Family_Bloom_WEB_RUN_TEST.bat",
+    "scripts/android/build/Family_Bloom_Android_RUN_TEST.bat",
+    "scripts/android/build/Family_Bloom_IOS_RUN_TEST.sh"
+  ],
+  "removed": [],
+  "full_source_file_count": 1443
+}

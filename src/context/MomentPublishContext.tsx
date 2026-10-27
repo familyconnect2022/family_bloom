@@ -7,8 +7,11 @@ import { momentsService } from "../services/moments/momentsService";
 import type { MediaFile } from "../types";
 import type { MomentMedia } from "../types/moments";
 import { momentResumeProgress, normalizeMomentTargetFamilyIds } from "../utils/momentPublishPolicy";
+import { cloudinaryService } from "../services/media/cloudinaryService";
+import { momentMediaApi } from "../services/media/momentMediaApi";
+import { momentUploadToastStore } from "../services/moments/momentUploadToastStore";
 
-export type PendingMomentStatus = "queued" | "uploading" | "publishing" | "published" | "failed";
+export type PendingMomentStatus = "queued" | "uploading" | "publishing" | "cancelling" | "published" | "failed";
 export type PendingMomentFailureStage = "upload" | "publish";
 
 export interface PendingMomentUploadedFile {
@@ -17,6 +20,8 @@ export interface PendingMomentUploadedFile {
   media: MomentMedia;
   /** False only when Cloudinary succeeded but media_assets metadata could not sync yet. */
   metadataSynced: boolean;
+  /** Ephemeral: delete without privileged backend within 10 minutes. */
+  deleteToken?: string;
 }
 
 export interface PendingMoment {
@@ -61,6 +66,7 @@ interface MomentPublishContextValue {
   publishMoment: (input: PublishMomentInput) => string;
   retryMoment: (localId: string) => void;
   removePendingMoment: (localId: string) => void;
+  cancelMoment: (localId: string) => void;
   reconcilePublished: (familyId: string, postIds: string[]) => void;
 }
 
@@ -115,6 +121,8 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   const runningRef = useRef(new Set<string>());
   const queueRef = useRef<PendingMoment[]>([]);
   const queueDrainingRef = useRef(false);
+  const cancelledRef = useRef(new Set<string>());
+  const abortRef = useRef(new Map<string, AbortController>());
   const progressRenderRef = useRef(new Map<string, { lastValue: number; lastAt: number }>());
   const { finishTask, failTask } = useBloomTaskToast();
 
@@ -134,6 +142,21 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   const execute = useCallback(async (task: PendingMoment) => {
     if (runningRef.current.has(task.localId)) return;
     runningRef.current.add(task.localId);
+    const controller = new AbortController();
+    abortRef.current.set(task.localId, controller);
+    const createdAssetIds = new Set<string>();
+    const wasCancelled = () => cancelledRef.current.has(task.localId) || controller.signal.aborted;
+    const throwIfCancelled = () => {
+      if (wasCancelled()) throw Object.assign(new Error("Moment đã hủy"), { name: "AbortError" });
+    };
+    const toast = (status: "queued" | "uploading" | "publishing" | "cancelling", progress: number, fileIndex = 0) => {
+      const file = task.files[Math.min(fileIndex, Math.max(0, task.files.length - 1))];
+      momentUploadToastStore.set({
+        localId: task.localId, status, progress, thumbnailUri: file?.uri,
+        video: file?.type === "video",
+      });
+    };
+    toast("uploading", momentResumeProgress(task.files.length, task.uploadedFiles.length));
     progressRenderRef.current.set(task.localId, { lastValue: momentResumeProgress(task.files.length, task.uploadedFiles.length), lastAt: 0 });
 
     const completedByFile = new Map(task.uploadedFiles.map((item) => [item.fileId, item]));
@@ -147,6 +170,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
     });
 
     try {
+      throwIfCancelled();
       const media = new Array<MomentMedia>(task.files.length);
       const progressById = new Map(task.files.map((file) => [file.id, completedByFile.has(file.id) ? 100 : 0]));
       completedByFile.forEach((item) => {
@@ -169,13 +193,18 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
 
         progressRenderRef.current.set(task.localId, { lastValue: nextProgress, lastAt: nowMs });
         setPendingMomentProgress(task.localId, nextProgress);
+        const currentToast = momentUploadToastStore.getSnapshot();
+        if (currentToast?.localId === task.localId && currentToast.status === "uploading")
+          toast("uploading", nextProgress, task.files.findIndex((file) => (progressById.get(file.id) ?? 0) < 100));
       };
 
       const worker = async () => {
         while (true) {
+          throwIfCancelled();
           const index = nextIndex++;
           if (index >= task.files.length) return;
           const file = task.files[index];
+          toast("uploading", Math.max(1, momentUploadToastStore.getSnapshot()?.progress ?? 0), index);
           const existing = completedByFile.get(file.id);
           if (existing) {
             media[index] = existing.media;
@@ -196,9 +225,11 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
                 category: "moments",
               },
               (value) => {
+                if (wasCancelled()) return;
                 progressById.set(file.id, value);
                 updateOverallProgress();
               },
+              { signal: controller.signal, onAssetCreated: (asset) => { createdAssetIds.add(asset.id); } },
             );
           } catch (error) {
             const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null } } } | null)?.managedUploadCheckpoint;
@@ -217,6 +248,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
                   duration: file.duration ?? undefined,
                 },
                 metadataSynced: false,
+                deleteToken: checkpoint.result.deleteToken,
               };
               completedByFile.set(file.id, completed);
               media[index] = completed.media;
@@ -241,8 +273,10 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
               duration: file.duration ?? undefined,
             },
             metadataSynced: true,
+            deleteToken: uploaded.result.deleteToken,
           };
           completedByFile.set(file.id, completed);
+          throwIfCancelled();
           media[index] = completed.media;
           progressById.set(file.id, 100);
           patch(task.localId, { uploadedFiles: [...completedByFile.values()] });
@@ -259,9 +293,11 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         if (failed) throw failed.reason;
       }
 
+      throwIfCancelled();
       // If Cloudinary succeeded earlier but the media_assets metadata write failed,
       // repair that small Firestore record first. The binary is not uploaded twice.
       for (const uploadedFile of completedByFile.values()) {
+        throwIfCancelled();
         if (uploadedFile.metadataSynced) continue;
         try {
           await mediaService.setUploaded(uploadedFile.assetId, {
@@ -277,7 +313,9 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         }
       }
 
+      throwIfCancelled();
       setPendingMomentProgress(task.localId, 100);
+      toast("publishing", 100);
       patch(task.localId, { status: "publishing", progress: 100, uploadedFiles: [...completedByFile.values()] });
       try {
         const post = await momentsService.publishWithAssets(
@@ -309,28 +347,63 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         throw Object.assign(error instanceof Error ? error : new Error(String(error)), { __momentStage: "publish" as const });
       }
 
+      momentUploadToastStore.clear(task.localId);
       setPendingMomentProgress(task.localId, 100);
       patch(task.localId, { status: "published", progress: 100, failureStage: undefined });
       finishTask({ title: "Khoảnh khắc đã được chia sẻ 🌷", message: "Đã đăng xong vào trang Kỷ niệm." });
     } catch (error) {
-      const stage = ((error as { __momentStage?: PendingMomentFailureStage } | null)?.__momentStage) ?? "upload";
-      // Do NOT mark successful uploads cleanup_pending here. They are the resumable checkpoint.
-      // Cleanup only happens if the user explicitly discards the pending Moment.
-      patch(task.localId, {
-        status: "failed",
-        uploadedFiles: [...completedByFile.values()],
-        error: error instanceof Error ? error.message : String(error),
-        failureStage: stage,
-      });
-      failTask(error, {
-        title: "Khoảnh khắc chưa đăng được",
-        message: stage === "publish"
-          ? "Ảnh và video đã được giữ lại. Bạn chỉ cần thử đăng lại."
-          : "Những phần đã hoàn tất vẫn được giữ lại. Hãy thử lại khi kết nối ổn định.",
-      });
+      if (wasCancelled()) {
+        // Aborted requests may still have arrived at Cloudinary. Queue every
+        // created media_assets record for privileged reconciliation first.
+        const allIds = [...new Set([
+          ...createdAssetIds, ...[...completedByFile.values()].map((entry) => entry.assetId),
+        ])];
+        patch(task.localId, { status: "cancelling", uploadedFiles: [...completedByFile.values()] });
+        toast("cancelling", 0);
+        const markPending = Promise.allSettled(allIds.map((id) => mediaService.markCleanupPending(id)));
+        // Firestore offline writes can remain unresolved until reconnection.
+        // They are queued locally; the HỦY UI must not freeze on network loss.
+        await Promise.race([markPending, new Promise<void>((resolve) => setTimeout(resolve, 1800))]);
+        // Android first: delete with the short-lived Cloudinary token, if present.
+        const cleared = await Promise.allSettled([...completedByFile.values()].map(async (entry) => {
+          if (!entry.deleteToken) return;
+          if (await cloudinaryService.deleteWithToken(entry.deleteToken)) {
+            await mediaService.markDeleted(entry.assetId);
+          }
+        }));
+        void cleared; // Individual failures remain cleanup_pending for Vercel.
+        // Server fallback is best-effort immediately; daily cron handles outages.
+        if (momentMediaApi.configured && allIds.length) {
+          void momentMediaApi.requestCleanup(allIds).catch(() => undefined);
+        }
+        setPendingMoments((current) => {
+          const next = current.filter((item) => item.localId !== task.localId);
+          pendingRef.current = next;
+          return next;
+        });
+        clearPendingMomentProgress(task.localId);
+        momentUploadToastStore.clear(task.localId);
+        finishTask({ title: "Đã hủy khoảnh khắc", message: "Bài chưa được đăng. Tệp còn sót sẽ tiếp tục được dọn." });
+      } else {
+        momentUploadToastStore.clear(task.localId);
+        const stage = ((error as { __momentStage?: PendingMomentFailureStage } | null)?.__momentStage) ?? "upload";
+        // Failed uploads remain resumable; only explicit HỦY initiates cleanup.
+        patch(task.localId, {
+          status: "failed", uploadedFiles: [...completedByFile.values()],
+          error: error instanceof Error ? error.message : String(error), failureStage: stage,
+        });
+        failTask(error, {
+          title: "Khoảnh khắc chưa đăng được",
+          message: stage === "publish"
+            ? "Ảnh và video đã được giữ lại. Bạn chỉ cần thử đăng lại."
+            : "Những phần đã hoàn tất vẫn được giữ lại. Hãy thử lại khi kết nối ổn định.",
+        });
+      }
     } finally {
+      abortRef.current.delete(task.localId);
       runningRef.current.delete(task.localId);
       progressRenderRef.current.delete(task.localId);
+      cancelledRef.current.delete(task.localId);
     }
   }, [failTask, finishTask, patch]);
 
@@ -376,10 +449,42 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
     }));
 
     tasks.forEach((task) => setPendingMomentProgress(task.localId, task.progress));
+    pendingRef.current = [...tasks, ...pendingRef.current];
     setPendingMoments((current) => [...tasks, ...current]);
+    if (!momentUploadToastStore.getSnapshot() && tasks[0]) {
+      momentUploadToastStore.set({ localId: tasks[0].localId, status: "queued", progress: 0,
+        thumbnailUri: tasks[0].files[0]?.uri, video: tasks[0].files[0]?.type === "video" });
+    }
     tasks.forEach(enqueue);
     return tasks[0]?.localId ?? "";
   }, [enqueue]);
+
+  const cancelMoment = useCallback((localId: string) => {
+    const task = pendingRef.current.find((item) => item.localId === localId)
+      ?? queueRef.current.find((item) => item.localId === localId);
+    if (!task || task.status === "published" || task.status === "publishing" || task.status === "cancelling") return;
+    cancelledRef.current.add(localId);
+    abortRef.current.get(localId)?.abort();
+    queueRef.current = queueRef.current.filter((item) => item.localId !== localId);
+    patch(localId, { status: "cancelling" });
+    const existingToast = momentUploadToastStore.getSnapshot();
+    if (!existingToast || existingToast.localId === localId) {
+      momentUploadToastStore.set({ localId, status: "cancelling", progress: 0,
+        thumbnailUri: task.files[0]?.uri, video: task.files[0]?.type === "video" });
+    }
+    if (!runningRef.current.has(localId)) {
+      // Nothing was transferred yet; queued cancellation needs no server work.
+      setPendingMoments((current) => {
+        const next = current.filter((item) => item.localId !== localId);
+        pendingRef.current = next;
+        return next;
+      });
+      clearPendingMomentProgress(localId);
+      momentUploadToastStore.clear(localId);
+      cancelledRef.current.delete(localId);
+      finishTask({ title: "Đã hủy khoảnh khắc", message: "Chưa có tệp nào được tải lên." });
+    }
+  }, [finishTask, patch]);
 
   const retryMoment = useCallback((localId: string) => {
     const task = pendingRef.current.find((item) => item.localId === localId);
@@ -444,7 +549,18 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
     setPendingMoments((current) => {
       const item = current.find((candidate) => candidate.localId === localId);
       if (item?.uploadedFiles.length) {
-        void mediaService.markCleanupPendingMany(item.uploadedFiles.map((upload) => upload.assetId)).catch(() => undefined);
+        const ids = item.uploadedFiles.map((upload) => upload.assetId);
+        void mediaService.markCleanupPendingMany(ids).catch(() => undefined);
+        // A publish request may have committed on Firestore before its ACK was lost.
+        // Never client-delete its media on an ambiguous publish failure. The Vercel
+        // cleanup path checks the actual published post before destroying anything.
+        if (item.failureStage !== "publish") {
+          void Promise.allSettled(item.uploadedFiles.map(async (upload) => {
+            if (upload.deleteToken && await cloudinaryService.deleteWithToken(upload.deleteToken))
+              await mediaService.markDeleted(upload.assetId);
+          }));
+        }
+        if (momentMediaApi.configured) void momentMediaApi.requestCleanup(ids).catch(() => undefined);
       }
       clearPendingMomentProgress(localId);
       return current.filter((candidate) => candidate.localId !== localId);
@@ -486,8 +602,8 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   );
 
   const value = useMemo(
-    () => ({ failedPendingMoments, publishMoment, retryMoment, removePendingMoment, reconcilePublished }),
-    [failedPendingMoments, publishMoment, retryMoment, removePendingMoment, reconcilePublished],
+    () => ({ failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished }),
+    [failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished],
   );
 
   return <MomentPublishContext.Provider value={value}>{children}</MomentPublishContext.Provider>;

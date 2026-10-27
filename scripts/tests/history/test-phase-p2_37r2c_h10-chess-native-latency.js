@@ -20,7 +20,7 @@ const app = JSON.parse(read('app.json')).expo;
 let passed = 0, failed = 0;
 const check = (good, label) => { if (good) {++passed; console.log('PASS '+label);} else {++failed;console.error('FAIL '+label);} };
 console.log('Family Bloom H10 | Chess local-first / native UI guards');
-check(app.android.versionCode === 143042 && app.version === '1.3.32','distinct APK identity');
+check(app.android.versionCode === 143043 && app.version === '1.3.33','distinct APK identity');
 check(native.includes('P2.37R2C-H25-native-3'),'native binary tag synchronized');
 check(names.every(n=>fs.existsSync(root+'/'+raw+'fb_board_'+n+'.mp3')), '11 source mp3 embedded in Android res/raw');
 check(names.every(n=>board.includes('R.raw.fb_board_'+n)),'11 native cues registered in SoundPool');

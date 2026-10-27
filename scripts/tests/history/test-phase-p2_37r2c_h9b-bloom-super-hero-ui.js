@@ -16,7 +16,7 @@ function check(ok, reason) {
   else { failed++; console.error('FAIL ' + reason); }
 }
 console.log('\nFamily Bloom P2.37R2C-H9B — Bloom Super Hero Native UI\n');
-check(app.expo.version === '1.3.32' && app.expo.android.versionCode === 143042, 'new APK identity prevents stale H9A native binary');
+check(app.expo.version === '1.3.33' && app.expo.android.versionCode === 143043, 'new APK identity prevents stale H9A native binary');
 check(native.includes('P2.37R2C-H25-native-3') && pkg.version === '1.3.18', 'native binary identity/version are updated together');
 check(native.includes('(viewportW * 0.90f)') && native.includes('(viewportH * 0.90f)'), 'Full takes exactly 90% of current native viewport');
 check(native.includes('val innerW = (fullW - dp(20f))') && native.includes('val innerH = (fullH - dp(20f))'), 'H11 Chess stage uses a single 10dp inset per side');

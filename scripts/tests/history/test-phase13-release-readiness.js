@@ -14,6 +14,8 @@ const bridge = read("src/components/system/BloomPushBridge.tsx");
 const token = read("src/services/push/pushTokenService.ts");
 const hero = read("src/components/ui/BloomHeroHeader.tsx");
 const flags = read("src/constants/featureFlags.ts");
+const runtimeState = read("src/constants/cloudRuntimeState.ts");
+const cloudFeature = read("src/services/cloud/cloudFeatureService.ts");
 const app = JSON.parse(read("app.json"));
 check("Developer tools are exclusive to the verified account in Debug and Release",
   perf.includes('FAMILY_BLOOM_DEV_EMAIL = "huynh235@gmail.com"')
@@ -30,10 +32,16 @@ check("Media lifecycle fields are immutable", rules.includes("request.resource.d
 check("Client family deletion is blocked", rules.includes("recursive family deletion needs a trusted backend"), "Avoid orphaned family subcollections.");
 check("Bloom Supper rounded hero contract", hero.includes("roundedBottom") && hero.includes("borderBottomLeftRadius"), "Calendar/Moments can share the Tree lower silhouette.");
 check("Cloud Functions remains Spark-safe",
-  /export\s+const\s+FEATURE_FLAGS\s*=\s*\{[\s\S]*?\bUSE_CLOUD_FUNCTIONS\s*:\s*false\s*[,}]/.test(flags)
+  // R3R13+ uses a runtime opt-in switch instead of a literal `USE_CLOUD_FUNCTIONS: false`.
+  // Validate the effective safe default, verified deployment gate and retained deferred flags.
+  /get\s+USE_CLOUD_FUNCTIONS\(\)\s*:\s*boolean\s*\{\s*return\s+getCloudFunctionsRuntimeEnabled\(\)/.test(flags)
+  && /let\s+cloudFunctionsActive\s*=\s*false\s*;/.test(runtimeState)
+  && /cloudFunctionsEnabled:\s*false\s*,\s*remotePushEnabled:\s*false/.test(cloudFeature)
+  && /if\s*\(enabled\s*&&\s*!\(await\s+this\.verifyDeployed\(\)\)\)/.test(cloudFeature)
+  && /this\.reset\(\);/.test(cloudFeature)
   && /\bCROSS_FAMILY_GRAPH_BRIDGE_DEFAULT_ENABLED\s*:\s*false\s*[,}]/.test(flags)
   && /export\s+const\s+ENABLE_FAMILY_BULLETIN\s*:\s*boolean\s*=\s*false/.test(flags),
-  "Spark-safe Direct Mode, original graph-bridge flags, and deferred bulletin all remain configured.");
+  "Cloud runtime defaults OFF, enabling requires verified backend, deferred features remain disabled.");
 check("Android release versionCode exists", Number.isInteger(app.expo.android.versionCode) && app.expo.android.versionCode >= 1, "Required for repeatable Android RC builds.");
 check("iOS native config retired for Android/Web-only baseline", !app.expo.ios, "Family Bloom currently ships Android + Web source only.");
 console.log("FAMILY BLOOM PHASE 13 RELEASE READINESS");

@@ -20,7 +20,7 @@ const mod = json('modules/family-bloom-overlay/package.json');
 const app = json('app.json');
 
 check(mod.version === '1.3.18' && native.includes('P2.37R2C-H25-native-3'), 'native binary identity is H9B / module 1.3.14');
-check(app.expo.version === '1.3.32' && app.expo.android.versionCode === 143042, 'app identity remains 1.3.32 / 143042');
+check(app.expo.version === '1.3.33' && app.expo.android.versionCode === 143043, 'app identity remains 1.3.33 / 143043');
 check(store.includes('STORE_PRESERVE_LOCAL_MODE') && store.includes('snapshot.activeGameId === gameId'), 'same authoritative game refresh preserves local Full/Mini mode');
 check(store.includes('STORE_REJECT_DIFFERENT_GAME_REFRESH'), 'stale/different game state cannot steal active presentation');
 check(bridge.includes('presentConfirmedBoardGame("chess", state.gameId)') && bridge.includes('presentConfirmedBoardGame("xiangqi", state.gameId)'), 'server still owns live-game existence while store owns local presentation mode');

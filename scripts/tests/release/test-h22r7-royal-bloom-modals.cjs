@@ -33,7 +33,7 @@ check('Native Xiangqi king uses preloaded red_general PNG, half-overlapping canv
 check('Native Xiangqi all connecting, waiting, ready, result stages have King',xiangqi.includes('drawBloomKing(c,w/2f,top') && xiangqi.includes('drawBloomKing(c,center,top') && xiangqi.includes('drawBloomKing(c,x,top') && xiangqi.includes('SẴN SÀNG VÀO TRẬN'));
 check('Xiangqi distinct victory/draw/loss colors and CTA retained',xiangqi.includes('#FFF9DF') && xiangqi.includes('#E8FAFF') && xiangqi.includes('#F1F8EC') && xiangqi.includes('onAction("resultAck",s.gameId)'));
 check('Live game move logic unaffected by presentation badge',xiangqi.includes('moveDurationMs = 205L') && xiangqi.includes('val radius=cell*.47025f') && xiangqi.includes('next.soundToken!=lastSoundToken'));
-check('Native APK identity is fresh and in sync',app.expo.version==='1.3.32' && app.expo.android.versionCode===143042 && nativeModule.includes('P2.37R2C-H25-native-3'));
+check('Native APK identity is fresh and in sync',app.expo.version==='1.3.33' && app.expo.android.versionCode===143043 && nativeModule.includes('P2.37R2C-H25-native-3'));
 for (const bat of ['scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat','scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat']) {
  const source=read(bat);
  check(`${path.basename(bat)} runs H22R7 gate before building`,source.includes('node scripts\\tests\\release\\test-h22r7-royal-bloom-modals.cjs\r\nif errorlevel 1 goto :fail'));

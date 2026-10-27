@@ -190,6 +190,7 @@ export default function MomentsScreen() {
   const [caption, setCaption] = useState("");
   const [memoryPrompt, setMemoryPrompt] = useState<string | null>(null);
   const [selected, setSelected] = useState<MediaFile[]>([]);
+  const [previewGridWidth, setPreviewGridWidth] = useState(0);
   const [personIds, setPersonIds] = useState<string[]>([]);
   const [timelineAudience, setTimelineAudience] = useState<"self" | "family" | "persons">("self");
   const [notifyFamily, setNotifyFamily] = useState(false);
@@ -423,13 +424,14 @@ export default function MomentsScreen() {
     };
   }, [revealCommentInput]);
 
-  const previewColumns = screenWidth >= 430 ? 4 : 3;
-  const previewLimit = previewColumns * 2;
-  const previewItems = selected.slice(0, previewLimit);
-  const previewRemaining = Math.max(0, selected.length - previewItems.length);
+  const availablePreviewWidth = previewGridWidth || Math.max(240, Math.min(screenWidth, 560) - 40);
+  const previewColumns = availablePreviewWidth >= 390 ? 4 : availablePreviewWidth >= 275 ? 3 : 2;
+  // Render every selected item (up to 10). The previous 2-row slice silently
+  // concealed four selections on narrow phones, preventing removal before post.
+  const previewItems = selected;
   const previewTileSize = Math.max(
-    72,
-    Math.floor((Math.min(screenWidth, 560) - 40 - (previewColumns - 1) * 8) / previewColumns),
+    56,
+    Math.floor((availablePreviewWidth - (previewColumns - 1) * SPACING.sm - 2) / previewColumns),
   );
 
   const pickMedia = async () => {
@@ -1050,11 +1052,11 @@ export default function MomentsScreen() {
               </Pressable>
 
               {(editExistingMedia.length > 0 || editNewFiles.length > 0) && (
-                <View style={styles.previewGrid}>
+                <View style={styles.previewGrid} onLayout={(event) => setPreviewGridWidth(event.nativeEvent.layout.width)}>
                   {[
                     ...editExistingMedia.map((media) => ({ id: `existing-${media.id}`, kind: "existing" as const, media })),
                     ...editNewFiles.map((file) => ({ id: `new-${file.id}`, kind: "new" as const, file })),
-                  ].slice(0, previewLimit).map((entry, index) => {
+                  ].map((entry, index) => {
                     const uri = entry.kind === "existing"
                       ? (entry.media.thumbnailUrl || entry.media.secureUrl)
                       : entry.file.uri;
@@ -1256,9 +1258,8 @@ export default function MomentsScreen() {
               </Pressable>
 
               {selected.length > 0 && (
-                <View style={styles.previewGrid}>
+                <View style={styles.previewGrid} onLayout={(event) => setPreviewGridWidth(event.nativeEvent.layout.width)}>
                   {previewItems.map((file, index) => {
-                    const isLastVisible = index === previewItems.length - 1;
                     return (
                       <Pressable
                         key={file.id}
@@ -1286,11 +1287,6 @@ export default function MomentsScreen() {
                         {file.type === "video" && (
                           <View style={styles.videoBadge}>
                             <Ionicons name="play" size={12} color={COLORS.white} />
-                          </View>
-                        )}
-                        {isLastVisible && previewRemaining > 0 && (
-                          <View pointerEvents="none" style={styles.previewMoreOverlay}>
-                            <Text style={styles.previewMoreText}>+{previewRemaining}</Text>
                           </View>
                         )}
                       </Pressable>
@@ -1455,13 +1451,11 @@ const styles = StyleSheet.create({
   mediaPickerCopy: { flex: 1 },
   pickerTitle: { fontWeight: "900", color: COLORS.primaryText, fontSize: 13.5 },
   pickerSub: { fontSize: 11.5, color: COLORS.secondaryText, marginTop: 2 },
-  previewGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginBottom: SPACING.lg },
+  previewGrid: { width: "100%", flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginBottom: SPACING.lg },
   thumbWrap: { position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: COLORS.softSurface },
   thumb: { width: "100%", height: "100%" },
   videoPreviewPlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: 5, backgroundColor: "#FFF4F8" },
   videoPreviewText: { color: COLORS.primaryText, fontSize: 9.5, fontWeight: "900", letterSpacing: 0.7 },
   removeThumb: { position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
   videoBadge: { position: "absolute", left: 6, bottom: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.48)", alignItems: "center", justifyContent: "center" },
-  previewMoreOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(67,39,49,0.52)", alignItems: "center", justifyContent: "center" },
-  previewMoreText: { color: COLORS.white, fontSize: 24, fontWeight: "900" },
 });

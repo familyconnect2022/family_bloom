@@ -11,7 +11,7 @@ const migration=JSON.parse(read('scripts/setup/script-migration-map.json'));
 const manifest=JSON.parse(read('scripts/setup/bat-entrypoints-manifest.json'));
 let n=0;
 function check(label,ok){assert(ok,label);console.log('PASS '+(++n)+' '+label);}
-check('Project root chi co 4 BAT phien ban on dinh',JSON.stringify(fs.readdirSync(root).filter(f=>f.toLowerCase().endsWith('.bat')).sort())===JSON.stringify(manifest.batFiles.filter(f=>!f.includes('/')).sort()));
+check('Project root khong con BAT trung lap',JSON.stringify(fs.readdirSync(root).filter(f=>f.toLowerCase().endsWith('.bat')).sort())===JSON.stringify(manifest.batFiles.filter(f=>!f.includes('/')).sort()));
 check('BAT menu tai scripts/android',file('scripts/android/Family_Bloom_MENU.bat'));
 check('Build, Auto Update, Clean, EAS nam trong nhom',[
  'scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat',
@@ -22,7 +22,7 @@ check('Build, Auto Update, Clean, EAS nam trong nhom',[
 ].every(file));
 check('175 test duoc chuyen co ban do',Object.keys(migration.movedFiles).length>=175 && Object.values(migration.movedFiles).every(file));
 check('Khong con test-*.js o scripts/',fs.readdirSync(path.join(root,'scripts')).every(f=>!/^test-/i.test(f)));
-check('Manifest du 4 launcher root va cac BAT scripts',manifest.batFiles.every(file) && manifest.batFiles.filter(f=>!f.includes('/')).length===4 && new Set(manifest.batFiles).size===manifest.batFiles.length);
+check('Manifest chi co BAT scripts, khong co launcher root',manifest.batFiles.every(file) && manifest.batFiles.filter(f=>!f.includes('/')).length===0 && new Set(manifest.batFiles).size===manifest.batFiles.length);
 const updater=read('scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat');
 check('Don duong dan cu chi SAU backup',updater.indexOf('auto-update-full.cjs" backup')<updater.indexOf('retire-legacy-script-paths.cjs')&&updater.indexOf('retire-legacy-script-paths.cjs')<updater.indexOf('auto-update-full.cjs" overlay'));
 check('Auto Update goi CLEAN APPLY o vi tri moi',updater.includes('%FB_TARGET%\\scripts\\android\\maintenance\\Family_Bloom_CLEAN_APPLY_FULL.bat'));
