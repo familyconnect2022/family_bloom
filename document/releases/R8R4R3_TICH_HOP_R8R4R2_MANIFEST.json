@@ -1,0 +1,47 @@
+{
+  "project": "Family Bloom Android",
+  "release": "R8R4R3 integrated with R8R4R2",
+  "source_archive": "FAMILY_BLOOM_R8R4R3_IMAGE_HERO_FLOATING_SNAP_DOCK_FULL_2026-10-31.zip",
+  "previous_archive": "FAMILY_BLOOM_R8R4R2_THEME_WELCOME_TABS_FULL_SOURCE_2026-10-31.zip",
+  "source_archive_sha256": "55a2c31ba56dc8275e5c9c4a19c896a2a4e26a7c445dcdd0d9459c8fb8652737",
+  "previous_archive_sha256": "ddbbf557f562b2930d90cd3f95f24c1c9768a7ad9a4624168e233f506ed461b1",
+  "R8R4R2_files": 1530,
+  "R8R4R3_files": 1548,
+  "missing_R8R4R2_files": 0,
+  "additional_R8R4R3_files": [
+    "assets/images/storybook/heroes/event_garden.png",
+    "assets/images/storybook/heroes/event_heritage.png",
+    "assets/images/storybook/heroes/event_midnight.png",
+    "assets/images/storybook/heroes/event_rose.png",
+    "assets/images/storybook/heroes/home_garden.png",
+    "assets/images/storybook/heroes/home_heritage.png",
+    "assets/images/storybook/heroes/home_midnight.png",
+    "assets/images/storybook/heroes/home_rose.png",
+    "assets/images/storybook/heroes/moment_garden.png",
+    "assets/images/storybook/heroes/moment_heritage.png",
+    "assets/images/storybook/heroes/moment_midnight.png",
+    "assets/images/storybook/heroes/moment_rose.png",
+    "assets/images/storybook/heroes/tree_garden.png",
+    "assets/images/storybook/heroes/tree_heritage.png",
+    "assets/images/storybook/heroes/tree_midnight.png",
+    "assets/images/storybook/heroes/tree_rose.png",
+    "document/releases/R8R4R3_README.md",
+    "scripts/tests/release/test-r8r4r3-floating-dock-hero.cjs"
+  ],
+  "changed_R8R4R3_files_relative_to_R8R4R2": [
+    "document/releases/m3r4r5/known-source-lineages.json",
+    "scripts/maintenance/auto-update-full.cjs",
+    "scripts/maintenance/check-r1r4-source-lineage.cjs",
+    "scripts/tests/release/test-r8r3-theme-system.cjs",
+    "scripts/tests/release/test-r8r4r2-theme-perf-welcome.cjs",
+    "src/app/(tabs)/_layout.tsx",
+    "src/app/(tabs)/index.tsx",
+    "src/components/ui/BloomHeroHeader.tsx"
+  ],
+  "source_version_code": 143044,
+  "install_from": [
+    "R8R4R1 verified source",
+    "R8R4R2 verified source"
+  ],
+  "note": "R8R4R3 archive already contains the entire prior R8R4R2 code tree; no source merges necessary."
+}

@@ -1,0 +1,35 @@
+{
+  "updatedAt": "2026-09-30T07:48:00.000Z",
+  "bootstrap": true,
+  "policy": "append_verified; keep_pending; never delete source history; provider audit controls playable pool",
+  "sources": {
+    "nct_home": {
+      "url": "https://www.nhaccuatui.com/",
+      "finalUrl": "https://www.nhaccuatui.com/",
+      "status": 200,
+      "etag": null,
+      "lastModified": null,
+      "fingerprint": null,
+      "checkedAt": "2026-09-30T07:48:00.000Z",
+      "bootstrapNote": "Initial Phase 14L additions were curated from the current public NCT homepage. First automated refresh replaces this bootstrap with the real HTTP fingerprint."
+    },
+    "nct_top100": {
+      "url": "https://www.nhaccuatui.com/top100/",
+      "status": 200,
+      "checkedAt": "2026-09-30T07:48:00.000Z",
+      "bootstrap": true
+    },
+    "zing_chart": {
+      "url": "https://zingmp3.vn/zing-chart",
+      "status": 200,
+      "checkedAt": "2026-09-30T07:48:00.000Z",
+      "jsShellOnly": true
+    },
+    "zing_new": {
+      "url": "https://zingmp3.vn/moi-phat-hanh",
+      "status": 200,
+      "checkedAt": "2026-09-30T07:48:00.000Z",
+      "jsShellOnly": true
+    }
+  }
+}

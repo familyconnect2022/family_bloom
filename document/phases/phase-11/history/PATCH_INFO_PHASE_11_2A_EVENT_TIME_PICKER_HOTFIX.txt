@@ -1,0 +1,27 @@
+Family Bloom Phase 11.2A - Event Time / Local Reminder / Bloom Time Picker Hotfix
+Date: 2026-09-27
+Base: Family_Bloom_Phase_11_2A_NOTIFICATION_SOUND_HOTFIX_FULL_2026-09-27.zip
+
+Fixes
+- Timed events now always schedule one local notification at the exact event start time. Previously a newly-created event only a few minutes away could miss both the -3h and -30m reminder windows and therefore schedule nothing.
+- Android notification permission is requested after the user creates an event that needs local reminders; event creation itself never rolls back if permission is denied.
+- One-off timed events on Today cannot be saved with a clock time in the past. Guard exists in Planner UI and eventService.
+- Bloom Time Picker receives the selected event date. When the date is Today, it clamps to the next 5-minute future slot and disables past quick times.
+- Bloom Time Picker wheel highlight no longer covers the selected text; list work is bounded (7 initial/batch, windowSize 5) and redundant wheel re-positioning is avoided.
+- Planner adds quick date chips: Hôm nay / Ngày mai.
+- Default timed-event clock is never in the past when opening a Today composer.
+
+Local-only architecture note
+- This build does NOT use Cloud Functions or remote FCM.
+- On a cloned/dual-app installation, each clone has its own notification permission and on-device schedule.
+- A clone that was already in the background before another clone/device creates a new event cannot know about that new event until it is opened/resumed and syncs Firestore. This is an architectural limitation of local-only notifications, not a scheduling bug.
+
+Validation
+- 162 TS/TSX syntax transpile: PASS
+- Phase 11.2A local notification contract: PASS
+- Phase 11.1 Smart Reminder contract: PASS
+- Phase 11.0 Activity performance contract: PASS
+- Phase 10 reliability/performance contract: PASS
+- Phase 8.2C tab regression: PASS
+- Shared realtime registry: PASS
+- New event-time/time-picker hotfix contract: PASS

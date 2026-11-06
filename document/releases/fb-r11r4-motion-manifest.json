@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "release": "R11R4_AUTH_WELCOME_TABS",
+  "base": "R11R3_MOTION_RECOVERY",
+  "r10Sha256": "c1e3b5b3aff41247f1779e459e4bcd913312f6ff47e2b07f76049e1ed61d512d",
+  "files": [
+    {
+      "path": "R11R4_MOTION_INSTALL.cmd",
+      "before": [
+        null
+      ],
+      "after": "fae962754c55e6b5375e1b57e8dd65ac00c37887fa9a25e36c700530ec8e6752"
+    },
+    {
+      "path": "document/releases/R11R4_AUTH_WELCOME_TABS_GUIDE_VI.txt",
+      "before": [
+        null
+      ],
+      "after": "1a0e6fee7a0925f65ac20ecaf8daf7a7f4268edc9f9086c15630ff246121a8a4"
+    },
+    {
+      "path": "scripts/maintenance/fb-r11r4-entry-motion.cjs",
+      "before": [
+        null
+      ],
+      "after": "f83d3cfbc60858056c2384ddb6c083904dd55f8d7a985df50909fe411e92e1ca"
+    },
+    {
+      "path": "scripts/setup/family-bloom-source-release.json",
+      "before": [
+        "4b804a3ef1ced736c2d71203017ba6e9a2be688a2a0cbadd2e1c523eae502d6d"
+      ],
+      "after": "4f5bfb166e18675ad5bb0f2f9c61e1f1a1a91aca0af6a2c7256a6a353137c384"
+    },
+    {
+      "path": "scripts/tests/release/test-r11-motion-lab-contract.cjs",
+      "before": [
+        "7f3944245bc3714156f6e4d7b1715896b34d1c3a57a7cbb37240b46c57a8be8a"
+      ],
+      "after": "5e588d7ff9cbfb0df91bf9f11c7e943b0a27d20252e2a05b7edd67657e6e13f2"
+    },
+    {
+      "path": "scripts/tests/release/test-r11r3-motion-recovery.cjs",
+      "before": [
+        "a0c7862e6c21e892fc45e6dadcd654b00de94c2d545643fe9cda04ef506a1fad"
+      ],
+      "after": "952220d55921fa55ba61f24307730f967e9e581c2be1bc61a8abdfb9099b0e70"
+    },
+    {
+      "path": "scripts/tests/release/test-r11r4-entry-motion.cjs",
+      "before": [
+        null
+      ],
+      "after": "50e8758efe3088140b8ecc489c7d0c3eee2c4064259d269db3821f22af1399d5"
+    },
+    {
+      "path": "src/app/(auth)/login.tsx",
+      "before": [
+        "6fb181ea0764ab1dc05ae142d363ebec811852e52715ee47ae209ec6fe6bf33e"
+      ],
+      "after": "fa6c8e6b9a34044d5339d623dcf30781198632701c3022097819b17860449b42"
+    },
+    {
+      "path": "src/app/(internal)/motion-lab.tsx",
+      "before": [
+        "43df5e889ea6aab5db69de8045ef28925f28cf7a39712d5c27eab2334058267a"
+      ],
+      "after": "aabc57f3396d64fb98fdc8bea62fcb69dc21ebd39d5a53bbad8eb6dac02db7a7"
+    },
+    {
+      "path": "src/app/(tabs)/_layout.tsx",
+      "before": [
+        "cbdbb79b8667c83638c02c636c7b7b55ef7970b95beadbe3eb4c755b5fdeacbb"
+      ],
+      "after": "a39e9f6dd6978d51d6f18e0ee9b0c57a8f20d02da685b0b9b6c4cfb80806f443"
+    },
+    {
+      "path": "src/app/(tabs)/family.tsx",
+      "before": [
+        "dc78b4cfecfa6c5b731b6d4c409174841331f30700adea5a709e46fbcac2444a"
+      ],
+      "after": "4fac6172f7f5a1025fe7b3e108169f64fa1207a6228d5c7db8eebba07731dd97"
+    },
+    {
+      "path": "src/app/(tabs)/index.tsx",
+      "before": [
+        "43ada5cea9fc12cfa519b5b5ca652a9fa20b4b0b23e4a12984fac132edc15c42"
+      ],
+      "after": "4291827c63bbd0acc206f983e696483348b12cabbf5b4bb6771ea930b36e1483"
+    },
+    {
+      "path": "src/app/(tabs)/moments.tsx",
+      "before": [
+        "95646fc8b316cccb5a34cf43f7e4b07ccb2d14caab6bc9a8145e97379aa988bb"
+      ],
+      "after": "484b4ce78c5f8cb000be795ef358fb356adedf93d5089f5e7b7a1a64838307c2"
+    },
+    {
+      "path": "src/app/(tabs)/planner.tsx",
+      "before": [
+        "5168e35fa2d6f084a15b2735a65760dcfece88bef447eaebe3005fbe16593e91"
+      ],
+      "after": "93b70806cc3f2bfde0cc801afb42c507e5eedf5478278c23eeb2d3db41f14c93"
+    },
+    {
+      "path": "src/app/(tabs)/play.tsx",
+      "before": [
+        "f8c064d0ae75e7605f3ef0e301a1bacbe7d28a33444df0a7ffb277113c16b30a"
+      ],
+      "after": "0011e1b330006abd696da3070e04e297e2a59efdff21cc9e9577844aff944aba"
+    },
+    {
+      "path": "src/components/onboarding/WelcomeModal.tsx",
+      "before": [
+        "2af6a365b0c6251b82c71e784deeb087491acddf67ad18ae029f285ce06e85be"
+      ],
+      "after": "2d71b4e185d6b7b1e128e52645274bcbf80adb4ca5f5a61ea58336b63cb972ad"
+    },
+    {
+      "path": "src/motion/BloomMotion.tsx",
+      "before": [
+        "28642e760463ac98230bfce48da11087c38a892ed5833625cf63de079ce13742"
+      ],
+      "after": "43532692b2f8f8aefbd5a637e77b23fc35d160f964c044ca221bc4415fdbb904"
+    }
+  ],
+  "preserve": [
+    ".env",
+    "Family_Bloom_AUTO_UPDATE_FULL.bat",
+    "Family_Bloom_BUILD_APK_TO_SHARE.bat",
+    "android",
+    "firebase",
+    "firestore.rules",
+    "ios",
+    "config/credentials"
+  ]
+}

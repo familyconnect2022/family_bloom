@@ -1,0 +1,28 @@
+'use strict';
+// Dependency-free source/data contract. Runs before Auto Update touches the old project.
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const read=p=>fs.readFileSync(p,'utf8');
+const path='src/features/study/';
+const repo=read(path+'studyRepository.ts');
+const model=read(path+'StudySolutionModel.ts');
+const composer=read(path+'StudyComposer.tsx');
+const renderer=read(path+'StudyFormula.tsx');
+const rules=read('firestore.rules');
+const cloudRules=read('firestore.cloud.rules');
+const schema=JSON.parse(read('document/phase-h25/study/study-solution-blocks-v1.schema.json'));
+const example=JSON.parse(read('document/phase-h25/study/study-solution-example-v1.json'));
+let count=0;
+const check=(label,fn)=>{fn();count++;console.log(`PASS ${count} ${label}`)};
+check('Text and formula retained as ordered blocks',()=>{assert(repo.includes("kind:'text'|'formula'"));assert(renderer.includes('blocks.map'));assert(Array.isArray(example)&&example.length>4)});
+check('Explicit logical relations, no implicit => translation',()=>{assert(model.includes("'none'|'implies'|'iff'|'equals'"));assert(model.includes("iff:'⇔'"));assert(model.includes("implies:'⇒'"))});
+check('Old data without relation remains readable',()=>{assert(renderer.includes("!!b.relationBefore")||renderer.includes("!!b.relationBefore"));assert(!schema.items.oneOf[1].required.includes('relationBefore'))});
+check('Relation attaches to following equation not to preceding prose',()=>{assert(renderer.includes('b.relationBefore'));assert(composer.includes('relationBefore:editingFormula'));assert(composer.includes("kind:'text'"))});
+check('Native formula layout scrolls without WebView',()=>{assert(renderer.includes("from './StudySolutionModel'"));assert(renderer.includes('solutionRelation'));assert(renderer.includes('solutionEquationBody'));assert(renderer.includes('<NativeFormula'));assert(!/import .*WebView/.test(renderer))});
+check('Composer can commit prose then insert another formula',()=>{assert(composer.includes('commitText'));assert(composer.includes('Thêm đoạn chữ vào bài giải'));assert(composer.includes('ƒx Công thức'))});
+check('Composer supports ⇒ ⇔ = selection and reordering',()=>{assert(composer.includes("from './StudySolutionModel'"));assert(composer.includes('nextRelation'));assert(composer.includes('arrow-up-circle-outline'));assert(composer.includes('arrow-down-circle-outline'));assert(composer.includes('studyRelationGlyph'))});
+check('Blocks bounded and relation metadata checked',()=>{assert(repo.includes('blocks.length>24'));assert(repo.includes('b.value.length>6000'));assert(repo.includes('STUDY_RELATIONS.includes(b.relationBefore)'))});
+check('Firestore question and answer schema unchanged',()=>{for(const content of [rules,cloudRules]){assert(content.includes("request.resource.data.keys().hasOnly(['authorUid','authorName','blocks','imageUrls','createdAt'])"));assert(content.includes('validStudyBlocks(request.resource.data.blocks)'));assert(content.includes('request.query.limit <= 30'))}});
+check('Schema v1 describes accepted types and optional relation',()=>{assert.equal(schema.type,'array');assert.equal(schema.maxItems,24);assert.deepEqual(schema.items.oneOf[1].properties.relationBefore.enum,['none','implies','iff','equals'])});
+check('Sample has explanation → formula → explanation → iff → conclusion',()=>{assert.equal(example[0].kind,'text');assert.equal(example[1].kind,'formula');assert(example.some(x=>x.relationBefore==='iff'));assert.equal(example.at(-1).kind,'text')});
+check('No module startup subscriptions',()=>{assert(!/onSnapshot\s*\(|setInterval\s*\(/.test(repo));assert(composer.includes("import('./StudyFormulaEditor')"))});
+console.log(`STUDY STRUCTURED SOLUTION R3R10 ${count}/${count} PASS`);

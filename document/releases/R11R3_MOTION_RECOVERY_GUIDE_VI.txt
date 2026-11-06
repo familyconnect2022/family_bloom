@@ -1,0 +1,26 @@
+FAMILY BLOOM R11R3 - SUA GIAO DIEN CARD + MOTION THAT (2026-11-05)
+
+NGUON: R11/R11R2 dang cai tren may. KHONG DUNG TRUC TIEP VOI R10 goc.
+R10 FULL CODE ZIP giu rieng lam diem quay lai.
+
+CACH NHANH NHAT KHI DUNG CMD
+1. Giai nen ban R11R3_MOTION_RECOVERY_SAFE_PATCH.zip vao thu muc MOI.
+2. Mo CMD tai thu muc ban vua giai nen.
+3. Chay:
+   node scripts\maintenance\fb-r11r3-recovery.cjs check "D:\Family Bloom App + Server\Family_Bloom"
+4. Neu CHECK PASS thi chay:
+   node scripts\maintenance\fb-r11r3-recovery.cjs install "D:\Family Bloom App + Server\Family_Bloom"
+5. Build lai Release APK bang cach da su dung thanh cong.
+
+HOAC chay R11R3_MOTION_RECOVERY.cmd; chi nhap project path mot lan.
+
+AN TOAN
+- Tao backup cac file se thay doi TRUOC khi copy.
+- Kiem SHA tung file; khong khop thi STOP, khong cap nhat.
+- Khong sua .env, Firebase, Android native, BAT, build config.
+- Can giu nguyen R10 backup. KHONG giai nen FULL R11R3 de vao thu muc R10 dang su dung.
+
+CHUA XAC MINH
+- Chua build APK Release tren Windows va chua test tren dien thoai that.
+- Bloom Magic sau save Gia pha dang hien boi qua toast, khac demo lon trong Motion Lab.
+- Hieu ung Thu Ngo chi hien khi account CON PHAI xem thu theo gate, khong lap lai moi lan mo app.

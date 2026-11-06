@@ -1,0 +1,13 @@
+PHASE 14R.4B RELEASE GATE HOTFIX
+
+Reproduced failure:
+- Phase14R.1: 37 PASS / 1 FAIL
+- Failing check: project root remains free of BAT clutter
+- Root BATs were the two intentionally shipped deploy helpers.
+
+Correction:
+- Allowlist exactly the two deployment helpers.
+- Reject any other unexpected root BAT file.
+- Add phase14r4:check to RELEASE build gate sequence.
+
+Validation is recorded after packaging in the assistant run.

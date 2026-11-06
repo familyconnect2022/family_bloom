@@ -1,0 +1,19 @@
+PHASE 14V4M VALIDATION — 2026-10-04
+
+PASS 15/15 V4M targeted checks
+PASS 18/18 V4L production UI regression
+PASS 11/11 V4K material swing FX regression
+PASS 17/17 V4J sparse hint / visual commit regression
+PASS 54/54 Phase 14U chess core static gate
+PASS 256/256 TS/TSX syntax transpile check
+
+Changed behavior:
+- ChessResultToast is a true absolute board overlay, not a React Native Modal.
+- Result overlay cannot consume ScrollView layout height or push player rails.
+- Win celebration strengthened with aura / petals / blossoms / sparkles.
+- Material advantage is isolated in a dedicated row above captured pieces.
+- Long capture rows compact progressively at 8 / 11 / 14 pieces.
+- Bloom Bot artificial action delay is fixed at exactly 120 ms for diagnosis.
+
+Important runtime note:
+The 120 ms Bloom Bot delay is server-side. Deploy/restart the Render chess server from this source before comparing bot response timing on device.

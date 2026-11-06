@@ -1,0 +1,15 @@
+PHASE 14J APPLY
+
+Base required:
+Family_Bloom_Phase_14I_NATIVE_FOCUS_PORTAL_FULL_2026-09-30
+
+Option A — PATCH
+1. Extract the Phase 14J PATCH ZIP.
+2. Copy its contents over the root of the Phase 14I FULL project.
+3. Allow replacement of existing files.
+4. Restart Metro/dev-client as usual.
+
+Option B — FULL
+Use the Phase 14J FULL ZIP directly as the new source checkpoint.
+
+No Firestore Rules, Firestore indexes, Functions, or native dependency changes are required for Phase 14J itself.

@@ -1,0 +1,8 @@
+Family Bloom H18 APK: confirm VersionCode 143028, Native P2.37R2C-H18-native-1.
+1. Deploy H18 server to Render.
+2. New Bot chess game.
+3. Switch Wi-Fi/mobile network mid Bot thinking and mid animation.
+4. Verify NO fullscreen Sync overlay, NO blank/flash, last verified move animated exactly once.
+5. Check Black human / White bot and vice versa.
+6. Reconnect and compare board FEN to server; verify no phantom move; inspect Mini restore.
+7. If multiple revisions missed and no predecessor from older server, safe non-animated snap is expected.

@@ -1,0 +1,15 @@
+FAMILY BLOOM — PHASE 6.3 CENTER-PORT CONNECTOR FIX
+
+Checks run on cumulative current source:
+- Family Graph Query + Kinship + Focus: PASS
+- DG-11 Batch Relationship Composer: PASS
+- Dense layout + connector routing: PASS
+- Synthetic benchmark 50/100/300/500: PASS
+- TS/TSX syntax transpile: PASS (121 files)
+- Relative imports: PASS (404 checked, 0 missing)
+
+New regression coverage:
+- lateral parent-child is not misclassified as direct
+- center-aligned parent-child remains direct
+- TOP/BOTTOM/LEFT/RIGHT ports are exact edge midpoints
+- routing uses 128px node slot center + 112px visible card tolerance

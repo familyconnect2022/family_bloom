@@ -1,0 +1,40 @@
+FAMILY BLOOM P2.37R2C H11 — KIEM THU APK THAT (chua chay trong container)
+
+A. BUILD + BINARY
+[ ] Sao luu source; cleanup + copy-over dung thu muc.
+[ ] Install dependencies, tsc full (khong chi transpile syntax).
+[ ] Bat APK build release/EAS test; Kotlin Gradle compile PASS.
+[ ] APK cai moi; nativeBinaryIdentity = P2.37R2C-H11-native-1, versionCode=143021.
+
+B. CHESS FULL
+[ ] Bam Moi Bloom Bot: Full hien ngay, 32 quan hinh PNG, khong phai doi trong Hub.
+[ ] Ten Bot mo va status 'Dang ket noi...' ben canh, khong co Ready modal.
+[ ] Clock chua chay cho den khi server state active.
+[ ] Khi active: clock duoc server kich hoat, lua chon nuoc di, premove, capture, SFX.
+[ ] Promotion 4 quan, move accepted/rejected/resync khong mat board.
+[ ] Khong co X/Exit; chi co minimize.
+[ ] Nen hong dang sau ban co da bo, 10dp padding duy nhat.
+
+C. MINI
+[ ] Full -> Mini 96x52dp, khong goi resign/close server.
+[ ] Khi luot doi phuong: alpha Mini 0.2; luot minh = 1.0.
+[ ] Keo Mini vao 2 mep va cham Mini de restore Full.
+[ ] State FEN, selected squares, clock, reconnect dung sau restore.
+[ ] 5 tab Home / Pha he / Moments / ... chuyen qua lai >= 20 lan khi Mini dang hien.
+[ ] Android Profiler: JS FPS, UI FPS, JS thread, memory/listeners so voi H10R2.
+[ ] Neu lag: lay video, logcat, React profiler va dump native frame timeline.
+
+D. SERVER/INVITE
+[ ] Bot tu dong accept; failed/rejected/expired don provisional board va ve lobby.
+[ ] Cho server Render cold-start 30s, khong tu tao gameId that.
+[ ] Moi het han 2 phut tu server khong the accept lai.
+[ ] ACK den muon sau vong moi: khong dong nham game da active.
+[ ] Resume from background; reconnect wifi; swap family; crash/relaunch while game active.
+[ ] White/black/opponent turns tick dung; timeout khong chay trong preview.
+
+E. XIANGQI + REGRESSION
+[ ] Xiangqi independent socket/session; khong vo tinh dong Chess.
+[ ] Home, Phả hệ Focus pan/pinch, Moments, Event, TabBar, app splash van dung.
+[ ] Them nhan dien root native rail con chung: can phase tach hoan toan.
+
+Neu gap loi: gui versionCode/native identity, video va adb logcat.

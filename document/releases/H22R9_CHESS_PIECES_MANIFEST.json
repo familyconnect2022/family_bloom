@@ -1,0 +1,187 @@
+{
+  "source_file": "pieces_chess.zip",
+  "source_sha256": "088f0e3e04029cf9ec79e75dbe3f4c895cd4faf7484263689030a761a767d197",
+  "method": "Crop alpha, rescale to legacy painted height and baseline, modest width compensation (max 1.6x), RGBA 192x192",
+  "pieces": {
+    "wk": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        152,
+        49,
+        359,
+        475
+      ],
+      "output_visible_size": [
+        121,
+        155
+      ],
+      "sha256": "f803c1308c3c2d041f232e00ea0db4a08f49f83b5b5a6a06e098e51409eb328d"
+    },
+    "wq": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        154,
+        110,
+        358,
+        475
+      ],
+      "output_visible_size": [
+        137,
+        153
+      ],
+      "sha256": "d31b876abc8c4e35b2975f207fe949f5c71dea82a54539d1bd53dda9614a4669"
+    },
+    "wr": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        158,
+        183,
+        353,
+        475
+      ],
+      "output_visible_size": [
+        126,
+        140
+      ],
+      "sha256": "fa1ec9fb5c826483bdde0d9eef9b2ab3191d7c6fc5dff0319cd55673c2fc2dba"
+    },
+    "wb": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        161,
+        125,
+        351,
+        475
+      ],
+      "output_visible_size": [
+        134,
+        154
+      ],
+      "sha256": "163d6c98b5392e588d8edd56bfc5369655beb9558cef447d8f0a1f5750b073c9"
+    },
+    "wn": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        151,
+        140,
+        361,
+        475
+      ],
+      "output_visible_size": [
+        148,
+        149
+      ],
+      "sha256": "23627a9c5c23409ad61005cbd05da120aaec879b21930f57ae8456e721e95d52"
+    },
+    "wp": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        167,
+        219,
+        345,
+        475
+      ],
+      "output_visible_size": [
+        110,
+        141
+      ],
+      "sha256": "f4cf02cfb8e896540fdf5cd07997b760a4bfafbcd60d5289b69ad21b293c38b8"
+    },
+    "bk": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        153,
+        84,
+        358,
+        475
+      ],
+      "output_visible_size": [
+        130,
+        155
+      ],
+      "sha256": "1ceb620804dc16556b502e2ad30599c56b2e859dd4090f4eb7a9ec24ed1d4ffa"
+    },
+    "bq": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        154,
+        122,
+        357,
+        475
+      ],
+      "output_visible_size": [
+        145,
+        158
+      ],
+      "sha256": "18870020ae37df26bd38f738c1c97e7a42350f35d422c2e14212ec1919dd5373"
+    },
+    "br": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        157,
+        184,
+        355,
+        475
+      ],
+      "output_visible_size": [
+        126,
+        140
+      ],
+      "sha256": "a2a4e994372fbe08549db1fb1b563ed45358f3a11331fc86a42927b1d62542f1"
+    },
+    "bb": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        159,
+        133,
+        353,
+        475
+      ],
+      "output_visible_size": [
+        140,
+        154
+      ],
+      "sha256": "fb3c9dcc5a0b55b119a9669752f429b18e614d5427f6bb916ff56b22796960d1"
+    },
+    "bn": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        152,
+        149,
+        360,
+        475
+      ],
+      "output_visible_size": [
+        148,
+        149
+      ],
+      "sha256": "4bd3ad0327a283516a244d8df5242d9ecc0d1093981aa227e0cc3243dc4e5659"
+    },
+    "bp": {
+      "canvas": "192x192",
+      "original": "512x512",
+      "original_alpha_bbox": [
+        165,
+        213,
+        346,
+        475
+      ],
+      "output_visible_size": [
+        110,
+        141
+      ],
+      "sha256": "ff155c54d8909643215b15d077fc1fbf278ed1ce5e963f927969b61a389b1b0b"
+    }
+  }
+}

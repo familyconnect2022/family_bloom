@@ -1,0 +1,38 @@
+FAMILY BLOOM M3R4R6 · SOURCE VERIFICATION · 2026-10-30
+============================================
+SOURCE BASIS: M3R4R5R1 (R5 original compatible). R2 was NOT byte-for-byte merged.
+CHANGE: Removed idle pink decorative progress track above avatar by only
+rendering the AvatarUploadFrame track during uploading/failed/complete states.
+CHANGE: Root route compares pathname and skips redirects during image-picker;
+public/private Stack.Protected groups require a genuine Firebase UID.
+CHANGE: Auth callback no longer resets the whole session for a repeated UID;
+AppState picker transition does not reinitialize membership listeners.
+CHANGE: ImagePicker uses owner/identity scoped Android result recovery, newest
+selection precedence, and local preview cannot be overwritten by stale parent.
+CHANGE: Family profile and family-tree person avatar upload paths remain distinct.
+Person upload includes real progress and retries; Cloudinary confirmation and
+cleanup of orphan assets remain in the existing services.
+SOURCE-ONLY CHECKS PASSED:
+- R6 Root/Auth/Avatar lifecycle contract: 24/24
+- Welcome/Profile/Toast integration preflight: 17/17
+- CV/Crop geometry contract: 15/15
+- Firebase profile avatar contract: 10/10
+- Family person avatar security contract: 13/13
+- Windows Build & Share preflight: 7/7
+- Expo Router route uniqueness: PASS
+- Source import integrity: 2,071 imports, PASS
+- R5 original source fingerprint accepted: PASS
+- Auto Update check against R5 original: PASS (read-only)
+- Background avatar queue mock: PASS
+- SDK57 image-manipulator and file-system preflight: PASS
+- TypeScript/TSX syntax-only transpilation: 349 files PASS
+NOT TESTED HERE:
+- Windows Clean Apply BAT execution
+- Actual Android Gradle assembleRelease, on-device photo selection or crop
+- Realtime Firebase, Cloudinary or Vercel network behavior
+- Complete TypeScript project typecheck with installed Android dependencies
+SAFETY:
+- Auto Update rejects unknown R2 and modified sources; do NOT bypass checks.
+- Web, Render and Vercel server code have not been modified in this release.
+- Android identity remains version 1.3.33 / versionCode 143043 in source due to
+  legacy gates that require a synchronized build artifact identity.

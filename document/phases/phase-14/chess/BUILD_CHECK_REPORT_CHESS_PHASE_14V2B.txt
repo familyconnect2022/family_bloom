@@ -1,0 +1,50 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 14V.2B
+CHESS COLD-START / FALSE-DISCONNECT HOTFIX
+Date: 2026-10-03
+
+RUNTIME EVIDENCE FROM DEVICE
+- Render cold start observed at about 22 seconds.
+- /health returned HTTP 200 after about 22.9 seconds.
+- Socket.IO eventually emitted socket:connect and connect:ready.
+- chess:lobby:join returned ok:true.
+- A concurrent chess:app:join exceeded the old 12-second ACK timeout and the client incorrectly painted the lobby as a hard connection error.
+- When Android reported the app leaving foreground, the global context intentionally emitted chess:app:leave and disconnected. This is correct for real background/phone-home; navigating between Family Bloom tabs must not do this.
+
+IMPLEMENTED FIXES
+1. ChessSocketService.emitAck accepts a command-specific timeout. Gameplay commands remain 12s by default.
+2. app:join uses a 30s ACK window; session:getActive uses 20s; lobby:join uses 30s.
+3. If app:join returns CHESS_SERVER_RECOVERING while the Socket is actually connected, the client keeps a reconnecting state and retries instead of showing a false hard error.
+4. A successful lobby:join repairs connection state to ready because lobby:join performs membership/family validation too.
+5. Server app/lobby join no longer blocks ACK while waiting for presence fan-out. Presence refresh runs asynchronously after room state is updated.
+6. Concurrent app:join + lobby:join share one first Firestore membership read using a memberInFlight promise map; the existing 10-second membership result cache remains unchanged.
+7. Temporary diagnostics now log AppState transitions and current route under [ChessDebug] so device testing can distinguish navigation inside Family Bloom from actual Android backgrounding.
+8. Leaving Chess Lobby still sends lobby:leave only; it does not own or disconnect the global foreground Chess socket.
+
+SECURITY / DATA IMPACT
+- No Firebase token/private key logging.
+- No Firestore schema migration.
+- No Rules/index change.
+- No new native dependency.
+- No change to server-authoritative board, clock, result or active-user locking.
+
+VALIDATION
+- Phase 14V.2B static gate: 18/18 PASS.
+- Phase 14V.2A: 13/13 PASS.
+- Phase 14V.2: 40/40 PASS.
+- Phase 14V.1: 33/33 PASS.
+- Phase 14V: 26/26 PASS.
+- Phase 14U Chess: 54/54 PASS.
+- Phase 14T: 44/44 PASS.
+- Phase 14T.0A single Android identity: 21/21 PASS.
+- 239 TS/TSX files transpiled with 0 syntax diagnostics using the available TypeScript compiler.
+- Server strict internal typecheck with external declaration stubs: PASS.
+- Runtime retest on the Android device and redeployed Render server is still required.
+
+DEPLOY / TEST
+- Redeploy Render because server/src/socket/socketServer.ts changed.
+- Restart Metro with: npx expo start --dev-client --clear
+- No expo run:android required solely for this hotfix.
+- During retest watch [ChessDebug] appState:change:
+  * switching Family Bloom tabs should NOT report background and should keep Socket alive;
+  * pressing Android Home / switching apps should report background and intentionally disconnect;
+  * returning foreground should reconnect and restore Ready automatically.

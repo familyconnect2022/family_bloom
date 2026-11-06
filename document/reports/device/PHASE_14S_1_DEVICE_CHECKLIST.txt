@@ -1,0 +1,57 @@
+FAMILY BLOOM — PHASE 14S.1 DEVICE CHECKLIST
+Quỹ gia đình: Thủ quỹ, bàn giao, nhóm quỹ, khóa 3 ngày, dấu chân, thống kê
+Date: 2026-10-02
+
+TRƯỚC KHI TEST
+1. Từ root project chạy Family_Bloom_Deploy_Firestore_Rules.bat.
+2. Build DEBUG bằng scripts\android\Family_Bloom_Android_Debug_Build_And_Run.bat trên máy test hoặc máy thứ hai.
+3. Nên dùng ít nhất 2 tài khoản thật trong cùng Nhà Mình; 3 tài khoản sẽ test được helper tốt hơn.
+
+A. KHỞI TẠO THỦ QUỸ
+[ ] A1. Owner/Admin chính mở Quỹ gia đình lần đầu -> tự trở thành thủ quỹ chính.
+[ ] A2. Thành viên thường chỉ xem, nút nhập Thu/Chi bị khóa.
+[ ] A3. Không có quyền Admin đặc biệt chen vào sau khi quỹ đã được bàn giao.
+
+B. BÀN GIAO CÓ XÁC NHẬN
+[ ] B1. Thủ quỹ A chọn thành viên B và gửi đề nghị bàn giao.
+[ ] B2. Trước khi B trả lời: A vẫn có quyền Thu/Chi; B chưa có quyền.
+[ ] B3. B bấm Từ chối -> A vẫn là thủ quỹ chính.
+[ ] B4. Gửi lại; B bấm Đồng ý -> B trở thành thủ quỹ chính ngay.
+[ ] B5. Sau B4: A (kể cả A là Admin) không còn quyền Thu/Chi nếu B chưa mời A vào nhóm quỹ.
+
+C. NHÓM QUỸ
+[ ] C1. B thêm 1 helper, nhập mô tả nhiệm vụ rõ ràng -> helper có quyền nhập Thu/Chi.
+[ ] C2. B thêm helper thứ 2 -> PASS.
+[ ] C3. Không thể chọn helper thứ 3.
+[ ] C4. Có thể chọn Admin cũ làm helper; khi được chọn Admin lấy lại quyền Thu/Chi với tư cách helper.
+[ ] C5. B xóa Admin/helper khỏi nhóm -> người đó mất quyền Thu/Chi.
+
+D. GIAO DỊCH + KHÓA 3 NGÀY
+[ ] D1. Primary tạo Thu -> số dư và máy khác cập nhật realtime.
+[ ] D2. Helper tạo Chi -> số dư và máy khác cập nhật realtime.
+[ ] D3. Helper sửa/xóa khoản của chính mình khi còn <3 ngày -> PASS.
+[ ] D4. Helper không sửa/xóa khoản do người khác tạo -> bị chặn.
+[ ] D5. Primary sửa/xóa bất kỳ khoản nào còn <3 ngày -> PASS.
+[ ] D6. Khoản >3 ngày hoặc legacy không có server createdAt -> hiện Khóa và không sửa/xóa được.
+[ ] D7. Sau xóa, số dư được tính lại chính xác và dấu chân xóa vẫn còn.
+
+E. DẤU CHÂN
+[ ] E1. Tạo Thu/Chi -> Nhật ký có người thao tác, thời gian, dữ liệu Sau.
+[ ] E2. Sửa -> Nhật ký có Trước và Sau.
+[ ] E3. Xóa -> Nhật ký giữ dữ liệu Trước và trạng thái Sau = đã xóa.
+[ ] E4. Bàn giao / từ chối / nhận / đổi nhóm quỹ đều tạo dấu chân riêng.
+
+F. THỐNG KÊ
+[ ] F1. Tab Ngày -> 7 ngày gần nhất.
+[ ] F2. Tab Tháng -> 6 tháng gần nhất.
+[ ] F3. Tab Năm -> 5 năm gần nhất.
+[ ] F4. Biểu đồ Thu/Chi hiển thị mượt, không che nhãn.
+[ ] F5. DEBUG: bật Dữ liệu thử -> biểu đồ có dữ liệu mẫu ngay.
+[ ] F6. Tắt/bật lại app sau Mô phỏng -> Firestore không xuất hiện giao dịch mẫu nào (RAM-only).
+
+G. REGRESSION
+[ ] G1. Family Bloom dùng một package duy nhất com.familybloom.android; không còn gate dual-app.
+[ ] G2. Lời thì thầm direct vẫn báo notification đúng người nhận.
+[ ] G3. Hộp thời gian sender/recipient realtime vẫn hoạt động.
+
+EXPECTED: PASS toàn bộ trước khi đưa Phase 14S.1 sang Release.

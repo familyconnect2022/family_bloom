@@ -1,0 +1,13 @@
+H19 — CHECKLIST TEST APK THẬT
+1. Build APK mới từ FULL CODE H19, mở Developer Tools và xác nhận versionCode=143029, native=P2.37R2C-H19-native-1.
+2. Tạo ván Chess với Bloom Bot, đi 2 nước; kill app hoàn toàn rồi mở lại (đúng tài khoản+family). Sau Home first paint phải có lời hỏi “Bạn có muốn tiếp tục ván cờ?”.
+3. Bấm “Để sau”: ván vẫn tồn tại, không resign, sau đó vào trang game dùng Recover thủ công được. Kill/mở lại sẽ hỏi lại.
+4. Tiếp tục ván: board hiển thị đúng 32 quân/ô theo FEN, không lóe ô rỗng/tiny dots; không cần bấm Đầu hàng để sửa giao diện.
+5. Giữa lượt của mình, tắt Wi-Fi và dữ liệu. Thử e2-e4 (hoặc nước hợp lệ). Chỉ di chuyển một lần trong client. Không cho nhập nước tiếp khi movePending.
+6. Bật mạng: board tự rejoin room, so FEN/revision; nếu server giữ thế cờ cũ thì gửi lại đúng 1 intent, Bot phản hồi và ván chơi tiếp được.
+7. Lặp lại khi chơi Đen. Xác nhận quân Trắng không thể được chọn khi đang chơi Đen.
+8. Đổi mạng đúng lúc ACK chưa về; kiểm tra không giật ngược, không gửi đôi.
+9. Nếu server đã tiến thêm nước khác, không gửi lại nước dự đoán lỗi thời, hiển thị thông báo chọn lại.
+10. Full <-> Mini sau recovery, đồng hồ, Result UI và âm thanh không bị vỡ.
+Ghi log/gameId/revision nếu có lỗi; không chia sẻ UID/token thật.
+CHƯA KIỂM CHỨNG: Android Gradle APK và Render production. Đây là checklist cho người dùng test.

@@ -1,0 +1,32 @@
+FAMILY BLOOM - FB12/15 + GENDER NODES + NOTE VIA PERSON.DESCRIPTION
+Release: 2026-11-04
+Baseline: User-provided FB01_FB10 consolidated full code, accepting earlier Hero Reading Veil via SHA-bound installer.
+
+IMPLEMENTATION
+- Three user-approved node styles mapped by person.gender; actual portrait source unchanged.
+- 112x124 graph node geometry constants UNCHANGED; connector calculations and Firestore relationships UNCHANGED.
+- Full Person name retained; 5 text lines and compact adaptive font; full name available in existing detail sheet.
+- Node Note icon and orange unread/content dot; floral paper style preview; expand and close.
+- Node Note data reads family Person.description. No new 'note' Firestore field or migration.
+- Create/edit Person forms use same description; new input limit 2500 for Cloud Function compatibility.
+- Time Capsule required title validation is beside the input; placeholder shortened.
+- Fund Accept handover button uses active primary color; existing disabled state unchanged.
+- Private, target-only in-app Activity inbox notices after fund handover request, response or cancellation.
+- In-app Activity graph notices after new Person/relationship create with fallback; existing manual summary remains for other changes.
+- Learning redesign FB11 deferred, chess/Xiangqi and Render code unchanged.
+
+VALIDATION PERFORMED
+PASS: 393/393 TypeScript/TSX syntax transpilation.
+PASS: 2157/2157 local import specifiers resolve to source files.
+PASS: Expo Router unique screen/layout route check, 3 layouts.
+PASS: Family Graph integrity tests (chronology, cycles, candidates).
+PASS: Phase2 static transpilation, 393 files.
+PASS: Project structural check 19/19.
+PASS: Installer tested against clean FB01-FB10 copy: hash check, backup, apply, post-check.
+PASS: Installer previously tested against original Hero Reading Veil baseline using the same SHA/backup logic; final new files pending an equivalent fresh-copy test.
+PASS: Firebase rules and functions not changed, no new Person field.
+
+KNOWN LIMITATIONS
+NOT RUN: Native Android/Gradle Release APK, real device font scaling, Windows BAT launch, production Firestore Rules, FCM/Cloud Functions push, multi-user live synchronization.
+PRE-EXISTING FAILURE: historical test-m3r3-graph-avatar-security expects scripts/firestore.rules to byte-match firestore.rules; files already differ in user-provided FB01-FB10 baseline. Deliberately did not overwrite Rules just to pass old gate.
+In-app Activity inbox notices are not remote push notifications.

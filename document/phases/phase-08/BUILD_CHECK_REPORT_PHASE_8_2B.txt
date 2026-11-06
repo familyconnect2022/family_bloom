@@ -1,0 +1,58 @@
+> **SUPERSEDED 2026-09-25:** Phase 8.2B scheduling/yield behavior was rejected after real-device tab regression. Current authority is Phase 8.2C. Keep this file only as historical evidence.
+
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 8.2B FIRST FRAME / JS YIELD
+Date: 2026-09-25
+Base: Phase 8.3–8.5 reliability/multi-family build on Phase 8.2 optimized Graph
+Status: IMPLEMENTED / AWAITING USER DEVICE RETEST
+
+DEVICE EVIDENCE THAT TRIGGERED THIS PASS
+- 300 Person first paint: 3626ms (previous baseline ~5765ms)
+- 300 Person full progressive: 4097ms (previous ~7872ms)
+- 500 Person first paint: 5917ms (previous ~9258ms)
+- 500 Person full progressive: 6741ms (previous ~18571ms)
+- JS stall max in measured session: 6372ms
+- intermittent tab first-frame traces: Moments/Planner/Family roughly 380–556ms
+
+IMPLEMENTED
+- Full Tree auto-expansion waits for first viewport paint
+- every automatic progressive batch crosses a paint boundary
+- adaptive large-tree runtime initial/batch budgets under Phase 8.2 64/48 ceilings
+- connector decoration deferred until after first node viewport paint
+- stable partner adjacency index reused by progressive + viewport logic
+- connector lane/routing work tightened to viewport route IDs while full parent truth remains indexed
+- Planner/Moments focused realtime work deferred past a paint boundary
+- tab traces record focus-yield and listener-open timing
+- Performance Lab remains enabled in test builds
+
+STATIC / REGRESSION
+- TS/TSX transpile: PASS — 144 files
+- Relative imports: PASS — 523 checked, 0 missing
+- Phase 8.2B first-frame / JS-yield contract: PASS
+- Phase 8.3–8.5 reliability contract: PASS
+- Phase 7 multi-family: PASS
+- Startup gate: PASS
+- Tab warmup: PASS
+- Phase 6.5 integration: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Query/Kinship/Focus: PASS
+- DG-11 batch relationships: PASS
+- Dense layout/spatial routing: PASS
+- 50/100/300/500 synthetic Graph benchmark: PASS
+- Functions core/syntax: PASS
+
+LATEST CONTAINER SYNTHETIC RUN
+- Phase 6.4 progressive order ~6.9ms; 120 viewport queries ~6.4ms; avg 82.7, max 143
+- dense adapter ~3.3ms; spatial routing ~44ms
+- 500 Person adapter ~2.6ms
+
+NOT CERTIFIED HERE
+- Android first-paint improvement from this 8.2B pass
+- Android JS-stall reduction
+- native FPS/GPU/RAM
+- offline retry / A+B/C Moment / family-switch splash functional acceptance
+
+DEPLOY IMPACT
+- schema/migration: none
+- firestore.rules: unchanged
+- Functions/Blaze: not required
+- native/npm dependency: none

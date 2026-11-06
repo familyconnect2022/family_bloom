@@ -1,0 +1,20 @@
+H21 ACCEPTANCE CHECKLIST – REQUIRED BEFORE CHESS SIGNOFF
+
+[ ] Build the new APK with Build & Share. Confirm package com.familybloom.android, 1.3.21, versionCode 143031 and native identity P2.37R2C-H21-native-1.
+[ ] Deploy matching H21 server/ (Render), then launch APK H21 on two DIFFERENT Firebase users in the same family.
+[ ] A invites B from lobby, B receives Super Bloom invitation while in another tab, countdown is 60 seconds; accept at 59s and confirm both Full boards open.
+[ ] Retry invite: A cancels -> B sees terminal notice; try decline/expiry/cancel-vs-accept race; neither player is stuck in pending game.
+[ ] After B accepts, delay B asset readiness. Check the server does NOT publish colors or run the clock before both boardReady.
+[ ] After both boardReady, check both players see correct White/Black orientation; delay one playReady; clock remains stopped. After both ready, White's clock begins and only White may move.
+[ ] Background B while A stays in app: game moves toward away deadline according to server time; tab switching WITHIN app must not count as background.
+[ ] 10+0, 10+5: >2:00 remaining -> away allowance 50%; at exactly 2:00 or below -> full remaining.
+[ ] 5+0: >1:00 remaining -> away allowance 50%; exactly 1:00 or below -> full remaining.
+[ ] 3+2: absence deadline uses full remaining; separately verify flag-fall/normal clock interactions.
+[ ] Repeated B background/foreground cannot replenish used away allowance; repeated duplicate background events cannot postpone deadline.
+[ ] Kill B during active game; verify A sees win immediately when authoritative deadline expires and may play C before B reopens the app.
+[ ] Open B after expiration; show a completed-game defeat; never offer to resume the expired game.
+[ ] While B is absent, restart Render; recover active state and verify saved absence deadline was NOT extended or cleared by an inactive reconnect.
+[ ] Full/Mini clock and last-moved piece remain independent Native UI updates; no Home/tree/Xiangqi rerender, no new chess jitter/premove reset.
+[ ] Perform test game with Bloom Bot and a human to confirm neither flow is left waiting for ready.
+
+NOT DEVICE-TESTED IN THIS SOURCE-ONLY DELIVERY.

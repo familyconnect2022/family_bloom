@@ -1,0 +1,36 @@
+FAMILY BLOOM — R3 -> R5 DIRECT UPDATE, 30/10/2026
+
+SOURCE: M3R4R3 R1_BASE original ZIP (16,459,621 bytes).
+DESTINATION: M3R4R5 SAFE R1_BASE Android source; R3 compatibility pack adds updater/test/documentation only.
+APP package: com.familybloom.android
+Android versionCode: 143043 (unchanged; existing binary identity gates).
+
+VERIFIED:
+- R3 original source matches 8 identity hashes + 14 extra critical source hashes.
+- Unknown R2 / custom or R3 critical code tampering is rejected before backup/copy.
+- Auto-update-full.cjs check against exact extracted R3: PASS.
+- Simulated backup/overlay/verify against a disposable R3 copy: PASS.
+- Source backups created successfully, original secrets test fixtures preserved.
+- New AvatarCropEditor, welcomeGate, CV code present after overlay.
+- Welcome/CV preflight 17/17 PASS.
+- CV/avatar crop contract 15/15 PASS.
+- Background avatar queue regression PASS.
+- Windows Build & Share source preflight 7/7 PASS.
+- Script layout test 14/14 PASS.
+- Source structure 19/19 PASS.
+- TS/TSX parser/transpile 347/347 PASS.
+- Expo Router duplicate route check PASS.
+
+NOT VERIFIED:
+- Full Windows .bat CLEAN_APPLY_FULL execution, npm install on the user's PC, Android Gradle build, real APK, physical device UI.
+- Live Firebase/Cloudinary operation.
+- Direct byte-for-byte R2 merge (R2 original ZIP still inaccessible).
+
+USER ACTION:
+1. Keep old R3 project intact; unzip this FULL release to a distinct, non-nested folder.
+2. Run Family_Bloom_AUTO_UPDATE_FULL.bat from the unzipped FULL folder.
+3. When asked for target folder, choose the CURRENT R3 project folder.
+4. If source fingerprint mismatch, STOP. Never force or bypass the gate.
+5. Only after UPDATE PASS, run Family_Bloom_BUILD_APK_TO_SHARE.bat in the updated project.
+
+NOTE: Rollback requires restoring updater's generated backup; do not manually mix R3 and R5 folders.

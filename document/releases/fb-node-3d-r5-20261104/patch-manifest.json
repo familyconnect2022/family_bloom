@@ -1,0 +1,33 @@
+{
+  "release": "Family Bloom Node 3D R5 BAT-PRESERVING installer (same app code)",
+  "baseline": "Exact Node 3D R4 application source files; preserve any existing root BAT without modifying it",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "src/constants/appConfiguration.ts",
+      "before": "8520e855415ff9705f3214ee989dd5c7d3aae93b00af9bde43cadae9de7f712e",
+      "after": "e2bb1e50ec36314fc541c661ab6cf03c833e9613a82be27a7ba4d5cae45282a9"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-admin.tsx",
+      "before": "2a8f1c955e696a85fc791e606dbf3e61acabedc61d02ae5b33758b39b81aeb96",
+      "after": "cca6aecb36812411ff87d329cc189e0f6a15d335bfbb3140566d743bad9834be"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-person-editor.tsx",
+      "before": "bc84f2997bc50e5cdc79e5c9729fb48cb63e547fd21c8112f6e360859e620333",
+      "after": "a65760c058f863fd1172ca8bab482b49aed4ed76b3fd1665e798782f1392a6c9"
+    }
+  ],
+  "remove": [],
+  "extra": [
+    "scripts/maintenance/fb-node-3d-r5-safe-update.cjs",
+    "scripts/tests/release/test-node-r5-spacing-gender.cjs",
+    "document/releases/fb-node-3d-r5-20261104/patch-manifest.json",
+    "document/releases/fb-node-3d-r5-20261104/RELEASE_NOTES.txt"
+  ],
+  "preservedFiles": [
+    "Family_Bloom_AUTO_UPDATE_FULL.bat"
+  ]
+}

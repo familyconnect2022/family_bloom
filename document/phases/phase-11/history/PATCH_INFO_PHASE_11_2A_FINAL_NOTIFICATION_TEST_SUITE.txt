@@ -1,0 +1,10 @@
+Family Bloom Phase 11.2A final notification test-suite hotfix
+Date: 2026-09-27
+
+- Adds developer-only button in Chuyện trong nhà for account token huynh235.
+- One tap schedules 9 local Android notifications: Moment, Planner/Event, Graph x normal/notable/important.
+- 8-second cadence, old suite schedules are cleared first.
+- Generic Moment test notification now opens Moments tab even without a sourceId.
+- Reworks BloomTimePicker to remove FlatList/VirtualizedList entirely; uses 24 hour chips + 5-minute chips.
+- Today still blocks past times and quick presets in the past.
+- No Cloud Functions, no remote FCM messaging, no Firestore schema/rules change, no new realtime listener.

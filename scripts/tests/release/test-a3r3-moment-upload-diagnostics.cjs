@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+'use strict';
+const fs=require('node:fs');const path=require('node:path');const assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../../..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+let passed=0;const check=(desc,predicate)=>{assert(predicate,desc);console.log('PASS '+(++passed)+' '+desc)};
+const cloud=read('src/services/media/cloudinaryService.ts');
+const media=read('src/services/media/momentMediaApi.ts');
+const moment=read('src/context/MomentPublishContext.tsx');
+const pending=read('src/components/moments/PendingMomentCard.tsx');
+const guide=read('src/services/media/momentUploadError.ts');
+const manifest=JSON.parse(read('scripts/setup/bat-entrypoints-manifest.json'));
+const env=read('src/config/env.ts');
+check('Signed Moment Cloudinary endpoint comes from Vercel-signed cloudName',cloud.includes('signed?.cloudName ?? APP_CONFIG.CLOUDINARY.cloudName'));
+check('Only unsigned uploads require local preset',cloud.includes('!signedManaged && (!APP_CONFIG.CLOUDINARY.cloudName || !preset)'));
+check('Vercel HTTP status survives error wrapping',media.includes('MOMENT_MEDIA_API_HTTP_${response.status}')&&cloud.includes('MOMENT_MEDIA_'));
+check('Cloudinary HTTP status survives error wrapping',cloud.includes('CLOUDINARY_UPLOAD_HTTP_${status}'));
+check('Signed server response validated',media.includes('MOMENT_MEDIA_BAD_SIGNATURE_RESPONSE')&&media.includes('typeof signed.cloudName'));
+check('Failures record sanitized cause without logging credentials',moment.includes('const safeReason = momentUploadErrorMessage(error, stage)')&&moment.includes('error: safeReason'));
+check('Failed card surfaces actionable cause',pending.includes('item.status === "failed" && !!item.error')&&pending.includes('selectable>{item.error}'));
+check('Distinct diagnostics for Firestore, Cloudinary and Vercel',guide.includes('Firestore')&&guide.includes('Cloudinary')&&guide.includes('Vercel'));
+check('Stale old Media URL cannot override new deployment',env.includes('rawMediaEnvUrl === LEGACY_MOMENT_MEDIA_API_URL')&&env.includes('mediaEnvUrl || mediaExtraUrl || DEFAULT_MOMENT_MEDIA_API_URL'));
+check('Exactly two root shortcuts registered',manifest.batFiles.filter(x=>!x.includes('/')).length===2);
+check('EAS files remain grouped and root duplicates retired',!fs.existsSync(path.join(root,'Family_Bloom_EAS_BUILD_TEST.bat'))&&!fs.existsSync(path.join(root,'Family_Bloom_EAS_UPDATE_TEST.bat'))&&fs.existsSync(path.join(root,'scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat')));
+console.log(`A3R3 MOMENT HOTFIX ${passed}/${passed} PASS`);

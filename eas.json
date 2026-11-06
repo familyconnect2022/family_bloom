@@ -1,0 +1,19 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "family-bloom-test": {
+      "distribution": "internal",
+      "channel": "family-bloom-test",
+      "android": {
+        "buildType": "apk"
+      },
+      "developmentClient": true,
+      "env": {
+        "EXPO_PUBLIC_MOMENT_MEDIA_API_URL": "https://vercelfamilybloommedia.vercel.app",
+        "EXPO_PUBLIC_CHESS_SOCKET_URL": "https://render-chess-xiangqi.onrender.com"
+      }
+    }
+  }
+}

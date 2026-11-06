@@ -1,0 +1,37 @@
+FAMILY BLOOM R8R4R3 - FULL CODE TICH HOP R8R4R2 + R8R4R3
+Ngay: 31/10/2026
+
+BAN NAY CO THE NANG CAP TRUC TIEP TU R8R4R1 (KHONG CAN CAI R8R4R2 TRUOC).
+
+1. Dung FULL CODE R8R4R3 lam nen tang, DA CHUA TOAN BO R8R4R2.
+2. Tinh nang ke thua R8R4R2: input/button/header theo theme, viền focus, mo phong bi trong suot
+   va goi y chu gon sang, thu hep render theme tai root, tab chuyen canh nhanh.
+3. R8R4R3 bo sung: hero anh minh hoa theo 4 theme voi chan anh tan vao nen,
+   tabbar noi nhan giu-keo-tha, snap diem neo gan nhat, chuyen tab khi nha tay.
+4. Ban cờ Full/Mini va logic Firebase/Auth/Moment khong bi sua de hop nhat.
+5. Danh tinh source giu nguyen R8R4R3; day la goi phat hanh hop nhat/ban giao,
+   KHONG phai mot version code Android moi.
+
+HUONG DAN WINDOWS:
+- Giai nen ZIP nay thanh THU MUC RIENG, khong giai nen truc tiep len project cu.
+- Tu thu muc moi giai nen, chay Family_Bloom_AUTO_UPDATE_FULL.bat.
+- Chon thu muc project Family Bloom dang dung (R8R4R1 hoac R8R4R2).
+- BAT kiem tra nguon TRUOC khi sua; neu fail, DUNG LAI, khong chay Build & Share.
+- Doc duong dan BACKUP sau khi chay thanh cong; giu lai cho den khi test xong APK.
+- Sau khi Auto Update bao PASS, moi chay Family_Bloom_BUILD_APK_TO_SHARE.bat.
+- Khong can chay BAT R8R4R2 va khong can chép tay patch R8R4R2.
+
+DA KIEM TRA:
+- R8R4R2 (1530 file) la tap con hoan toan cua R8R4R3 (1548 file): 0 file thieu.
+- R8R4R1 -> R8R4R3 check, backup, overlay, verify tren BAN SAO: PASS.
+- Bao toan gia lap .env: PASS. 1548/1548 file o target khop ma nguon.
+- Test 8/8 R8R4R1, 13/13 R8R4R2, 27/27 R8R4R3,
+  22/22 theme co ban, 6/6 runtime Thu Ngo: PASS.
+
+CHUA KIEM CHUNG:
+- BAT tren Windows cua ban, Gradle/APK Android that, ve do muot gesture tren dien thoai.
+- 92/92 man hinh chua duoc chuyen het sang Living Storybook.
+- Cac kiem tra Render phu thuoc may chu khong duoc tinh PASS.
+
+Luu y an toan: project nguon phai khop fingerprint phat hanh da duoc xac minh;
+project co thay doi ngoai luong co the bi tu choi de tranh mat code.

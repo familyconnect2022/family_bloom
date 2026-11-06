@@ -1,0 +1,56 @@
+FAMILY BLOOM — BUILD CHECK REPORT — PHASE 8.2C TAB REGRESSION CORRECTION
+Date: 2026-09-25
+
+RESULT
+PASS — source/static regression gate completed in handoff environment.
+Real Android device retest is still required before runtime PASS.
+
+STATIC
+- 144 TS/TSX files transpiled: PASS
+- 525 relative imports checked: 0 missing
+
+CURRENT CONTRACTS
+- Phase 8.2C tab-regression correction: PASS
+- Phase 8.3–8.5 reliability/multi-family: PASS
+- Phase 7 multi-family: PASS
+- Startup gate: PASS
+- Tab warmup scheduling: PASS
+- Phase 6.5 Person Integration: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Query/Kinship/Focus: PASS
+- DG-11 batch relationship: PASS
+- Dense layout/spatial routing: PASS
+- Functions familyGraphCore: PASS
+- Functions JS syntax: PASS
+
+SYNTHETIC GRAPH BENCHMARK
+- 50 Person: PASS
+- 100 Person: PASS
+- 300 Person: PASS
+- 500 Person: PASS
+Note: container benchmark does not replace device rendering measurements.
+
+8.2C CORRECTION ASSERTIONS
+- 8.2B schedulePaintYieldTask removed.
+- firstViewportPaintReady / connectorRenderReady scheduling gates removed.
+- Phase 8.2 idle progressive scheduler restored.
+- partner adjacency index retained.
+- scoped connector routing retained.
+- Planner listeners no longer depend on tab focus.
+- pending review listeners no longer depend on Family tab focus.
+- Moments moderation listener no longer depends on Moments tab focus; visible-card comment/reaction realtime remains focus-bounded.
+- Performance Lab and tab/listener markers retained.
+
+DEPLOY IMPACT
+- Firestore schema: unchanged
+- Rules: unchanged
+- Functions: no deploy
+- Native/npm dependencies: unchanged
+- Blaze: not required
+- USE_CLOUD_FUNCTIONS=false
+
+DEVICE ACCEPTANCE TARGET
+- Typical warmed tab transitions should trend back toward the earlier ~150–250ms range.
+- Moments/Planner/Family should not repeatedly sit around 0.7–1.0s.
+- Listener count may be above five for admin users, but must remain stable under repeated tab switching.
+- 300/500 Person Full Tree should not regress versus the Phase 8.2 + 8.3–8.5 baseline.

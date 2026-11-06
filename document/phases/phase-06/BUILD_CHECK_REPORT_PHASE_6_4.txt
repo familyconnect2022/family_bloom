@@ -1,0 +1,19 @@
+FAMILY BLOOM — PHASE 6.4 BUILD CHECK
+Date: 2026-09-24
+
+PASS: Family Graph dense layout + connector routing
+PASS: Phase 6.4 viewport/progressive synthetic test
+PASS: Query/Kinship/Focus Subgraph
+PASS: DG-11 Batch Relationship Composer
+PASS: Phase 6.3 synthetic benchmark 50/100/300/500
+PASS: 123 TS/TSX transpile syntax check
+PASS: 408 relative imports checked, 0 missing
+
+Phase 6.4 viewport synthetic fixture:
+- 500 Person
+- progressive order starts at focus
+- 120 spatial viewport queries
+- average visible nodes ~65
+- max visible nodes ~110
+
+Note: synthetic/static checks do not replace real-device acceptance.

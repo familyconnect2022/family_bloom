@@ -1,0 +1,12 @@
+FAMILY BLOOM PHASE 14L — DEVICE / NETWORK CHECKLIST
+
+[ ] Existing Phase 14K playlist regenerates under *_3d_vi2 at the next load/cycle.
+[ ] Automatic Playlist remains 100% Vietnamese-language; no arbitrary Audius global fill.
+[ ] Search / Yêu thích / Bài hát Nhà Mình / player still behave like 14K.
+[ ] Run Family_Bloom_Refresh_Vietnamese_Music.bat on a Windows machine with Internet.
+[ ] Refresh report shows Top 50 Nhạc Việt / trending / recent parsing counts > 0.
+[ ] Review queue items do not appear in automatic playlist.
+[ ] First full Audius audit produces matched / ambiguous / unmatched coverage report.
+[ ] After audit, unmatched/ambiguous seed IDs are not searched again at runtime.
+[ ] If Audius coverage is too low to build 20 verified Vietnamese tracks, Bloom shows the friendly shortage message and does not insert foreign tracks.
+[ ] After pushing latest code to GitHub, run workflow_dispatch once and confirm generated metadata can commit successfully.

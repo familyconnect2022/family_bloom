@@ -1,0 +1,16 @@
+Family Bloom P2.28 R1 - Build Gate Packaging Fix
+Date: 2026-10-15
+
+Reason for R1:
+The original P2.28 FULL ZIP accidentally excluded scripts/android/* from the archive even though those files existed and passed the P2.28 gate in the working source. On copy-over installations, the user's older scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat therefore remained in place. The P2.28 invariant gate correctly reported:
+  FAIL Release APK build gates on P2.28 + typecheck
+
+R1 changes no app/game/Focus runtime logic. It fixes FULL-package completeness by including the full scripts/android directory, including:
+- Family_Bloom_Android_Test_App_RELEASE.bat
+- Family_Bloom_Android_Release_Build_APK_And_Share.bat
+- Family_Bloom_Android_Debug_Build_And_Run.bat
+- the remaining Android helper BAT files
+
+Expected verification after overlay:
+  npm run phaseP2_28:check
+must report 51 PASS / 0 FAIL.

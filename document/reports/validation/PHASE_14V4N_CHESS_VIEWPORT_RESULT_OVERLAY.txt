@@ -1,0 +1,21 @@
+PHASE 14V4N — CHESS VIEWPORT RESULT OVERLAY VALIDATION
+Date: 2026-10-04
+Base: Phase 14V4M
+
+Fix:
+- ChessResultToast moved out of boardStage.
+- ChessResultToast moved out of ScrollView and mounted under ScreenContainer root.
+- absoluteFillObject now resolves against the viewport.
+- Result toast cannot consume layout height or scroll with the board.
+- Result toast hides while rematch loading overlay is active.
+- V4M fixed Bloom Bot 120 ms test timing preserved.
+- V4M material advantage/captured-piece layout preserved.
+
+Validation:
+- Phase 14V4N: PASS 12/12
+- Phase 14V4M regression: PASS 15/15
+- Phase 14V4L regression: PASS 18/18
+- Phase 14V4K regression: PASS 11/11
+- Phase 14V4J regression: PASS 17/17
+- Phase 14U core: Phase 14U Chess static: 54 PASS / 0 FAIL
+- TS/TSX syntax: 256/256 PASS

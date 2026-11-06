@@ -1,0 +1,68 @@
+PHASE 14T — TRÒ CHƠI NHÀ MÌNH — DEVICE CHECKLIST
+
+A. PREP
+[ ] Deploy Firestore Rules successfully.
+[ ] Build/install Family Bloom DEBUG trên máy test/máy thứ hai; app dùng package duy nhất com.familybloom.android.
+[ ] Existing Quỹ gia đình still opens and Phase 14S.1A date/keyboard behavior still works.
+
+B. HUB
+[ ] Nhà Mình card says “Trò chơi Nhà Mình” and “CHƠI NGAY”.
+[ ] Game hub shows exactly six game types.
+[ ] “Dữ liệu thử” 10 / 50 / 100 changes only the on-screen mock list and creates no Firestore documents.
+[ ] Horizontal recent-session rail stays smooth with 50/100 simulated rows.
+
+C. AI HIỂU AI NHẤT?
+[ ] Create a round with >=2 real family users.
+[ ] Pick one subject.
+[ ] Subject answers 5 questions.
+[ ] Another member guesses the same 5 questions.
+[ ] Before reveal, other users cannot see hidden answers.
+[ ] Creator reveals; answer key + score appear.
+
+D. ĐOÁN NGƯỜI NHÀ MÌNH
+[ ] Creator chooses a secret member.
+[ ] Only creator + secret member can see secret identity before reveal.
+[ ] Secret member answers 3 clue questions.
+[ ] Other users see clues but not identity.
+[ ] Other users choose a member and submit.
+[ ] Reveal shows secret identity and correct-guess count.
+
+E. KÝ ỨC NÀY CỦA AI?
+[ ] Family has at least one family-timeline Moment from a selected player.
+[ ] Round shows Moment preview/caption but not author.
+[ ] Players guess a member.
+[ ] Reveal shows original author.
+[ ] No Moment copy is created just by playing.
+
+F. CHUYỆN THẬT HAY BỊA?
+[ ] Chosen subject writes three multiline statements.
+[ ] Keyboard keeps the whole growing multiline input above keyboard.
+[ ] Subject marks exactly one lie.
+[ ] Other users see the three statements but not lie index.
+[ ] Other users pick statement 1/2/3.
+[ ] Reveal marks the lie clearly.
+
+G. NỐI CHUYỆN NHÀ MÌNH
+[ ] Turn order is frozen when created.
+[ ] Only the current turn sees the active input.
+[ ] After each line, the next participant becomes active.
+[ ] Before reveal, UI shows starter + latest line rather than full story.
+[ ] After every turn is complete, creator reveals full story.
+[ ] “Lưu thành Moment” creates one text-only family Moment.
+
+H. BINGO NHÀ MÌNH
+[ ] Shared 3x3 board has 9 different prompts.
+[ ] Each member can mark/unmark their own cells.
+[ ] Progress survives leaving/reopening the round.
+[ ] Row/column/diagonal shows BINGO.
+
+I. SECURITY / MULTI-DEVICE
+[ ] Không còn dual-app gate; dùng hai thiết bị thật hoặc clone/profile của hệ điều hành khi cần hai tài khoản đồng thời.
+[ ] A non-participant cannot read a session by guessed ID.
+[ ] A participant cannot write another participant’s response document.
+[ ] Hidden answers are not readable before reveal.
+
+J. REGRESSION
+[ ] Quỹ gia đình still shows real/simulated data correctly.
+[ ] Lời thì thầm recipient notification still works.
+[ ] Hộp thời gian still updates sender/recipient state.

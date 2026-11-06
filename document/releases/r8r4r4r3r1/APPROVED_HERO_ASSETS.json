@@ -1,0 +1,188 @@
+{
+  "release": "R8R4R4R3R1",
+  "base": "R8R4R4R3 FULL CODE (includes R8R4R4R2)",
+  "art_source": "Family_Bloom_20_Hero_Images_4_Themes.zip",
+  "notes": "User-approved original PNG bytes are copied without resampling/recoloring into main hero art. Thumbnails generated from same files.",
+  "assets": {
+    "family_rose.png": {
+      "sha256": "8c527b2e1ef559be8959eb406741952de6a5421f04cc19b15ea8254ed8343fa8",
+      "thumbnail_sha256": "868d297584c7efcdc88de074664ca39b863869a684834df2f04446722c984344",
+      "size_px": [
+        740,
+        460
+      ],
+      "bytes": 842450
+    },
+    "family_garden.png": {
+      "sha256": "6a15dc36485f83bbe61d38b2a8313a9a23122827d75793dd02bc0213bf25cc60",
+      "thumbnail_sha256": "01dc19d31c8966b592e8caf6c1c3fb1234c16c7c985691600e21cda72ea74677",
+      "size_px": [
+        740,
+        460
+      ],
+      "bytes": 877436
+    },
+    "family_heritage.png": {
+      "sha256": "9801b34bda3d2ae71e212d39858702d176e732df05cbb4cb0898e79d4ab8625d",
+      "thumbnail_sha256": "cfafa0b2e2de9d323f3482cd685b7af401f20fa1b044a30ad388c2646117f9f8",
+      "size_px": [
+        740,
+        455
+      ],
+      "bytes": 824198
+    },
+    "family_midnight.png": {
+      "sha256": "48b8de351a63e64884771bb7d5e69ecbf7d0dab2eab2cdb868abe1a7899ac096",
+      "thumbnail_sha256": "fc3121a22356f06d7b26bce99ec9422759c5010f43fc0e9af981cf59144f9a84",
+      "size_px": [
+        740,
+        455
+      ],
+      "bytes": 830931
+    },
+    "moments_rose.png": {
+      "sha256": "acf41c725e6f6382ac2d249eb82322cf8355940b6e65cf1d10de9dbb31d7cae7",
+      "thumbnail_sha256": "9d5125969cb8ea64b36d988b59e94b1ca7b6b661b9dc79264f9b9079dc4972a4",
+      "size_px": [
+        719,
+        476
+      ],
+      "bytes": 826662
+    },
+    "moments_garden.png": {
+      "sha256": "b6047eb5b88c8d1f5fc74164b235a2b7021456c6f13fbcdea46e68d1e5eb7391",
+      "thumbnail_sha256": "f9885984ad54c2057eea9c7844cd688aa2087b3cb7a7a319ad24980f7c254d4f",
+      "size_px": [
+        718,
+        476
+      ],
+      "bytes": 856792
+    },
+    "moments_heritage.png": {
+      "sha256": "12ffabe71d21319f592f6f9b439e227be0c66bf2f1087ff0ac4daae303cdc48a",
+      "thumbnail_sha256": "bbffbec48aad058c9a7d1f204554d6b82bdb60b0ec43d055f3a4901d9d4ae26e",
+      "size_px": [
+        719,
+        470
+      ],
+      "bytes": 797403
+    },
+    "moments_midnight.png": {
+      "sha256": "4008a397663d1fbe0a70554de53c72251f8aab6d2a7c619cc3266089cccab387",
+      "thumbnail_sha256": "f72fed6e01b8b34571b1e5d82f79cfd767aa5fce1d07acc661d4f71fb2513a36",
+      "size_px": [
+        718,
+        470
+      ],
+      "bytes": 799079
+    },
+    "learning_rose.png": {
+      "sha256": "c1e63f053e72bc1f663064513b0179a56914e7d05e7baca92c45cd7f9e95ccd4",
+      "thumbnail_sha256": "2e9363075bbaa13cab3072c4d9eae7cab1c26211cc6e6616de58ce9caf0586c6",
+      "size_px": [
+        719,
+        476
+      ],
+      "bytes": 798720
+    },
+    "learning_garden.png": {
+      "sha256": "140d2b91826392df1f79313393ec42280b749544ad868efc8588614172de73d9",
+      "thumbnail_sha256": "10035d73a2aeabc748d7116bb1cd38d4c9e293c30218f30678181ccffa606b6e",
+      "size_px": [
+        718,
+        476
+      ],
+      "bytes": 819257
+    },
+    "learning_heritage.png": {
+      "sha256": "9d22f3d06083aca44a39d61dfa47e884ed4361cc1b859bcb0ce02c70cee14526",
+      "thumbnail_sha256": "265c045ca9f94049b09ceeee40e34b095181e857a86c2a2e99f6f234fe7b5a24",
+      "size_px": [
+        719,
+        470
+      ],
+      "bytes": 764212
+    },
+    "learning_midnight.png": {
+      "sha256": "4f9ddd9a6178f3cb07552e7cc0064c81d72603cb2dcd3c98edf9f9a91cb80737",
+      "thumbnail_sha256": "ec3e05328708a1bc16b79d22d133c72d1470d4f29463619aa20eedf04d313f99",
+      "size_px": [
+        718,
+        470
+      ],
+      "bytes": 788207
+    },
+    "events_rose.png": {
+      "sha256": "e86f404e1732ffcdcd6cff8f65cad8c3e920a27ec81f3c6062ed91c79646916a",
+      "thumbnail_sha256": "5d635636bd97a228c86f3362bef7be20b8983cc7ec58e3f48e5439c421f42a25",
+      "size_px": [
+        719,
+        476
+      ],
+      "bytes": 850946
+    },
+    "events_garden.png": {
+      "sha256": "7ae20819e92aee8960aadf98c732151cd91245faad0a56188b653581348ede83",
+      "thumbnail_sha256": "abc4679b4aca6d78432717aa0e2e91543758166e2fe3efa8b3fe7866fa9c3761",
+      "size_px": [
+        718,
+        476
+      ],
+      "bytes": 870201
+    },
+    "events_heritage.png": {
+      "sha256": "fde39e1079f1ea1314e96a68d98696b9bedab1144157f6b863d94817f21fc7eb",
+      "thumbnail_sha256": "b55fe45a89749234495068e2a43e93ab1cb7a74eb994f51138b490b94484fc37",
+      "size_px": [
+        719,
+        470
+      ],
+      "bytes": 807407
+    },
+    "events_midnight.png": {
+      "sha256": "71e8e1f8e02ffcc6bcce08a47c2ead44d360ef15f968ed95f4ae4945def0ee0b",
+      "thumbnail_sha256": "e8817227525e992795186a9f79e00889b04d25c51b9a4c9a9e3c7809be57fe93",
+      "size_px": [
+        718,
+        470
+      ],
+      "bytes": 830673
+    },
+    "settings_rose.png": {
+      "sha256": "60c9dc8f548408de715d6bf8fab18c98a092a22e89bd6ce0c552d13acd5cb743",
+      "thumbnail_sha256": "d05e24ae2df16cb5d2da93084b4458653c7b01efdd839ddda8b3cb23fa9a5bf6",
+      "size_px": [
+        719,
+        476
+      ],
+      "bytes": 817168
+    },
+    "settings_garden.png": {
+      "sha256": "91c5dc2791ecfc5c32ece771611e7d6732ad697fba5a272d4304102244f8501f",
+      "thumbnail_sha256": "0ec60e7d9d49e5580acfaa92e6f46a700d824f2e6b942e6eee02da71dd31675a",
+      "size_px": [
+        718,
+        476
+      ],
+      "bytes": 856332
+    },
+    "settings_heritage.png": {
+      "sha256": "d77e467145f4c5a13471c005bb9f3c87a4ff18a3b0176af1cb8412f1944100c9",
+      "thumbnail_sha256": "807c9ed9b1cb325fe21654a5d3697dc6aa908806bfe1e74613c971f8393e2f45",
+      "size_px": [
+        719,
+        470
+      ],
+      "bytes": 770608
+    },
+    "settings_midnight.png": {
+      "sha256": "7223f3092d030426f8048cb6ee61148f91f4d8200a8f9e2c8057a7d07ae792bc",
+      "thumbnail_sha256": "86eab1baebfd7916eb17f6f6aab00f53eb6dffab1fde3a00ea5143d3516add06",
+      "size_px": [
+        718,
+        470
+      ],
+      "bytes": 798878
+    }
+  }
+}

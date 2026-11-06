@@ -1,0 +1,98 @@
+M3R4R3 ANDROID SOURCE CHECK REPORT
+Fri Oct 30 07:08:16 UTC 2026
+===== AVATAR CONTRACT =====
+PASS Native square crop and permissions remain unchanged
+PASS Recovery is restricted to recent interrupted picks
+PASS Android canceled pick cannot replay cached image
+PASS Picker rejects previous selection with ticket
+PASS Every accepted avatar crop changes render revision
+PASS Local preview bypasses image cache and transition
+PASS Profile create is persisted without waiting for upload
+PASS Profile editing persists text without waiting for upload
+PASS Background job persists and is UID scoped
+PASS Superseded asset cannot attach
+PASS Foreground reattempt and dismiss/remove are implemented
+PASS Cloudinary identity confirmation retained
+PASS Graph avatars keep signed MIME mapping
+PASS Toast success is green and information is blue
+PASS Toast warning is amber and error is red
+PASS Avatar file MIME mapping 5/5
+M3R4R3 Avatar+toast checks 15/15 PASS
+===== ASYNC QUEUE =====
+PASS stale upload does not attach; latest avatar wins, pending record removed
+PASS queue discard clears persisted intent
+PASS uid identity gate blocks cross-account upload
+===== TOAST AUDIT =====
+{
+  "counts": {
+    "total": 191,
+    "success": 48,
+    "warning": 66,
+    "error": 13,
+    "info": 10,
+    "notification": 5,
+    "dynamic": 49,
+    "unclassified": 0
+  },
+  "out": "/mnt/data/family_bloom_work/source/document/reports/validation/FAMILY_BLOOM_M3R4R3_TOAST_AUDIT.csv"
+}
+===== PROJECT STRUCTURE =====
+PASS 01 - Root has zero Markdown/TXT documentation files
+PASS 02 - All Markdown/TXT documentation lives under document/
+PASS 03 - Canonical document/ directory exists
+PASS 04 - Accidental plural documents/ directory is absent
+PASS 05 - Legacy top-level reports/ directory is absent
+PASS 06 - Root BAT launchers exactly match the 2 declared in manifest
+PASS 07 - Android BAT helpers are grouped by purpose under scripts/android
+PASS 08 - Web BAT helpers live under scripts/windows/web
+PASS 09 - Firebase deploy helpers have one canonical home under scripts/firebase
+PASS 10 - Release reports are grouped under document/releases
+PASS 11 - Verification logs are grouped under document/verification
+PASS 12 - Device and validation reports are grouped under document/reports
+PASS 13 - Music machine state is outside document/
+PASS 14 - iOS Firebase plist is retired from Android/Web source
+PASS 15 - app.json has no active iOS block
+PASS 16 - package.json has no iOS run script
+PASS 17 - Android identity remains canonical
+PASS 18 - Structure gate is registered
+PASS 19 - P2.9 gate is registered
+
+Family Bloom project structure gate: 19/19 PASS
+===== ROUTE UNIQUENESS =====
+PASS Expo Router: 3 layouts checked, no duplicate Stack/Tabs/Drawer names
+===== USER AVATAR SECURITY =====
+PASS Native square avatar crop is available
+PASS User avatar requires server signature
+PASS Other media retains old legacy path
+PASS Avatar is confirmed before publication
+PASS Profile stores verified avatarAssetId
+PASS Profile creation attaches verified asset atomically
+PASS Profile edit uses signed managed upload
+PASS Firestore has signed user-avatar contract
+PASS User avatar cannot be directly deleted
+PASS Avatar visible on create and edit
+M3R2 Avatar 10/10 PASS
+===== GRAPH AVATAR SECURITY =====
+PASS Avatar square-crop restored for all BloomInputAvatar uses
+PASS No avatar can silently use unsigned preset
+PASS Person photo confirmation required
+PASS Person photo stored under exact family/person namespace
+PASS Graph editor uses signed managed upload
+PASS Graph editor cleans previously attached photo only after replacement
+PASS Graph transaction atomically updates person and asset
+PASS Rules block unverified avatar URL changes
+PASS Rules require graph admin for person uploads
+PASS Rules require signed person avatar record
+PASS Rules prevent deletion of linked avatar assets
+PASS Rules disallow client deletion of managed person avatar
+PASS Old Firestore rules deployment copy synchronized
+M3R3 Graph avatar 13/13 PASS
+===== BUILDSHARE REGRESSION =====
+[PASS] H11 ready phase + Full/Mini: [SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.
+[PASS] H13 result dismissal + bridge: H13 Bloom UI + immediate-return gate: PASS (20/20)
+[PASS] H14 black piece permission: [SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.
+[PASS] H15 release authority: [SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.
+[PASS] H17 optimistic controller: [SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.
+[PASS] H25R2R1 Build & Share mock/READY regression: 5/5 executable gates, 4/4 BAT entrypoints
+===== MEDIA SECURITY =====
+PASS A3R4M3R1 Android Media rules and API contract source checks

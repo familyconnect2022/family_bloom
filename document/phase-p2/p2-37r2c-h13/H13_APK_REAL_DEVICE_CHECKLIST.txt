@@ -1,0 +1,21 @@
+FAMILY BLOOM H13 — KIỂM TRA TRÊN APK THẬT
+
+[ ] Build Android APK versionCode 143023, native ID P2.37R2C-H13-native-1; cài đè H12 (giữ applicationId + signing key).
+[ ] Từ Hub mời Bloom Bot, màn Full mở ngay, các ô cờ PNG đủ và chỉ khi loading mới có overlay sáng.
+[ ] Màn Đang chuẩn bị: veil màu sáng; card sáng; không còn nút hồng giả / không thể bấm vào status.
+[ ] Status cạnh tên Bot đúng với waitingMessage; không tự chạy đồng hồ trước game.start từ server.
+[ ] Thắng: huy hiệu cúp, lời chúc Bloom, fireworks chỉ lúc xuất hiện (không chạy nền ở Mini).
+[ ] Hòa: card không đen, thông điệp công bằng và tôn trọng đối thủ.
+[ ] Thua: card sắc độ dịu, lời động viên phù hợp.
+[ ] Cầu hòa: nhấn mở xác nhận, hủy không gửi gì, gửi đề nghị chờ phản hồi.
+[ ] Xin thua: nhấn mở xác nhận, hủy không kết thúc, đồng ý do server quyết định kết quả.
+[ ] Bấm Về sảnh trò chơi khi Socket nhanh/chậm/offline: Full biến mất ngay; UI Hub tương tác được.
+[ ] Sau đó nếu kết quả cũ đến muộn (state/delta) không mở lại ván cũ.
+[ ] Sau khi về sảnh, mời một ván mới; ACK ván cũ trả muộn không đóng ván mới.
+[ ] Force close/restart khi ACK bị mất mạng: server có thể phục hồi unseen result; đó là fallback chấp nhận được.
+[ ] Mini/Full, âm thanh premove capture/check, phong cấp, reconnect không bị hồi quy.
+[ ] Bloom Bot mời user trong màn test: veil sáng, hai nút rõ, Từ chối/Đồng ý vẫn gửi đúng protocol.
+[ ] Chuyển Home, Moments, Phả hệ trong lúc Mini chạy; quan sát jank thực tế.
+
+CÁC KẾT QUẢ CHƯA KIỂM THỬ = không được coi là PASS.
+H13 chỉ thay UI native/JS client; server Render cần là H12 hoặc tương thích, không cần redeploy H13 (không có sửa server H13).

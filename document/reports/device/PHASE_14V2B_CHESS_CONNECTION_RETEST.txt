@@ -1,0 +1,39 @@
+PHASE 14V.2B — ANDROID CONNECTION RETEST
+
+PREP
+1. Push/redeploy updated server to Render.
+2. Confirm https://family-bloom-chess.onrender.com/health returns {"ok":true}.
+3. Keep EXPO_PUBLIC_CHESS_SOCKET_URL configured.
+4. Start Metro: npx expo start --dev-client --clear
+
+TEST A — COLD START
+1. Let Render sleep if practical, then open Family Bloom.
+2. Open Chess Lobby.
+3. Expected: UI may show "Đang đánh thức..." / "Đang kết nối...", but must not become a permanent false error if socket/lobby join later succeeds.
+4. Expected log eventually includes socket:connect, connect:ready, lobby join ok:true.
+5. Expected UI becomes "Sẵn sàng".
+
+TEST B — NAVIGATE INSIDE FAMILY BLOOM
+1. From Chess, go to Home/Nhà Mình/another Family Bloom route without putting app in background.
+2. Expected: no client disconnect.
+3. Expected: [ChessDebug] appState:change should not report a background transition merely because route changed.
+4. Expected: global challenge overlay can still arrive while foreground.
+
+TEST C — REAL ANDROID BACKGROUND
+1. Press Android Home or switch to another app.
+2. Expected: [ChessDebug] appState:change shows non-active state.
+3. Expected: app:leave + client disconnect; user is no longer challengeable while background.
+4. Return to Family Bloom.
+5. Expected: foreground reconnect occurs automatically and returns to ready.
+
+TEST D — ACTIVE GAME BACKGROUND
+1. Start a Bloom Bot game.
+2. Background the app briefly.
+3. Expected: server clock continues; no pause caused by player background.
+4. Foreground app.
+5. Expected: reconnect + authoritative game resync.
+
+SEND BACK IF FAILURE
+- Metro lines starting [ChessDebug]
+- Render lines starting [chess]
+- Screenshot of the visible connection banner

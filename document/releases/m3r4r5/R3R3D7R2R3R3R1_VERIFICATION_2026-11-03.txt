@@ -1,0 +1,30 @@
+FAMILY BLOOM R3R3D7R2R3R3R1 — P0 LOGIN CRASH REPAIR
+Date: 2026-11-03
+Source: R3R3D7R2R3R3 official FULL CODE
+
+[PASS] Reproduced anti-pattern by static source inspection:
+       useBloomColorsRevision() was inside lazy createBloomStyles(HERO_CONFIG)
+       called by BloomHeroHeader displayed on the login route.
+[FIX]  Removed Hook from factory. BloomHeroHeader already subscribes in its
+       proper component function via useBloomThemeRevision().
+[PASS] 384 TS/TSX source files parse with vendored TypeScript.
+[PASS] 127 createBloomStyles factories scanned; 0 React Hooks inside factories.
+[PASS] 19/19 project structure gates.
+[PASS] Original R2R3R3 accepted as update source (protected SHA fingerprints).
+[PASS] Original R2R3R2R1 accepted as update source.
+[PASS] Modified source's HERO_CONFIG rejected by fingerprint.
+[PASS] 9/9 Metro quiet test.
+[PASS] 16/16 Appearance root test.
+[PASS] Local-first appearance source/VM test.
+[PASS] Appearance token inventory test.
+[PASS] 10/10 avatar/dock theme contract test.
+[PASS] 12/12 Welcome cover safe font test.
+[PASS] 20/20 H13 binary + Chess gate.
+[PASS] 25/25 native visual probe test (source only).
+[UNVERIFIED] Real Android Release APK runtime, on-device crash disappearance,
+             full Windows BAT updater/build, Render-dependent integration.
+[UNCHANGED] firestore.rules, AuthContext, Firebase sync, Render, media,
+            UI palette, font mapping, versionCode 143045.
+
+NOT a full root-cause proof without on-device logcat, but a concrete React
+Hook-order violation in the login component is repaired and regression-locked.

@@ -1,0 +1,41 @@
+Family Bloom — Phase 11.2A Local-first Notifications (No Cloud Functions required)
+Date: 2026-09-27
+Base: Family_Bloom_Phase_11_2_ANDROID_FCM_BLOOM_TIME_PICKER_FULL_2026-09-27.zip
+
+GOAL
+- Keep Phase 11.0/11.1 Activity Center + Smart Reminder logic.
+- Keep Bloom custom time picker.
+- Let Android schedule reminders locally on-device without deploying Cloud Functions or upgrading Blaze.
+- Preserve the 10-listener realtime baseline: no new Firestore realtime listener.
+
+WHAT CHANGED
+1) Added expo-notifications local scheduling.
+2) Added Bloom semantic channels: bloom_normal / bloom_notable / bloom_important.
+3) Local reminder horizon is bounded to 30 days and max 48 scheduled items.
+4) Re-sync on app resume, membership/preferences changes, and after creating a new Event.
+5) Foreground: suppress system banner and show Bloom in-app toast instead.
+6) Notification tap deep-links through existing family switch/deep-link flow.
+7) Notification settings now say “Lời nhắc trên thiết bị Android”.
+8) Added “Gửi lời nhắc thử sau 8 giây” smoke-test button.
+9) Restored Phase 11.1 Firestore rules: no push-token rules deployment required for this local-first build.
+10) Root FULL ZIP includes both helper BAT files requested by the user.
+
+IMPORTANT LIMITATION
+Without a trusted backend/Cloud Functions, another person’s new Moment tag, family broadcast, join request, moderation item, or Graph proposal cannot wake a completely closed/background target app in real time. Those items remain available in “Chuyện trong nhà” when the app opens/syncs. Local notifications cover reminders that the device has already synced (birthday, memorial, events).
+
+INSTALL / TEST
+- npm install
+- npx expo run:android
+- Open Chuyện trong nhà -> Nhắc thông minh
+- Enable “Lời nhắc trên thiết bị Android” if needed
+- Tap “Gửi lời nhắc thử sau 8 giây”, then put the app in background
+
+NO DEPLOY REQUIRED
+- No Cloud Functions deploy required.
+- No new Firestore Rules deploy required compared with approved Phase 11.1.
+
+VALIDATION
+- Phase 11.2A local-first contract: PASS
+- Shared realtime registry: PASS
+- Phase 11.1 / 11.0 / 10 / 9.2 / 8 regression contracts: PASS
+- 164 TS/TSX static transpile: 0 syntax errors

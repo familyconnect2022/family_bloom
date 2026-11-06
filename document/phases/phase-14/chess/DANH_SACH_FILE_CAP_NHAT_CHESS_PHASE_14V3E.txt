@@ -1,0 +1,23 @@
+Phase 14V.3E key changed/new files
+
+src/constants/chessThemes.ts
+src/components/chess/ChessBoard.tsx
+src/components/chess/ChessPreGameThemeModal.tsx
+src/components/chess/ChessChallengeOverlay.tsx
+src/context/ChessRealtimeContext.tsx
+src/app/(chess)/chess-lobby.tsx
+src/app/(chess)/chess-game/[gameId].tsx
+src/hooks/chess/useChessLobby.ts
+src/services/profile/profileService.ts
+src/types/chess.ts
+src/types/user.ts
+src/utils/profile.ts
+scripts/test-phase14v3e-chess-pregame-piece-theme-lock.js
+scripts/test-phase14v3c-chess-smooth-motion.js
+package.json
+assets/images/chess/themes/classic/*.png
+assets/images/chess/themes/duotone/*.png
+assets/images/chess/themes/bloom/*.png
+document/FAMILY_BLOOM_MASTER_HANDOFF_PROMPT_CURRENT.md
+document/phases/phase-14/chess/BUILD_CHECK_REPORT_CHESS_PHASE_14V3E.txt
+document/phases/phase-14/chess/DANH_SACH_FILE_CAP_NHAT_CHESS_PHASE_14V3E.txt

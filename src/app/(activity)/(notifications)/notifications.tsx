@@ -1,0 +1,356 @@
+import { getBloomStatusBarStyle } from "../../../constants/theme";
+import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
+import { createBloomStyles } from '../../../theme/createBloomStyles';
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import { BloomText as Text } from '../../../components/ui/BloomText';
+import { ScreenContainer } from "../../../components/layout/ScreenContainer";
+import { BloomButton, BloomIconButton } from "../../../components/ui/BloomButtonComponents";
+import { BloomEmptyState, BloomPill } from "../../../components/ui/BloomPageComponents";
+import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
+import { BloomLoadingOverlay } from "../../../components/ui/BloomLoadingOverlay";
+import { COLORS } from "../../../constants/theme";
+import { useAuth } from "../../../context/AuthContext";
+import { useBloomToast } from "../../../components/ui/BloomToast";
+import { activityService } from "../../../services/activity/activityService";
+import { smartReminderService } from "../../../services/activity/smartReminderService";
+import { momentsService } from "../../../services/moments/momentsService";
+import { momentDeepLinkCache } from "../../../services/moments/momentDeepLinkCache";
+import type { FamilyActivity } from "../../../types";
+import { useA3Theme } from '../../../appearance3/useAppearance3';
+import { useA3LegacyStyles } from '../../../appearance3/compatReactiveStyles';
+
+
+type ActivityWithFamily = FamilyActivity & { familyName: string; isUnread: boolean; isSmartReminder?: boolean };
+type ActivityGrouped = ActivityWithFamily & { groupedCount: number };
+type ActivitySection = { title: string; data: ActivityGrouped[] };
+type NotificationsCacheEntry = { items: ActivityWithFamily[]; loadedAt: number };
+
+const NOTIFICATIONS_FOCUS_TTL_MS = 30_000;
+const notificationsMemoryCache = new Map<string, NotificationsCacheEntry>();
+
+const dayBucket = (iso: string) => {
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return "Trước đó";
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const diff = Math.round((today - day) / 86400000);
+  if (diff === 0) return "Hôm nay";
+  if (diff === 1) return "Hôm qua";
+  return value.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+/** Keep each underlying activity/source together, never merge unrelated events. */
+export const buildActivitySections = (items: ActivityWithFamily[]): ActivitySection[] => {
+  const buckets = new Map<string, Map<string, ActivityGrouped>>();
+  for (const item of [...items].sort((a,b) => b.createdAt.localeCompare(a.createdAt))) {
+    const day = dayBucket(item.createdAt);
+    const dayGroups = buckets.get(day) ?? new Map<string, ActivityGrouped>();
+    if (!buckets.has(day)) buckets.set(day, dayGroups);
+    // Only a stable source can be grouped; source-less entries remain distinct.
+    const groupKey = item.sourceId && item.sourceType
+      ? `${item.familyId}:${item.sourceType}:${item.sourceId}`
+      : `${item.familyId}:notification:${item.id}`;
+    const existing = dayGroups.get(groupKey);
+    if (existing) {
+      existing.groupedCount++;
+      existing.isUnread = existing.isUnread || item.isUnread;
+    } else dayGroups.set(groupKey, { ...item, groupedCount: 1 });
+  }
+  return [...buckets].map(([title, groups]) => ({
+    title: title === "Hôm nay" ? `Hôm nay · ${groups.size} câu chuyện` : title,
+    data: [...groups.values()],
+  }));
+};
+
+const iconFor = (activity: FamilyActivity): keyof typeof Ionicons.glyphMap => {
+  if (activity.kind === "event") return activity.importance === "important" ? "calendar" : "calendar-outline";
+  if (activity.kind === "graph") return "git-network-outline";
+  if (activity.kind === "review") return "shield-checkmark-outline";
+  if (activity.sourceType === "home_fund") return "wallet-outline";
+  if (activity.kind === "home" || activity.sourceType === "home_time_capsule") return "gift-outline";
+  return activity.audience === "target" ? "flower-outline" : "images-outline";
+};
+
+const timeText = (iso: string) => {
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return "";
+  const now = new Date();
+  if (value.toDateString() === now.toDateString()) {
+    return value.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  }
+  return value.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+export default function Notifications() {
+  const __a3Theme = useA3Theme();
+
+  const __a3Colors = __a3Theme.colors;
+  const __a3_styles = useA3LegacyStyles(styles);
+
+  
+  const router = useRouter();
+  const { user, userProfile, families, activeFamilyId, switchFamily } = useAuth();
+  const { showToast } = useBloomToast();
+  const cacheKey = useMemo(() => {
+    if (!user) return "guest";
+    const familySignature = families.map((item) => `${item.familyId}:${item.role ?? ""}`).sort().join("|");
+    return `${user.uid}:${familySignature}:${JSON.stringify(userProfile?.smartReminderPreferences ?? {})}`;
+  }, [families, user, userProfile?.smartReminderPreferences]);
+  const initialCache = notificationsMemoryCache.get(cacheKey);
+  const [items, setItems] = useState<ActivityWithFamily[]>(() => initialCache?.items ?? []);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [loading, setLoading] = useState(!initialCache);
+  const [loadError, setLoadError] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openingStage, setOpeningStage] = useState<string | null>(null);
+
+
+  const load = useCallback(async (options: { force?: boolean; blocking?: boolean } = {}) => {
+    if (!user) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+    const cached = notificationsMemoryCache.get(cacheKey);
+    const cacheFresh = !!cached && Date.now() - cached.loadedAt < NOTIFICATIONS_FOCUS_TTL_MS;
+    if (!options.force && cacheFresh) {
+      if (!itemsRef.current.length && cached.items.length) setItems(cached.items);
+      setLoading(false);
+      return;
+    }
+    if (options.blocking !== false && itemsRef.current.length === 0) setLoading(true);
+    setLoadError(false);
+    try {
+      const pages = await Promise.all(families.map(async (membership) => {
+        const [activityResult, reminderResult] = await Promise.allSettled([
+          activityService.listForUser(membership.familyId, user.uid, 60),
+          smartReminderService.listForUser(
+            membership.familyId,
+            user.uid,
+            userProfile?.smartReminderPreferences,
+            { includeDiscovery: true },
+          ),
+        ]);
+        return {
+          membership,
+          activityPage: activityResult.status === "fulfilled" ? activityResult.value : null,
+          reminderPage: reminderResult.status === "fulfilled" ? reminderResult.value : null,
+        };
+      }));
+      const successfulPages = pages.filter((item) => item.activityPage || item.reminderPage);
+      const merged = successfulPages
+        .flatMap(({ membership, activityPage, reminderPage }) => [
+          ...(activityPage?.items ?? []).map((activity) => ({
+            ...activity,
+            familyName: membership.familyName,
+            isUnread: activity.actorUid !== user.uid && (!activityPage?.lastSeenAt || activity.createdAt > activityPage.lastSeenAt),
+            isSmartReminder: false,
+          })),
+          ...(reminderPage?.items ?? []).map((activity) => ({
+            ...activity,
+            familyName: membership.familyName,
+            isUnread: activity.badgeEligible && (!reminderPage?.lastSeenAt || activity.createdAt > reminderPage.lastSeenAt),
+            isSmartReminder: true,
+          })),
+        ])
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 120);
+      setItems(merged);
+      notificationsMemoryCache.set(cacheKey, { items: merged, loadedAt: Date.now() });
+      setLoadError(successfulPages.length === 0 && families.length > 0);
+      // Opening Chuyện trong nhà means both persisted activity and smart reminders
+      // currently visible to the user are considered seen.
+      await Promise.all(successfulPages.flatMap(({ membership, activityPage, reminderPage }) => [
+        activityPage ? activityService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
+        reminderPage ? smartReminderService.markAllSeen(membership.familyId, user.uid).catch(() => undefined) : Promise.resolve(undefined),
+      ]));
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [cacheKey, families, user, userProfile?.smartReminderPreferences]);
+
+  // P2.5 Back != Refresh: a short detail round-trip reuses the in-memory
+  // projection. Only a stale/changed notification view revalidates, and when
+  // cached rows exist that refresh is silent rather than a full-screen loader.
+  useFocusEffect(useCallback(() => {
+    const cached = notificationsMemoryCache.get(cacheKey);
+    const stale = !cached || Date.now() - cached.loadedAt >= NOTIFICATIONS_FOCUS_TTL_MS;
+    if (stale) void load({ blocking: itemsRef.current.length === 0 });
+  }, [cacheKey, load]));
+
+  const sections = useMemo(() => buildActivitySections(items), [items]);
+
+  const waitForOverlayPaint = useCallback(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }), []);
+
+  const openActivity = useCallback(async (activity: ActivityWithFamily) => {
+    if (openingId) return;
+    setOpeningId(activity.id);
+    setOpeningStage(activity.sourceType === "moment" ? "Bloom đang mở đúng kỷ niệm…" : "Bloom đang chuẩn bị nội dung…");
+    try {
+      // Paint the transition first so a slow family switch / Firestore read never feels frozen.
+      await waitForOverlayPaint();
+
+      // Start the exact Moment read immediately after the overlay paints. For a cross-family
+      // notification it runs in parallel with switchFamily; for the current family we navigate
+      // right away. The Moments screen reuses this same in-flight promise, so there is no second read.
+      const momentPrefetch = activity.sourceType === "moment" && activity.sourceId
+        ? momentDeepLinkCache.prefetch(
+            activity.familyId,
+            activity.sourceId,
+            () => momentsService.getById(activity.familyId, activity.sourceId!),
+          ).catch(() => null)
+        : null;
+
+      if (activity.familyId !== activeFamilyId) {
+        setOpeningStage(`Đang vào ${activity.familyName}…`);
+        const switched = await switchFamily(activity.familyId);
+        if (!switched) return;
+      }
+
+      if (activity.sourceType === "event" && activity.sourceId) {
+        setOpeningStage("Đang mở sự kiện…");
+        router.push(`/event/${activity.sourceId}` as never);
+      } else if (activity.sourceType === "event") {
+        setOpeningStage("Đang mở Lịch nhà…");
+        router.push("/(tabs)/planner" as never);
+      } else if (activity.sourceType === "moment" && activity.sourceId) {
+        setOpeningStage("Đang mở kỷ niệm…");
+        void momentPrefetch;
+        router.push({ pathname: "/(tabs)/moments", params: { highlightMomentId: activity.sourceId, highlightFamilyId: activity.familyId } } as never);
+      } else if (activity.sourceType === "graph") {
+        setOpeningStage("Đang mở cây nhà…");
+        router.push("/family-graph" as never);
+      } else if (activity.sourceType === "join_request") {
+        router.push("/family-join-requests" as never);
+      } else if (activity.sourceType === "graph_proposal") {
+        router.push("/family-graph-proposals" as never);
+      } else if (activity.sourceType === "home_fund") {
+        setOpeningStage("Đang mở Quỹ gia đình…");
+        router.push("/home-fund" as never);
+      } else if (activity.sourceType === "home_time_capsule" && activity.sourceId) {
+        setOpeningStage("Đang mở Hộp thời gian…");
+        router.push(`/home-time-capsule/${activity.sourceId}` as never);
+      } else if (activity.sourceType === "home_time_capsule") {
+        router.push("/home-time-capsules" as never);
+      }
+    } finally {
+      setOpeningId(null);
+      setOpeningStage(null);
+    }
+  }, [activeFamilyId, openingId, router, switchFamily, waitForOverlayPaint]);
+
+  return (
+    <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
+      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <BloomHeroHeader
+        eyebrow="CHUYỆN TRONG NHÀ"
+        title="Có gì mới trong nhà?"
+        subtitle="Bloom gom những điều đáng để bạn ghé mắt tới, rồi để những ngày yên bình được yên bình."
+        variant="notice"
+        onBack={() => router.back()}
+        roundedBottom
+        compact
+        right={<BloomIconButton icon="options-outline" size={19} onPress={() => router.push("/notification-preferences" as never)} customStyle={__a3_styles.headerAction} />}
+      />
+      <View style={__a3_styles.listBody}>
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => `${item.familyId}:${item.audience}:${item.targetUid || "family"}:${item.id}`}
+        contentContainerStyle={__a3_styles.content}
+        showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        ListHeaderComponent={(
+          <View>
+            <View style={__a3_styles.intro}>
+              <Ionicons name="notifications-outline" size={20} color={__a3Colors.primary} />
+              <Text style={__a3_styles.introText}>Bloom chỉ làm nổi bật những điều thật sự cần chú ý. Kỷ niệm “Toàn gia đình” bình thường vẫn ở đây nhưng không làm phiền bạn.</Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={loading ? (
+          <View style={__a3_styles.loading}><ActivityIndicator color={__a3Colors.primary} /><Text style={__a3_styles.loadingText}>Bloom đang gom chuyện trong nhà…</Text></View>
+        ) : loadError ? (
+          <BloomEmptyState icon="cloud-offline-outline" title="Chưa mở được Chuyện trong nhà" description="Kiểm tra kết nối rồi thử lại nhé." />
+        ) : (
+          <BloomEmptyState icon="mail-open-outline" title="Mọi thứ đang yên bình" description="Khi có một kỷ niệm, sự kiện hoặc thay đổi đáng chú ý, Bloom sẽ đặt ở đây." />
+        )}
+        renderSectionHeader={({ section }) => (
+          <View style={__a3_styles.sectionHeader}><Text style={__a3_styles.sectionTitle}>{section.title}</Text></View>
+        )}
+        ItemSeparatorComponent={() => <View style={__a3_styles.itemGap} />}
+        renderItem={({ item }) => {
+          const important = item.importance === "important";
+          const notable = item.importance === "notable" || item.badgeEligible;
+          return (
+            <Pressable onPress={() => void openActivity(item)} style={({ pressed }) => [__a3_styles.card, important && __a3_styles.cardImportant, notable && !important && __a3_styles.cardNotable, pressed && __a3_styles.pressed]}>
+              <View style={[__a3_styles.icon, important && __a3_styles.iconImportant]}>
+                <Ionicons name={iconFor(item)} size={20} color={important ? __a3Colors.white : __a3Colors.primary} />
+              </View>
+              <View style={__a3_styles.copy}>
+                <View style={__a3_styles.metaRow}>
+                  <BloomPill icon="home-outline" label={item.familyName} />
+                  {important && <BloomPill icon="alert-circle-outline" label="Quan trọng" />}
+                  {!important && item.importance === "notable" && <BloomPill icon="sparkles-outline" label="Đáng chú ý" />}
+                  {item.isSmartReminder && <BloomPill icon="sparkles-outline" label="Nhắc" />}
+                  {item.isUnread && <BloomPill icon="ellipse" label="Mới" />}
+                </View>
+                <Text style={__a3_styles.title}>{item.title}</Text>
+                {!!item.body && <Text style={__a3_styles.body} numberOfLines={3}>{item.body}</Text>}
+                <View style={__a3_styles.notificationFooter}><Text style={__a3_styles.time}>{item.isSmartReminder ? "Nhắc hôm nay" : timeText(item.createdAt)}</Text>{item.groupedCount > 1 && <Text style={__a3_styles.groupCount}>+{item.groupedCount - 1} cập nhật cùng sự kiện</Text>}</View>
+              </View>
+              {openingId === item.id ? <ActivityIndicator size="small" color={__a3Colors.primary} /> : <Ionicons name="chevron-forward" size={18} color={__a3Colors.secondaryText} />}
+            </Pressable>
+          );
+        }}
+      />
+      </View>
+
+      <BloomLoadingOverlay
+        visible={!!openingStage}
+        title={openingStage || "Bloom đang mở câu chuyện…"}
+        message="Một chút nhé, Bloom đang đưa bạn tới đúng nơi."
+        icon="notifications-outline"
+      />
+    </ScreenContainer>
+  );
+}
+
+const styles = createBloomStyles(() => StyleSheet.create({
+  headerAction: { width: 56, height: 56, borderRadius: 21 },
+  listBody: { flex: 1, paddingHorizontal: 18, paddingTop: 14 },
+  content: { paddingBottom: 34 },
+  intro: { marginBottom: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, padding: 14, flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  introText: { flex: 1, color: COLORS.secondaryText, fontSize: 11, lineHeight: 16, fontWeight: "600" },
+  loading: { minHeight: 180, alignItems: "center", justifyContent: "center", gap: 10 },
+  loadingText: { color: COLORS.secondaryText, fontSize: 11.5, fontWeight: "700" },
+  sectionHeader: { backgroundColor: COLORS.background, paddingTop: 16, paddingBottom: 11, paddingHorizontal: 1 },
+  notificationFooter: { marginTop: 5, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 },
+  groupCount: { color: COLORS.primary, fontSize: 10, fontWeight: "900", backgroundColor: COLORS.softSurface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 11 },
+  sectionTitle: { color: COLORS.primaryText, fontSize: 13, fontWeight: "900" },
+  itemGap: { height: 10 },
+  card: { minHeight: 96, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, padding: 13, flexDirection: "row", alignItems: "center", gap: 11 },
+  cardNotable: { borderColor: COLORS.focusBorder },
+  cardImportant: { borderColor: COLORS.primary, borderWidth: 1.5 },
+  pressed: { opacity: 0.76, transform: [{ scale: 0.99 }] },
+  icon: { width: 44, height: 44, borderRadius: 16, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
+  iconImportant: { backgroundColor: COLORS.primary },
+  copy: { flex: 1, minWidth: 0 },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 7 },
+  title: { color: COLORS.primaryText, fontSize: 13, lineHeight: 18, fontWeight: "900" },
+  body: { marginTop: 3, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, fontWeight: "600" },
+  time: { marginTop: 6, color: COLORS.secondaryText, fontSize: 9.5, fontWeight: "700" },
+
+}));

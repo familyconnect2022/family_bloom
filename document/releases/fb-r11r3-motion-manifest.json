@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "release": "R11R3_MOTION_RECOVERY",
+  "base": "R11/R11R2",
+  "r10Sha256": "c1e3b5b3aff41247f1779e459e4bcd913312f6ff47e2b07f76049e1ed61d512d",
+  "files": [
+    {
+      "path": "src/app/(tabs)/index.tsx",
+      "before": [
+        "47c908ee63c05153fa455f267bcbe54258fe61ef5c58baa9471ad30893eeea59"
+      ],
+      "after": "43ada5cea9fc12cfa519b5b5ca652a9fa20b4b0b23e4a12984fac132edc15c42"
+    },
+    {
+      "path": "src/components/ui/BloomPageComponents.tsx",
+      "before": [
+        "e7f5f4bafbd470d58d3936731adf93db2901d2a6d9edbbe63a087f7b106c0d14"
+      ],
+      "after": "9f1a2d0dff399b9ebd1b0758ab859d82c6123f5b296479989f0027cd0e7cd777"
+    },
+    {
+      "path": "src/motion/BloomMotion.tsx",
+      "before": [
+        "fdc897c3b7feb34fdc03fa3a735dce681541f29fb227e7ca39b03783dbc6c320"
+      ],
+      "after": "28642e760463ac98230bfce48da11087c38a892ed5833625cf63de079ce13742"
+    },
+    {
+      "path": "src/components/onboarding/WelcomeModal.tsx",
+      "before": [
+        "dabbcdf7f12b1bd531fdc0006bb11a6fc34d060baedbc7c0226f15368cedde9a"
+      ],
+      "after": "2af6a365b0c6251b82c71e784deeb087491acddf67ad18ae029f285ce06e85be"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph.tsx",
+      "before": [
+        "1faba4e24f30429dbb24c80ace4eb3936de4764c23fe9552b1ad0c4ea378d329"
+      ],
+      "after": "714c4531bc5d07d68b4c50f11587359230396607af2b6fbc7863daf589ec986b"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-admin.tsx",
+      "before": [
+        "cca6aecb36812411ff87d329cc189e0f6a15d335bfbb3140566d743bad9834be"
+      ],
+      "after": "eb549ebe6e59487346e435d3bfc0ea3d9dacfe0fe041dff74687d14f48cf813b"
+    },
+    {
+      "path": "src/components/ui/BloomToast.tsx",
+      "before": [
+        "0c6a0fc8a7de7305c18b01b875bd582b39b4281d23c9b9560ff7601840208cfe"
+      ],
+      "after": "83751fe437cfef537fde8693f1fe7a1ffa902097727f82d480b1e6de280f306c"
+    },
+    {
+      "path": "scripts/setup/family-bloom-source-release.json",
+      "before": [
+        "ad472e6bc3bed36010aea736a47c66410a0043933482f60fc68a00e86979aa30"
+      ],
+      "after": "4b804a3ef1ced736c2d71203017ba6e9a2be688a2a0cbadd2e1c523eae502d6d"
+    },
+    {
+      "path": "document/releases/R11_MOTION_TEST_PLAN.md",
+      "before": [
+        "ae31fcfcdef45ef7715a5b19002fff349c9232dee2ee33fffa11c623da12c153"
+      ],
+      "after": "3b2935251951fd78320200c8b17e50b7db85a90bceb198e12711e293ef1d28c5"
+    },
+    {
+      "path": "scripts/tests/release/test-r10-home-event-card-typography.cjs",
+      "before": [
+        "acb80c56243de196f1925218068a5615003497dd0cd366273dabf1913f39e8dc"
+      ],
+      "after": "bce153f1adaf9cb3eb99f60a9e527f238abc7725ac6c2a81e5c1026c7e11edd7"
+    },
+    {
+      "path": "scripts/tests/release/test-r11-motion-lab-contract.cjs",
+      "before": [
+        "a04dbb0865f6713b285b1547f89102d7ef04634599f989c6d136fd647a104292"
+      ],
+      "after": "7f3944245bc3714156f6e4d7b1715896b34d1c3a57a7cbb37240b46c57a8be8a"
+    },
+    {
+      "path": "scripts/maintenance/fb-r11-motion-safe-update.cjs",
+      "before": [
+        "8dc6f4cbf689b94c282f4532f662a55fb95a0ce4e63ee636fa814bb8e686ddd9"
+      ],
+      "after": "95c8a16b3a36c45cb215abf95d2321eab50938d71a9c1fdb03435d977b592a45"
+    },
+    {
+      "path": "scripts/maintenance/fb-r11r3-recovery.cjs",
+      "before": [
+        null
+      ],
+      "after": "eec77fead3849e4fc7e1966597a22b651fa56482ce237b48fe85be0b885e46a4"
+    },
+    {
+      "path": "R11R3_MOTION_RECOVERY.cmd",
+      "before": [
+        null
+      ],
+      "after": "97eaa4f1528f8df5b340db3cc00266ecc35dbdcae155bd817667176350011ad1"
+    },
+    {
+      "path": "document/releases/R11R3_MOTION_RECOVERY_GUIDE_VI.txt",
+      "before": [
+        null
+      ],
+      "after": "f40c3dab639a5fc2e6fb2368fac167e1862e0e063ad2cb6dfd6c726ae4d1d541"
+    },
+    {
+      "path": "scripts/tests/release/test-r11r3-motion-recovery.cjs",
+      "before": [
+        null
+      ],
+      "after": "a0c7862e6c21e892fc45e6dadcd654b00de94c2d545643fe9cda04ef506a1fad"
+    }
+  ],
+  "preserve": [
+    ".env",
+    "Family_Bloom_AUTO_UPDATE_FULL.bat",
+    "android",
+    "firebase",
+    "ios",
+    "config/credentials"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceReleaseId": "R11",
+  "baselineSourceReleaseId": "R10",
+  "baselineArtifact": "FamilyBloom_R10_HOME_EVENT_CARD_TYPOGRAPHY_FULL_CODE_2026-11-05.zip",
+  "baselineFullCodeSHA256": "c1e3b5b3aff41247f1779e459e4bcd913312f6ff47e2b07f76049e1ed61d512d",
+  "releasePurpose": "R11R4 Motion real-entry pilot: animated login scene, focused Home and five real tabs, safe native Welcome letter reveal and read-only developer preview; retain R10 card appearance and R11R3 Home ticket layout; no gate/Firebase/native changes.",
+  "appVersion": "1.3.35",
+  "androidVersionCode": 143045,
+  "excludedScope": [
+    "Firebase Rules/data",
+    "Android native versionCode and build gate",
+    "Moments upload flow",
+    "Render Chess/Xiangqi",
+    "Vercel media",
+    "Web"
+  ],
+  "date": "2026-11-05",
+  "patchReleaseId": "R11R4"
+}

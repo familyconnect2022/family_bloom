@@ -1,0 +1,24 @@
+FAMILY BLOOM PHASE 14F — DEVICE CHECKLIST
+
+DEFAULT ENTRY
+[ ] Open Cây nhà fresh: default tab is 3 thế hệ.
+[ ] Current account-linked Person is near screen center and highlighted.
+[ ] No "Nhánh đang xem" state/banner appears automatically.
+[ ] Other nodes/lines are NOT faded merely because the current user is centered.
+
+FOCUS VIEW — BASE CANVAS MUST STAY FROZEN
+[ ] In 3 thế hệ, pan + zoom to a recognisable position. Enable Nhánh and open Person A.
+[ ] Focus View opens; background nodes/connectors remain visually exactly as before.
+[ ] Background does not recenter, zoom, dim, expand a branch or change lines.
+[ ] Pan/pinch inside Focus View moves only the Focus graph.
+[ ] Close Focus View: background returns at exactly the same pan/zoom and 3-generation mode.
+[ ] Repeat from 5 thế hệ.
+[ ] Repeat from Toàn phả hệ.
+[ ] Open A, tap B inside Focus View: same overlay changes to B; no second overlay stacks.
+[ ] Re-open A after A->B: branch should feel immediate due to layout cache.
+
+REGRESSION
+[ ] Normal Person detail tap still opens the Person sheet when Nhánh mode is OFF.
+[ ] Search still locates/opens a Person.
+[ ] Admin add/edit/delete flows still work.
+[ ] Graph 50+ people remains smooth; no new listener count increase.

@@ -1,0 +1,223 @@
+{
+  "release": "Family Bloom Node R6 user interface and cleanup",
+  "baseline": "Exact Node 3D R5 BAT-PRESERVED source; root updater BAT is preserved",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "src/app/(family)/(graph)/family-graph-person-editor.tsx",
+      "before": "a65760c058f863fd1172ca8bab482b49aed4ed76b3fd1665e798782f1392a6c9",
+      "after": "23df5422e34eb3abe95e1f44be2bb325b58ddb1d457e9b2b4a3b17e234970d4b"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPersonSheet.tsx",
+      "before": "9163ffc597a35efca78e8641490697012d182b40c076bc1ebc13d998ecda76b6",
+      "after": "376e6f019759b23e689a0eca0e3d855947a5f4c1ea902b027b9a0f1e9a236165"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphFocusView.tsx",
+      "before": "b662b7690574472ea50b42eaae86d73e5127ef43a3bf1db0b98c779fe6ed2fc2",
+      "after": "18c22f5bbacb269924b3eb5351188e0329d1479db0ec11c22e430e01bab7605a"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPrototype.tsx",
+      "before": "5a23eb732de6d996d33befca9277f6a397f81c85e2fa7b75660cf660a293c85b",
+      "after": "606dc638e7c77d81d5f18fb1e3ce25d346c74139e7786ef2d0f07d5c5ddacbb4"
+    },
+    {
+      "path": "src/components/ui/BloomInputComponents/BloomInputAvatar.tsx",
+      "before": "50269d7c40c02f2dd2cffc1844b46cd69bd2c3b69f9511672f09f9ecc778e3be",
+      "after": "8bb1bfdc501de460a32b3f2d34262bc5013eeb0327b7029a8795043a679ab240"
+    },
+    {
+      "path": "src/components/ui/BloomInputComponents/AvatarSourceSheet.tsx",
+      "before": "b58f04f3c81056516a8f98bdac5da7bca29572f09723f9bcd00660ab4af17b4a",
+      "after": "cbbe8bb49bc989145a6a3018cb3d2053eeaf1c7b6970b9821ec190d350569727"
+    },
+    {
+      "path": "scripts/tests/release/test-family-cv-r7-contract.cjs",
+      "before": "a4da755f6554f53b4abbf90be6c10d68df2ba67a6318cbdb41848292dbfcf4e6",
+      "after": "79977a3a992611e7f5c3dce33f525d59f56e14031ebfb85672028cb21c71b460"
+    },
+    {
+      "path": "scripts/tests/release/test-node-r5-spacing-gender.cjs",
+      "before": "c9ddba093d7c8a13fb7e188bcd9abbc2b168e4c4c0f2754a2427dd7dc0b7ad94",
+      "after": "ea4e1c384efe94ef0f8f084ac3d623e0323ce294fb10b2f2880ce091da3c440f"
+    }
+  ],
+  "remove": [
+    {
+      "path": "assets/images/avatars/presets/hoa-hong.png",
+      "before": "1af4e547c6d0de3f58e8e3b7447c54be949623d8892a97528a26d70a867d8947",
+      "after": null
+    },
+    {
+      "path": "assets/images/avatars/presets/la-non.png",
+      "before": "8c69b167661e5724fe5c63e3b09a5ed50041bcf25fe177ec5188c1c58a51b2a4",
+      "after": null
+    },
+    {
+      "path": "assets/images/avatars/presets/nang-mai.png",
+      "before": "40f49f1867473c72e15332341d8f7ccd786d64ccd56b2901e405fda329af2811",
+      "after": null
+    },
+    {
+      "path": "assets/images/avatars/presets/oai-huong.png",
+      "before": "987419aa1eee90bf51d0eadec04248e1a736bc82335221837e2ce9106da1ac62",
+      "after": null
+    },
+    {
+      "path": "assets/images/avatars/presets/thanh-binh.png",
+      "before": "76b1fc2b84a6c94b6d1e6c68c00e355a00aea7915dfa2e2aee5d99d484841d9e",
+      "after": null
+    },
+    {
+      "path": "assets/images/avatars/presets/xanh-bien.png",
+      "before": "35b8cf797403f11ebb58d8e32deba4ca402b9a6b8b120f2c886b1fc1bead749c",
+      "after": null
+    },
+    {
+      "path": "assets/images/family-tree/node-3d/female-approved-original.png",
+      "before": "ee78ff502b18883ac9612e556e1b57559d2bb16da933b1c7b4f5ac37c3e618a3",
+      "after": null
+    },
+    {
+      "path": "assets/images/family-tree/node-3d/male-approved-original.png",
+      "before": "043ce5f39734d2709a2f97e0072e0da66fd2b218b7dfe9e49b644b9b6bab3341",
+      "after": null
+    },
+    {
+      "path": "assets/images/family-tree/node-3d/unknown-approved-original.png",
+      "before": "285cf4ecc2d9124661fb1c4a0722029fb428b73d65d52d52a8ef4cb83c189131",
+      "after": null
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/opening.jpg",
+      "before": "30b45f0525310f56aa8614c4e6417fd4ad9f018fd8bc2ec12c4be238d1511367",
+      "after": null
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/revealed.jpg",
+      "before": "90dffac4eff2a82e8743afc4e2c3c188e6fa2607ff3687a238dc8f5f40a56de5",
+      "after": null
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/sealed.jpg",
+      "before": "7eefd3670c0cfedf2f76e681c465e707391031171f29d9d34990cd3802e01b22",
+      "after": null
+    },
+    {
+      "path": "assets/images/react-logo.png",
+      "before": "224b7636b15e672801579b5b418077cbc2ca42f0146389062364356b0ecb5c5c",
+      "after": null
+    },
+    {
+      "path": "assets/images/react-logo@2x.png",
+      "before": "fa600be9ad2f869c7a8dbaffc78bb15af741123e1319c948f0be51753a153cde",
+      "after": null
+    },
+    {
+      "path": "assets/images/react-logo@3x.png",
+      "before": "cd84e02a5d542a3e71b7fa10a685c1b9fb51db4aff92aca6c0da6461ce17be16",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_garden.png",
+      "before": "3306a5fd4435775184962f5701f7d3a0924cb50c845a852e68b1856f80ab0f14",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_heritage.png",
+      "before": "98335f2ee9dd8462d4bd1f6a295cf4a22f8db4438d1d375aeab8d04743b4ecae",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_midnight.png",
+      "before": "5d396d05da972aebbf6854a56e6793063b8430eafdf331eb35a937a4468f2846",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_rose.png",
+      "before": "34c092f3f0debe2b2b18565859d875ab617386d75522abef7b5f30250eb06caf",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_garden.png",
+      "before": "f5d6226695187132e6d23973560922e582904a3d47d30bcf4543459aa9030285",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_heritage.png",
+      "before": "f9611b893c125619ddbc71c1c04ea7292d99e59b7b76025d037a884b22fc00e0",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_midnight.png",
+      "before": "f03ba3cc6c27c6c643e91b98b83a32d0a6f60b8a210d1cfa805c2563381a82dd",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_rose.png",
+      "before": "8dd5512c6af2c8aa1f4ed8e5d93d990d8b3efa0cf4bbff10c32e087bc01f2b01",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_garden.png",
+      "before": "6b7b286fe86f9bd52d30387a7aa7b1bdcc8b401f8fc9643e7904be5b1bdde7b4",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_heritage.png",
+      "before": "3078c563d01113571470e22a08c383138e85e2ee979680cdccb2690507e26c81",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_midnight.png",
+      "before": "0240a96ad65f88adbe189d019a1a64e686fe656087531a5d4500f88babfeb3fa",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_rose.png",
+      "before": "bb1e0affdfade95530d49c09425f6040be03c9601246c43f532741dbc0754091",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_garden.png",
+      "before": "fa3a0626d535b21bb7a576142b388fc9b24c008421a22be349b68e838c74f676",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_heritage.png",
+      "before": "1ced04feba95849eea897a195449dd99b906b2ed1f75de42a54253163a5365b4",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_midnight.png",
+      "before": "edc3e45dbfab2d704568d3a57e65e1bb22c3ddacea438ba44959c487e9992f12",
+      "after": null
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_rose.png",
+      "before": "f59c15c98ea768707e23ea09018220094c3ec2d6e45cea7c6b8a2a89993c46b8",
+      "after": null
+    }
+  ],
+  "extra": [
+    "src/components/familyGraph/familyGraphNode3dAssets.ts",
+    "scripts/tests/release/test-node-r6-ux-assets.cjs",
+    "scripts/maintenance/fb-node-r6-safe-update.cjs",
+    "00_CAP_NHAT_R6_AN_TOAN.cmd",
+    "document/releases/fb-node-r6-20261104/asset-cleanup.json",
+    "document/releases/fb-node-r6-20261104/RELEASE_NOTES.txt",
+    "document/releases/fb-node-r6-20261104/patch-manifest.json"
+  ],
+  "preservedFiles": [
+    "Family_Bloom_AUTO_UPDATE_FULL.bat",
+    "firestore.rules",
+    "firestore.cloud.rules",
+    "firebase.json",
+    "app.json",
+    ".env",
+    "google-services.json"
+  ]
+}

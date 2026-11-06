@@ -1,0 +1,220 @@
+import { getBloomStatusBarStyle } from "../../constants/theme";
+import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../theme/BloomThemeProvider';
+import { createBloomStyles } from '../../theme/createBloomStyles';
+import { useTabStartupTask } from "../../context/TabStartupContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BloomText as Text } from '../../components/ui/BloomText';
+import { StatusBar } from "expo-status-bar";
+import { ScreenContainer } from "../../components/layout/ScreenContainer";
+import { BloomHeroHeader } from "../../components/ui/BloomHeroHeader";
+import { BloomRouteEntrance } from "../../motion/BloomMotion";
+import { BloomCard, BloomSectionHeader } from "../../components/ui/BloomPageComponents";
+import { COLORS } from "../../constants/theme";
+import { ENABLE_FAMILY_BULLETIN } from "../../constants/featureFlags";
+import { useAuth } from "../../context/AuthContext";
+import { useTabLiveEffect } from "../../context/TabRuntimeContext";
+import { homeTimeCapsuleService, isTimeCapsuleOpen, timeCapsuleOpenMillis } from "../../services/home/homeTimeCapsuleService";
+import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
+import type { HomeTimeCapsule } from "../../types/homeLiving";
+import { useA3Theme } from '../../appearance3/useAppearance3';
+import { useA3LegacyStyles } from '../../appearance3/compatReactiveStyles';
+
+
+type HubCardProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description: string;
+  accent: string;
+  badge?: string;
+  statusLine?: string;
+  attention?: boolean;
+  onPress?: () => void;
+};
+
+function HubCard({ icon, title, description, accent, badge, statusLine, attention, onPress }: HubCardProps) {
+  const __a3Colors = useA3Theme().colors;
+  const __a3_styles = useA3LegacyStyles(styles);
+
+  
+  
+  return (
+    <BloomCard style={[__a3_styles.hubCard, attention && __a3_styles.hubCardAttention]} onPress={onPress}>
+      <View style={[__a3_styles.hubIcon, { backgroundColor: accent }]}><Ionicons name={icon} size={25} color={__a3Colors.primaryText} /></View>
+      <View style={__a3_styles.hubCopy}>
+        <View style={__a3_styles.titleRow}>
+          <Text style={__a3_styles.hubTitle}>{title}</Text>
+          {!!badge && <View style={[__a3_styles.badge, attention && __a3_styles.badgeAttention]}><Text style={[__a3_styles.badgeText, attention && __a3_styles.badgeTextAttention]}>{badge}</Text></View>}
+        </View>
+        <Text style={__a3_styles.hubDescription}>{description}</Text>
+        {!!statusLine && (
+          <View style={[__a3_styles.hubStatus, attention && __a3_styles.hubStatusAttention]}>
+            <View style={[__a3_styles.hubStatusDot, attention && __a3_styles.hubStatusDotAttention]} />
+            <Text style={[__a3_styles.hubStatusText, attention && __a3_styles.hubStatusTextAttention]}>{statusLine}</Text>
+          </View>
+        )}
+      </View>
+      {onPress ? <Ionicons name="chevron-forward" size={20} color={__a3Colors.primary} /> : null}
+    </BloomCard>
+  );
+}
+
+export default function PlayScreen() {
+  const __a3Theme = useA3Theme();
+
+  const __a3Colors = __a3Theme.colors;
+  const __a3_styles = useA3LegacyStyles(styles);
+
+  
+  useTabStartupTask("play");
+  const router = useRouter();
+  const { user, userProfile, activeMembership, activeFamilyId } = useAuth();
+  const [timeCapsules, setTimeCapsules] = useState<HomeTimeCapsule[]>([]);
+  const [capsuleClock, setCapsuleClock] = useState(0);
+  const name = userProfile?.shortName || userProfile?.displayName || "bạn";
+  const familyName = activeMembership?.familyName || "gia đình mình";
+
+
+  useEffect(() => {
+    if (!activeFamilyId || !user?.uid) setTimeCapsules([]);
+  }, [activeFamilyId, user?.uid]);
+
+  useTabLiveEffect("play", (scope) => {
+    if (!activeFamilyId || !user?.uid) return;
+    return subscribeSharedRealtime<HomeTimeCapsule[]>({
+      key: `home.time_capsules.recipient.all:${activeFamilyId}:${user.uid}`,
+      listenerName: "home.time_capsules.recipient",
+      start: (onData, onError) => homeTimeCapsuleService.watchRecipientCapsules(activeFamilyId, user.uid, onData, onError),
+      onData: (items) => { if (scope.isCurrent()) setTimeCapsules(items); },
+      onError: () => undefined,
+    });
+  }, [activeFamilyId, user?.uid]);
+
+  useTabLiveEffect("play", () => {
+    const now = Date.now();
+    const next = timeCapsules
+      .map(timeCapsuleOpenMillis)
+      .filter(value => value > now)
+      .sort((a, b) => a - b)[0];
+    if (!next) return;
+    const timer = setTimeout(() => setCapsuleClock(value => value + 1), Math.max(180, Math.min(2_147_000_000, next - now + 150)));
+    return () => clearTimeout(timer);
+  }, [timeCapsules, capsuleClock]);
+
+  const timeCapsuleHub = useMemo(() => {
+    const uid = user?.uid || "";
+    const now = Date.now();
+    const visibleUnopened = timeCapsules
+      .filter(item => item.previewMode === "locked" || isTimeCapsuleOpen(item, now))
+      .filter(item => !(item.openedByUids ?? []).includes(uid));
+    const ready = visibleUnopened.filter(item => isTimeCapsuleOpen(item, now));
+    const upcoming = visibleUnopened
+      .filter(item => !isTimeCapsuleOpen(item, now))
+      .sort((a, b) => timeCapsuleOpenMillis(a) - timeCapsuleOpenMillis(b));
+    if (ready.length) {
+      return {
+        attention: true,
+        badge: ready.length === 1 ? "MỞ NGAY" : `${ready.length} MỞ NGAY`,
+        statusLine: ready.length === 1 ? "Có một Hộp thời gian đã đến giờ mở" : `Có ${ready.length} Hộp thời gian đã đến giờ mở`,
+      };
+    }
+    if (upcoming.length) {
+      const nextAt = timeCapsuleOpenMillis(upcoming[0]);
+      const dateText = nextAt ? new Date(nextAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "sắp tới";
+      return {
+        attention: true,
+        badge: upcoming.length === 1 ? "1 HỘP ĐANG CHỜ" : `${upcoming.length} HỘP ĐANG CHỜ`,
+        statusLine: `Hộp gần nhất sẽ mở ${dateText}`,
+      };
+    }
+    return { attention: false, badge: "Dùng ngay", statusLine: "Chưa có hộp nào đang chờ bạn mở" };
+  }, [capsuleClock, timeCapsules, user?.uid]);
+
+  return (
+    <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
+      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
+        <BloomRouteEntrance>
+        <BloomHeroHeader
+          eyebrow="NHÀ MÌNH"
+          title="Chỗ cả nhà cùng vui"
+          subtitle="Chơi một chút, hỏi nhau một điều, vào bếp cùng nhau và gom những chuyện chỉ nhà mình mới có."
+          variant="learning"
+          compact
+          roundedBottom
+        />
+        </BloomRouteEntrance>
+
+        <View style={__a3_styles.pageBody}>
+          <View style={__a3_styles.group}>
+            <BloomSectionHeader title="Chung một mái nhà" subtitle="Cùng chăm lo, cùng quyết định những việc của nhà" />
+            <View style={__a3_styles.list}>
+              {ENABLE_FAMILY_BULLETIN && (
+                <HubCard icon="megaphone-outline" title="Bảng tin Nhà Mình" description="Những tin chung của gia đình: sự kiện quan trọng và kỷ niệm cả nhà cần biết." accent={__a3Colors.iconBackground} badge="Tin chung" onPress={() => router.push("/home-board" as never)} />
+              )}
+              <HubCard icon="wallet-outline" title="Quỹ gia đình" description="Cùng ghi nhận thu chi, giữ quỹ minh bạch và xem dấu chân quỹ chung." accent={__a3Colors.iconBackground} onPress={() => router.push("/home-fund" as never)} />
+              <HubCard icon="stats-chart-outline" title="Cùng quyết định" description="Mời cả nhà chọn Đồng ý hoặc Không đồng ý trước hạn hẹn." accent={__a3Colors.iconBackground} onPress={() => router.push("/home-polls" as never)} />
+            </View>
+          </View>
+          <View style={__a3_styles.group}>
+            <BloomSectionHeader title="Giờ vui của cả nhà" subtitle="Một ván cờ, một tiếng cười, thêm chút gần nhau" />
+            <View style={__a3_styles.list}>
+              <HubCard icon="game-controller-outline" title="Trò chơi Nhà Mình" description="Chỉ Cờ vua và Cờ tướng — mời người thân cùng đấu." accent={__a3Colors.iconBackground} badge="Cùng chơi" onPress={() => router.push("/home-games" as never)} />
+            </View>
+          </View>
+          <View style={__a3_styles.group}>
+            <BloomSectionHeader title="Vườn tri thức nở hoa" subtitle="Mỗi ngày khám phá thêm một điều thú vị" />
+            <View style={__a3_styles.list}>
+              <HubCard icon="school-outline" title="Góc học tập Super Bloom" description="Học Toán, Tiếng Việt, Văn, Anh, Lí, Hóa theo bài đã xuất bản từ Bloom Content Studio." accent={__a3Colors.iconBackground} badge="Học ngay" onPress={() => router.push("/learning-library" as never)} />
+            </View>
+          </View>
+          <View style={__a3_styles.group}>
+            <BloomSectionHeader title="Lời thương cất giữ" subtitle="Có những lời dành cho hiện tại, có những lời chờ mai sau" />
+            <View style={__a3_styles.list}>
+              <HubCard icon="chatbubble-ellipses-outline" title="Thì thầm" description="Gửi điều nhỏ bé tới riêng một người thân hoặc cả nhà." accent={__a3Colors.iconBackground} onPress={() => router.push("/home-whispers" as never)} />
+              <HubCard icon={timeCapsuleHub.attention ? "gift" : "gift-outline"} title="Hộp thời gian" description={timeCapsuleHub.attention ? "Có chiếc hộp đã đến lúc mở. Chạm để xem những lời gửi từ trước." : "Gửi một lời cho tương lai, rồi để Bloom mở đúng ngày đã hẹn."} accent={timeCapsuleHub.attention ? __a3Colors.selectedBackground : __a3Colors.iconBackground} badge={timeCapsuleHub.badge} statusLine={timeCapsuleHub.statusLine} attention={timeCapsuleHub.attention} onPress={() => router.push("/home-time-capsules" as never)} />
+            </View>
+          </View>
+          <View style={__a3_styles.group}>
+            <BloomSectionHeader title="Bếp ấm thơm nhà" subtitle="Món ngon và câu chuyện quanh mâm cơm" />
+            <View style={__a3_styles.list}>
+              <HubCard icon="restaurant-outline" title="Bếp Nhà Mình" description="Khám phá những món Việt và chọn bữa ngon theo khẩu vị của nhà." accent={__a3Colors.iconBackground} onPress={() => router.push("/home-kitchen" as never)} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}
+
+const styles = createBloomStyles(() => StyleSheet.create({
+  content: { paddingBottom: 162 },
+  pageBody: { paddingHorizontal: 16, paddingTop: 23, paddingBottom: 20, gap: 24 },
+  group: { gap: 12 },
+  welcomeCard: { flexDirection: "row", gap: 12, alignItems: "flex-start", backgroundColor: COLORS.surfaceFocus },
+  welcomeIcon: { width: 48, height: 48, borderRadius: 18, backgroundColor: COLORS.surface, alignItems: "center", justifyContent: "center" },
+  welcomeCopy: { flex: 1 },
+  welcomeKicker: { color: COLORS.primary, fontSize: 9.5, fontWeight: "900", letterSpacing: 0.7 },
+  welcomeTitle: { marginTop: 4, color: COLORS.primaryText, fontSize: 17, fontWeight: "900" },
+  welcomeText: { marginTop: 5, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17 },
+  list: { gap: 10 },
+  hubCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 15 },
+  hubCardAttention: { borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.surface, shadowColor: COLORS.shadow, shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  hubIcon: { width: 52, height: 52, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  hubCopy: { flex: 1 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  hubTitle: { flex: 1, color: COLORS.primaryText, fontSize: 14.5, fontWeight: "900" },
+  hubDescription: { marginTop: 5, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 16.5 },
+  hubStatus: { marginTop: 8, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, backgroundColor: COLORS.softSurface, paddingHorizontal: 9, paddingVertical: 5 },
+  hubStatusAttention: { backgroundColor: COLORS.softSurface },
+  hubStatusDot: { width: 6, height: 6, borderRadius: 99, backgroundColor: COLORS.secondaryText },
+  hubStatusDotAttention: { backgroundColor: COLORS.selectedBackground },
+  hubStatusText: { color: COLORS.secondaryText, fontSize: 9.5, fontWeight: "800" },
+  hubStatusTextAttention: { color: COLORS.primary },
+  badge: { borderRadius: 999, backgroundColor: COLORS.softSurface, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeAttention: { backgroundColor: COLORS.selectedBackground },
+  badgeText: { color: COLORS.primary, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.35 },
+  badgeTextAttention: { color: COLORS.onPrimary },
+}));

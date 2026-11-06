@@ -1,0 +1,256 @@
+{
+  "release": "Family Bloom FB12-FB15 + gender nodes + Person Note using description",
+  "baseline": "Hero Reading Veil or FB01-FB10 consolidated (exact hashes only)",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "00_MO_CAP_NHAT_FAMILY_BLOOM.cmd",
+      "before": [
+        null
+      ],
+      "after": "4f0c80d3c25c048bb7a4f5e3befc9a37a9307afe48ae0a6b267a5b4d4cc896c9"
+    },
+    {
+      "path": "Family_Bloom_AUTO_UPDATE_FULL.bat",
+      "before": [
+        "9f4b306025599b414ed9e603f3f47a71e0ba8bbfeeaab2b25bf82753ef4e46e0",
+        "763dab240a0c69716081b45113f7175962cd75e86305fad4309445e47eac550d"
+      ],
+      "after": "90c15fb01d809ad016d521142775338a1da8bd015ce8a67fbd311cffb890be1f"
+    },
+    {
+      "path": "HUONG_DAN_CHAY_UPDATE_FB12_FB15.txt",
+      "before": [
+        null
+      ],
+      "after": "778ee9d3bfcd3a41b4c5762a6e7ee26ee7501a4e0683f46dbe892a898c82863e"
+    },
+    {
+      "path": "document/releases/fb0110-20261104/RELEASE_NOTES.txt",
+      "before": [
+        null
+      ],
+      "after": "478c0b2ff90b9fee7655be9cda22bcac7cf6b486c265d28937a62dc097acd60c"
+    },
+    {
+      "path": "document/releases/fb0110-20261104/patch-manifest.json",
+      "before": [
+        null
+      ],
+      "after": "608d7707b0b52d045d4c4d8007503d0f0b766aef060ccc14b3be7b41541f9594"
+    },
+    {
+      "path": "document/releases/fb1215-node-note-20261104/NOTIFICATION_AUDIT.md",
+      "before": [
+        null
+      ],
+      "after": "4e43d6477e4b2e610d493e014a7aabdf7fde0f1ded601ddcfe6d3d270b4e12aa"
+    },
+    {
+      "path": "document/releases/fb1215-node-note-20261104/VALIDATION_REPORT.txt",
+      "before": [
+        null
+      ],
+      "after": "0baaeb7e9c43c5a932498f29f3c7d2018b74fe7d72141e57f289ae29da463b28"
+    },
+    {
+      "path": "scripts/maintenance/fb-01-10-safe-update.cjs",
+      "before": [
+        null
+      ],
+      "after": "52b8edbbba0cc45b4a03e2e733632c1006cd74df5da5687133a72a309d483a0f"
+    },
+    {
+      "path": "src/app/(activity)/(notifications)/notifications.tsx",
+      "before": [
+        "72f31cb91e4bdb7a70c9c34585980f5d949ce3835d2a1d9666fe4065416277f8"
+      ],
+      "after": "33ad53775123868a13c9af4e0388d0f3f7922d6da0d6a12349bc4ef3ffb8c5d7"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-admin.tsx",
+      "before": [
+        "bec8dd2a343aa2cc706e2d088a1f450ee549250883990422f6545c8600b6ecab"
+      ],
+      "after": "2a8f1c955e696a85fc791e606dbf3e61acabedc61d02ae5b33758b39b81aeb96"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-person-editor.tsx",
+      "before": [
+        "20a9ed493081ef640fef515f25bf99d20b7f9520b80e0962fcaaf06dd83b3042"
+      ],
+      "after": "bc84f2997bc50e5cdc79e5c9729fb48cb63e547fd21c8112f6e360859e620333"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-proposals.tsx",
+      "before": [
+        "561a7d17dc51cc433e7f222f0ed0aa01e145920bce9c4e392b8e0fa19c2e75e5"
+      ],
+      "after": "5e96edca2eec126873c7422cb9d5365daa450aaca615a9ce05b18ec13cbf7229"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-relationship-editor.tsx",
+      "before": [
+        "239f8a0ac5e860179b58c8ba28a2de2bdf3ba6873c098df8660d68f71156d109"
+      ],
+      "after": "3fef4f83eeb00567a05e90052d3d183843f6734771b0c172d52de5d7bcd6bab3"
+    },
+    {
+      "path": "src/app/(home)/(fund)/home-fund.tsx",
+      "before": [
+        "e2b60f16b25f247a3909940886e2fc839002cc0e9a7ed85d6dd32de3856fb844",
+        "d2c387fe89ecb6a620429bb516370f5d15f22d853083c0e7c2447d79b4abf017"
+      ],
+      "after": "26391ac3f422449c17b29419c56e588114e157214dc483d4ebacc1c38efd3a97"
+    },
+    {
+      "path": "src/app/(home)/(games)/home-games.tsx",
+      "before": [
+        "5c7dd9602faf0bd52a061062c8892fffa67c3c3ea147732258b701f87b138a46"
+      ],
+      "after": "e5142242d0fb4ae94183e53d41ae276bf5e6890ce532a77fcbec953db772e488"
+    },
+    {
+      "path": "src/app/(home)/(time-capsule)/home-time-capsule-compose.tsx",
+      "before": [
+        "71c9832565145c580384bc31f5404f45adbdfc6413be415c9d8a4d351348d02d"
+      ],
+      "after": "ac7623cb06df887d3d4390e249bebfb5e120158ae4faa5a6c60ae4480102b18d"
+    },
+    {
+      "path": "src/app/(memories)/memory-book.tsx",
+      "before": [
+        "990128e1bed48d09106a8825184132ac54d44df2fb3c1a4947bd0f833bbcb680"
+      ],
+      "after": "c0e67f90b7356634acab47958e3929aa8291fea8bda0d64093105111fbf07863"
+    },
+    {
+      "path": "src/app/(tabs)/index.tsx",
+      "before": [
+        "38a96d663e685454d8842407103b5daaedb3404b26f792f58263053a83a5fe3a"
+      ],
+      "after": "d645e49c112ade9f843c565ad48d84c508e3760253ca3e7e094c816df02a6bd4"
+    },
+    {
+      "path": "src/app/(tabs)/play.tsx",
+      "before": [
+        "b45818ef556b55f961c12256fdd5df28274f8d3be48dab47c516118abd48aea1"
+      ],
+      "after": "f8c064d0ae75e7605f3ef0e301a1bacbe7d28a33444df0a7ffb277113c16b30a"
+    },
+    {
+      "path": "src/app/_layout.tsx",
+      "before": [
+        "6761748f6af900e0e12ada4453befcff67893d241c2f114a7a4ff7208acd1fbd"
+      ],
+      "after": "70cde9c73b6ca5c1b9ee0f51dde2c3608ebf12373ffe41905e0b3e2e71425e95"
+    },
+    {
+      "path": "src/components/events/EventCard.tsx",
+      "before": [
+        "6118b86ceecb72939cba594a2b6c21ea85ada59893184ca3633c1731a4ef7efe"
+      ],
+      "after": "683662450f336bad51939c0fa7d9c5c21cd8d0424c355b38dec5dbda931feb94"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPortrait.tsx",
+      "before": [
+        "13c93a229aecbcf3e8af80b1b7e54cb3844baefed65905564320a1a9c26c6d70"
+      ],
+      "after": "6a88afca6f32a3a593746197e0280fb490a62a36e9764ecf6201c93993bae9c9"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPrototype.tsx",
+      "before": [
+        "a353ce2ae568839f5c2d0331e611a73b3306bf14619ab9ec2a0fba6e551f34ba",
+        "f73b1faae706dfe10abd0b82f1a4baaf4e9df7e34cd7e8d37b6eef69fcf98d93"
+      ],
+      "after": "46e45e71043c28228465623526fe274b1cc71aef91f1cec52040561e3166585a"
+    },
+    {
+      "path": "src/components/ui/BloomHeroHeader.tsx",
+      "before": [
+        "919a839da78881b6e9cb786796e87e240b7a33d555f5c8c970f746a19e8c2040"
+      ],
+      "after": "52dcab1c1075bfe4673707d38584aa816536035f1e67f7365f2d56c14a06a74f"
+    },
+    {
+      "path": "src/components/ui/BloomInputComponents/BloomTextInput.tsx",
+      "before": [
+        "c9ed6d67809b9083a7ac1fd26f6eacafc75b6adfd87bfdf4303d3db37257127c"
+      ],
+      "after": "7c02915835b47e186f9d15e5dc2913a766c67f3cffee7e19bfa8dab2914ac2dd"
+    },
+    {
+      "path": "src/components/ui/BloomScaledInput.tsx",
+      "before": [
+        "8a5ad39b9dd0cdfb126f5b55338ee216829c13f5cc20e6afab86159d34b13148"
+      ],
+      "after": "83094ffef16acb8183f4a4ec325dfbf766f71d5e7e3eec14c4b4a8ad901be4ec"
+    },
+    {
+      "path": "src/features/home/polls/PollFeaturePanel.tsx",
+      "before": [
+        "95281bc5449226bd1450b1badbf6bbf9a51c8448096761caf034a98b96559766"
+      ],
+      "after": "3be19b91d186eea78fddc1c4ba4caea7f9bacd3a435fd5421d1643c603df9ae5"
+    },
+    {
+      "path": "src/services/activity/activityService.ts",
+      "before": [
+        "fd54e3346a5ca7430acffa4cb825c8ac8e37b340fd1ebb379a6cb64896b595b3"
+      ],
+      "after": "96bad86394f5ec799a2c3c3d7a455cf98bc40e93c7fc64f0a6bb489c907b1351"
+    },
+    {
+      "path": "src/services/familyGraph/graphProposalService.ts",
+      "before": [
+        "6444c5a25d8bfc18290ab0beaf4d97e4ed27d51b7242d9389c8facec62e3a6ef"
+      ],
+      "after": "785c12d8ec639ebf0f01640d3b7aaaca44de1eefbec3cd472946992bc5df11fb"
+    },
+    {
+      "path": "src/services/home/homePollService.ts",
+      "before": [
+        "53c209b9c3a558eb359d81254f0eceabf97fe39506e4750993110d17d8b36ddd"
+      ],
+      "after": "53d2209cf3e774f9fdfdfe3c8ec2498cce4f29178ff0e81d05508bd2eb35ef3f"
+    },
+    {
+      "path": "src/services/index.ts",
+      "before": [
+        "f20870088d89d7ff4fd2f4a0a9eeb59e5928ec4ecd9094ce0187b28cacaacd50"
+      ],
+      "after": "183d53eec4f4e96ab99655debaf7d8b54986e5fea3d9d0704d4d0a4097f60a66"
+    },
+    {
+      "path": "src/types/activity.ts",
+      "before": [
+        "04fbfd1562cfa04bbb38c7c30aed4841cb3a23618fa0eb35102a7b498180f846"
+      ],
+      "after": "73cc5e0af52c120295e460e250266b715d91da02b313dd5d8c895363d20231ee"
+    }
+  ],
+  "remove": [
+    {
+      "path": "src/app/(home)/(games)/home-game-create.tsx",
+      "before": [
+        "05f42111b7b82c34f691821420933360ba5015d2cf6924838de16834166d3717"
+      ],
+      "after": null
+    },
+    {
+      "path": "src/app/(home)/(games)/home-game/[sessionId].tsx",
+      "before": [
+        "7061177f4b3083980fa811f485c1c92446b34a7109d9e6a13640550c5dd41276"
+      ],
+      "after": null
+    }
+  ],
+  "extra": [
+    "document/releases/fb1215-node-note-20261104/RELEASE_NOTES.txt",
+    "document/releases/fb1215-node-note-20261104/patch-manifest.json",
+    "scripts/maintenance/fb-12-15-safe-update.cjs"
+  ]
+}

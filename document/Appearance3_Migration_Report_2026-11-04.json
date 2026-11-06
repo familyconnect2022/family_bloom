@@ -1,0 +1,161 @@
+{
+  "changed": [
+    {
+      "rel": "components/ui/BloomButtonComponents/BloomButton.tsx",
+      "functions": [
+        "BloomButton"
+      ],
+      "colorsUsed": 0,
+      "stylesUsed": 19,
+      "edits": 21
+    },
+    {
+      "rel": "components/ui/BloomConfirmDialog.tsx",
+      "functions": [
+        "BloomConfirmDialog"
+      ],
+      "colorsUsed": 0,
+      "stylesUsed": 18,
+      "edits": 20
+    },
+    {
+      "rel": "components/ui/BloomConfirmModal.tsx",
+      "functions": [
+        "BloomConfirmModal"
+      ],
+      "colorsUsed": 0,
+      "stylesUsed": 17,
+      "edits": 19
+    },
+    {
+      "rel": "components/ui/BloomHeroHeader.tsx",
+      "functions": [
+        "EventIllustration",
+        "MomentIllustration",
+        "TreeIllustration",
+        "FamilyIllustration",
+        "ProfileIllustration",
+        "AuthIllustration",
+        "LivingIllustration",
+        "WhisperIllustration",
+        "PollIllustration",
+        "KitchenIllustration",
+        "NoticeIllustration",
+        "GameIllustration",
+        "MusicIllustration",
+        "FundIllustration",
+        "SymbolIllustration",
+        "BloomHeroHeader"
+      ],
+      "colorsUsed": 53,
+      "stylesUsed": 172,
+      "edits": 242
+    },
+    {
+      "rel": "components/ui/BloomPageComponents.tsx",
+      "functions": [
+        "BloomBackButton",
+        "BloomStickyHeader",
+        "BloomPageHeader",
+        "BloomSectionHeader",
+        "BloomCard",
+        "BloomQuickAction",
+        "BloomInfoRow",
+        "BloomListRow",
+        "BloomEmptyState",
+        "BloomPill"
+      ],
+      "colorsUsed": 10,
+      "stylesUsed": 55,
+      "edits": 76
+    },
+    {
+      "rel": "features/home/kitchen/KitchenFeaturePanel.tsx",
+      "functions": [
+        "RecipeCard",
+        "RecipeDetail",
+        "KitchenFeaturePanel"
+      ],
+      "colorsUsed": 6,
+      "stylesUsed": 44,
+      "edits": 54
+    },
+    {
+      "rel": "features/home/music/HomeMusicPanel.tsx",
+      "functions": [
+        "MiniPlayer",
+        "HomeMusicPanel"
+      ],
+      "colorsUsed": 24,
+      "stylesUsed": 74,
+      "edits": 101
+    },
+    {
+      "rel": "features/home/polls/PollFeaturePanel.tsx",
+      "functions": [
+        "PollFeaturePanel"
+      ],
+      "colorsUsed": 7,
+      "stylesUsed": 65,
+      "edits": 74
+    },
+    {
+      "rel": "features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx",
+      "functions": [
+        "Particle",
+        "RibbonBow",
+        "TimeCapsuleRevealPrototype"
+      ],
+      "colorsUsed": 0,
+      "stylesUsed": 93,
+      "edits": 97
+    },
+    {
+      "rel": "features/home/whispers/WhisperFeaturePanel.tsx",
+      "functions": [
+        "WhisperFeaturePanel"
+      ],
+      "colorsUsed": 15,
+      "stylesUsed": 75,
+      "edits": 92
+    },
+    {
+      "rel": "features/learning/LessonRichView.tsx",
+      "functions": [
+        "RenderBlock",
+        "LessonRichView"
+      ],
+      "colorsUsed": 5,
+      "stylesUsed": 2,
+      "edits": 10
+    },
+    {
+      "rel": "features/study/StudyComposer.tsx",
+      "functions": [
+        "StudyComposer"
+      ],
+      "colorsUsed": 12,
+      "stylesUsed": 28,
+      "edits": 42
+    },
+    {
+      "rel": "features/study/StudyFormula.tsx",
+      "functions": [
+        "RootSegment"
+      ],
+      "colorsUsed": 1,
+      "stylesUsed": 0,
+      "edits": 3
+    },
+    {
+      "rel": "features/study/StudyFormulaEditor.tsx",
+      "functions": [
+        "FormulaEditor"
+      ],
+      "colorsUsed": 4,
+      "stylesUsed": 79,
+      "edits": 85
+    }
+  ],
+  "issues": []
+}

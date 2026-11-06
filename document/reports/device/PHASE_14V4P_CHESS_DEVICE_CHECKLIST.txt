@@ -1,0 +1,10 @@
+PHASE 14V4P — DEVICE CHECKLIST
+
+1. Scroll so the chessboard is high/low on the page, then trigger promotion.
+   PASS: promotion card is centered on the chessboard, not the phone screen.
+2. Finish a game and tap Chơi ván mới.
+   PASS: “Đang chuẩn bị ván mới…” is centered on the chessboard.
+3. Finish with win/loss/draw.
+   PASS: result toast is centered on the visible phone viewport, independent of page scroll.
+4. Verify Q/R/B/N are image-only promotion choices.
+5. Verify Hint/Motion/FX still work and Bloom Bot remains on the fixed 120ms test delay after server deploy.

@@ -1,0 +1,13 @@
+FAMILY BLOOM — PHASE 14Q V2.2 THREE REVEAL THEMES
+Date: 2026-10-01
+Base required: Family_Bloom_Phase_14Q_V2_1_LETTER_FRONT_REVEAL_FULL_2026-10-01
+
+Adds three visually and kinetically distinct Bloom Time Reveal themes:
+- Ấm áp: pink/gold, petals, soft motion.
+- Trang trọng: blue/silver, restrained sparks, deliberate motion.
+- Rộn ràng: pale yellow + pink, confetti/petals/sparks, faster pop motion.
+
+Preserves V2.1 letter contract: box opens first, then letter reveals in front from scale 0 / opacity 0 to full size.
+No Firestore/Rules/Functions/schema/data/permission/native dependency changes.
+No Firebase deploy required.
+Real Android visual/smoothness test is still required.

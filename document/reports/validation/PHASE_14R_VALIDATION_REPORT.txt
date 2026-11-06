@@ -1,0 +1,44 @@
+FAMILY BLOOM PHASE 14R — HỘP THỜI GIAN FUNCTIONAL V1 VALIDATION
+Date: 2026-10-01
+Base: Phase 14Q V2.2 BUILD-READY CLEAN-ROOT
+
+IMPLEMENTED
+PASS real homeTimeCapsules metadata/content/open-receipt service.
+PASS membership-user audience and creator exclusion.
+PASS hidden/locked preview modes.
+PASS three persisted reveal themes: warm/formal/festive.
+PASS first-open ceremony + per-user receipt + replay.
+PASS letter remains front-layer and starts scale=0 / opacity=0 after box opening beat.
+PASS Reduce Motion fallback.
+PASS local exact-open notification + exact deep link.
+PASS Time Capsule local notifications not limited by Event 30-day horizon.
+PASS Firestore Rules lock recipient content until server request.time >= openAt.
+PASS creator mutations only before openAt.
+PASS metadata create requires atomic content/main in same write batch.
+PASS firestore.rules and firestore.cloud.rules synchronized for Time Capsule rule block.
+PASS build BAT removes invalid Expo --output argument.
+PASS build BAT auto-repairs stale npm lock/dependencies and detects notification native packages.
+PASS APK-only build helper added; root-clean structure preserved at 21 root entries.
+
+STATIC / REGRESSION
+PASS Phase 13 release readiness: 11/11.
+PASS Phase 14C functional V1: 44/44; TS/TSX syntax 210/210.
+PASS Phase 14J Full-screen Focus + Locate: 18/18; TS/TSX syntax 210/210.
+PASS Phase 14N Focus-first/Catalog-first: 13/13.
+PASS Phase 14Q V2.2 reveal invariants: 34/34.
+PASS Phase 14R Time Capsule contract: 49/49.
+PASS 793 relative src imports resolved / 0 missing.
+PASS project JSON parse: 12/12.
+PASS project JS syntax: 66/66.
+PASS Firestore Time Capsule rule blocks match between direct/cloud rule files; rule braces balanced.
+
+NOT CLAIMED
+- No real Android native/device runtime test was performed in this packaging environment.
+- Firestore Rules were not deployed from this environment.
+- Remote Cloud Function push was not added; notification delivery is local-first and requires recipient device metadata sync.
+- The inherited package-lock cannot be refreshed against npm inside this offline packaging environment; the Windows build/setup BAT repairs it on the user's internet-connected machine before build when needed.
+
+REQUIRED NEXT
+1. Deploy Firestore Rules only.
+2. Run real sender/recipient Android device checklist.
+3. Build standalone APK if desired and test on second Android device.

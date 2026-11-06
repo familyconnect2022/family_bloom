@@ -1,0 +1,1705 @@
+{
+  "artifact": "Family Bloom Living Storybook 2.0 - SOURCE COMPARISON / REVIEW 92 + CHESS XIANGQI",
+  "date": "2026-10-31",
+  "scope": "Android only, source static audit (not release build)",
+  "baseline_zip": "FAMILY_BLOOM_R8R3R3_TYPESCRIPT_OFFLINE_GATE_FULL_2026-10-31.zip",
+  "sha256": "782e9958ece66bda7231c17dee49f9f55dc543395bfd7530d1e131d3f2992bb3",
+  "source_zip_file_count": 1521,
+  "review_total": 92,
+  "review_comments": 26,
+  "limitations": [
+    "Thiết kế được duyệt không chứng minh đã có trong mã nguồn.",
+    "Đối chiếu tĩnh; chưa chạy APK thực trên điện thoại, không chứng minh sát 90% UI.",
+    "Không mở đường thay đổi Web, Firebase rules hoặc servers qua đợt thiết kế.",
+    "Không chỉnh sửa source hoặc phát hành ZIP FULL CODE trong bộ báo cáo đối chiếu."
+  ],
+  "design_principles": {
+    "themes": [
+      "rose",
+      "garden",
+      "heritage",
+      "midnight"
+    ],
+    "modes": [
+      "light",
+      "dark",
+      "system"
+    ],
+    "motion": [
+      "vivid",
+      "gentle",
+      "static"
+    ],
+    "typography": [
+      "Be Vietnam Pro",
+      "Nunito",
+      "Quicksand",
+      "Lexend",
+      "Bloom Cute / Baloo 2 + Nunito"
+    ],
+    "max_accessible_text_scale_percent": 160,
+    "theme_cache": "per-UID local, Firebase bootstrap only on first installation/sign-in for missing cache; manual sync action"
+  },
+  "game_identity_approval": {
+    "approved": true,
+    "identity": {
+      "chess": {
+        "piece": "pawn",
+        "asset_primary": "assets/images/chess/pieces-png-default/wp.png",
+        "asset_alternate": "assets/images/chess/pieces-png-default/bp.png",
+        "actual_home_games_current": "assets/images/chess/pieces-png-default/bn.png",
+        "finding": "Sai quân (mã thay vì tốt)"
+      },
+      "xiangqi": {
+        "piece": "general",
+        "asset_primary": "assets/xiangqi/red_general.png",
+        "asset_alternate": "assets/xiangqi/black_general.png",
+        "actual_home_games_current": "assets/xiangqi/red_general.png",
+        "finding": "Đúng ở card sảnh, cần dùng chung nơi khác"
+      }
+    },
+    "contexts": [
+      "icon nhỏ",
+      "tab",
+      "card tính năng",
+      "huy hiệu",
+      "banner",
+      "thông báo",
+      "lời mời Super Bloom"
+    ],
+    "preserve": [
+      "Native Chess Full",
+      "Native Xiangqi Full",
+      "Native Mini chess/xiangqi",
+      "luật và đồng hồ server",
+      "chuyển Full/Mini và drag/snapping"
+    ],
+    "theme_change_scope": [
+      "sảnh",
+      "khung nền/panel",
+      "trang trí",
+      "card",
+      "lớp phủ Full/Mini"
+    ],
+    "precedence": "Đính chính 2026-10-31: Xiangqi=general có hiệu lực cao hơn câu ghi nhầm Xiangqi=pawn trong các ghi chú #17 và #61 của JSON 92 mục.",
+    "files": [
+      "src/app/(home)/(games)/home-games.tsx",
+      "src/app/(home)/(games)/home-chess.tsx",
+      "src/app/(home)/(games)/home-xiangqi.tsx",
+      "src/components/games/FirebaseBoardInvitationGate.tsx",
+      "src/components/games/BoardGamePresentationRoot.tsx",
+      "src/components/games/BoardGamePresentationRoot.android.tsx",
+      "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessNativeBoardView.kt",
+      "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/XiangqiNativeBoardView.kt"
+    ]
+  },
+  "screens": [
+    {
+      "id": 1,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Màn khởi động",
+      "layout": "splash",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/_layout.tsx",
+        "src/components/system/BloomAppBootstrap.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 2,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Đăng nhập",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(auth)/login.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 3,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Tạo tài khoản",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(auth)/login.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Khoảng trống chứng cứ: Không thấy luồng tạo tài khoản riêng ngoài Google/OTP; cần phân biệt với đăng nhập/tạo tài khoản lần đầu."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 4,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Đang xác thực",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/session-gate.tsx",
+        "src/app/_layout.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 5,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Tạo hồ sơ",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/create-profile.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 6,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Chọn ảnh đại diện",
+      "layout": "picker",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/create-profile.tsx",
+        "src/components/ui/BloomInputComponents/BloomInputAvatar.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 7,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Cắt ảnh đại diện",
+      "layout": "editor",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng bức tranh còn xấu nên đổi lại hình ảnh sẽ hay hơn",
+      "source_entry_points": [
+        "src/components/ui/BloomInputComponents/BloomInputAvatar.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng bức tranh còn xấu nên đổi lại hình ảnh sẽ hay hơn",
+        "Quy tắc xử lý: Đổi icon kiểu khung tranh thành biểu tượng ảnh/ảnh thật, giữ tính năng crop đã có."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 8,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Chọn gia đình",
+      "layout": "gallery",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-select.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 9,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Tạo gia đình",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-gateway.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 10,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Tìm gia đình",
+      "layout": "search",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-gateway.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 11,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Xin gia nhập",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": "Có thể làm lá thư đẹp hơn nữa",
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-gateway.tsx",
+        "src/components/onboarding/JoinFamilyModal.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Có thể làm lá thư đẹp hơn nữa",
+        "Quy tắc xử lý: Làm thiệp xin gia nhập đẹp hơn; không đổi quy trình gửi và chống trùng yêu cầu."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 12,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Chờ xét duyệt",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": "Thay biểu tượng đồng hồ cát thành biểu tượng khác gần gủi hơn",
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-gateway.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Thay biểu tượng đồng hồ cát thành biểu tượng khác gần gủi hơn",
+        "Quy tắc xử lý: Đổi đồng hồ cát thành hình chờ duyệt thân thiện; cần giữ loading không chồng nút."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 13,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Thư Ngõ - phong bì",
+      "layout": "letter",
+      "concept_approved_in_json": true,
+      "user_comment": "Là thư nên làm biểu tượng đẹp hơn nưa",
+      "source_entry_points": [
+        "src/components/onboarding/WelcomeModal.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Là thư nên làm biểu tượng đẹp hơn nưa",
+        "Quy tắc xử lý: Nâng hình bì thư và vùng chạm phủ thư, không đổi nội dung thư."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 14,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Thư Ngõ - nội dung",
+      "layout": "letter-open",
+      "concept_approved_in_json": true,
+      "user_comment": "Thư ngõ tôi muốn giữ nguyên thiết kế mà tôi với bạn đã thống nhất, làm hiệu ứng mượt mà hơn thôi",
+      "source_entry_points": [
+        "src/components/onboarding/WelcomeModal.tsx",
+        "src/services/onboarding/welcomeGate.ts"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Thư ngõ tôi muốn giữ nguyên thiết kế mà tôi với bạn đã thống nhất, làm hiệu ứng mượt mà hơn thôi",
+        "Quy tắc xử lý: Giữ nguyên 14 đoạn nội dung và thiết kế thư đã chốt, chỉ tinh chỉnh chuyển động. Lưu ý welcomeLedger hiện chỉ kích hoạt lần đầu đối với membership mới, chưa đáp ứng nhu cầu hiện thư sau mỗi lần đăng nhập chủ động."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 15,
+      "group": "01 Đăng nhập & khởi tạo",
+      "title": "Không có hồ sơ",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/session-gate.tsx",
+        "src/app/_layout.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 16,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Home - nhà mình",
+      "layout": "home",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng lịch và thành viên hơi xấu, học tập nên dùng biểu tượng quyển sách mở, coè vua lấy hình con tốt trong asset của app",
+      "source_entry_points": [
+        "src/app/(tabs)/index.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng lịch và thành viên hơi xấu, học tập nên dùng biểu tượng quyển sách mở, coè vua lấy hình con tốt trong asset của app",
+        "Quy tắc xử lý: Thay icon lịch/thành viên, học tập dùng sách mở; biểu tượng cờ dùng asset gốc."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 17,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Khám phá tính năng",
+      "layout": "tiles",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng lịch , học tập hơi xấu nên dùng biểu tượng quyển sách mở, cờ vua và cờ tướng lấy hình con tốt trong asset của app, supper bloom nhình giống biểu tượng trái bom hoen là hình bông hoa",
+      "source_entry_points": [
+        "src/app/(tabs)/play.tsx",
+        "src/app/(tabs)/index.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng lịch , học tập hơi xấu nên dùng biểu tượng quyển sách mở, cờ vua và cờ tướng lấy hình con tốt trong asset của app, supper bloom nhình giống biểu tượng trái bom hoen là hình bông hoa",
+        "Quy tắc xử lý: Cùng sửa icon lịch, học tập, Super Bloom hình hoa; XIANGQI dùng quân TƯỚNG theo quyết định mới."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 18,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Tìm kiếm toàn ứng dụng",
+      "layout": "search",
+      "concept_approved_in_json": true,
+      "user_comment": "Làm lại biểu tượng thành viên",
+      "source_entry_points": [
+        "src/app/(tabs)/index.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Làm lại biểu tượng thành viên",
+        "Quy tắc xử lý: Thay biểu tượng thành viên trong tìm kiếm.",
+        "Khoảng trống chứng cứ: Chưa xác minh có màn tìm kiếm toàn ứng dụng riêng; hiện gán vào Home làm điểm đối chiếu."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 19,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Tổng quan gia đình",
+      "layout": "home",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng lịch và thành viên hơi xấu, học tập nên dùng biểu tượng quyển sách mở, coè vua lấy hình con tốt trong asset của app",
+      "source_entry_points": [
+        "src/app/(tabs)/family.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng lịch và thành viên hơi xấu, học tập nên dùng biểu tượng quyển sách mở, coè vua lấy hình con tốt trong asset của app",
+        "Quy tắc xử lý: Thay icon lịch/thành viên, học tập sách mở; cờ vua quân tốt."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 20,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Danh sách thành viên",
+      "layout": "gallery",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng thành viên hơi xấu",
+      "source_entry_points": [
+        "src/app/(tabs)/family.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng thành viên hơi xấu",
+        "Quy tắc xử lý: Thay icon thành viên."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 21,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Quản trị gia đình",
+      "layout": "settings",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(graph)/family-graph-admin.tsx",
+        "src/app/(family)/(membership)/family-join-requests.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 22,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Duyệt yêu cầu gia nhập",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-join-requests.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 23,
+      "group": "02 Trang chủ & gia đình",
+      "title": "Đổi tên giới thiệu",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(membership)/family-gateway.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Khoảng trống chứng cứ: Chưa xác minh form đổi tên giới thiệu tách riêng; cần kiểm tra gateway/quản trị."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 24,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Cây gia phả",
+      "layout": "tree",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(graph)/family-graph.tsx",
+        "src/components/familyGraph/FamilyGraphPrototype.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 25,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Chi tiết thành viên",
+      "layout": "profile",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/member/[uid].tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 26,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Hồ sơ của tôi",
+      "layout": "profile",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng hình người quá xấu",
+      "source_entry_points": [
+        "src/app/(profile)/profile.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng hình người quá xấu",
+        "Quy tắc xử lý: Thay icon hình người; giữ nút Sửa hồ sơ trong card chân dung và thẻ nền trắng."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 27,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Chỉnh sửa hồ sơ",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/profile.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 28,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Thêm thành viên",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": "Nút thêm quá xấu",
+      "source_entry_points": [
+        "src/app/(family)/(graph)/family-graph-person-editor.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Nút thêm quá xấu",
+        "Quy tắc xử lý: Thiết kế lại nút thêm thành viên."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 29,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Thông tin quan hệ",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(family)/(graph)/family-graph-relationship-editor.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 30,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Thành tựu cá nhân",
+      "layout": "gallery",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/profile.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Khoảng trống chứng cứ: Chưa xác minh tab thành tựu độc lập; có hồ sơ làm điểm xuất phát."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 31,
+      "group": "03 Gia phả & hồ sơ",
+      "title": "Thay ảnh thành viên",
+      "layout": "picker",
+      "concept_approved_in_json": true,
+      "user_comment": "Làm lại biểu tương jhung tranh bằng image",
+      "source_entry_points": [
+        "src/app/(profile)/profile.tsx",
+        "src/components/ui/BloomInputComponents/BloomInputAvatar.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Làm lại biểu tương jhung tranh bằng image",
+        "Quy tắc xử lý: Thay icon khung tranh bằng icon hình ảnh."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 32,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Moment - bảng ảnh",
+      "layout": "moments",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx",
+        "src/components/moments/MomentCard.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 33,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Chi tiết Moment",
+      "layout": "moment-detail",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng thNhf viên gia đình quá xấu",
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx",
+        "src/components/moments/MomentCard.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng thNhf viên gia đình quá xấu",
+        "Quy tắc xử lý: Thay icon thành viên."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 34,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Tạo Moment",
+      "layout": "editor",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tương momnent không nên là honhf người đang viết, làm lại biểu tượng",
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tương momnent không nên là honhf người đang viết, làm lại biểu tượng",
+        "Quy tắc xử lý: Thay icon Moment, không dùng người đang viết."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 35,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Chọn ảnh / video",
+      "layout": "picker",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 36,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Tiến trình tải lên",
+      "layout": "upload",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/moments/MomentUploadToast.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 37,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Hủy tải / dọn media",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/services/moments",
+        "src/services/media"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 38,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Bình luận & cảm xúc",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tương khá xấu",
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx",
+        "src/components/moments/MomentCard.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Biểu tương khá xấu",
+        "Quy tắc xử lý: Thay icon bình luận/cảm xúc."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 39,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Album & bộ sưu tập",
+      "layout": "gallery",
+      "concept_approved_in_json": true,
+      "user_comment": "Alnum không nên là hình quyến sách",
+      "source_entry_points": [
+        "src/app/(memories)/memory-book.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Alnum không nên là hình quyến sách",
+        "Quy tắc xử lý: Album dùng ảnh/khung ảnh thay sách.",
+        "Khoảng trống chứng cứ: Có memory-book; chưa chứng minh album bộ sưu tập đúng concept."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 40,
+      "group": "04 Khoảnh khắc & album",
+      "title": "Moment chưa có dữ liệu",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/moments.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 41,
+      "group": "05 Lịch & sự kiện",
+      "title": "Danh sách sự kiện",
+      "layout": "events",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx",
+        "src/components/events/EventCard.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 42,
+      "group": "05 Lịch & sự kiện",
+      "title": "Chi tiết sự kiện",
+      "layout": "ticket",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(activity)/event/[eventId].tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 43,
+      "group": "05 Lịch & sự kiện",
+      "title": "Tạo sự kiện",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 44,
+      "group": "05 Lịch & sự kiện",
+      "title": "Chỉnh sửa sự kiện",
+      "layout": "form",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 45,
+      "group": "05 Lịch & sự kiện",
+      "title": "Lịch tháng",
+      "layout": "calendar",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 46,
+      "group": "05 Lịch & sự kiện",
+      "title": "Sự kiện của ngày",
+      "layout": "events",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 47,
+      "group": "05 Lịch & sự kiện",
+      "title": "Danh sách sinh nhật",
+      "layout": "birthday",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 48,
+      "group": "05 Lịch & sự kiện",
+      "title": "Thiệp sinh nhật",
+      "layout": "birthday",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(tabs)/planner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Khoảng trống chứng cứ: Có sự kiện sinh nhật; chưa chứng minh thiệp riêng đúng concept."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 49,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Góc học tập",
+      "layout": "learning",
+      "concept_approved_in_json": true,
+      "user_comment": "Biesur tượng toán nên là máy tính hay hình cái thước tam giác và compa",
+      "source_entry_points": [
+        "src/app/(home)/(learning)/learning-library.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biesur tượng toán nên là máy tính hay hình cái thước tam giác và compa",
+        "Quy tắc xử lý: Môn Toán dùng máy tính hoặc thước tam giác và compa."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 50,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Chọn môn học",
+      "layout": "subjects",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/learning-library.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 51,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Chọn lớp học",
+      "layout": "tiles",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/learning-library.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 52,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Danh sách bài học",
+      "layout": "gallery",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/learning-library.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 53,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Chi tiết bài học",
+      "layout": "lesson",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/learning-lesson.tsx",
+        "src/features/learning/LessonRichView.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 54,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Hỏi đáp - danh sách",
+      "layout": "qa",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/study-questions.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 55,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Chi tiết câu hỏi",
+      "layout": "qa-detail",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/study-question-detail.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 56,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Đặt câu hỏi",
+      "layout": "editor",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/study-question-compose.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 57,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Viết lời giải",
+      "layout": "solution",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/features/study/StudyComposer.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 58,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Bàn phím công thức",
+      "layout": "formula",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/features/study/StudyFormulaEditor.tsx",
+        "src/features/study/StudyFormula.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 59,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Xem trước lời giải",
+      "layout": "lesson",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/features/study/StudyComposer.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 60,
+      "group": "06 Góc học tập & hỏi đáp",
+      "title": "Câu trả lời được chọn",
+      "layout": "qa-detail",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(learning)/study-question-detail.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 61,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Sảnh trò chơi",
+      "layout": "games",
+      "concept_approved_in_json": true,
+      "user_comment": "Biểu tượng cờ vua , coè tướng lấy hình con tốt trong asset của app",
+      "source_entry_points": [
+        "src/app/(home)/(games)/home-games.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CẦN_ĐỔI_NHẬN_DIỆN",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Biểu tượng cờ vua , coè tướng lấy hình con tốt trong asset của app",
+        "Quy tắc xử lý: Chess = pawn từ assets/images/chess/pieces-png-default/; Xiangqi = general từ assets/xiangqi/; ghi chú cũ trong JSON bị quyết định mới thay thế."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 62,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Sảnh Cờ vua",
+      "layout": "game-lobby",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(home)/(games)/home-chess.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CẦN_ĐỔI_NHẬN_DIỆN",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Sảnh và card Cờ vua dùng quân tốt, không dùng quân vua/mã làm biểu tượng nhận diện; quân vua trong bảng mời cần phân biệt vai trò game art."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 63,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Sảnh Cờ tướng",
+      "layout": "game-lobby",
+      "concept_approved_in_json": true,
+      "user_comment": "Thay đổi biểu tượng quân tướng trong asset",
+      "source_entry_points": [
+        "src/app/(home)/(games)/home-xiangqi.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CẦN_ĐỔI_NHẬN_DIỆN",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Thay đổi biểu tượng quân tướng trong asset",
+        "Quy tắc xử lý: Cờ tướng = quân TƯỚNG từ asset, không dùng quân tốt theo ghi chú cũ."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 64,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Lời mời thi đấu",
+      "layout": "invitation",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/FirebaseBoardInvitationGate.tsx",
+        "src/components/games/ChessChallengeGate.tsx",
+        "src/components/games/XiangqiChallengeGate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CẦN_ĐỔI_NHẬN_DIỆN",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Lời mời: dùng quân tốt/quan tướng tùy môn theo board duyệt; giữ đếm ngược 60 giây và phân quyền."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 65,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Chuẩn bị bàn cờ",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx",
+        "src/components/games/ChessChallengeGate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 66,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Bàn Cờ vua Full",
+      "layout": "chess",
+      "concept_approved_in_json": true,
+      "user_comment": "Tôi muốn dùng bàn cờ cũ nhưng thay đổi hình nền theo theme",
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx",
+        "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/ChessNativeBoardView.kt"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "GIỮ_NGHIỆP_VỤ_CHỈ_ĐỔI_THEME",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Tôi muốn dùng bàn cờ cũ nhưng thay đổi hình nền theo theme",
+        "Quy tắc xử lý: Giữ thiết kế bàn cờ vua hiện có, chỉ đổi lớp nền/màu trang trí theo theme; KHÔNG đổi luật/đồng hồ."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 67,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Bàn Cờ tướng Full",
+      "layout": "xiangqi",
+      "concept_approved_in_json": true,
+      "user_comment": "Tôi muốn dùng bàn cờ tướng hiện tại, màu bàn cờ thay dổi theo theme",
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx",
+        "modules/family-bloom-overlay/android/src/main/java/expo/modules/familybloomoverlay/XiangqiNativeBoardView.kt"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "GIỮ_NGHIỆP_VỤ_CHỈ_ĐỔI_THEME",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Tôi muốn dùng bàn cờ tướng hiện tại, màu bàn cờ thay dổi theo theme",
+        "Quy tắc xử lý: Giữ thiết kế bàn cờ tướng hiện có, chỉ đổi lớp nền/màu trang trí theo theme; KHÔNG đổi luật/đồng hồ."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 68,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Bàn cờ Mini",
+      "layout": "mini",
+      "concept_approved_in_json": true,
+      "user_comment": "Tôi muốn dùng thiết kế hoeenj tại, background thay đổi theo theme",
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx",
+        "src/components/games/BoardGamePresentationRoot.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "GIỮ_NGHIỆP_VỤ_CHỈ_ĐỔI_THEME",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Tôi muốn dùng thiết kế hoeenj tại, background thay đổi theo theme",
+        "Quy tắc xử lý: Giữ thiết kế Mini hiện tại, đổi nền theo theme; không thay luồng kéo, thu nhỏ, phục hồi."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 69,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Kết quả thắng",
+      "layout": "result",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 70,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Kết quả hòa",
+      "layout": "result",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 71,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Kết quả thua",
+      "layout": "result",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/BoardGamePresentationRoot.android.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 72,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Tiếp tục sau mất kết nối",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/ChessSessionRecoveryGate.tsx",
+        "src/components/games/XiangqiSessionRecoveryGate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 73,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Super Bloom - thành tựu",
+      "layout": "bloom",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/FirebaseBoardInvitationGate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Logo Super Bloom phải là hoa, không giống bom; thành tựu theo nội dung.",
+        "Khoảng trống chứng cứ: Không thấy màn thành tựu Super Bloom độc lập; có hệ modal lời mời/hiển thị."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 74,
+      "group": "07 Trò chơi & Super Bloom",
+      "title": "Super Bloom - thông báo",
+      "layout": "bloom",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/games/FirebaseBoardInvitationGate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CẦN_ĐỔI_NHẬN_DIỆN",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Lời mời Super Bloom dùng đúng icon game, không thay kiểm soát phiên."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 75,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Hộp thông báo",
+      "layout": "notifications",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(activity)/(notifications)/notifications.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 76,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Chi tiết thông báo",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": "Làm lại biesur tượng lá thư",
+      "source_entry_points": [
+        "src/app/(activity)/(notifications)/notifications.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [
+        "Nhận xét gốc: Làm lại biesur tượng lá thư",
+        "Quy tắc xử lý: Thay biểu tượng thư."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 77,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Cài đặt",
+      "layout": "settings",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 78,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Chọn theme",
+      "layout": "appearance",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/ui/BloomThemeSettingsPanel.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "ĐÃ_CÓ_THEME_CƠ_BẢN_CẦN_NÂNG_CẤP",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 79,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Chế độ sáng / tối",
+      "layout": "appearance",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/ui/BloomThemeSettingsPanel.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "ĐÃ_CÓ_THEME_CƠ_BẢN_CẦN_NÂNG_CẤP",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 80,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Chọn font chữ",
+      "layout": "appearance",
+      "concept_approved_in_json": true,
+      "user_comment": "Dùng biểu tương Ab",
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Dùng biểu tương Ab",
+        "Quy tắc xử lý: Dùng biểu tượng chữ Ab; chọn font cần bổ sung vào app.",
+        "Khoảng trống chứng cứ: Chưa có danh sách lựa chọn 5 font trong Settings."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 81,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Cỡ chữ dễ đọc",
+      "layout": "fontscale",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Cỡ chữ lớn và tự xuống dòng chưa có engine app-wide.",
+        "Khoảng trống chứng cứ: Chưa có thanh điều chỉnh fontScale app-wide."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 82,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Hiệu ứng chuyển động",
+      "layout": "motion",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/constants/motion.ts",
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Ba mức chuyển động chưa có ở settings.",
+        "Khoảng trống chứng cứ: Chưa có lựa chọn motion sống động/dịu nhẹ/tĩnh."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 83,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Hình nền cá nhân hóa",
+      "layout": "appearance",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P0",
+      "notes": [
+        "Quy tắc xử lý: Hình nền cá nhân hóa chưa có trong cấu hình theme.",
+        "Khoảng trống chứng cứ: Chưa có lựa chọn nền riêng tùy cá nhân."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 84,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Cài đặt thông báo",
+      "layout": "settings",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(activity)/(notifications)/notification-preferences.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 85,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Quyền riêng tư & tài khoản",
+      "layout": "settings",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 86,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Công cụ thử nghiệm",
+      "layout": "settings",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(internal)/developer-tools.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 87,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Trợ giúp & giới thiệu",
+      "layout": "detail",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/(profile)/settings.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CHƯA_ĐỦ_BẰNG_CHỨNG_ĐẠT_CONCEPT",
+      "priority": "P1",
+      "notes": [
+        "Khoảng trống chứng cứ: Chưa kiểm chứng màn Trợ giúp & giới thiệu tách riêng."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 88,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Màn chờ Firebase",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/session-gate.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 89,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Không có kết nối",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": "Không kết nối nên dung đám mây nhưng có gạch chéo thể hiện không có kết nối",
+      "source_entry_points": [
+        "src/components/system/BloomInternetBanner.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P0",
+      "notes": [
+        "Nhận xét gốc: Không kết nối nên dung đám mây nhưng có gạch chéo thể hiện không có kết nối",
+        "Quy tắc xử lý: Offline icon đám mây có gạch chéo."
+      ],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 90,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Không có quyền",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/app/session-gate.tsx",
+        "src/app/_layout.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 91,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Thông báo lỗi",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/ui/BloomToast.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    },
+    {
+      "id": 92,
+      "group": "08 Thông báo, cài đặt & trạng thái",
+      "title": "Thông báo thành công",
+      "layout": "status",
+      "concept_approved_in_json": true,
+      "user_comment": null,
+      "source_entry_points": [
+        "src/components/ui/BloomToast.tsx"
+      ],
+      "source_entry_points_exist": true,
+      "review_result": "CÓ_ĐIỂM_TÍCH_HỢP_CẦN_ĐỐI_CHIẾU_UI",
+      "priority": "P1",
+      "notes": [],
+      "requires_android_visual_validation": true
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const r = path.resolve(__dirname,'../../..');
+const read = p => fs.readFileSync(path.join(r,p),'utf8');
+const exists = p => fs.existsSync(path.join(r,p));
+const editor = read('src/app/(family)/(graph)/family-graph-person-editor.tsx');
+assert.doesNotMatch(editor, /Không thêm trường mới vào Firebase/);
+const detail = read('src/components/familyGraph/FamilyGraphPersonSheet.tsx');
+assert.match(detail,/width: 124, height: 124, borderRadius: 28/);
+assert.match(detail,/avatarImage: \{ borderRadius: 27 \}/);
+assert.match(detail,/personName: \{[^\n]*fontSize: 19/);
+const focus = read('src/components/familyGraph/FamilyGraphFocusView.tsx');
+const main = read('src/components/familyGraph/FamilyGraphPrototype.tsx');
+const frames = read('src/components/familyGraph/familyGraphNode3dAssets.ts');
+assert.match(focus,/FAMILY_GRAPH_NODE_3D\[familyGraphNodeGender\(person.gender\)\]/);
+assert.match(focus,/topOrnamentWrap/);
+assert.match(focus,/bottomOrnamentWrap/);
+assert.match(focus,/pointerEvents="none"/);
+assert.match(main,/FAMILY_GRAPH_NODE_3D\[nodeKind\]/);
+for (const gender of ['male','female','unknown']) {
+ assert.match(frames, new RegExp(gender+': \\{'));
+ for (const edge of ['top','bottom']) assert.ok(exists(`assets/images/family-tree/node-3d/${gender}-${edge}.png`));
+}
+const sheet = read('src/components/ui/BloomInputComponents/AvatarSourceSheet.tsx');
+const picker = read('src/components/ui/BloomInputComponents/BloomInputAvatar.tsx');
+assert.doesNotMatch(sheet,/Chọn ảnh có sẵn|AVATAR_PRESETS|onPreset/);
+assert.doesNotMatch(picker,/choosePreset|ImageManipulator|expo-asset/);
+assert.match(sheet,/Chụp ảnh mới/);
+assert.match(sheet,/Chọn từ thư viện ảnh/);
+assert.equal(exists('assets/images/avatars/presets/hoa-hong.png'),false);
+assert.equal(exists('assets/images/storybook/heroes/home_rose.png'),false);
+assert.ok(exists('assets/images/storybook/heroes/v2/home_rose.webp'));
+console.log('PASS: R6 nontechnical help, larger rounded portrait, shared 3D gender styles, Focus mode, native image picker, asset cleanup');

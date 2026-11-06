@@ -1,0 +1,24 @@
+[
+  {
+    "file": "app/(tabs)/_layout.tsx",
+    "names": [
+      [
+        "BloomDockSlot",
+        2
+      ]
+    ]
+  },
+  {
+    "file": "app/(tabs)/index.tsx",
+    "names": [
+      [
+        "HomeOnThisDayIsland",
+        1
+      ],
+      [
+        "HomeUpcomingIsland",
+        1
+      ]
+    ]
+  }
+]

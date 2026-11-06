@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/fb_board_game_start,@raw/fb_board_move_self,@raw/fb_board_move_opponent,@raw/fb_board_capture,@raw/fb_board_move_check,@raw/fb_board_castle,@raw/fb_board_promote,@raw/fb_board_premove,@raw/fb_board_illegal,@raw/fb_board_tenseconds,@raw/fb_board_game_end" />

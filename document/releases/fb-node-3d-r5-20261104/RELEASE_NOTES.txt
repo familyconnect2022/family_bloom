@@ -1,0 +1,20 @@
+FAMILY BLOOM – NODE 3D R5 (04/11/2026)
+
+CHANGE LIST
+1) Increased generation separation from 216 to 264 logical units.
+2) Increased partner/sibling/family unit gaps 16->36, 30->52 and 72->96.
+3) Changed new Person initial gender from male to other on BOTH Android create/editor surfaces.
+4) Changed unknown gender label from "Khác" to "Chưa xác định" in the same two forms.
+5) Preserved actual stored gender for all existing persons, tree relations, notes and graphics.
+
+IMPORTANT: If an existing Person has gender=male saved in Firebase, its node remains green.
+Please open Person detail -> Edit and correct the gender manually. Do not infer gender from names.
+
+FILES changed in installed project: 4; 4 new QA/release/update files.
+RUN extracted 00_MO_CAP_NHAT_FAMILY_BLOOM.cmd -> checks exact R4 source, backup, SHA validation.
+No firebase rule/schema changes or database migrations. Android APK build and live Firebase test still required.
+
+BAT-PRESERVING COMPATIBILITY FIX
+- Existing root Family_Bloom_AUTO_UPDATE_FULL.bat is untouched and not SHA-gated.
+- Exact SHA of three app source files remains REQUIRED, plus release artifacts.
+- Use 00_MO_CAP_NHAT_FAMILY_BLOOM.cmd from freshly extracted ZIP.

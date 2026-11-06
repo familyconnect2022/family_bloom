@@ -1,0 +1,20 @@
+FAMILY BLOOM PHASE 14Q — HỘP THỜI GIAN REVEAL PROTOTYPE DEVICE CHECKLIST
+
+[ ] App opens normally from the Phase 14N baseline.
+[ ] Nhà Mình no longer shows the visible Phòng nhạc panel; it shows Hộp thời gian / Thử hiệu ứng.
+[ ] Opening Hộp thời gian shows the full-screen dark Bloom stage, not a white header screen.
+[ ] Back button returns normally.
+[ ] Before opening: sealed pink box + ribbon/flower seal are visible and centered.
+[ ] Tap Mở hộp: medium haptic is felt (when device haptics are enabled).
+[ ] Seal/ribbon transition feels intentional; no sudden content jump.
+[ ] Lid visibly opens with perspective.
+[ ] Warm glow appears from inside the box.
+[ ] Petals/sparks animate without obvious frame drops.
+[ ] Letter rises out of the box before the message is readable.
+[ ] Message fades in only after the reveal has progressed.
+[ ] “Lời này đã chờ 87 ngày để đến với em” appears after reveal.
+[ ] Completion haptic is felt (when enabled).
+[ ] Xem lại hiệu ứng resets cleanly and can be repeated 3–5 times.
+[ ] No crash after rapidly leaving/re-entering the prototype.
+[ ] Existing Thì thầm / Cùng quyết định / Bếp / Graph flows remain unchanged.
+[ ] No Firebase deploy is required for this prototype.

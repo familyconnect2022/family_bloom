@@ -1,0 +1,40 @@
+Family Bloom — Phase 14E Music Card + Graph Focus Overlay
+Date: 2026-09-29
+Base: Family_Bloom_Phase_14D_NHA_MINH_MUSIC_TODO_FULL_2026-09-29
+
+Scope
+1) Nhạc Nhà Mình UI consolidation
+- The entire music experience is now one Bloom Supper card instead of many visually detached blocks.
+- Hero + search + Playlist/Yêu thích/Bài hát Nhà Mình tabs + bounded track area + player + provider note live inside one card.
+- Track list is fixed-height (350px) and scrolls internally; only 20 tracks/page are mounted.
+- Favorites/family lists can page without making the Nhà Mình screen grow indefinitely.
+- Search keeps 360ms debounce, request cancellation and existing cache/provider architecture.
+- Raw Firestore permission/network errors are no longer shown directly to users; friendly Bloom copy is shown while raw detail remains in dev console diagnostics.
+
+2) Family Graph Focus Branch Overlay
+- Available from all background modes: 3 thế hệ, 5 thế hệ, Toàn phả hệ.
+- Opening a branch does NOT replace/re-layout the background graph. A bounded subgraph is derived from the already-loaded in-memory query engine snapshot and independently re-laid-out.
+- Focus card occupies 80% of the graph surface and animates from scale 0.2 -> 1.0.
+- A full-screen interaction shield/frosted dim layer catches every touch outside the focus card, so pan/pinch never leaks to the background graph.
+- Performance choice: Android uses a static frosted/dim veil instead of live GPU blur. This preserves the intended visual separation without continuous blur cost.
+- Focus graph has independent pan/pinch and auto-fit on first paint.
+- Selecting Person B while already focused on Person A replaces the bounded content INSIDE the same overlay with a small fade/zoom transition. It never stacks a second overlay.
+- Closing focus returns to the exact unchanged background graph camera and selected 3/5/all mode.
+- No Firestore listener is added for Focus View; data comes from the existing FamilyGraphSnapshot/query engine.
+
+3) Regression
+- Phase 14D Music/Kitchen/Whisper/Poll architecture preserved.
+- Phase 14C data contracts, Rules and indexes unchanged.
+- No new npm/native dependency.
+- No Firestore Rules/Indexes/Functions deploy required solely for Phase 14E.
+
+Validation commands
+  npm run phase14c:check
+  npm run phase14d:check
+  npm run phase14e:check
+
+Device checks still required
+- Graph 50+ people: open Focus View from 3 / 5 / Toàn phả hệ, pan/pinch focus, close and verify base camera is unchanged.
+- While focus A is open, tap B and confirm the same overlay changes branch with no stacked modal.
+- Stress Focus View repeatedly and confirm base graph does not visibly jump/re-center.
+- Nhà Mình music: verify one-card composition, internal list scroll, page controls, search, favorite/share and playback on real Android.

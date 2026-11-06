@@ -1,0 +1,106 @@
+{
+  "deleted_count": 31,
+  "deleted_bytes": 11909283,
+  "files": [
+    {
+      "path": "assets/images/family-tree/node-3d/female-approved-original.png",
+      "bytes": 823811
+    },
+    {
+      "path": "assets/images/family-tree/node-3d/male-approved-original.png",
+      "bytes": 825493
+    },
+    {
+      "path": "assets/images/family-tree/node-3d/unknown-approved-original.png",
+      "bytes": 766128
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/opening.jpg",
+      "bytes": 293444
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/revealed.jpg",
+      "bytes": 419185
+    },
+    {
+      "path": "assets/images/onboarding/time-letter/sealed.jpg",
+      "bytes": 258751
+    },
+    {
+      "path": "assets/images/react-logo.png",
+      "bytes": 6341
+    },
+    {
+      "path": "assets/images/react-logo@2x.png",
+      "bytes": 14225
+    },
+    {
+      "path": "assets/images/react-logo@3x.png",
+      "bytes": 21252
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_garden.png",
+      "bytes": 429560
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_heritage.png",
+      "bytes": 421872
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_midnight.png",
+      "bytes": 292645
+    },
+    {
+      "path": "assets/images/storybook/heroes/event_rose.png",
+      "bytes": 420774
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_garden.png",
+      "bytes": 1003653
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_heritage.png",
+      "bytes": 1022561
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_midnight.png",
+      "bytes": 774864
+    },
+    {
+      "path": "assets/images/storybook/heroes/home_rose.png",
+      "bytes": 1045122
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_garden.png",
+      "bytes": 448161
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_heritage.png",
+      "bytes": 442902
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_midnight.png",
+      "bytes": 310619
+    },
+    {
+      "path": "assets/images/storybook/heroes/moment_rose.png",
+      "bytes": 441137
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_garden.png",
+      "bytes": 380892
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_heritage.png",
+      "bytes": 375988
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_midnight.png",
+      "bytes": 263419
+    },
+    {
+      "path": "assets/images/storybook/heroes/tree_rose.png",
+      "bytes": 379160
+    }
+  ]
+}

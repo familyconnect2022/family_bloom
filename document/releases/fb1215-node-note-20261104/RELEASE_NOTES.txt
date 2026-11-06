@@ -1,0 +1,17 @@
+FAMILY BLOOM - PERSON NODE GENDER STYLES / NOTE via DESCRIPTION / FB-12..FB-15
+Release: 2026-11-04; based on user-uploaded FB01-FB10 consolidated full code.
+
+Node styles: Female warm floral paper; Male lilac generation label; Unspecified white with green outline.
+Avatars still come from the saved Person; layout coordinates, relation algorithm and connector geometry unchanged.
+Node names: allow five lines at a compact responsive font while maintaining original 112x124 graph node dimensions; full name in person sheet remains accessible.
+Note: one data source, existing FamilyPerson.description; no new Firestore field, no migration, no Rules change.
+Person create/edit forms label this field as Note/Story and enforce 2500 new-character input cap, compatible with familyGraphCore function contract.
+Bubble Note reads description, shows summary and Expand, closes without modifying Person data.
+Handover: enabled Accept uses primary theme button color; target recipient and previous steward receive a private in-app Activity notification on submit/response.
+Time Capsule: required title marker, shorter placeholder, validation appears beside title field.
+Graph: new Person and new relationship create activity notices with fallback to manually notify family when activity write fails.
+Notifications use existing Activity inbox; Android OS remote push is not enabled here and requires separately verified FCM infrastructure.
+FB-11 learning redesign remains deferred.
+Source update: SHA-256-bound; valid targets are unchanged Hero Reading Veil baseline or FB-01..FB-10; complete source backup first.
+Before applying, unzip this FULL CODE outside the existing project and run Family_Bloom_AUTO_UPDATE_FULL.bat.
+Tests: see validation report. Does not claim Android APK or production Firestore test.

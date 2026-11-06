@@ -1,0 +1,18 @@
+Family Bloom P2.30 — changed files
+
+src/components/chess/ChessSurfaceHost.tsx
+src/components/chess/ChessBoard.tsx
+src/components/chess/ChessGlobalUiHost.tsx
+src/app/(chess)/chess-game/[gameId].tsx
+src/components/xiangqi/XiangqiGlobalUiHost.tsx
+src/app/(xiangqi)/xiangqi-preview.tsx
+src/app/(home)/(games)/home-games.tsx
+scripts/test-phase-p2_30-independent-game-resume-handoff.js
+package.json
+scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat
+scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat
+scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat
+scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat
+scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat
+document/releases/PHASE_P2_30_INDEPENDENT_GAME_RESUME_HANDOFF.md
+document/releases/PHASE_P2_30_CHANGED_FILES.txt

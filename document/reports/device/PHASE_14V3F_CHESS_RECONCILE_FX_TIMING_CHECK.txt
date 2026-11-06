@@ -1,0 +1,24 @@
+Family Bloom Phase 14V.3F — Chess Reconcile + FX Timing
+Date: 2026-10-03
+
+Implemented:
+- Monotonic authoritative-state commit gate in useChessGame.
+- Ignore stale revisions from late Socket.IO/ACK packets.
+- Ignore conflicting FEN for the same revision.
+- Preserve optimistic native move animation without replaying the same move.
+- Queue Battle FX instead of replacing an event immediately.
+- Delay move-triggered FX 280ms after authoritative revision so piece motion settles first.
+- Longer readable FX holds: subtle 1100ms, active 1450ms, dramatic 1850ms, finale 2600ms.
+- FX queue advances only when current effect finishes.
+
+Static gates:
+- Phase 14V.3F reconcile/FX timing: 12/12 PASS
+- Phase 14V.3E pregame theme lock: 14/14 PASS
+- Phase 14V.1 global presence/Battle FX: 33/33 PASS
+- Changed TS/TSX syntax transpile: PASS
+- Generated JS under src/server/src: 0
+
+Runtime still required:
+- Real-device test for no visual bounce after own move.
+- Real-device test for opponent move animation.
+- Capture/check/promotion/checkmate FX sequencing and readability.

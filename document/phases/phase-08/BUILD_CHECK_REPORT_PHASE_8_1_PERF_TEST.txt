@@ -1,0 +1,34 @@
+FAMILY BLOOM — PHASE 8.1 AUTOMATED PERFORMANCE TEST BUILD
+Date: 2026-09-25
+
+SCOPE
+- Dedicated performance test routes
+- Automatic tab/family/common Bloom action instrumentation
+- Tracked realtime listener diagnostics
+- 30-second JS stall probe
+- In-memory synthetic Family Graph 50/100/200/300/500 Person
+- No Firebase synthetic writes
+- No Cloud Functions / Blaze requirement
+- No new native dependency
+
+VALIDATION RUN
+- Phase 2 static transpile: PASS — 141 TS/TSX
+- Relative imports: PASS — 511 checked, 0 missing
+- Phase 7 multi-family contract: PASS
+- Startup gate: PASS
+- Tab warmup: PASS
+- Phase 6.5 contract: PASS
+- Phase 6.4 viewport/progressive: PASS
+- Query/Kinship/Focus: PASS
+- DG-11: PASS
+- Dense layout/routing: PASS
+- Synthetic RAM graph generator: PASS — 50/100/200/300/500 exact Person counts, 0 invalid/self edges
+
+NOT CERTIFIED IN THIS ENVIRONMENT
+- Native Android build/install
+- Device FPS/GPU/RAM profiler
+- Real-device performance numbers
+- Full tsc --noEmit with project node_modules
+
+INTERPRETATION
+This build is instrumentation, not an optimization claim. User device measurements remain the source for runtime acceptance.

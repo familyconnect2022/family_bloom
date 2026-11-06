@@ -1,0 +1,42 @@
+FAMILY BLOOM — PHASE 13 ANDROID RC TEST
+
+A. BUILD / START
+1. app.json changed (native splash + versionCode), so run: npx expo run:android
+2. Then normal dev iterations: npx expo start --dev-client -c
+3. Confirm native splash is Bloom pink/family art with no blue flash.
+
+B. BLOOM SUPPER
+1. Home -> Kỷ niệm -> Lịch -> Cây nhà: hero reaches top/left/right.
+2. Kỷ niệm and Lịch: two lower hero corners are rounded like Cây nhà.
+3. Create/edit Event and Moment: full-screen; Back works; unsaved dialog is Bloom styled.
+4. Inputs/selectors are clearly distinct from the page background.
+
+C. RELIABILITY
+1. Switch Family A -> B -> C: transition appears immediately; no duplicate tabs.
+2. Moment with media: interrupt network, restore, retry; completed uploads must not restart from zero.
+3. Background/foreground while a failed Moment exists; it should resume after reconnect grace.
+4. Existing Event local notification: background app, tap notification, exact Event opens.
+
+D. PUSH TOKEN PREPARATION — NO BLAZE REQUIRED
+1. Notification Preferences -> enable notifications -> grant Android permission.
+2. Optional Firebase Console: users/<uid>/pushTokens contains an enabled Android token.
+3. Logout -> token document should become enabled=false.
+4. Cross-account remote FCM is PENDING_BLAZE and is NOT a Phase 13 failure.
+
+E. DATA ISOLATION
+1. Switch 2+ families: Moments/Events/Graph never leak between families.
+2. Normal member cannot perform admin-only Graph mutation.
+3. Join/proposal moderation still works.
+
+F. PERFORMANCE FINAL GATE
+1. Dev build only: Góc chơi -> Performance Lab -> Chạy Final Performance Gate.
+2. Expect 13/13 complete and Overall PASS.
+3. Graph 500 should remain visually fast; prior real-device baseline ~0.8s first paint / ~2.36s full mount.
+
+G. STATIC RELEASE CHECK
+Run: npm run phase13:check
+Expected: Overall PASS.
+
+DEFERRED
+- PENDING_BLAZE: Cloud Functions live deployment + real cross-account remote FCM.
+- PENDING_IOS_DEVICE: iPhone validation.

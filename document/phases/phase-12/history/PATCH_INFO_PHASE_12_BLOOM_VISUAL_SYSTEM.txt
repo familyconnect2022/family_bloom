@@ -1,0 +1,6 @@
+Family Bloom Phase 12 · Bloom Visual System Polish
+- Full-bleed purpose-aware heroes
+- Duplicate genealogy headers/actions removed
+- Home/Login/Bootstrap/Welcome visual upgrade
+- High-contrast input system
+- No dependency changes

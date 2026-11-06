@@ -1,0 +1,57 @@
+{
+  "source": "Family Bloom H22R8 original chess pieces (pre-H22R9)",
+  "dimensions": [
+    192,
+    192
+  ],
+  "pieces": {
+    "wk": {
+      "sha256": "57d79f673197cb73ff86a6930fd6b4e2940b4993561bb5498cbfb358d6a15d7a",
+      "bytes": 11158
+    },
+    "wq": {
+      "sha256": "0d6572b8d6c7ad7f2b06e8e1fbb53eb2e41e7173e1b6ee8b394927cef8692250",
+      "bytes": 14208
+    },
+    "wr": {
+      "sha256": "b5f2226aab67b2612a4d1de396cae399afa103e5731a9ad4be36f4c5bf2dab03",
+      "bytes": 3481
+    },
+    "wb": {
+      "sha256": "9cf12b1e961b32eb1048c8403ecf3496c34a1032deb4e78bbbffe16eea8c351d",
+      "bytes": 9064
+    },
+    "wn": {
+      "sha256": "5d4156fe4eedc6df162beedaf27e894545c0acdc118c97dad2a8a24548500ec8",
+      "bytes": 9194
+    },
+    "wp": {
+      "sha256": "9f9650a3367f80dc586cb16c2c811b37b9effbd40f486e3c3b69ce02eaa4b3b9",
+      "bytes": 5472
+    },
+    "bk": {
+      "sha256": "2dd1e6f98737f5e56577fb9145ca5230e5631a7559b3e2ac0aed67d55cff396b",
+      "bytes": 11814
+    },
+    "bq": {
+      "sha256": "b32b06fd858fc891d42c1cc4e54d2455cf93191fb0f72e8885b85266c1931d9c",
+      "bytes": 11622
+    },
+    "br": {
+      "sha256": "72f867f6c0703ff012cc8c29f083e9a713ecbd38e2623ba9e76789d30714f97e",
+      "bytes": 2817
+    },
+    "bb": {
+      "sha256": "2654858cfeb0b332a692e70d70b5dabb07ccc5a27066d28e846b24dfd67f01b6",
+      "bytes": 5109
+    },
+    "bn": {
+      "sha256": "aa7b9ae79b1641a2f10e578d70522bded44f35c2667b60134f95bdc7fbe16483",
+      "bytes": 6998
+    },
+    "bp": {
+      "sha256": "d63594234671daba822645aa7fe61133d285a13698b61755e6f58eecd292945c",
+      "bytes": 2660
+    }
+  }
+}

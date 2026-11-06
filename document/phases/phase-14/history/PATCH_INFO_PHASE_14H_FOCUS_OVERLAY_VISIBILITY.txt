@@ -1,0 +1,11 @@
+Family Bloom Phase 14H — Focus Overlay Visibility Hotfix
+Base bắt buộc: Family_Bloom_Phase_14G_TRUE_FOCUS_OVERLAY_FULL_2026-09-30
+
+Thay đổi chính:
+- Fix Android chỉ thấy blur nhưng không thấy Focus card.
+- Bỏ hardware texture + blur filter gây lỗi compositor.
+- Dùng frosted shield nhẹ, chặn gesture nền mà không render lại Canvas.
+- Ép zIndex/elevation Focus card.
+- Thêm nút Trở lại + Android hardware Back; giữ nút X và tap-outside close.
+- Giữ toàn bộ contract 14G: 80% Canvas, gradual zoom từ node, full-family branch, 3/5/all disabled, Canvas giữ nguyên pan/zoom/node/line.
+- Không thêm dependency, Rules, indexes hoặc Functions.

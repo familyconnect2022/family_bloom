@@ -1,0 +1,27 @@
+FAMILY BLOOM R5 SOURCE VERIFICATION — 2026-10-30
+Source: M3R4R4 R1_BASE + R2 behavior restoration, NOT a byte-merged R2.
+
+PASS Current R2/R4 source integration [scripts/tests/release/test-r2r4-preflight.cjs] | PASS Android package and Expo Router identity | R2/R4 integration PRECHECK 17/17
+PASS Current R2/R4 runtime policy [scripts/tests/release/test-r2r4-journey.cjs] | PASS Auto Update blocks unknown R2 lineage unless byte-merge is verified | PASS R2/R4 integration runtime regression
+PASS Structure (19 checks) [scripts/maintenance/check-project-structure.js] |  | Family Bloom project structure gate: 19/19 PASS
+PASS Expo route uniqueness [scripts/setup/check-expo-route-uniqueness.cjs] | PASS Expo Router: 3 layouts checked, no duplicate Stack/Tabs/Drawer names
+PASS TypeScript syntax transpile [scripts/setup/check-ts-syntax-transpile.js] | PASS TS/TSX syntax transpile: 347/347 files
+PASS Avatar/CV crop and UI [scripts/tests/release/test-m3r4r4-avatar-cv.cjs] | PASS Toast success, info, warning, error separated | PASS 15 contract gates + crop geometry
+PASS Avatar background queue concurrency [scripts/tests/release/test-m3r4r3-background-avatar-queue.cjs] | PASS discard removes persisted intent | PASS UID identity boundary
+PASS Avatar pick/progress contract [scripts/tests/release/test-m3r4-avatar-picker-and-progress.cjs] | PASS Avatar file MIME mapping 5/5 | M3R4R3 Avatar+toast checks 15/15 PASS
+PASS Firebase avatar contract [scripts/tests/release/test-m3r2-avatar-contract.cjs] | PASS Avatar visible on create and edit | M3R2 Avatar 10/10 PASS
+PASS Graph avatar security [scripts/tests/release/test-m3r3-graph-avatar-security.cjs] | PASS Old Firestore rules deployment copy synchronized | M3R3 Graph avatar 13/13 PASS
+PASS Welcome touch static [scripts/tests/release/test-r3r14r1-welcome-touch-static.cjs] | PASS R3R14R1 STATIC 8: unchanged Android identity and no duplicate root BAT wrappers | R3R14R1 STATIC TOUCH: 8/8 PASS
+PASS Welcome touch runtime [scripts/tests/release/test-r3r14r1-welcome-touch-runtime.cjs] | PASS R3R14R1 6: interrupted animation has guarded fallback and cancelable watchdog | R3R14R1 WELCOME TOUCH RUNTIME: 6/6 PASS
+PASS Welcome envelope animation [scripts/tests/release/test-r3r14-welcome-envelope-motion.cjs] | PASS R3R14 11: WelcomeModal TypeScript JSX is syntactically sound | R3R14 WELCOME LETTER: 11/11 PASS
+PASS Windows BAT and AAPT2 preflight [scripts/tests/release/test-h22r3-windows-build-preflight.cjs] | PASS Windows BAT manifest structural audit passes in actual source tree | H22R3 Windows Build & Share preflight: 7/7 PASS
+PASS Build & Share source package [scripts/tests/release/test-h25r2r2-release-preflight.cjs] | [PASS] Updater and Build & Share preflight wiring | [PASS] H25R2R3 release preflight 10/10 source-only gates. No existing project was modified.
+PASS Build script layout [scripts/tests/release/test-h25r2r7r2r3r5-script-layout.cjs] | PASS 14 Giu ma nguon Kotlin Native | H25R2R7R2R3R5 SCRIPT LAYOUT: 14/14 PASS
+PASS Auto Update mock regressions [scripts/tests/release/test-h22r7-auto-update-full.cjs] | PASS PRE-COPY cleanup supports noninteractive success and failure without pause | H22R7 one-click updater tests: 21/21 PASS
+PASS Build entrypoint manifest [scripts/setup/check-build-entrypoints.js] |  | Build entrypoint audit: PASS (36 shipped BAT files, 0 unmanaged)
+PASS Release readiness (cross repo may SKIP) [scripts/tests/history/test-phase13-release-readiness.js] | [SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.
+
+Passed test scripts: 19/19
+Online Firebase/Cloudinary, Gradle/APK and full TS typecheck: NOT RUN.
+R2 archive raw bytes: UNAVAILABLE; FULL binary R2+R4 merger: NOT VERIFIED.
+Do not Auto Update unknown R2 source; lineage gate refuses unrecognized target source.

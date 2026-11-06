@@ -1,0 +1,40 @@
+FAMILY BLOOM — PHASE 14R.1 DUAL APP DEVICE CHECKLIST
+
+ONE-TIME FIREBASE DEV SETUP
+[ ] Run scripts\android\Family_Bloom_Android_Print_DEV_SHA.bat.
+[ ] Copy both SHA-1 and SHA-256.
+[ ] Firebase Console -> project family-connect-4184f -> Project settings -> Add app -> Android.
+[ ] Android package name = com.familybloom.android.dev
+[ ] App nickname = Family Bloom Dev
+[ ] Add the DEV SHA-1 and SHA-256 before downloading config.
+[ ] Download google-services.json.
+[ ] Rename it to google-services.dev.json.
+[ ] Put it at config\firebase\google-services.dev.json.
+
+FIRST DEV INSTALL
+[ ] Connect authorized Android phone by USB.
+[ ] Run scripts\android\Family_Bloom_Android_DEV_Build_And_Run.bat.
+[ ] Confirm a second icon named Family Bloom Dev appears.
+[ ] Confirm RELEASE Family Bloom is still installed and untouched.
+[ ] Confirm DEV icon is Expo-style black/white.
+[ ] Confirm RELEASE icon is the Family Bloom family/house artwork.
+[ ] Sign in to DEV and verify Google/Phone auth as used by your test flow.
+
+LATER JS/UI DEVELOPMENT
+[ ] Leave Family Bloom Dev installed.
+[ ] Run scripts\android\Family_Bloom_Android_DEV_Metro_Only.bat.
+[ ] Open Family Bloom Dev on the phone.
+[ ] Confirm Metro refresh/hot reload works.
+
+RELEASE
+[ ] Run scripts\android\Family_Bloom_Android_Test_App_RELEASE.bat to build/install RELEASE.
+[ ] Or run scripts\android\Family_Bloom_Android_Build_APK_ONLY.bat to export APK only.
+[ ] APK alias: dist\android\Family_Bloom_Release_LATEST.apk
+[ ] Confirm installing RELEASE does not replace Family Bloom Dev.
+
+EXPECTED ISOLATION
+[ ] RELEASE package = com.familybloom.android
+[ ] DEV package = com.familybloom.android.dev
+[ ] Local app storage/cache are independent.
+[ ] Notification permissions/schedules are independent.
+[ ] Both may read/write the same Firebase backend because both are registered in family-connect-4184f.

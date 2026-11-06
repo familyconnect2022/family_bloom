@@ -1,0 +1,24 @@
+Family Bloom — Phase 14J Full-screen Focus + Smooth Point Animation — 2026-09-30
+
+Base: Phase 14I NATIVE_FOCUS_PORTAL FULL.
+
+Changes from real-device feedback:
+- Focus View is 80% x 80% of the full screen/window, not the smaller genealogy canvas.
+- Native Modal portal remains, so Android z-order is reliable.
+- Removed blur/frost. Only a lightweight ordinary dim/touch-shield remains between Canvas and Focus.
+- Header now has one explicit close action only: “← Trở về”. The duplicate X button is removed.
+- A -> B still reuses the same Focus View; no stacked overlays.
+- The old Focus zoom/scan action is replaced by Locate. Locate recenters the currently focused Person at a readable scale instead of fitting the whole branch.
+- Open/close animation is rebuilt around one UI-thread progress value:
+  * target is fixed at 80% full screen;
+  * origin is the exact tapped node converted to window coordinates;
+  * open starts from scale 0 and grows smoothly to 1;
+  * close returns all the way to scale 0 at the original node;
+  * opacity stays at 1 through most of the close and fades only in the final ~22%;
+  * the native Modal is unmounted only after the close animation reaches zero;
+  * duration is distance-normalized (~520–630 ms), reducing the “near node slow / far node fast” effect.
+- Background Canvas remains frozen: no node/line/layout mutation and no camera reset; 3/5/Toàn controls stay disabled while Focus is open.
+- Loading shell remains visible when branch extraction/layout has not completed.
+
+No Firestore Rules / Functions / indexes / native dependency change.
+Real-device validation is still required for final animation feel.

@@ -1,0 +1,14 @@
+PHASE 14V4L — DEVICE CHECKLIST
+
+1. Start a game. Confirm no Hint / Motion / FX test buttons are shown.
+2. Confirm Hint, Motion and contextual FX still work.
+3. Confirm only the side to move has a fully filled pink clock with white time text.
+4. Confirm clocks no longer show Bạn / Đối thủ.
+5. Confirm player cards no longer show Quân trắng / Quân đen or redundant turn-status rows.
+6. Play to checkmate: final piece movement should land, then centered result toast appears.
+7. On win: confirm trophy/sparkles/petals appear without blocking readability.
+8. Tap Đồng ý: result toast disappears and finished board remains visible.
+9. Tap Chơi ván mới: existing rematch flow still works.
+10. Promote a pawn: centered promotion overlay must show four real piece images (Hậu/Xe/Tượng/Mã), no visible piece-name buttons.
+11. Choose each promotion piece in separate tests and confirm the server accepts the selected piece.
+12. Recheck premove, capture FX, check FX, V4K material-swing suppression and clocks.

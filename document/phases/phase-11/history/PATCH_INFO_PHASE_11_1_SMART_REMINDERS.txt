@@ -1,0 +1,35 @@
+FAMILY BLOOM — PHASE 11.1 SMART FAMILY REMINDERS
+Base: Family_Bloom_Phase_11_0_ACTIVITY_PERFORMANCE_OPTIMIZED_FULL_2026-09-26.zip
+Date: 2026-09-26
+
+WHAT CHANGED
+- Added in-app Smart Reminders to Chuyện trong nhà without adding realtime listeners or remote push.
+- Birthday: reminder one day before and on the day.
+- Memorial / ngày giỗ: reminder one day before and on the day with restrained copy.
+- Normal event: appears quietly; a timed event can become badge-eligible when within ~3 hours.
+- Notable / Important event: badge-eligible reminder before/on the day; timed Important events can surface again near start time after an earlier reminder was seen.
+- On This Day: quiet discovery row only, never badge-eligible.
+- 3+ simultaneous event reminders collapse into one concise summary instead of flooding the Activity Center.
+- Added per-user Smart Reminder preferences: birthdays, memorials, family events, On This Day.
+- Preferences are stored on users/{uid}; reminder seen checkpoint is stored on the existing family member document.
+- Activity Center merges persisted Phase 11.0 Activity with virtual Smart Reminder rows and marks both seen.
+- Home badge includes unread smart reminders; reminder event data is bounded and cached in RAM.
+- Added bounded eventService.listReminderWindow() for today/tomorrow + recurring yearly projection.
+- No duplicate Event/Moment documents are created by the reminder engine.
+
+PERFORMANCE
+- No onSnapshot added.
+- Event reminder window cache: 5 minutes.
+- On This Day discovery cache: 20 minutes.
+- Reminder seen checkpoint cache: 30 seconds.
+- Existing Phase 10/11 singleton/listener architecture is preserved.
+
+RULES / DEPLOY
+- No new Firestore collection or Rules change is required for Phase 11.1 on top of the deployed Phase 11.0 Rules.
+- Phase 11.2 remote push (FCM/APNs) remains intentionally out of scope.
+
+VALIDATION
+- Phase 11.1 Smart Reminder contracts PASS.
+- Phase 11.0 Activity Center / Activity Performance / Hotfix contracts PASS.
+- Phase 10 / Phase 9 / Phase 8 regression contracts PASS.
+- 159 TS/TSX files transpile with 0 syntax errors.

@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'../../..');
+const read=x=>fs.readFileSync(path.join(root,x),'utf8');
+const layout=read('src/app/_layout.tsx'),old=read('src/app/welcome.tsx');
+const welcome=read('src/components/onboarding/WelcomeModal.tsx');
+const auth=read('src/context/AuthContext.tsx');
+const gate=read('src/app/session-gate.tsx');
+const check=(description,ok)=>{assert.ok(ok,description);console.log('PASS',description)};
+check('UID and membership are required for Welcome',layout.includes('const welcomeBlocking = verifiedFamily && welcomeReady && showWelcome;'));
+check('Home tabs are forbidden until Welcome dismissed',layout.includes('const allowFamilyRoutes = verifiedFamily && welcomeReady && !welcomeBlocking;')&&layout.includes('<Stack.Protected guard={allowFamilyRoutes}>'));
+check('Welcome presentation lives inside real native session gate',gate.includes('<WelcomeModal visible name={userProfile?.displayName} onContinue={dismissWelcome} />') && gate.includes('testID="verified-welcome-native-screen"'));
+check('Welcome has no competing global bootstrap shield',layout.includes('{!!user && !welcomeBlocking &&') && layout.includes('{familyTransition && !welcomeBlocking ?'));
+check('Old root sibling removed to avoid Android native stack z-order conflict',!layout.includes('welcomePresentationPlane') && gate.includes('verifiedWelcomeScreen: { flex: 1'));
+check('Native-stack Welcome cannot steal a frame',layout.includes('<Stack.Protected guard={false}>')&&old.includes('Redirect href="/session-gate"'));
+check('No navigation towards native /welcome on sign-in',!layout.includes('router.replace("/welcome"'));
+check('Welcome uses the always-public safe anchor',layout.includes('if (welcomePending)')&&layout.includes('router.replace("/session-gate" as never)'));
+check('Frame layout cannot falsely unlock presentation',!layout.includes('welcomeFrameReady')&&!layout.includes('useWelcomeFrameReady'));
+check('Verified Welcome does not wait for navigationStable and still requires acknowledgement',gate.includes('if (welcomeOnGate) {')&&gate.includes('onContinue={dismissWelcome}')&&layout.includes('const welcomeBlocking = verifiedFamily && welcomeReady && showWelcome;'));
+check('Visual fallback is noninteractive and never blocks tap',welcome.includes('styles.fallbackPaper')&&welcome.includes('imageFailed || geometry.compactFallback'));
+check('Whole-letter touch target contains the static JPG without elevated cover',welcome.includes('Image source={WELCOME_PAGE}')&&welcome.includes('resizeMode="cover"')&&welcome.includes('testID="welcome-paper-safe-text-region"')&&!welcome.includes('elevation: 100'));
+check('Letter retains 14 user-approved paragraphs',welcome.split('const LETTER:')[1].split('];')[0].match(/\n\s*\{ text:/g)?.length===14);
+check('Letter persists acknowledgement only on Continue',auth.includes('await welcomeLedger.markSeen(target.uid, membership);')&&welcome.includes('onPress={continueIntoFamily}'));
+check('Private home never unlocked by a mere Google sign-in',layout.includes('verifiedFamily = authStatus === "signed-in" && canEnterFamilyHome({')&&layout.includes('membershipStatus'));
+console.log('R8R4R4R3R4R1 ROOT WELCOME P0: 15/15 PASS (code-level; verify actual Android paint)');

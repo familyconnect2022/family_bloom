@@ -1,0 +1,7 @@
+{
+  "catalogVersion": "vi2-dynamic-2026-09-30",
+  "generatedAt": null,
+  "notRun": true,
+  "reason": "The build environment used to package Phase 14L has no outbound Audius API access. Run npm run music:audit-audius -- --full once on an Internet-connected machine. The generated provider manifest will then exclude unmatched/ambiguous seeds from runtime playlist generation.",
+  "entries": {}
+}

@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+'use strict';
+/* Source-level guard for the P0 auth/network patch. APK/emulator still required. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../../..');
+const read=r=>fs.readFileSync(path.join(root,r),'utf8');
+const auth=read('src/context/AuthContext.tsx');
+const network=read('src/services/network/internetReachabilityService.ts');
+const session=read('src/app/session-gate.tsx');
+const rootNav=read('src/app/_layout.tsx');
+const classifier=read('src/services/navigation/sessionVerificationIssue.ts');
+const family=read('src/services/family/familyService.ts');
+const welcome=read('src/services/onboarding/welcomeLedger.ts');
+let count=0;const check=(name,ok)=>{assert.ok(ok,name);console.log('PASS '+(++count)+' '+name)};
+const retry=auth.split('const retryFirebaseVerification = useCallback(() => {')[1]?.split('const switchFamily = useCallback')[0]||'';
+check('Retry never erases known profile',!retry.includes('setUserProfile(null)')&&!retry.includes('profileRef.current = null'));
+check('Retry never erases memberships',!retry.includes('setFamilies([])')&&!retry.includes('familiesRef.current = []'));
+check('Retry only refreshes invalid states',retry.includes('const retryProfile =')&&retry.includes('const retryMembership ='));
+check('Retry invalidates obsolete profile responses',auth.includes('request !== profileRequestRef.current')&&auth.includes('const request = ++profileRequestRef.current'));
+check('Auth observer same UID is no-op',auth.includes('authUidRef.current === nextUid) return;'));
+check('Auth identity switch revokes old verified session',auth.includes('verifiedMembershipUidRef.current = null')&&auth.includes('setUserProfile(null)')&&auth.includes('setFamilies([])'));
+check('Initial profile MUST come from Firestore server',read('src/services/profile/profileService.ts').includes('getDocFromServer(doc('));
+check('Initial memberships MUST come from Firestore server',family.includes('getDocsFromServer(collection('));
+check('Realtime cached snapshots cannot unlock family',family.includes('snap.metadata.fromCache || snap.metadata.hasPendingWrites'));
+check('Transient watch failures retain server-verified membership only',auth.includes('verifiedMembershipUidRef.current === currentUid && isTransientVerificationIssue(issue)'));
+check('Permission failures still block',auth.includes('setMembershipStatus("error")')&&classifier.includes('code.includes("permission-denied")'));
+check('Server result can repair a failed listener, but is UID guarded',auth.includes('if (!isCurrent()) return;\n      authoritativeReadPending = false;') && auth.includes('acceptMembershipServerProof(serverProof, "read", true)'));
+check('Recovery listener rechecks after reconnection',auth.includes('internetReachabilityService.subscribe((status)')&&auth.includes('retryFirebaseVerification();'));
+check('Auto retry bounded to two attempts per identity epoch',auth.includes('entry.attempts >= 2')&&auth.includes('entry.epoch !== authEpochRef.current'));
+check('Two blocked third-party probes never claim offline',network.includes("publish('unknown');")&&!network.includes("publish('offline');"));
+check('Session UI labels Firebase verification separately from Internet',session.includes('Chưa xác minh được dữ liệu gia đình')&&session.includes('Đây chưa phải bằng chứng mất Internet'));
+check('Welcome remains visible until acknowledge persists',auth.includes('await welcomeLedger.markSeen(target.uid, membership);')&&welcome.includes('AsyncStorage.setItem')&&!auth.split('const dismissWelcome = ')[1].split('const logout = ')[0].split('} catch {')[1].includes('setWelcomeTarget('));
+check('Welcome cannot open Home prematurely',rootNav.includes('const allowFamilyRoutes = verifiedFamily && welcomeReady && !welcomeBlocking;'));
+check('Verified Welcome is inside the real Session Gate native screen, never a root sibling',session.includes('testID="verified-welcome-native-screen"') && session.includes('canEnterFamilyHome({') && !rootNav.includes('welcomePresentationPlane'));
+console.log('R8R4R4R3R4R3 P0 Auth/Connectivity '+count+'/'+count+' PASS; Android physical test outstanding');

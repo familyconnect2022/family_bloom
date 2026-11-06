@@ -1,0 +1,27 @@
+FAMILY BLOOM · R3R3D7R2R2 · 02/11/2026
+Baseline: R3R3D7R2R1 (Android FULL CODE)
+Scope: UI hotfix Android only. Không sửa Firebase Rules, Render, Vercel Media, luồng Auth/gates, Web.
+
+SỬA ĐỔI
+1. Phả hệ chính và Focus: hiển thị ảnh HTTPS của FamilyPerson.avatarUrl; khi hồ sơ phả hệ liên kết UID và chưa có ảnh riêng thì dùng ảnh avatar của thành viên gia đình. Ảnh lỗi hiển thị chữ cái thay vì vùng trống. Chỉ mount ảnh cho node đang hiển thị.
+2. Tabbar: bỏ padding đáy ở navigator.sceneStyle khiến dải màu trang nằm ngang phía trên dock. Dock chứa trong suốt, viên thuốc giữ màu riêng theo theme. Tăng bottom padding nội dung cuộn trên 5 tab để nút cuối vẫn kéo lên khỏi dock.
+3. Typography: tăng nền cỡ chữ thêm 10% trong createBloomStyles. Giữ phần trăm fontScale tài khoản (90–160) và font riêng của Thư Ngõ; không tự ý ghi Firebase.
+4. Cập nhật các thành phần card dùng chung (BloomCard, BloomQuickAction, BloomActionCard) và nút chọn Lịch/Sự kiện dùng màu trực tiếp tại mỗi render để tránh giữ màu cũ cho tới khi chạm. Giữ cả bốn theme và Dark Mode; icon Dark Mode của dock vẫn mực đen.
+
+TRẠNG THÁI KIỂM TRA (SOURCE-ONLY)
+- 379/379 TS/TSX syntactic transpile PASS.
+- Expo Router route uniqueness PASS.
+- H13 binary preflight 20/20 PASS (versionCode 143045 không đổi trong hotfix).
+- Avatar/theme/dock contract mới 10/10 PASS.
+- Theme dock 8 variants PASS, theme coverage 61/61 PASS, live theme + hero 36/36 PASS.
+- Family Graph integrity PASS.
+- Offline TypeScript release 4/4 PASS, AutoUpdate TS preflight 8/8 PASS.
+- Rules firestore.rules SHA256 không đổi so với file người dùng cung cấp: 3a7ac319c2355d3930776e16c2d235715a5f139b0a527edff5d78afb7a29b80a.
+- Test cũ m3r3 avatar/firestore-rules kiểm tra bản sao scripts/firestore.rules trùng bản gốc vẫn FAIL từ baseline; chủ động không thay Rules người dùng.
+- CHƯA build hoặc chạy APK trên Android thật; cần người dùng kiểm tra ảnh, phản hồi theme trực tiếp và scroll/tabbar ở chế độ tối và sáng.
+
+QUY TRÌNH
+1. Sao lưu dự án hiện có; giải nén ZIP vào thư mục mới trên Windows.
+2. Chạy Family_Bloom_AUTO_UPDATE_FULL.bat trong bản mới. Chỉ build APK sau khi báo thành công.
+3. Chạy Family_Bloom_BUILD_APK_TO_SHARE.bat, cài và kiểm tra trên điện thoại.
+4. Kiểm tra avatar có ảnh riêng, avatar fallback UID, URL lỗi, tất cả 4 theme + Dark, đổi fontScale và cuộn tới cuối Kỷ niệm/Lịch.

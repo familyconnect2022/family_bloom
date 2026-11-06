@@ -1,0 +1,33 @@
+[
+  {
+    "kind": "text",
+    "value": "Xét phương trình bậc hai sau:"
+  },
+  {
+    "kind": "formula",
+    "value": "x^2-5x+6=0",
+    "relationBefore": "none"
+  },
+  {
+    "kind": "text",
+    "value": "Ta phân tích biểu thức thành nhân tử:"
+  },
+  {
+    "kind": "formula",
+    "value": "(x-2)(x-3)=0",
+    "relationBefore": "iff"
+  },
+  {
+    "kind": "text",
+    "value": "Vì tích hai thừa số bằng 0 thì ít nhất một thừa số bằng 0:"
+  },
+  {
+    "kind": "formula",
+    "value": "x=2\\ \\text{hoặc}\\ x=3",
+    "relationBefore": "iff"
+  },
+  {
+    "kind": "text",
+    "value": "Kết luận: Tập nghiệm của phương trình là S = {2; 3}."
+  }
+]

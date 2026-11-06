@@ -1,0 +1,115 @@
+{
+  "release": "FB-01..FB-10 consolidated Android source update",
+  "baseline": "User-supplied Family_Bloom_APPEARANCE3_HERO_READING_VEIL_THEME_FULL_CODE_2026-11-04.zip",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 source hotfix; Android native version unchanged",
+  "replace": [
+    {
+      "path": "Family_Bloom_AUTO_UPDATE_FULL.bat",
+      "before": "9f4b306025599b414ed9e603f3f47a71e0ba8bbfeeaab2b25bf82753ef4e46e0",
+      "after": "763dab240a0c69716081b45113f7175962cd75e86305fad4309445e47eac550d"
+    },
+    {
+      "path": "src/app/(family)/(graph)/family-graph-proposals.tsx",
+      "before": "561a7d17dc51cc433e7f222f0ed0aa01e145920bce9c4e392b8e0fa19c2e75e5",
+      "after": "5e96edca2eec126873c7422cb9d5365daa450aaca615a9ce05b18ec13cbf7229"
+    },
+    {
+      "path": "src/app/(home)/(fund)/home-fund.tsx",
+      "before": "e2b60f16b25f247a3909940886e2fc839002cc0e9a7ed85d6dd32de3856fb844",
+      "after": "d2c387fe89ecb6a620429bb516370f5d15f22d853083c0e7c2447d79b4abf017"
+    },
+    {
+      "path": "src/app/(home)/(games)/home-games.tsx",
+      "before": "5c7dd9602faf0bd52a061062c8892fffa67c3c3ea147732258b701f87b138a46",
+      "after": "e5142242d0fb4ae94183e53d41ae276bf5e6890ce532a77fcbec953db772e488"
+    },
+    {
+      "path": "src/app/(memories)/memory-book.tsx",
+      "before": "990128e1bed48d09106a8825184132ac54d44df2fb3c1a4947bd0f833bbcb680",
+      "after": "c0e67f90b7356634acab47958e3929aa8291fea8bda0d64093105111fbf07863"
+    },
+    {
+      "path": "src/app/(tabs)/index.tsx",
+      "before": "38a96d663e685454d8842407103b5daaedb3404b26f792f58263053a83a5fe3a",
+      "after": "d645e49c112ade9f843c565ad48d84c508e3760253ca3e7e094c816df02a6bd4"
+    },
+    {
+      "path": "src/app/(tabs)/play.tsx",
+      "before": "b45818ef556b55f961c12256fdd5df28274f8d3be48dab47c516118abd48aea1",
+      "after": "f8c064d0ae75e7605f3ef0e301a1bacbe7d28a33444df0a7ffb277113c16b30a"
+    },
+    {
+      "path": "src/app/_layout.tsx",
+      "before": "6761748f6af900e0e12ada4453befcff67893d241c2f114a7a4ff7208acd1fbd",
+      "after": "70cde9c73b6ca5c1b9ee0f51dde2c3608ebf12373ffe41905e0b3e2e71425e95"
+    },
+    {
+      "path": "src/components/events/EventCard.tsx",
+      "before": "6118b86ceecb72939cba594a2b6c21ea85ada59893184ca3633c1731a4ef7efe",
+      "after": "683662450f336bad51939c0fa7d9c5c21cd8d0424c355b38dec5dbda931feb94"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPortrait.tsx",
+      "before": "13c93a229aecbcf3e8af80b1b7e54cb3844baefed65905564320a1a9c26c6d70",
+      "after": "6a88afca6f32a3a593746197e0280fb490a62a36e9764ecf6201c93993bae9c9"
+    },
+    {
+      "path": "src/components/familyGraph/FamilyGraphPrototype.tsx",
+      "before": "a353ce2ae568839f5c2d0331e611a73b3306bf14619ab9ec2a0fba6e551f34ba",
+      "after": "f73b1faae706dfe10abd0b82f1a4baaf4e9df7e34cd7e8d37b6eef69fcf98d93"
+    },
+    {
+      "path": "src/components/ui/BloomHeroHeader.tsx",
+      "before": "919a839da78881b6e9cb786796e87e240b7a33d555f5c8c970f746a19e8c2040",
+      "after": "52dcab1c1075bfe4673707d38584aa816536035f1e67f7365f2d56c14a06a74f"
+    },
+    {
+      "path": "src/components/ui/BloomInputComponents/BloomTextInput.tsx",
+      "before": "c9ed6d67809b9083a7ac1fd26f6eacafc75b6adfd87bfdf4303d3db37257127c",
+      "after": "7c02915835b47e186f9d15e5dc2913a766c67f3cffee7e19bfa8dab2914ac2dd"
+    },
+    {
+      "path": "src/components/ui/BloomScaledInput.tsx",
+      "before": "8a5ad39b9dd0cdfb126f5b55338ee216829c13f5cc20e6afab86159d34b13148",
+      "after": "83094ffef16acb8183f4a4ec325dfbf766f71d5e7e3eec14c4b4a8ad901be4ec"
+    },
+    {
+      "path": "src/features/home/polls/PollFeaturePanel.tsx",
+      "before": "95281bc5449226bd1450b1badbf6bbf9a51c8448096761caf034a98b96559766",
+      "after": "3be19b91d186eea78fddc1c4ba4caea7f9bacd3a435fd5421d1643c603df9ae5"
+    },
+    {
+      "path": "src/services/familyGraph/graphProposalService.ts",
+      "before": "6444c5a25d8bfc18290ab0beaf4d97e4ed27d51b7242d9389c8facec62e3a6ef",
+      "after": "785c12d8ec639ebf0f01640d3b7aaaca44de1eefbec3cd472946992bc5df11fb"
+    },
+    {
+      "path": "src/services/home/homePollService.ts",
+      "before": "53c209b9c3a558eb359d81254f0eceabf97fe39506e4750993110d17d8b36ddd",
+      "after": "53d2209cf3e774f9fdfdfe3c8ec2498cce4f29178ff0e81d05508bd2eb35ef3f"
+    },
+    {
+      "path": "src/services/index.ts",
+      "before": "f20870088d89d7ff4fd2f4a0a9eeb59e5928ec4ecd9094ce0187b28cacaacd50",
+      "after": "183d53eec4f4e96ab99655debaf7d8b54986e5fea3d9d0704d4d0a4097f60a66"
+    }
+  ],
+  "remove": [
+    {
+      "path": "src/app/(home)/(games)/home-game-create.tsx",
+      "before": "05f42111b7b82c34f691821420933360ba5015d2cf6924838de16834166d3717",
+      "after": null
+    },
+    {
+      "path": "src/app/(home)/(games)/home-game/[sessionId].tsx",
+      "before": "7061177f4b3083980fa811f485c1c92446b34a7109d9e6a13640550c5dd41276",
+      "after": null
+    }
+  ],
+  "extra": [
+    "scripts/maintenance/fb-01-10-safe-update.cjs",
+    "document/releases/fb0110-20261104/patch-manifest.json",
+    "document/releases/fb0110-20261104/RELEASE_NOTES.txt"
+  ]
+}

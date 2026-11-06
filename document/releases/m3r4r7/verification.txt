@@ -1,0 +1,30 @@
+Family Bloom M3R4R7 · CODE / GATE VERIFICATION
+Date: 2026-10-30
+Base: M3R4R6R1 full source, Android only. Web unchanged.
+
+Scope: Camera/gallery/6 bundled portraits; in-app avatar crop; white CV cards, stable edit UI;
+profile UID and membership protected routes; welcome before Home; separate graph person media.
+
+PASS R7 user journey + profile / avatar / 3 source choices :: R7 CV/ONBOARDING CONTRACT: 26/26
+PASS R6 Root/Auth/picker regression :: R6 root+avatar contract 24 PASS
+PASS Welcome/avatar/toast integration :: R2/R4 integration PRECHECK 17/17
+PASS Avatar crop geometry & CV contracts :: PASS 15 contract gates + crop geometry
+PASS Avatar background queue concurrency :: PASS UID identity boundary
+PASS Windows Build & Share preflight :: H22R3 Windows Build & Share preflight: 7/7 PASS
+PASS Dependency bootstrap :: PASS H23R3 dependency bootstrap: 14/14
+PASS Source import integrity :: PASS all literal source imports resolve and all external packages are declared
+PASS Expo route uniqueness :: PASS Expo Router: 3 layouts checked, no duplicate Stack/Tabs/Drawer names
+PASS Source structure :: Family Bloom project structure gate: 19/19 PASS
+PASS Auto Update lineage R7/tamper tests :: R6R1 source gate regression: 4/4 PASS
+PASS Welcome behavioral policy :: PASS R2/R4 integration runtime regression
+PASS TypeScript parser source-only :: TypeScript syntax 350 files, errors 0
+PASS Auto Update check from clean R6R1 :: PREFLIGHT PASS {"source":"/mnt/data/fb_r7_work","target":"/mnt/data/fb_r6r1_clean","sourceVersion":143043,"targetVersion":143043,"sourceStructure":"PASS","releasePreflight":"PASS"}
+PASS Bundled 512x512 preset PNG artwork :: 6/6 original local assets
+
+Simulation on copy of original R6R1: CHECK -> BACKUP -> OVERLAY -> VERIFY passed;
+Firebase file + .env dummy data preserved; 6 avatar assets + native module copied.
+APK and Gradle: NOT RUN (Android SDK and installed package dependencies unavailable).
+Live Firebase and Cloudinary operations: NOT RUN; phone/device UI not verified.
+Existing app.json versionCode intentionally unchanged at 143043 to avoid legacy H25 identity gate drift;
+this full source is intended for testing a signed same-version APK replacement, not Play Store publishing.
+Run actual Windows Clean Apply and Build & Share before installing. Do not override failed gates.

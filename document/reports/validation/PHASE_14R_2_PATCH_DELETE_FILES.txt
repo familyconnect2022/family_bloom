@@ -1,0 +1,7 @@
+PHASE 14R.2 PATCH DELETE/REGENERATE NOTE
+
+If applying the PATCH over Phase 14R.1, delete the old root package-lock.json before the first dependency install.
+The new build/setup BAT files also detect a stale lock and run npm install automatically, which regenerates it online.
+
+Delete/regenerate:
+- package-lock.json

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "release": "R11-MOTION-LAB-R11R2-PRESERVE-BAT",
+  "base": "R10",
+  "baseVersionCode": 143045,
+  "sourceZipSha256": "c1e3b5b3aff41247f1779e459e4bcd913312f6ff47e2b07f76049e1ed61d512d",
+  "replace": [
+    {
+      "path": "src/app/(tabs)/index.tsx",
+      "before": "f6b9cb17e0985c42f1f95a512e148449125b106228f13465b9eda1328d3c9b76",
+      "after": "47c908ee63c05153fa455f267bcbe54258fe61ef5c58baa9471ad30893eeea59"
+    },
+    {
+      "path": "src/components/ui/BloomPageComponents.tsx",
+      "before": "9f1a2d0dff399b9ebd1b0758ab859d82c6123f5b296479989f0027cd0e7cd777",
+      "after": "e7f5f4bafbd470d58d3936731adf93db2901d2a6d9edbbe63a087f7b106c0d14"
+    },
+    {
+      "path": "src/app/_layout.tsx",
+      "before": "70cde9c73b6ca5c1b9ee0f51dde2c3608ebf12373ffe41905e0b3e2e71425e95",
+      "after": "5ca172754994aedfeb8b340f7f038bff8cbb42d30141c99a1c0d524964e6abfb"
+    },
+    {
+      "path": "src/app/(internal)/developer-tools.tsx",
+      "before": "15f9f2c59a9d817632d18dd7b41c60192a31399ea176169712bb69326703b032",
+      "after": "c11a3802c3c1e387f25b672ff73913ebcca6e866550805514e39fd6f756e1e8a"
+    },
+    {
+      "path": "scripts/setup/family-bloom-source-release.json",
+      "before": "35ea5f432eecd321d3c1ed54f6f52bf01720b0e61a0f5a98d8878bb83ee77d2e",
+      "after": "ad472e6bc3bed36010aea736a47c66410a0043933482f60fc68a00e86979aa30"
+    },
+    {
+      "path": "scripts/tests/release/test-r10-home-event-card-typography.cjs",
+      "before": "bfbdd65865fa7acbfdd8b4664aef540d90194ab9ac3af988381efdb9e7f5e805",
+      "after": "acb80c56243de196f1925218068a5615003497dd0cd366273dabf1913f39e8dc"
+    }
+  ],
+  "extra": [
+    "src/motion/BloomMotion.tsx",
+    "src/app/(internal)/motion-lab.tsx",
+    "scripts/maintenance/fb-r11-motion-safe-update.cjs",
+    "document/releases/R11_MOTION_TEST_PLAN.md",
+    "R11_MOTION_SAFE_UPDATE.cmd",
+    "document/releases/fb-r11-motion-manifest.json",
+    "scripts/tests/release/test-r11-motion-lab-contract.cjs",
+    "document/releases/R11R1_FOLDER_PICKER_FIX_GUIDE_VI.md",
+    "scripts/tests/release/test-r11r1-updater-repair.cjs"
+  ],
+  "extraBefore": {
+    "scripts/maintenance/fb-r11-motion-safe-update.cjs": [
+      "ddda6dd5f74fde8e23b901329e10658b15b793545eff13f1362fea11c6121585"
+    ],
+    "document/releases/fb-r11-motion-manifest.json": [
+      "82d419ea61a7f541b160602a344ed17343d4ab8730f3314e5f381fb4219048f2"
+    ]
+  }
+}

@@ -1,0 +1,262 @@
+[
+  {
+    "file": "app/(family)/(graph)/family-graph-admin.tsx",
+    "report": [
+      {
+        "name": "RelationshipPickerPersonRow",
+        "colors": 4,
+        "styles": 11
+      },
+      {
+        "name": "RelationshipModal",
+        "colors": 7,
+        "styles": 43
+      }
+    ]
+  },
+  {
+    "file": "app/(family)/(graph)/family-graph-relationship-editor.tsx",
+    "report": [
+      {
+        "name": "PickerRow",
+        "colors": 3,
+        "styles": 16
+      }
+    ]
+  },
+  {
+    "file": "app/(family)/family-timeline.tsx",
+    "report": [
+      {
+        "name": "TimelineMemory",
+        "colors": 3,
+        "styles": 20
+      }
+    ]
+  },
+  {
+    "file": "app/(home)/(learning)/study-questions.tsx",
+    "report": [
+      {
+        "name": "QuestionRow",
+        "colors": 2,
+        "styles": 8
+      }
+    ]
+  },
+  {
+    "file": "app/(tabs)/_layout.tsx",
+    "report": [
+      {
+        "name": "BloomDockSlot",
+        "colors": 0,
+        "styles": 3
+      }
+    ]
+  },
+  {
+    "file": "app/(tabs)/index.tsx",
+    "report": [
+      {
+        "name": "HomeSummaryIsland",
+        "colors": 3,
+        "styles": 17
+      },
+      {
+        "name": "HomeOnThisDayIsland",
+        "colors": 4,
+        "styles": 16
+      },
+      {
+        "name": "HomeUpcomingIsland",
+        "colors": 1,
+        "styles": 6
+      },
+      {
+        "name": "HomeMomentsIsland",
+        "colors": 0,
+        "styles": 2
+      },
+      {
+        "name": "HomeMembersIsland",
+        "colors": 2,
+        "styles": 11
+      }
+    ]
+  },
+  {
+    "file": "app/(tabs)/moments.tsx",
+    "report": [
+      {
+        "name": "FeedSeparator",
+        "colors": 0,
+        "styles": 1
+      },
+      {
+        "name": "MomentPostRow",
+        "colors": 0,
+        "styles": 1
+      }
+    ]
+  },
+  {
+    "file": "app/(tabs)/planner.tsx",
+    "report": [
+      {
+        "name": "CalendarDayCell",
+        "colors": 2,
+        "styles": 8
+      },
+      {
+        "name": "CalendarMonthGrid",
+        "colors": 2,
+        "styles": 11
+      },
+      {
+        "name": "PlannerShell",
+        "colors": 6,
+        "styles": 17
+      },
+      {
+        "name": "PlannerEventRow",
+        "colors": 0,
+        "styles": 1
+      },
+      {
+        "name": "CalendarPanel",
+        "colors": 1,
+        "styles": 7
+      },
+      {
+        "name": "PlannerEventEmptyCard",
+        "colors": 6,
+        "styles": 18
+      },
+      {
+        "name": "EventsPanel",
+        "colors": 1,
+        "styles": 8
+      }
+    ]
+  },
+  {
+    "file": "components/family/FamilySwitcherModal.tsx",
+    "report": [
+      {
+        "name": "FamilySwitcherModal",
+        "colors": 0,
+        "styles": 6
+      }
+    ]
+  },
+  {
+    "file": "components/familyGraph/FamilyGraphFocusView.tsx",
+    "report": [
+      {
+        "name": "FocusConnectors",
+        "colors": 0,
+        "styles": 4
+      },
+      {
+        "name": "FocusPersonCard",
+        "colors": 1,
+        "styles": 12
+      },
+      {
+        "name": "FamilyGraphFocusView",
+        "colors": 0,
+        "styles": 5
+      }
+    ]
+  },
+  {
+    "file": "components/familyGraph/FamilyGraphPrototype.tsx",
+    "report": [
+      {
+        "name": "PersonNode",
+        "colors": 7,
+        "styles": 33
+      },
+      {
+        "name": "PreparedPartnerConnector",
+        "colors": 2,
+        "styles": 0
+      },
+      {
+        "name": "PreparedUnionStemConnector",
+        "colors": 2,
+        "styles": 0
+      },
+      {
+        "name": "PreparedUnionChildConnector",
+        "colors": 2,
+        "styles": 0
+      }
+    ]
+  },
+  {
+    "file": "components/home/HomeActivityBell.tsx",
+    "report": [
+      {
+        "name": "HomeActivityBell",
+        "colors": 0,
+        "styles": 4
+      }
+    ]
+  },
+  {
+    "file": "components/moments/MomentCard.tsx",
+    "report": [
+      {
+        "name": "MomentMediaGrid",
+        "colors": 0,
+        "styles": 5
+      }
+    ]
+  },
+  {
+    "file": "components/moments/MomentFamilyMultiPicker.tsx",
+    "report": [
+      {
+        "name": "MomentFamilyMultiPicker",
+        "colors": 1,
+        "styles": 20
+      }
+    ]
+  },
+  {
+    "file": "components/ui/BloomActionCard.tsx",
+    "report": [
+      {
+        "name": "BloomActionCard",
+        "colors": 0,
+        "styles": 9
+      }
+    ]
+  },
+  {
+    "file": "components/ui/BloomInputComponents/BloomTextInput.tsx",
+    "report": [
+      {
+        "name": "BloomTextInput",
+        "colors": 0,
+        "styles": 12
+      }
+    ]
+  },
+  {
+    "file": "features/home/music/HomeMusicPanel.tsx",
+    "report": [
+      {
+        "name": "TrackArtwork",
+        "colors": 1,
+        "styles": 1
+      },
+      {
+        "name": "TrackRow",
+        "colors": 6,
+        "styles": 16
+      }
+    ]
+  }
+]

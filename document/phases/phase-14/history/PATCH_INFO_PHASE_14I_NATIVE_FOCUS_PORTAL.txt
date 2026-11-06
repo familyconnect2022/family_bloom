@@ -1,0 +1,21 @@
+Family Bloom — Phase 14I Native Focus Portal Hotfix — 2026-09-30
+
+Base: Phase 14H FOCUS_OVERLAY_VISIBILITY FULL.
+
+Device symptom fixed:
+- Focus state/touch shield was active, but on Android the Focus card itself was not presented; user only saw the separated/blurred-looking background and could no longer interact with the canvas.
+
+Implementation:
+- Render Focus View through a transparent native React Native Modal portal, not as an Android sibling layer of the graph canvas.
+- Measure the FamilyGraphPrototype host with measureInWindow and mount the portal over exactly that graph region.
+- Keep target Focus frame at 80% x 80% of the canvas viewport.
+- Keep node-origin translate/scale animation and distance-normalized duration.
+- Focus shell opacity is never zero; only transform is animated, preventing an invisible-but-touch-blocking state.
+- Use only a very light separation veil (rgba alpha 0.20), no live GPU blur.
+- Preserve visible Trở lại + X + Android hardware Back + outside-tap close.
+- 3/5/Toàn phả hệ remain disabled while Focus is open.
+- Background Canvas View remains visually/camera-stable; no branch line expansion/dimming, pan/zoom mutation, or Firestore query is introduced.
+- Full focus branch remains computed from the full in-memory family snapshot, independent of background 3/5/all mode.
+
+No Firestore Rules / Functions / indexes / native dependency change.
+Device validation is still required.

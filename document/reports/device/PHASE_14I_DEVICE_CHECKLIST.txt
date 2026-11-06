@@ -1,0 +1,14 @@
+PHASE 14I — NATIVE FOCUS PORTAL DEVICE CHECKLIST
+
+[ ] Open graph; default is 3 generations and linked account node is centered/highlighted only.
+[ ] Enable Nhánh and choose a Person near center: Focus card visibly grows from that node into an ~80% x 80% canvas frame.
+[ ] Repeat from a Person near a corner: transition remains gradual, not an instant jump.
+[ ] Focus card/header is visible immediately; if branch layout is delayed, see “Đang chuẩn bị nhánh của …”.
+[ ] Background is only lightly veiled; original nodes/lines remain readable and unchanged.
+[ ] 3 thế hệ / 5 thế hệ / Toàn phả hệ cannot be changed while Focus is open.
+[ ] Pan/pinch inside Focus moves only Focus graph. Background canvas does not move.
+[ ] “Trở lại”, X, outside tap, and Android hardware Back all close Focus.
+[ ] Closing Focus animates back toward the original selected node and reveals the exact prior canvas pan/zoom/mode.
+[ ] Canvas mode may be 3/5/all, but Focus branch includes the complete available branch from the full family snapshot.
+[ ] In Focus A, tap Person B: same Focus card transitions to B; no stacked overlay.
+[ ] Top hero wrench is absent; lower Thêm button remains.

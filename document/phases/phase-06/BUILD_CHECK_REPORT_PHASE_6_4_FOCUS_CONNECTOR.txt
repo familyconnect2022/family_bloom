@@ -1,0 +1,10 @@
+Family Bloom — Phase 6.4 Focus Connector / Relation Order build check
+
+PASS  phase2-static-check.js — 123 TS/TSX transpiled
+PASS  test-familyGraphQueryEngine.js
+PASS  test-familyGraphBatchRelationships.js
+PASS  test-familyGraphLayout.js
+PASS  test-familyGraphPhase64.js
+PASS  relative import scan — 410 relative imports, 0 missing
+
+Note: Phase 6.4 visual-compat baseline uses generationStep=216px; regression tests were aligned with the already-shipped visual-compat configuration instead of the rejected initial 288px spacing.

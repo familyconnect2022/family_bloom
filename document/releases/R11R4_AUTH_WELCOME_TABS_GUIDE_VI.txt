@@ -1,0 +1,35 @@
+FAMILY BLOOM R11R4 - MOTION DANG NHAP / THU NGO / 5 TAB (2026-11-05)
+
+DAY LA BAN THU NGHIEM TIEP THEO R11R3, KHONG PHẢI FULL ANIMATION 4.0.
+BAN SAO LUU R10 CUA BAN PHAI DUOC GIU NGUYEN.
+
+DA TICH HOP VAO MAN HINH THAT
+- Dang nhap: Hero va form hien tu tu va nang nhe khi route duoc focus.
+- Sau khi xac thuc va vao Home: Hero vao canh theo focus (khong doi trang/mo gate sớm).
+- 5 tab duoi: chuyen tab fade, Hero tung tab xuat hien nhe khi focus; tab bar cu, pan/zoom va scroll position van giu.
+- Thu Ngo: anh giay va tieu de xuat hien ro hon, mot hat sang nho, CTA o vi tri cu.
+- Developer Tools > Motion Lab > Mo xem thu Thu Ngo: dung man Thu Ngo that; preview khong ghi Firebase, khong doi Welcome Gate, khong doi tai khoan.
+- Sống động / Dịu nhẹ / Tĩnh; Android Reduce Motion tat cac hieu ung trang tri.
+
+CACH CAI LEN R11R3 DA CHAY
+1. Giai nen SAFE PATCH R11R4 thanh mot thu muc RIENG (khong de vao du an).
+2. Mo CMD tai thu muc SAFE PATCH.
+3. CHI KIEM TRA:
+   node scripts\maintenance\fb-r11r4-entry-motion.cjs check "D:\Family Bloom App + Server\Family_Bloom"
+4. Sau khi [CHECK PASS]:
+   node scripts\maintenance\fb-r11r4-entry-motion.cjs install "D:\Family Bloom App + Server\Family_Bloom"
+5. Sau khi [INSTALL PASS], build Release APK lai tu du an dang su dung.
+
+KHONG DUOC: chay patch R11R4 truc tiep tren R10 goc; ghi de thu muc R10 backup.
+R11R4 bao ve BAT hien tai, .env, Firebase, Android native, Render/Vercel.
+Neu [STOP] hay [SHA MISMATCH]: dung lai, chup man hinh; khong force copy.
+
+TEST
+- Tab trang nha, ky niem, lich, cay nha, nha minh: doi tab nhin thay Hero va giao dien van nguyen ven.
+- Dang xuat -> mo login: form hien nhe; dang nhap Google/OTP van nguyen gate.
+- Tai khoan da chap nhan Thu Ngo: khong tu hien lai. Dung Motion Lab > Mo xem thu Thu Ngo.
+- Tai khoan moi can xem Thu Ngo: thu that hien, van cuon doc, nhan nut duoc; khong gap overlay trang.
+- Thu ca 3 muc motion va Android Reduce Motion; muc Tinh khong co hieu ung.
+- Kiem tra card va Home Event ticket nhu R10/R11R3.
+
+CHUA XAC MINH: Gradle Release APK/Win BAT/thiet bi that va Firebase live.

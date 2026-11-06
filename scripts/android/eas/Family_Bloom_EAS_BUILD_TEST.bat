@@ -1,0 +1,223 @@
+@echo off
+setlocal EnableExtensions
+title Family Bloom - EAS Test Build H25
+
+for %%I in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
+
+echo ============================================================
+echo  FAMILY BLOOM H25 - EAS ANDROID TEST BUILD
+echo  Profile : family-bloom-test
+echo  EXPECTED: app 1.3.35 / versionCode 143045
+echo  Native   : P2.37R2C-H25-native-3
+echo  This helper ALWAYS waits for the new build and clears EAS cache.
+echo ============================================================
+echo.
+
+if not exist "eas.json" (
+  echo [ERROR] Khong tim thay eas.json.
+  echo BAT da duoc gom tai scripts\android\eas; PROJECT_ROOT duoc tu dong nhan dien.
+  pause
+  exit /b 1
+)
+
+findstr /I /C:"family-bloom-test" "eas.json" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] eas.json chua co profile family-bloom-test.
+  pause
+  exit /b 1
+)
+
+findstr /I /C:"appVersionSource" "eas.json" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] eas.json chua khoa appVersionSource=local.
+  pause
+  exit /b 1
+)
+
+findstr /I /C:"developmentClient" "eas.json" >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] family-bloom-test phai co developmentClient=true de dung voi Metro dev-client workflow.
+  pause
+  exit /b 1
+)
+
+where eas >nul 2>&1
+if errorlevel 1 (
+  set "EAS_CMD=npx eas-cli@latest"
+) else (
+  set "EAS_CMD=eas"
+)
+
+node scripts\setup\check-expo-route-uniqueness.cjs
+if errorlevel 1 goto :fail
+rem P0: auth/connectivity and welcome are stable under retry.
+node scripts\tests\release\test-r8r4r4r3r4r3-auth-connectivity-p0.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r8r4r4r3r4r3r2-cold-start-proof.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r8r4r4r3r4r3r3-membership-metadata.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25r2r7r2r3r5-script-layout.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r9-android-only-build-contract.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r3-windows-build-preflight.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h23r3-typescript-bootstrap.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25-firebase-invitation.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25-source-package.cjs
+if errorlevel 1 goto :fail
+node scripts\setup\check-source-import-integrity.js
+if errorlevel 1 goto :fail
+
+set "NEED_NATIVE_INSTALL=0"
+node scripts\setup\check-p2_37r2-local-install.js >nul 2>nul
+if errorlevel 1 set "NEED_NATIVE_INSTALL=1"
+if "%NEED_NATIVE_INSTALL%"=="1" (
+  echo [P2.37R2C-H21] Installing/updating local native module dependency...
+  call npm install --no-audit --no-fund
+  if errorlevel 1 goto :fail
+)
+
+call "%PROJECT_ROOT%\scripts\android\maintenance\Family_Bloom_ENSURE_GATE_DEPENDENCIES.bat"
+if errorlevel 1 goto :fail
+rem H25R2R6R3R1: the two-stage READY Chess VM needs TypeScript.
+rem It MUST run after ENSURE_GATE_DEPENDENCIES, not during no-deps Auto Update preflight.
+node scripts\tests\release\test-h25r2r6r2-chess-ready-vm.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25-runtime-claims.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-super-bloom-native-math-lessons.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-super-bloom-math-reactions-r3r7.cjs
+if errorlevel 1 goto :fail
+rem R3R8: deterministic chemistry validation; never auto-fix ambiguous formula.
+node scripts\tests\release\test-super-bloom-chemistry-safe-r3r8.cjs
+if errorlevel 1 goto :fail
+rem R3R9: nhap O2 ngay sau phan so, xem truoc an toan.
+node scripts\tests\release\test-super-bloom-inline-chemical-follow-r3r9.cjs
+if errorlevel 1 goto :fail
+rem R3R10 structured explanatory blocks and mathematical implication/equivalence.
+node scripts\tests\release\test-super-bloom-solution-blocks-r3r10.cjs
+if errorlevel 1 goto :fail
+rem R3R11: mathematical limit/matrix/radical/vector regression.
+node scripts\tests\release\test-super-bloom-math-typesetting-r3r11.cjs
+if errorlevel 1 goto :fail
+rem R3R13: optional Cloud Features must be secure and off by default.
+node scripts\tests\release\test-r3r13-blaze-ready.cjs
+if errorlevel 1 goto :fail
+rem R3R14: approved envelope animation assets, scroll safety and TypeScript syntax.
+node scripts\tests\release\test-r3r14-welcome-envelope-motion.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r3d7-welcome-single-paper.cjs
+if errorlevel 1 goto :fail
+rem R3R14R1: topmost touch plane and real runtime opening flow, after dependencies.
+node scripts\tests\release\test-r3r14r1-welcome-touch-static.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r14r1-welcome-touch-runtime.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-r3r12-family-intro-letter-radical.cjs
+if errorlevel 1 goto :fail
+rem H25R2R1: prevent regressions in legacy Chess AppState controller VM mocks and READY gate.
+node scripts\tests\release\test-h25r2r1-build-share-regression.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25r2r4-touch-feedback.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25r2r5-internet-connectivity.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h25r2-xiangqi-black-turn-reconnect.cjs
+if errorlevel 1 goto :fail
+node scripts\setup\check-ts-syntax-transpile.js
+if errorlevel 1 goto :fail
+echo [INFO] Render server independently verified/deployed from its own repository.
+node scripts\tests\release\test-h22r2-cleanup-retention.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22-xiangqi-parity.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r6-xiangqi-bloom-motion.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r7-royal-bloom-modals.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r8-xiangqi-ux-draw.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r9-chess-assets-royal-highlight.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h23-family-game-hubs.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h23r2-dual-app-presence.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\release\test-h22r1-bot-invite-countdown.cjs
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2-full-copy-integrity.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c-binary-identity-lock.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h6-decor-rail-isolation.js
+if errorlevel 1 exit /b 1
+node scripts\tests\history\test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h8-native-chess-tap-move.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h10-chess-native-latency.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h13-bloom-results-return.js
+if errorlevel 1 goto :fail
+node scripts\setup\check-board-audio-apk.js
+if errorlevel 1 goto :fail
+node scripts\tests\history\test-phase-p2_37r2c_h21r1-audio-packaging.cjs
+if errorlevel 1 goto :fail
+node scripts\setup\check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config
+if errorlevel 1 goto :fail
+
+echo.
+echo ------------------------------------------------------------
+echo PRE-BUILD IDENTITY VERIFIED
+echo   app version : 1.3.35
+echo   versionCode : 143045
+echo   native ID   : P2.37R2C-H25-native-3
+echo ------------------------------------------------------------
+echo.
+echo EAS will now build a NEW APK and wait until the build finishes.
+echo Do NOT install an older artifact from the dashboard.
+echo.
+
+call %EAS_CMD% build -p android --profile family-bloom-test --clear-cache
+set "ERR=%ERRORLEVEL%"
+
+if not "%ERR%"=="0" goto :buildfail
+
+echo.
+echo ============================================================
+echo [OK] EAS reports the H25 Android build completed successfully.
+echo Install ONLY the APK produced by THIS build.
+echo After install, Game Foundation MUST show:
+echo   ACTUAL versionCode: 143045
+echo   FamilyBloomOverlay: YES
+echo   native identity: P2.37R2C-H25-native-3
+echo ============================================================
+echo.
+pause
+exit /b 0
+
+:buildfail
+echo.
+echo [ERROR] EAS Build failed. Exit code: %ERR%
+echo The R2C binary was NOT accepted.
+echo.
+pause
+exit /b %ERR%
+
+:fail
+echo.
+echo [ERROR] H25 pre-build gate failed. Build cancelled.
+echo Fix the first error above before trying EAS again.
+echo.
+pause
+exit /b 1

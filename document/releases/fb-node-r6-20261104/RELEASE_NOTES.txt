@@ -1,0 +1,12 @@
+FAMILY BLOOM - NODE R6 - 2026-11-04
+
+Baseline: Node 3D R5 BAT PRESERVED source. No Firestore Rules or Person data changed.
+1. Family Person detail: avatar 124 x 124, rounded image, smaller name/meta typography.
+2. Person editor: remove internal Firebase implementation language from Note help.
+3. Avatar picker: remove six unusable preset choices and images; retain camera, gallery, crop and remove.
+4. Family branch Focus: use same gender-specific top/bottom 3D ornaments as the main tree; preserves pan/zoom and non-interactive overview behavior.
+5. Asset cleanup: 31 unreferenced legacy files (see asset-cleanup.json), 11.9 MB uncompressed. Original scene V2 WebP remains. No system icons, chess, xiangqi or firebase assets removed.
+6. Safe patch validates SHA-256 against R5 and creates backup; preserves existing root updater BAT, Firebase files and user settings. Run 00_CAP_NHAT_R6_AN_TOAN.cmd from extracted FULL CODE or PATCH.
+
+Restrictions: Current release was NOT compiled as a native Windows Android APK or tested with real Firebase credentials.
+No claim is made that an untested device UI is guaranteed perfect.

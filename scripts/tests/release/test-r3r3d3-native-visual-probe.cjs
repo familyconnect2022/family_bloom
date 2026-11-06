@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+'use strict';
+/** Source contract only. Real Android window ordering requires phone evidence. */
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '../../..');
+const read = x => fs.readFileSync(path.join(root,x),'utf8');
+const layout = read('src/app/_layout.tsx');
+const gate = read('src/app/session-gate.tsx');
+const welcome = read('src/components/onboarding/WelcomeModal.tsx');
+const auth = read('src/context/AuthContext.tsx');
+let n=0;
+const check=(title,fn)=>{fn();console.log(`PASS ${++n} ${title}`);};
+check('Module splash preventAutoHide has resolved and rejected instrumentation',()=>{
+ assert.ok(layout.includes('splash-prevent-resolved')&&layout.includes('splash-prevent-rejected'));
+ assert.ok(!layout.includes('SplashScreen.preventAutoHideAsync().catch(() => undefined)'));
+});
+check('Splash hide starts only after native stack host layout',()=>assert.ok(layout.includes('const splashSafeToHide = nativeStackHostLaidOut && (firstVisualReady || welcomeBlocking)')));
+check('Welcome can hide splash independent of navigationStable after native stack layout',()=>assert.ok(layout.includes('firstVisualReady || welcomeBlocking')));
+check('Splash hide cannot silently fail',()=>assert.ok(layout.includes('splash-hide-request')&&layout.includes('splash-hide-resolved')&&layout.includes('splash-hide-rejected')));
+check('Splash hide is bounded at two attempts',()=>assert.ok(layout.includes('attempt <= 2')&&layout.includes('splashHideStarted.current = true')));
+check('Splash errors not printed raw',()=>assert.ok(!layout.includes('console.warn("[BloomVisualD3] splash-hide-rejected", error)')));
+check('Native stack host layout is logged',()=>assert.ok(layout.includes('native-stack-host-layout')));
+check('Root overlay states collected in report',()=>assert.ok(layout.includes('family-shield-active')&&layout.includes('auth-shield-active')&&layout.includes('tab-shield-active')&&layout.includes('root-shields-clear')));
+check('Root probe is DEV-only and non-interactive',()=>assert.ok(layout.includes('devVisualProbe = sessionDiagnosticsEnabled && typeof __DEV__')&&layout.includes('testID="d3-root-visual-probe"')&&layout.includes('pointerEvents="none"')));
+check('Root probe is drawn AFTER native stack and shields',()=>assert.ok(layout.indexOf('testID="d3-root-visual-probe"')>layout.indexOf('showTransitionShield ? (')));
+check('Session gate focus and blur logged',()=>assert.ok(gate.includes('useFocusEffect')&&gate.includes('session-gate-focused')&&gate.includes('session-gate-blurred')));
+check('Native Android Alert independent probe available',()=>assert.ok(gate.includes('Alert.alert(')&&gate.includes('native-alert-request')&&gate.includes('Platform.OS !== "android"')));
+check('Native Alert occurs only when verified Welcome and route focused',()=>assert.ok(gate.includes('if (!sessionDiagnosticsEnabled || !welcomeOnGate || !nativeRouteFocused || nativeProbeShown.current')));
+check('Native Alert restricted to development and verified developer',()=>assert.ok(gate.includes('!canViewDetailedDiagnostics(user)')&&gate.includes('!(typeof __DEV__ !== "undefined" && __DEV__)')));
+check('Native Alert once with a 3.5s delay',()=>assert.ok(gate.includes('nativeProbeShown.current = true')&&gate.includes('}, 3500)')));
+check('Native Alert copy uses sanitized diagnostic report',()=>assert.ok(gate.includes('Clipboard.setStringAsync(diagnostic.exportReport())')));
+check('Native Alert does not route or bypass verification',()=>assert.ok(!gate.includes('router.push(')&&!gate.includes('router.replace(')&&!gate.includes('setMembershipStatus(')));
+check('Gate green probe DEV-only and non-interactive',()=>assert.ok(gate.includes('testID="d3-gate-visual-probe"')&&gate.includes('sessionDiagnosticsEnabled && typeof __DEV__ !== "undefined" && __DEV__')&&gate.includes('pointerEvents="none"')));
+check('Green probe is inside Welcome screen after letter',()=>assert.ok(gate.indexOf('testID="d3-gate-visual-probe"')>gate.indexOf('<WelcomeModal visible')));
+check('All protected Home routes still require verified membership and Welcome acknowledged',()=>assert.ok(layout.includes('const allowFamilyRoutes = verifiedFamily && welcomeReady && !welcomeBlocking;')&&layout.includes('<Stack.Protected guard={allowFamilyRoutes}>')));
+check('Session gate can only show Welcome with signed-in and verified family',()=>assert.ok(gate.includes('authStatus === "signed-in" && verifiedFamily && welcomeReady && showWelcome')));
+check('No new Firestore reads or HTTP calls in Gate',()=>assert.ok(!gate.includes('getDoc(')&&!gate.includes('getDocs(')&&!gate.includes('fetch(')));
+check('Welcome original interaction and content preserved',()=>assert.ok(welcome.includes('testID="welcome-one-artwork"')&&welcome.includes('testID="welcome-letter-scroll"')&&welcome.includes('LETTER.map(')));
+check('Home still needs ledger success to proceed',()=>assert.ok(auth.includes('await welcomeLedger.markSeen(target.uid, membership);')));
+check('Native splash debug and Alert have no secret-bearing args',()=>assert.ok(!layout.includes('console.info("[BloomVisualD3] root-planes", { user:')&&!gate.includes('Alert.alert(user?.uid')));
+console.log(`R3R3D3 visual probe ${n}/${n} PASS (source-only, Android painting NOT confirmed).`);

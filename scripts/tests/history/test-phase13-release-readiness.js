@@ -1,0 +1,51 @@
+// Split A1: historical integration gate, not Android-only.
+if (!require('node:fs').existsSync(require('node:path').join(__dirname, '../../../server/package.json'))) { console.log('[SKIP-CROSS-REPO] Render server tests run only in a combined integration workspace; server is now a separate repository.'); process.exit(0); }
+const __legacyScriptsDir = require('node:path').resolve(__dirname, '..', '..');
+const fs = require("fs");
+const path = require("path");
+const root = path.resolve(__legacyScriptsDir, "..");
+const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+const checks = [];
+const check = (name, ok, detail) => { checks.push({ name, ok, detail }); if (!ok) process.exitCode = 1; };
+const perf = read("src/constants/performanceTest.ts");
+const build = read("src/constants/buildMode.ts");
+const e2e = read("src/constants/e2eTest.ts");
+const rules = read("firestore.rules");
+const cloudRules = read("firestore.cloud.rules");
+const bridge = read("src/components/system/BloomPushBridge.tsx");
+const token = read("src/services/push/pushTokenService.ts");
+const hero = read("src/components/ui/BloomHeroHeader.tsx");
+const flags = read("src/constants/featureFlags.ts");
+const runtimeState = read("src/constants/cloudRuntimeState.ts");
+const cloudFeature = read("src/services/cloud/cloudFeatureService.ts");
+const app = JSON.parse(read("app.json"));
+check("Developer tools are exclusive to the verified account in Debug and Release",
+  perf.includes('FAMILY_BLOOM_DEV_EMAIL = "huynh235@gmail.com"')
+  && perf.includes('isVerifiedDeveloperAccount')
+  && perf.includes('emailVerified === true')
+  && !perf.includes('INTERNAL_TOOLS_ENABLED')
+  && read('server/src/socket/socketServer.ts').includes('socket.data.developerAuthorized = isVerifiedDeveloperIdentity(decoded)'),
+  "Private tools require verified email/UID; Socket test mutations require verified Firebase token.");
+check("E2E harness is internal-only", e2e.includes("INTERNAL_TOOLS_ENABLED"), "E2E controls are disabled in release.");
+check("Push token registry wired", bridge.includes("pushTokenService") && token.includes("getDevicePushTokenAsync") && rules.includes("match /pushTokens/{tokenId}") && cloudRules.includes("match /pushTokens/{tokenId}"), "Native token registration + private Firestore schema in direct/cloud rule sets.");
+check("Logout disables device token", read("src/context/AuthContext.tsx").includes("disableCurrentDevice"), "Signed-out account must not retain an enabled device token.");
+check("Diagnostics schema is privacy bounded", rules.includes("match /diagnostics/{diagnosticId}") && cloudRules.includes("match /diagnostics/{diagnosticId}") && !read("src/services/error/runtimeDiagnosticsService.ts").includes("stack:"), "No raw stack/form/family content is uploaded.");
+check("Media lifecycle fields are immutable", rules.includes("request.resource.data.diff(resource.data).affectedKeys().hasOnly") && rules.includes("'secureUrl','publicId','thumbnailUrl','status','updatedAt'"), "Media record cannot be retargeted to another family/entity.");
+check("Client family deletion is blocked", rules.includes("recursive family deletion needs a trusted backend"), "Avoid orphaned family subcollections.");
+check("Bloom Supper rounded hero contract", hero.includes("roundedBottom") && hero.includes("borderBottomLeftRadius"), "Calendar/Moments can share the Tree lower silhouette.");
+check("Cloud Functions remains Spark-safe",
+  // R3R13+ uses a runtime opt-in switch instead of a literal `USE_CLOUD_FUNCTIONS: false`.
+  // Validate the effective safe default, verified deployment gate and retained deferred flags.
+  /get\s+USE_CLOUD_FUNCTIONS\(\)\s*:\s*boolean\s*\{\s*return\s+getCloudFunctionsRuntimeEnabled\(\)/.test(flags)
+  && /let\s+cloudFunctionsActive\s*=\s*false\s*;/.test(runtimeState)
+  && /cloudFunctionsEnabled:\s*false\s*,\s*remotePushEnabled:\s*false/.test(cloudFeature)
+  && /if\s*\(enabled\s*&&\s*!\(await\s+this\.verifyDeployed\(\)\)\)/.test(cloudFeature)
+  && /this\.reset\(\);/.test(cloudFeature)
+  && /\bCROSS_FAMILY_GRAPH_BRIDGE_DEFAULT_ENABLED\s*:\s*false\s*[,}]/.test(flags)
+  && /export\s+const\s+ENABLE_FAMILY_BULLETIN\s*:\s*boolean\s*=\s*false/.test(flags),
+  "Cloud runtime defaults OFF, enabling requires verified backend, deferred features remain disabled.");
+check("Android release versionCode exists", Number.isInteger(app.expo.android.versionCode) && app.expo.android.versionCode >= 1, "Required for repeatable Android RC builds.");
+check("iOS native config retired for Android/Web-only baseline", !app.expo.ios, "Family Bloom currently ships Android + Web source only.");
+console.log("FAMILY BLOOM PHASE 13 RELEASE READINESS");
+for (const item of checks) console.log(`${item.ok ? "PASS" : "FAIL"} | ${item.name} | ${item.detail}`);
+console.log(`Overall: ${checks.every((x) => x.ok) ? "PASS" : "FAIL"} (${checks.filter((x) => x.ok).length}/${checks.length})`);

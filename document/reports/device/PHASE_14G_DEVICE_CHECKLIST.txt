@@ -1,0 +1,18 @@
+FAMILY BLOOM PHASE 14G — TRUE FOCUS OVERLAY DEVICE CHECKLIST
+
+[ ] Vào Cây nhà: mặc định chọn 3 thế hệ.
+[ ] User linked được đưa về gần giữa Canvas và node được highlight; không có trạng thái “Nhánh đang xem”.
+[ ] Pan/zoom Canvas đến một vị trí dễ nhận biết trước khi test Focus.
+[ ] Bấm Nhánh rồi chọn Person ở giữa Canvas: Focus View nở từ đúng khu vực node, không bật đùng 100%.
+[ ] Chọn Person gần mép/góc Canvas: animation vẫn có tốc độ cảm nhận tương đương, không lao quá nhanh.
+[ ] Focus View đích chiếm khoảng 80% ngang x 80% dọc của vùng Canvas.
+[ ] Trong lúc Focus mở: Canvas phía dưới blur/tách lớp và không nhận pan/pinch/tap.
+[ ] Trong lúc Focus mở: 3 nút 3 thế hệ / 5 thế hệ / Toàn phả hệ không bấm được.
+[ ] Canvas đang ở 3 thế hệ nhưng Focus Person có nhánh sâu hơn: Focus vẫn hiện đủ nhánh từ full snapshot.
+[ ] Nếu nhánh chưa layout xong: thấy “Đang chuẩn bị nhánh của <Tên>…”.
+[ ] Pan/pinch trong Focus chỉ tác động graph Focus.
+[ ] Từ Focus A bấm Person B: cùng một Focus View chuyển sang B, không chồng overlay.
+[ ] Đóng Focus: animation thu về điểm node nguồn; Canvas lộ ra đúng mode/pan/zoom/node/line cũ.
+[ ] Canvas không mở thêm connector hoặc dim node/line trong toàn bộ quá trình Focus.
+[ ] Hero không còn nút cờ-lê; nút Thêm bên dưới vẫn hoạt động.
+[ ] Regression Search, Person sheet, edit/delete relation, Graph 3/5/all bình thường.

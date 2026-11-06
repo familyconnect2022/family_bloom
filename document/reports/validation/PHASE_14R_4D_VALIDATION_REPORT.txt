@@ -1,0 +1,22 @@
+Family Bloom — Phase 14R.4D Validation Report
+Date: 2026-10-01
+Base: Phase 14R.4C
+
+Automated gates executed:
+- Phase14R Time Capsule: 49 PASS / 0 FAIL
+- Phase14R.4 UX/realtime: 16 PASS / 0 FAIL
+- Phase14R.4D horizontal boxes: 26 PASS / 0 FAIL
+- Phase14Q V2.2 reveal: 34 PASS / 0 FAIL
+- Phase14R.1 Android variants: 39 PASS / 0 FAIL
+- Phase14R.3 Firebase/lock gate: 8 PASS / 0 FAIL
+- Phase14F/14J TypeScript/TSX syntax gate: 210/210 PASS
+- Phase14N: 13 PASS / 0 FAIL
+
+Additional checks:
+- Changed TS/TSX files parse/transpile successfully with TypeScript transpileModule.
+- Relative imports in changed application/service files resolve to existing project files.
+- Direct and cloud Time Capsule rule blocks are synchronized.
+
+Not executed in this Linux container:
+- Windows Expo prebuild / Gradle assembleRelease.
+- Physical-device visual/haptic validation.

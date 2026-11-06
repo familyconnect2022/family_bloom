@@ -1,0 +1,38 @@
+FAMILY BLOOM — PHASE 6.3 BUILD CHECK
+
+BASELINE
+- Phase 6.2 CLOSED basecode
+- DG-1 -> DG-10 confirmed
+- No persisted schema/rules/functions changes
+
+PURE DOMAIN
+- strict TypeScript semantic check for Family Graph Query/Kinship core: PASS
+- Query + Kinship + Focus Subgraph pure tests: PASS
+
+PROJECT STATIC
+- TypeScript transpile syntax: PASS — 115 TS/TSX, 0 errors
+- Phase 2 static architecture check: PASS — 115 TS/TSX
+- Relative import resolution: PASS — 370 imports, 0 missing
+
+SYNTHETIC PERFORMANCE / SCALE
+- 50 persons: PASS
+- 100 persons: PASS
+- 300 persons: PASS
+- 500 persons: PASS
+- maxPeople cap enforced
+- focus subgraph extraction PASS
+- relationshipBetween PASS
+- Vietnamese resolver PASS
+- live graph adapter PASS
+
+Representative local benchmark (development container; NOT a device SLA):
+50 persons  | engine 7.48ms | subgraph 0.91ms | relationship 0.30ms | adapter 1.39ms
+100 persons | engine 0.13ms | subgraph 0.49ms | relationship 0.02ms | adapter 1.13ms
+300 persons | engine 0.36ms | subgraph 0.18ms | relationship 0.01ms | adapter 2.77ms
+500 persons | engine 0.59ms | subgraph 0.24ms | relationship 0.01ms | adapter 6.05ms
+
+LIMITATIONS / HONESTY
+- Full `tsc --noEmit` for Expo project cannot run in this artifact workspace because node_modules / expo tsconfig are not bundled.
+- React Native device render/performance is not claimed PASS until user tests.
+- Phase 6.3 bounded focus is derived/render-side; Firestore transport remains the existing screen-scoped full graph listener by DG-1.
+- No Firebase Emulator/Rules deployment was needed because rules are unchanged.

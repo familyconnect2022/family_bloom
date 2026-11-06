@@ -1,0 +1,67 @@
+FAMILY BLOOM PHASE 14R — HỘP THỜI GIAN DEVICE CHECKLIST
+Date: 2026-10-01
+
+PREP
+[ ] Deploy firestore.rules with scripts\firebase\Family_Bloom_Deploy_Firestore_Rules.bat
+[ ] Build/install RELEASE or dev-client with latest Phase 14R source.
+[ ] Ideally test with 2 real family accounts/devices (sender + recipient).
+
+A. CREATE / MEMBERSHIP
+[ ] Nhà Mình -> Hộp thời gian -> Tạo Hộp thời gian.
+[ ] "Người được chọn" shows actual family membership users, not genealogy Persons.
+[ ] Current sender cannot be selected as recipient.
+[ ] "Cả nhà" confirmation uses Bloom custom modal, not Android default dialog.
+[ ] Keyboard does not cover Title/Message inputs.
+
+B. PREVIEW MODES
+[ ] Send a LOCKED/Báo trước capsule a few minutes in the future.
+[ ] Recipient sees a locked card + opening time, but NEVER title/message before openAt.
+[ ] Send a HIDDEN/Ẩn hoàn toàn capsule.
+[ ] Recipient list shows nothing before openAt.
+[ ] If testing a known direct link to hidden capsule before openAt, UI does not reveal sender/theme/title/message/open time.
+
+C. FIRESTORE SECURITY
+[ ] Recipient before openAt cannot read content/main (permission denied if directly tested).
+[ ] Creator can read/edit/delete before openAt.
+[ ] Creator cannot edit/delete after openAt.
+[ ] Recipient after openAt can read content/main.
+[ ] Different non-recipient family member cannot read capsule/content.
+
+D. OPEN CEREMONY
+[ ] At/after openAt, first recipient open launches full reveal ceremony.
+[ ] Box opens BEFORE the letter appears.
+[ ] Letter starts scale 0 -> 1 and opacity 0 -> 1.
+[ ] Letter is visually in FRONT of the box throughout reveal.
+[ ] Warm = pink/cream/gold + soft petals.
+[ ] Formal = clearly blue/silver + restrained particle + no visible bounce.
+[ ] Festive = pale yellow/pink + confetti/sparkle + stronger pop.
+[ ] After ceremony finishes, returning to capsule shows quick read view, not forced ceremony.
+[ ] "Xem lại hiệu ứng" replays the persisted sender-selected theme.
+
+E. RECEIPT / MULTI-RECIPIENT
+[ ] With 2+ recipients, each recipient has independent first-open state.
+[ ] One recipient opening does not mark another recipient as opened.
+
+F. LOCAL NOTIFICATION
+[ ] Recipient opens/resumes app once after sender creates capsule so local metadata sync can occur.
+[ ] Notification arrives at openAt.
+[ ] Tapping it switches to the correct family if needed and deep-links to exact capsule.
+[ ] Test a capsule more than 30 days away: after sync, confirm it remains in Android scheduled notification queue if inspected through internal tooling (optional).
+
+G. EDIT / DELETE
+[ ] Before openAt, sender can change recipients, preview mode, date/time, theme, title and message.
+[ ] Delete before openAt removes metadata + content.
+[ ] After openAt, edit/delete controls disappear and Rules reject mutation.
+
+H. BUILD / APK
+[ ] scripts\android\Family_Bloom_Android_Build_APK_ONLY.bat builds without a USB phone.
+[ ] Output exists: dist\android\Family_Bloom_Release_Test_LATEST.apk
+[ ] APK installs on a second Android phone without Metro/source.
+[ ] If node_modules/lock is stale, release BAT repairs dependencies instead of failing with npm ci EUSAGE.
+
+SEND BACK IF ANY FAIL
+- Screenshot/video
+- Which account/device was sender/recipient (no password)
+- Exact openAt used
+- Theme + preview mode
+- Any Firestore permission or Android notification error text

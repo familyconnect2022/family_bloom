@@ -1,0 +1,92 @@
+FAMILY BLOOM PHASE 14U — CHESS REALTIME RUNTIME CHECKLIST
+Use two real accounts/devices where possible. Mark PASS only from observed behavior.
+
+PREP
+[ ] Root `npm install` succeeds and installs socket.io-client.
+[ ] `cd server && npm install && npm run typecheck && npm run build` succeeds.
+[ ] Firestore Rules deployed to family-connect-4184f.
+[ ] Firestore indexes deployed; chessGames composite index READY.
+[ ] Render Singapore Free service deployed and /health returns {"ok":true}.
+[ ] Render env FIREBASE_PROJECT_ID is exactly family-connect-4184f.
+[ ] FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY set as Render secrets.
+[ ] App configured with EXPO_PUBLIC_CHESS_SOCKET_URL.
+
+AUTH / FAMILY
+[ ] Invalid/expired/absent token cannot enter Chess socket.
+[ ] Two valid members of same family can enter lobby.
+[ ] Different-family account cannot join/inspect guessed gameId.
+[ ] Removed member is rejected after membership cache expires (<= about 10s).
+[ ] Multi-family user opening Family B cannot challenge while an active game exists in Family A.
+
+LOBBY / INVITE
+[ ] Offline family member appears unavailable.
+[ ] Member actively in Chess Lobby appears ready.
+[ ] Challenge arrives only to intended member.
+[ ] Reject works.
+[ ] Accept creates one game with server-random white/black.
+[ ] Cancel works.
+[ ] Invite expires around 45s.
+[ ] Duplicate/spam attempts are bounded and do not create multiple active games.
+
+BOARD / RULES
+[ ] White board orientation puts White at bottom.
+[ ] Black board orientation puts Black at bottom.
+[ ] Tap piece shows legal targets.
+[ ] Illegal move rejected and board stays authoritative.
+[ ] Wrong turn rejected.
+[ ] Castling works.
+[ ] En passant works.
+[ ] Promotion selector Q/R/B/N works and server validates it.
+[ ] Last move highlight works.
+[ ] Checked king highlight works.
+[ ] Checkmate ends and persists game.
+[ ] Stalemate/insufficient material/threefold/50-move behavior matches server rules.
+[ ] Draw offer/accept/reject works.
+[ ] Resign uses Bloom confirmation and persists result.
+[ ] Rematch creates a NEW gameId/history row.
+
+CLOCK
+[ ] 3+2 works; 2s increment appears after accepted move.
+[ ] 5+0 works.
+[ ] 10+5 works.
+[ ] No-clock mode shows infinity/no timeout.
+[ ] Timeout occurs server-side without client reporting timeout.
+[ ] Changing phone wall-clock does not control server outcome.
+[ ] No Firestore write occurs once per second while clocks run.
+
+NETWORK / RECOVERY
+[ ] Temporary network loss shows recovery and reconnects.
+[ ] After reconnect, socket rejoins exact game room and state resyncs.
+[ ] Background then foreground resyncs authoritative board/clock.
+[ ] Duplicate move packet/requestId cannot apply twice.
+[ ] Player-only disconnect does NOT pause timed clock while server stays alive.
+[ ] Force Render/server restart while game active.
+[ ] Restored game becomes paused without charging unknown server downtime.
+[ ] Both players reconnect; recovered game resumes correctly.
+
+HISTORY / PRIVACY / COST
+[ ] Finished game appears in History with opponent/avatar/color/result/reason/time-control/date.
+[ ] History loads max 20 per page and Load More works.
+[ ] No persistent onSnapshot listener for Chess history.
+[ ] Non-player family member cannot read another pair's game record.
+[ ] Mobile cannot write chessGames directly.
+[ ] Mobile cannot read/write chessActiveUsers.
+[ ] Lobby did not create a duplicate family.members listener.
+
+CONCURRENCY
+[ ] At least 10 simultaneous games can be created in test/staging without cross-room events.
+[ ] Move in Game A never appears in Game B.
+[ ] Presence/invite/game state never leaks across families.
+
+FAMILY BLOOM REGRESSION
+[ ] App startup/login/logout.
+[ ] Family Gateway + switch family.
+[ ] Profile + family memberships.
+[ ] Moments + Events + Calendar.
+[ ] Family Graph + Person Detail.
+[ ] Six existing Nhà Mình games.
+[ ] Family Fund.
+[ ] Notifications/navigation.
+
+FINAL
+[ ] Only after all required real-device/server checks are accepted may Phase 14U be marked runtime PASS/CLOSED.

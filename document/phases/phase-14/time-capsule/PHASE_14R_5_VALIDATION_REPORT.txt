@@ -1,0 +1,366 @@
+FAMILY BLOOM PHASE 14R.5 VALIDATION REPORT
+Date: 2026-10-01
+Base: Phase 14R.4G
+
+PASS functions/pushNotifications.js syntax
+PASS Phase14R.5 test script syntax
+Phase14C functional V1: 44 PASS / 0 FAIL
+PASS | exists:src/app/(home)/(whispers)/home-whispers.tsx
+PASS | exists:src/app/(home)/(polls)/home-polls.tsx
+PASS | exists:src/app/(home)/(kitchen)/home-kitchen/index.tsx
+PASS | exists:src/app/(home)/(kitchen)/home-kitchen/[recipeId].tsx
+PASS | exists:src/features/home/whispers/WhisperFeaturePanel.tsx
+PASS | exists:src/features/home/polls/PollFeaturePanel.tsx
+PASS | exists:src/features/home/kitchen/KitchenFeaturePanel.tsx
+PASS | exists:src/services/home/homeWhisperService.ts
+PASS | exists:src/services/home/homePollService.ts
+PASS | exists:src/services/home/homeKitchenService.ts
+PASS | exists:src/components/family/FamilyMemberPicker.tsx
+PASS | exists:src/types/homeLiving.ts
+PASS | exists:src/data/kitchen/bloomRecipesV1.ts
+PASS | exists:firestore.rules
+PASS | exists:firestore.cloud.rules
+PASS | exists:firestore.indexes.json
+PASS | exists:scripts/firebase/Family_Bloom_Deploy_Firestore_Indexes.bat
+PASS | whisper pagination 20
+PASS | whisper retention 60d
+PASS | saved whisper snapshot
+PASS | direct recipient inbox
+PASS | whisper family/direct UX
+PASS | whisper 10 emotions
+PASS | whisper compact filter UX
+PASS | membership picker reused by whispers/polls
+PASS | member picker scalable search + virtualization
+PASS | missing-index fallback
+PASS | poll retention 30d
+PASS | poll frozen denominator + ballots
+PASS | poll group min 3
+PASS | poll anonymous UX
+PASS | poll expiry choices
+PASS | poll result buckets
+PASS | kitchen 100 recipes
+PASS | kitchen daily rotation
+PASS | kitchen membership-user preferences
+PASS | rules user private data
+PASS | rules polls/kitchen
+PASS | rules legacy whisper compatibility
+PASS | rules legacy poll compatibility
+PASS | push deep link source
+PASS | Cloud push remains direct-only via recipient inbox
+PASS | 7 Firestore indexes
+PASS | all TS/TSX syntax 210/210
+FAMILY BLOOM PHASE 13 RELEASE READINESS
+PASS | Internal tools are __DEV__ gated | No hard-coded developer account gate in release policy.
+PASS | E2E harness is internal-only | E2E controls are disabled in release.
+PASS | Push token registry wired | Native token registration + private Firestore schema in direct/cloud rule sets.
+PASS | Logout disables device token | Signed-out account must not retain an enabled device token.
+PASS | Diagnostics schema is privacy bounded | No raw stack/form/family content is uploaded.
+PASS | Media lifecycle fields are immutable | Media record cannot be retargeted to another family/entity.
+PASS | Client family deletion is blocked | Avoid orphaned family subcollections.
+PASS | Bloom Supper rounded hero contract | Calendar/Moments can share the Tree lower silhouette.
+PASS | Cloud Functions remains Spark-safe | Blaze-dependent live validation remains deferred.
+PASS | Android release versionCode exists | Required for repeatable Android RC builds.
+PASS | iOS buildNumber prepared | Source readiness only; device validation deferred.
+Overall: PASS (11/11)
+PASS focus-modal-onshow-boundary
+PASS focus-shell-before-data
+PASS focus-request-versioned
+PASS focus-switch-loading-first
+PASS focus-native-portal
+PASS focus-single-exit
+PASS catalog-first-track
+PASS playlist-no-provider-gate
+PASS playlist-local-deterministic
+PASS firestore-not-ui-gate
+PASS lazy-playback-resolution
+PASS playback-failure-friendly
+PASS no-technical-provider-copy
+
+Phase 14N: 13 PASS / 0 FAIL
+PASS route exists
+PASS hub entry exists
+PASS hub names all three reveal themes
+PASS music panel removed from visible hub
+PASS music source left intact
+PASS reanimated used
+PASS haptics used
+PASS three theme keys exist
+PASS Vietnamese theme names exist
+PASS warm remains default
+PASS formal palette is blue-led
+PASS festive palette is pale-yellow plus pink
+PASS warm palette preserved
+PASS theme picker exists
+PASS theme cannot switch mid-animation
+PASS each theme owns motion timing
+PASS formal motion has no letter overshoot
+PASS festive motion has stronger pop
+PASS formal particles are restrained
+PASS festive particles include confetti
+PASS particle sets remain bounded
+PASS single UI-thread timeline remains
+PASS old 3D lid path remains removed
+PASS layered halo remains
+PASS letter still waits for opening beat
+PASS letter still starts at exact scale zero
+PASS letter remains in front of box
+PASS premium box layers remain
+PASS theme-specific seal icon exists
+PASS theme-specific copy exists
+PASS waited-days emotional line exists
+PASS replay exists
+PASS prototype does not import firestore
+PASS no new animation dependency required
+Phase14Q V2.2 checks: 34 PASS / 0 FAIL
+PASS real collection path exists
+PASS content separated under content/main
+PASS per-user opens receipt exists
+PASS theme type has warm
+PASS theme type has formal
+PASS theme type has festive
+PASS audience supports family
+PASS preview supports hidden and locked
+PASS create validates future openAt
+PASS creator excluded from recipient snapshot
+PASS recipient snapshot bounded for large families
+PASS list hides hidden future recipient capsules
+PASS hidden direct view leaks no sender theme or opening time
+PASS content is not copied into metadata create
+PASS compose uses actual membership picker
+PASS compose excludes current uid
+PASS family audience snapshots current members
+PASS custom Bloom family confirmation exists
+PASS hidden mode UI exists
+PASS locked mode UI exists
+PASS custom Bloom date picker exists
+PASS Bloom time picker exists
+PASS all three theme options exist in composer
+PASS real reveal uses persisted theme
+PASS real reveal disables theme switching
+PASS first-open receipt is recorded after ceremony
+PASS later visits expose replay
+PASS letter real content is injected
+PASS letter remains scale zero at reveal start
+PASS letter stays above box layer
+PASS Reduce Motion fallback exists
+PASS metadata rules present
+PASS content read waits for server request.time >= openAt
+PASS metadata create requires atomic content/main
+PASS creator may mutate only before old openAt
+PASS opens write limited to own uid
+PASS cloud rules mirror time capsule rule
+PASS notification data supports time capsule
+PASS upcoming capsules join reminder sync
+PASS long-sleep capsules are not limited by 30-day event horizon
+PASS notification deep-links exact capsule
+PASS Nhà Mình hub points to real feature
+PASS real time-capsule routes registered in root stack
+PASS hub no longer labels capsule prototype
+PASS build script no expo --output regression
+PASS build script repairs stale package-lock
+PASS build script detects missing notification native packages
+PASS build script supports APK-only mode
+PASS release build runs Phase 14R gate
+Phase14R Time Capsule checks: 49 PASS / 0 FAIL
+PASS production display name
+PASS production package stays canonical
+PASS production scheme stays canonical
+PASS production firebase config stays canonical
+PASS production icon uses release branding
+PASS production adaptive icon uses release branding
+PASS development display name is distinct
+PASS development package is side-by-side safe
+PASS development scheme is distinct
+PASS development firebase config is isolated
+PASS development icon uses expo branding
+PASS development adaptive icon uses dev branding
+PASS production native tree protects debug applicationId
+PASS development native tree does not double-suffix dev package
+PASS manual Expo commands default to DEV package
+PASS manual Expo commands default to DEV display name
+PASS release asset exists: icon.png
+PASS release asset exists: android-icon-foreground.png
+PASS release asset exists: android-icon-background.png
+PASS release asset exists: android-icon-monochrome.png
+PASS release asset exists: notification-icon.png
+PASS dev asset exists: icon.png
+PASS dev asset exists: android-icon-foreground.png
+PASS dev asset exists: android-icon-background.png
+PASS dev asset exists: android-icon-monochrome.png
+PASS dev asset exists: notification-icon.png
+PASS user-supplied release icon source preserved
+PASS release launcher icon is 1024 square
+PASS dev launcher icon is 1024 square
+PASS release BAT forces production variant
+PASS release BAT has no unsupported --output flag
+PASS release BAT repairs dependency lock with npm install
+PASS release BAT clean-prebuilds variant resources
+PASS dev BAT forces development variant
+PASS dev BAT targets distinct package
+PASS dev BAT requires separate firebase json
+PASS dev BAT clean-prebuilds native project
+PASS dev BAT launches or builds debug app
+PASS Metro-only helper exists
+PASS DEV SHA helper prints SHA1 and SHA256
+PASS Firebase DEV setup guide exists
+PASS debug applicationIdSuffix plugin exists
+PASS release Firebase json also carries DEV client for safe debug-from-release tree
+PASS project root BATs are limited to approved deploy helpers
+PASS approved root deploy helpers are preserved
+Phase14R.1 dual Android variants: 45 PASS / 0 FAIL
+PASS dynamic config uses Expo config parameter
+PASS dynamic config no longer requires app.json directly
+PASS base iOS bundle identifier is inherited
+PASS base plugins are inherited
+PASS production adds only debug applicationId safety plugin
+PASS production package remains canonical
+PASS development package remains side-by-side
+PASS production icon remains release branding
+PASS development icon remains dev branding
+PASS @expo/ui aligned for Expo SDK 57
+PASS expo-glass-effect aligned for Expo SDK 57
+PASS expo-image-picker aligned for Expo SDK 57
+PASS expo-linking aligned for Expo SDK 57
+PASS expo-router aligned for Expo SDK 57
+PASS expo-video aligned for Expo SDK 57
+PASS expo-notifications aligned for Expo SDK 57
+PASS expo-application aligned for Expo SDK 57
+PASS package-lock is absent in clean archive or synchronized after npm install
+PASS dependency checker exists
+PASS package-lock checker exists
+PASS install + doctor helper exists
+PASS release build can repair dependencies
+PASS release build validates regenerated package-lock
+PASS dev build can repair dependencies
+PASS dev build validates regenerated package-lock
+Phase14R.2 Expo doctor/build fix: 25 PASS / 0 FAIL
+PASS DEV Firebase config is shipped in FULL source
+PASS DEV Firebase project is family-connect-4184f
+PASS DEV Firebase client package exists
+PASS DEV Firebase validator exists
+PASS DEV build validates Firebase config before prebuild
+PASS DEV Metro helper validates Firebase config
+PASS 14R.2 lock gate accepts synchronized generated lock
+PASS 14R.2 no longer requires package-lock to stay absent
+Phase14R.3 DEV Firebase + lock gate: 8 PASS / 0 FAIL
+PASS list hero has Back button
+PASS composer uses stable Bloom date picker path
+PASS composer no longer uses native Android date picker
+PASS Bloom date picker owns custom Vietnamese calendar UI
+PASS ready recipient box has explicit open CTA
+PASS ready recipient box uses bounded shake animation
+PASS shake respects Reduce Motion
+PASS visible card crosses reveal time without one-second polling
+PASS detail automatically reloads when seal expires
+PASS recipient metadata has realtime watcher
+PASS global bridge wires realtime capsule watcher
+PASS realtime listener is pooled and shared
+PASS hidden due capsule can silently refresh list
+PASS realtime sync replaces only Time Capsule alarms
+PASS short-future capsule notifications can still schedule
+PASS release build runs Phase 14R.4 gate
+Phase14R.4 UX/realtime checks: 16 PASS / 0 FAIL
+PASS two-section IA uses Hộp dành cho tôi
+PASS two-section IA uses Hộp tôi gửi
+PASS old waiting/open vertical sections removed
+PASS both collections use horizontal virtualized rails
+PASS rail order prioritizes ready then upcoming then opened
+PASS nearest future boxes sort forward
+PASS all three themes own distinct physical box colors
+PASS opened sender box uses recipient progress
+PASS partial sender open is visually distinct from fully opened
+PASS ajar/open transition animates instead of snapping
+PASS ajar animation lifts and rotates lid
+PASS opened animation reveals letter peek
+PASS shake only applies to due unopened incoming boxes
+PASS opened recipient state comes from persisted openedByUids
+PASS create remains compatible with pre-14R.4D deployed rules
+PASS markOpened preserves per-user receipt and updates summary
+PASS replay preserves first openedAt timestamp
+PASS legacy due boxes hydrate old open receipts without new listeners
+PASS recipient summary update is tightly scoped in Firestore rules
+PASS cloud Time Capsule rules also include open summary guard
+PASS recipient cannot claim another uid as opened
+PASS date picker wrapper removes inherited bottom margin
+PASS date and time triggers use one fixed equal height
+PASS detail page exposes persisted Đã mở state
+PASS release build runs Phase 14R.4D gate
+PASS direct and cloud Time Capsule rule blocks stay synchronized
+Phase14R.4D horizontal box checks: 26 PASS / 0 FAIL
+PASS Nhà Mình hub subscribes to recipient capsule state before entry
+PASS Nhà Mình hub visibly highlights ready boxes
+PASS Nhà Mình hub highlights locked preview boxes waiting to open
+PASS hidden preview is not advertised before open time
+PASS recipient watcher exposes all state transitions
+PASS sender watcher exists for openedByUids realtime state
+PASS horizontal collection subscribes to sender realtime state
+PASS global bridge shares sender realtime listener
+PASS sender gets foreground notification toast on remote-device open
+PASS recipient exact-time local notification remains scheduled
+PASS locked preview creates persistent recipient activity notice
+PASS hidden preview does not create early waiting activity notice
+PASS first open creates persistent sender activity notice
+PASS activity model supports time capsule deep links
+PASS Activity Center opens exact capsule
+PASS manual Expo command defaults to DEV package safety
+PASS release-generated native debug build gets .dev suffix safety net
+PASS release still requires explicit production variant
+PASS DEV build verifies generated applicationId before install
+PASS RELEASE build verifies generated applicationId before build
+PASS DEV script verifies side-by-side install when release already exists
+PASS generated native applicationId guard exists
+Phase14R.4E live-state checks: 22 PASS / 0 FAIL
+PASS DEV script no longer passes adb serial to Expo --device
+PASS DEV script builds debug APK directly with Gradle
+PASS DEV script discovers generated debug APK
+PASS DEV script installs onto exact adb serial
+PASS DEV script revalidates adb target immediately before build/install
+PASS DEV script keeps side-by-side package verification
+PASS DEV script reverses Metro port only for selected phone
+PASS DEV script starts Metro separately after install
+PASS DEV script launches only the DEV package
+PASS RELEASE install remains exact-serial adb based
+Phase14R.4F device-targeting checks: 10 PASS / 0 FAIL
+PASS plugin transform succeeds on Expo-style Gradle fixture
+PASS suffix exists exactly once
+PASS suffix is placed after buildTypes begins
+PASS suffix is not inside signingConfigs
+PASS suffix is inside the buildTypes debug block
+PASS signingConfigs remains free of applicationIdSuffix
+PASS plugin is idempotent
+PASS core uses scoped buildTypes lookup instead of loose first-debug regex
+PASS Expo plugin delegates to dependency-free scoped transform
+PASS generated Gradle guard exists
+PASS release build validates generated debug suffix before Gradle
+PASS dev build validates absence of double suffix
+PASS release build runs phase14r4g gate
+PASS dev build runs phase14r4g gate
+Phase14R.4G release Gradle suffix: 14 PASS / 0 FAIL
+PASS direct whisper still creates exactly recipient homeInbox event
+PASS family whisper intentionally creates no inbox event
+PASS one bounded user-private inbox watcher exists
+PASS inbox listener is shared by user not multiplied per family
+PASS client atomically claims whisper delivery
+PASS Release and DEV dedupe on shared deliveredAt claim
+PASS foreground recipient gets Bloom toast
+PASS background recipient gets local Android notification fallback
+PASS whisper local notification deep-links as home_whisper
+PASS whisper notification uses notable Android channel
+PASS old legacy inbox events are acknowledged without toast storm
+PASS multi-family whisper batches keep deep-link family unambiguous
+PASS notification tap marks inbox read before opening whisper screen
+PASS mark read also seals delivery acknowledgement
+PASS rules let only recipient update delivery/read acknowledgements
+PASS direct and cloud rules mirror whisper delivery acknowledgement
+PASS Cloud Function now triggers from recipient inbox source of truth
+PASS Cloud Function atomically claims deliveredAt
+PASS Cloud Function releases claim when no push token receives message
+PASS Cloud Function is direct-whisper only via homeInbox type
+PASS app version advanced for install-over update
+PASS iOS build number advanced consistently
+PASS phase14r5 npm gate exists
+PASS DEV build runs phase14r5 gate
+PASS RELEASE build runs phase14r5 gate
+PASS Time Capsule recipient and sender listeners remain intact
+PASS notification settings explain direct-only whisper policy
+Phase14R.5 whisper notification/stability: 27 PASS / 0 FAIL

@@ -1,0 +1,24 @@
+FAMILY BLOOM PHASE 14D — DEVICE CHECKLIST
+
+[ ] Rebuild Android dev client/app binary (app.json thêm expo-video background playback config).
+[ ] Deploy/publish Firestore Rules trước khi test favorite/family song/cycle writes.
+[ ] Nhà Mình: Nhạc Nhà Mình hiện trực tiếp trong hub, hero Bloom Supper đẹp, không còn card mở trang nhạc riêng.
+[ ] Tabs ngang: Playlist / Yêu thích / Bài hát Nhà Mình chuyển mượt.
+[ ] Search: gõ nhanh không lag; request cũ bị hủy; kết quả có ☆ và Thêm.
+[ ] Favorite: star bật/tắt đúng tài khoản; đổi account không lẫn.
+[ ] Bài hát Nhà Mình: user A thêm -> user B cùng family thấy; family khác không thấy.
+[ ] Playlist: 2 user cùng family thấy cùng track + cùng thứ tự trong cùng cycle 3 ngày.
+[ ] Playlist: mở lại không tự random lại trong cycle.
+[ ] Play/pause/next/previous hoạt động; đổi tab/scroll/search không làm player restart.
+[ ] Background playback + Now Playing notification hoạt động sau native rebuild.
+[ ] Đổi family trong lúc phát -> player cũ dừng/clear.
+[ ] Bếp default: 2+ account cùng family, không filter -> sáng/trưa/tối giống hệt nhau.
+[ ] Bếp sang ngày mới -> menu default đổi.
+[ ] Bếp bật filter ở user A -> chỉ A cá nhân hóa; user B default không đổi.
+[ ] Bếp xóa filter -> A quay lại đúng menu chung của ngày đó.
+[ ] Default Bếp không có Đổi món; khi có filter thì Đổi món khả dụng.
+[ ] Lời thì thầm Cả nhà: modal xác nhận Bloom, không còn dialog Android mặc định.
+[ ] Keyboard: input đang viết vẫn nhìn thấy; validation focus/scroll đúng field.
+[ ] Note 60 ngày / poll 30 ngày nổi bật và wording tự nhiên hơn.
+[ ] Phase14C regressions: member picker, whispers, polls, kitchen, family switch vẫn PASS.
+[ ] Performance: scroll Nhà Mình + search + phát nhạc không có giật rõ rệt trên device thật.

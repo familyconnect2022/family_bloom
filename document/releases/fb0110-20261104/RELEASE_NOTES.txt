@@ -1,0 +1,36 @@
+FAMILY BLOOM — FB-01..FB-10 — CONSOLIDATED ANDROID SOURCE CORRECTIONS
+Baseline: Family_Bloom_APPEARANCE3_HERO_READING_VEIL_THEME_FULL_CODE_2026-11-04.zip
+Generated: 2026-11-04
+Identity retained: Android package com.familybloom.android; Expo 1.3.35 / versionCode 143045.
+
+What changed:
+ FB-01: Condensed greeting and hero copy, bounded lines/layout; applies to common hero component.
+ FB-02: Shorter poll placeholder and safer input wrapping.
+ FB-03: Event title has its own full-width, multiline row, with badges below.
+ FB-04: Memory book title input reduced to theme-friendly font size; shared scaled input capped in narrow controls.
+ FB-05: Family tree card/avatar cosmetic refinement; layout graph and persisted relationships untouched.
+ FB-06: Graph proposal submit shows required-reason/error feedback inside its modal. Button can be tapped even when graph is unavailable to show a specific error.
+ FB-07: Poll create/vote gets clear error/status feedback, busy protection, safer single-document create; Firestore role/security rules unchanged.
+ FB-08: Fund amount gets a single direct numeric input and separate currency label.
+ FB-09: Fund save button uses active/disabled/loading state consistently; immediate double-submit guard.
+ FB-10: Android games lobby contains Chess and Xiangqi only. Two old mini-game routes removed; chess/xiangqi routes and backends unchanged. Persisted Firestore mini-game records NOT deleted. Web companion code still contains unused legacy helpers; web is out of this Android release scope.
+ FB-11: Góc học tập/Tủ sách Bloom NOT implemented here by explicit user decision; discuss later.
+
+Safe Windows source update:
+ 1. Extract this FULL ZIP to a NEW directory OUTSIDE the existing project.
+ 2. Run Family_Bloom_AUTO_UPDATE_FULL.bat from the extracted directory.
+ 3. Choose the existing Family Bloom project folder (the target).
+ 4. The updater SHA-verifies every touched target against the supplied 2026-11-04 baseline. It FAILS CLOSED if any target file differs.
+ 5. After explicit Y confirmation, it backs up the entire project source excluding generated build caches, then patches 17 app files, updates the root BAT plus 3 installer documents/scripts, and removes 2 obsolete Android routes; source SHA-256 verified again before success.
+ 6. Existing project secrets and generated native caches are not overwritten.
+ 7. Build APK from target on Windows after a PASS; test on both member/admin accounts.
+ Note: The old unbounded historical R3/R5 installer path is replaced for this update with release-scoped SHA-verified source patching. No automatic Firebase deploy takes place.
+
+Release validation limitations:
+ - No physical Windows BAT execution, native Android compile, installed APK run, or real Firebase permission test in this environment.
+ - Static TS/TSX transpile, import integrity, Expo routes, BAT manifest, Family Graph integrity and old H23 chess/xiangqi tests pass.
+ - Firestore rules in ZIP show a valid family member can CREATE a poll; deployed production rules may differ. Confirm with two users before declaring FB-07 resolved.
+ - Existing Firebase configuration and user data unchanged.
+ - This is FULL SOURCE CODE, not an APK, and not a standalone Render/Vercel server release.
+
+Compatibility: the legacy scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat is retained solely for old migrations and static contract tests. For THIS release, use ONLY the root Family_Bloom_AUTO_UPDATE_FULL.bat (the SHA-bound FB01-FB10 installer).

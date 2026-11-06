@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict'); const fs=require('node:fs'); const path=require('node:path');
+const root=path.resolve(__dirname,'../../..'); const read=x=>fs.readFileSync(path.join(root,x),'utf8');
+const layout=read('src/app/_layout.tsx'); const policy=read('src/services/navigation/rootRoutePolicy.ts');
+const welcome=read('src/components/onboarding/WelcomeModal.tsx'); const screen=read('src/app/welcome.tsx');
+const hero=read('src/components/ui/BloomHeroHeader.tsx');
+const moments=read('src/app/(tabs)/moments.tsx'),planner=read('src/app/(tabs)/planner.tsx');
+const check=(name,ok)=>{assert.ok(ok,name);console.log('PASS',name)};
+check('Safe unauthenticated anchor remains first',layout.indexOf('name="session-gate"')<layout.indexOf('guard={!user}')&&layout.includes('router.replace("/session-gate"'));
+check('Welcome is native Stack route verified by UID, profile and family',layout.includes('welcomeBlocking = verifiedFamily && welcomeReady && showWelcome')&&read('src/app/session-gate.tsx').includes('testID="verified-welcome-native-screen"'));
+check('Home unavailable until Welcome dismissed',layout.includes('const allowFamilyRoutes = verifiedFamily && welcomeReady && !welcomeBlocking;')&&layout.includes('<Stack.Protected guard={allowFamilyRoutes}>'));
+check('Welcome does not spawn Android opaque Modal',!welcome.includes('<Modal')&&read('src/app/session-gate.tsx').includes('<WelcomeModal visible')&&!layout.includes('visible={canPresentWelcome('));
+check('Welcome remains tappable, scrollable and guarded',welcome.includes('onPress={continueIntoFamily}')&&welcome.includes('testID="welcome-paper-safe-text-region"')&&welcome.includes('testID="welcome-letter-scroll"')&&welcome.includes('single-paper-image-timeout-fallback'));
+check('Finished Welcome leaves route for Tabs',policy.includes('const onWelcome = pathname === "/welcome";')&&policy.includes('onSessionGate || onWelcome'));
+check('Welcome fallback never paints blank white',layout.includes('<BloomAppBootstrap ready={false}'));
+check('Welcome handoff waits for a native-laid-out frame', read('src/app/session-gate.tsx').includes('testID="verified-welcome-native-screen"') && !layout.includes('welcomeFrameReady') && screen.includes('Redirect href="/session-gate"'));
+check('Hero fills width and avoids contain side gutters',hero.includes('contentFit="cover"')&&!hero.includes('placeholder={scene && !artwork')&&hero.includes('viewportHeight * 0.35'));
+check('Hero uses irregular themed fog',hero.includes('getBloomFogArt(palette, isDark ? "dark" : "light")')&&hero.includes('height: "30%"'));
+check('Moments cached header refreshed on theme change',moments.includes('const themeRevision = useBloomThemeRevision();')&&moments.includes('[themeRevision, canModerate'));
+check('Calendar cached header refreshed on theme change',planner.includes('const themeRevision = useBloomThemeRevision();')&&planner.includes('[themeRevision, shellProps'));
+console.log('R8R4R4R3R3 regression contract PASS; on-device APK validation still required.');
