@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'../../..');
+const file=p=>fs.existsSync(path.join(root,p));
+const bat=fs.readdirSync(root).filter(n=>/\.(bat|cmd)$/i.test(n)).sort();
+assert.deepEqual(bat,['Family_Bloom_BUILD_APK_TO_SHARE.bat','Family_Bloom_BUILD_METRO.bat']);
+const m=JSON.parse(fs.readFileSync(path.join(root,'scripts/setup/bat-entrypoints-manifest.json')));
+assert.deepEqual(m.batFiles.filter(x=>!x.includes('/')).sort(),bat);
+const metro=fs.readFileSync(path.join(root,'Family_Bloom_BUILD_METRO.bat'),'utf8');
+assert(metro.includes('scripts\\android\\dev\\Family_Bloom_Android_Metro_Only.bat'));
+assert(metro.includes('scripts\\android\\dev\\Family_Bloom_Android_Debug_Build_And_Run.bat'));
+assert(metro.includes('choice /C 12'));
+assert(metro.includes('exit /b %errorlevel%'));
+const share=fs.readFileSync(path.join(root,'Family_Bloom_BUILD_APK_TO_SHARE.bat'),'utf8');
+assert(share.includes('scripts\\android\\build\\Family_Bloom_BUILD_APK_TO_SHARE.bat'));
+const history=['00_CAP_NHAT_R11R2_LEN_R11R4R1.cmd','00_CAP_NHAT_R6_AN_TOAN.cmd','00_CAP_NHAT_R7_AN_TOAN.cmd','00_MO_CAP_NHAT_FAMILY_BLOOM.cmd','00_TACH_WEB_ANDROID_AN_TOAN.cmd','R11R3_MOTION_RECOVERY.cmd','R11R4_MOTION_INSTALL.cmd','R11_MOTION_SAFE_UPDATE.cmd','Family_Bloom_AUTO_UPDATE_FULL.bat'];
+for(const name of history) assert(file('scripts/android/maintenance/legacy/'+name),'Missing legacy '+name);
+assert(file('scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat'));
+assert(!file('HUONG_DAN_1_BUOC.txt')&&!file('R11R4R2_RELEASE_NOTES.txt'));
+assert(file('document/releases/R11R4R2_RELEASE_NOTES.txt'));
+assert(file('document/guides/HUONG_DAN_1_BUOC_R11R2_TO_R11R4R1.txt'));
+console.log('R11R4R2R1 ROOT BAT & DOC CONTRACT: PASS (2 launchers, no root CMD, history preserved)');

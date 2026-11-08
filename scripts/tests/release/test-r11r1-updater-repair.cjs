@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'../../..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const script=read('scripts/maintenance/fb-r11-motion-safe-update.cjs');
 const manifest=JSON.parse(read('document/releases/fb-r11-motion-manifest.json'));
-assert(fs.existsSync(path.join(root,'Family_Bloom_AUTO_UPDATE_FULL.bat')), 'Keep local auto-update BAT without requiring a specific release-specific UI');
+assert(fs.existsSync(path.join(root,'scripts/android/maintenance/legacy/Family_Bloom_AUTO_UPDATE_FULL.bat')), 'Keep local auto-update BAT without requiring a specific release-specific UI');
 assert(script.includes('function locateProject()'), 'Must discover nested project folders');
 assert(script.includes('matches.length > 1'), 'Must reject ambiguous project folders');
 assert(script.includes("item.depth >= 2"), 'Must bound discovery depth');

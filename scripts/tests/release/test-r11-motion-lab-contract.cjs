@@ -27,5 +27,5 @@ assert(read('src/app/(internal)/developer-tools.tsx').includes('/motion-lab'));
 const updater=read('scripts/maintenance/fb-r11-motion-safe-update.cjs');
 assert(updater.includes('Refusing symlink')||updater.includes('Refusing symlink'));
 assert(updater.includes('backupSource(target,backup)')&&updater.includes('POST')===false);
-assert(fs.existsSync(path.join(root,'Family_Bloom_AUTO_UPDATE_FULL.bat')), 'Keep the user-installed local update BAT');
+assert(fs.existsSync(path.join(root,'scripts/android/maintenance/legacy/Family_Bloom_AUTO_UPDATE_FULL.bat')), 'Keep the user-installed local update BAT');
 console.log('R11 MOTION LAB: PASS — gated preview, UI-thread primitives, no Firebase, SHA-bound updater');

@@ -31,4 +31,4 @@
 - `src/app/` dùng Expo Router route-groups để gom route theo domain mà không đổi URL.
 - `src/components/`, `src/services/`, `src/context/` chia theo domain; shared UI nằm trong `components/ui` / `components/layout`.
 - `scripts/android/`, `scripts/firebase/`, `scripts/maintenance/`, `scripts/setup/`, `scripts/windows/web/` dành cho tooling; Firebase deploy helper chỉ có một bản chuẩn trong `scripts/firebase/`, và không đưa BAT helper trở lại root nếu không phải copy-over entrypoint.
-- Hai file BAT copy-over ở root được giữ có chủ đích vì người dùng phải chạy trực tiếp trước/sau overlay FULL CODE.
+- Root chỉ giữ 2 launcher dễ dùng: `Family_Bloom_BUILD_METRO.bat` và `Family_Bloom_BUILD_APK_TO_SHARE.bat`. Auto Update nằm trong `scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat` (hoặc menu `scripts/android/Family_Bloom_MENU.bat`); các launcher nâng cấp cũ lưu tại `scripts/android/maintenance/legacy/`.

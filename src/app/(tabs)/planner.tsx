@@ -248,17 +248,6 @@ const PlannerShell = memo(function PlannerShell({
       </BloomRouteEntrance>
 
       <View style={__a3_styles.topInset}>
-        {canModerate && (
-          <Pressable onPress={onModerate} style={({ pressed }) => [__a3_styles.moderationButton, pressed && __a3_styles.pressed]}>
-            <View style={__a3_styles.moderationIcon}><Ionicons name="shield-checkmark-outline" size={18} color={__a3Colors.primary} /></View>
-            <View style={__a3_styles.moderationCopy}>
-              <Text style={__a3_styles.moderationTitle}>Kiểm duyệt sự kiện</Text>
-              <Text style={__a3_styles.moderationHint}>Người giữ nhà chỉ giúp ẩn hoặc đưa ngày này trở lại · nội dung vẫn thuộc người tạo</Text>
-            </View>
-            <View style={__a3_styles.hiddenCount}><Text style={__a3_styles.hiddenCountText}>{hiddenCount}</Text></View>
-          </Pressable>
-        )}
-
         <View
           style={__a3_styles.segment}
           onLayout={(event) => { segmentWidth.value = event.nativeEvent.layout.width; }}
@@ -281,6 +270,16 @@ const PlannerShell = memo(function PlannerShell({
             <Text style={[__a3_styles.segmentText, mode === "list" && __a3_styles.segmentTextActive]}>Sự kiện</Text>
           </Pressable>
         </View>
+        {canModerate && (
+          <Pressable onPress={onModerate} style={({ pressed }) => [__a3_styles.moderationButton, pressed && __a3_styles.pressed]}>
+            <View style={__a3_styles.moderationIcon}><Ionicons name="shield-checkmark-outline" size={18} color={__a3Colors.primary} /></View>
+            <View style={__a3_styles.moderationCopy}>
+              <Text style={__a3_styles.moderationTitle}>Kiểm duyệt sự kiện</Text>
+              <Text style={__a3_styles.moderationHint}>Người giữ nhà chỉ giúp ẩn hoặc đưa ngày này trở lại · nội dung vẫn thuộc người tạo</Text>
+            </View>
+            <View style={__a3_styles.hiddenCount}><Text style={__a3_styles.hiddenCountText}>{hiddenCount}</Text></View>
+          </Pressable>
+        )}
       </View>
     </>
   );

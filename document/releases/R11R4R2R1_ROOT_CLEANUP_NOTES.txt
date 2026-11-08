@@ -1,0 +1,26 @@
+FAMILY BLOOM ANDROID R11R4R2R1 — GATEFIX + ROOT BAT CLEANUP (2026-11-07)
+
+BASELINE: FamilyBloom_R11R4R2_PLANNER_MODERATION_ORDER_FULL_CODE_2026-11-07.zip
+The Planner UI change R11R4R2 is retained exactly.
+
+ROOT WINDOWS ENTRIES (ONLY TWO):
+- Family_Bloom_BUILD_METRO.bat => [1] Metro-only; [2] Debug APK build/install + Metro via scripts/android/dev/
+- Family_Bloom_BUILD_APK_TO_SHARE.bat => scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat
+
+CLEANUP:
+- Move R11 historical update launchers (CMD/BAT) to scripts/android/maintenance/legacy/;
+  keep legacy invocation-relative paths corrected to project root.
+- Active full-source updater remains at scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat.
+- Move HUONG_DAN_1_BUOC.txt to document/guides, R11R4R2_RELEASE_NOTES.txt to document/releases.
+- Update BAT manifest, migration map, and structure regression guard; prevent extra root CMD files.
+- No change to Android app code, native permissions, Firestore Rules, Firebase, games or Web source.
+
+INSTALL:
+- Existing installed R11R4R2: apply included safe patch with 00_SUA_ANDROID_ROOT_R11R4R2R1.cmd;
+  patch checks file SHA, backs up originals, refuses unknown modifications, and rolls back on failure.
+- New install: use this FULL CODE as Android source. Do not unpack over existing source without a backup.
+- To perform future FULL CODE overlay, use the maintenance BAT under scripts/android/maintenance.
+- APK gate check before build: node scripts/maintenance/check-project-structure.js
+- Metro BAT offers two modes: start existing Debug APK Metro, or build/install Debug APK then open Metro. Not a Release APK.
+
+NOT TESTED HERE: actual Windows batch runtime, Gradle/Release APK compile, device behavior.

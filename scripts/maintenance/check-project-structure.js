@@ -18,6 +18,9 @@ const rootEntries = fs.readdirSync(root, { withFileTypes: true });
 const rootDocs = rootEntries
   .filter((entry) => entry.isFile() && /\.(md|txt)$/i.test(entry.name))
   .map((entry) => entry.name);
+const rootCmd = rootEntries
+  .filter((entry) => entry.isFile() && /\.cmd$/i.test(entry.name))
+  .map((entry) => entry.name);
 const rootBat = rootEntries
   .filter((entry) => entry.isFile() && /\.bat$/i.test(entry.name))
   .map((entry) => entry.name)
@@ -31,7 +34,8 @@ check('Root has zero Markdown/TXT documentation files', rootDocs.length === 0, r
 const docsOutsideCanonical = [];
 function scanDocumentation(current) {
   for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-    if (['node_modules', '.git', '.expo', 'android', 'ios', 'dist'].includes(entry.name)) continue;
+    // Patch backups are generated machine state, not live project documentation.
+    if (['node_modules', '.git', '.expo', '.familybloom_backups', 'android', 'ios', 'dist'].includes(entry.name)) continue;
     const absolute = path.join(current, entry.name);
     const rel = path.relative(root, absolute).replace(/\\/g, '/');
     // Historical update payload is an inert package snapshot, not live project documentation.
@@ -50,7 +54,9 @@ check('All Markdown/TXT documentation lives under document/', docsOutsideCanonic
 check('Canonical document/ directory exists', fs.existsSync(path.join(root, 'document')));
 check('Accidental plural documents/ directory is absent', !fs.existsSync(path.join(root, 'documents')));
 check('Legacy top-level reports/ directory is absent', !fs.existsSync(path.join(root, 'reports')));
-check(`Root BAT launchers exactly match the ${allowedRootBat.length} declared in manifest`, JSON.stringify(rootBat) === JSON.stringify(allowedRootBat), rootBat.join(', '));
+check(`Root has exactly ${allowedRootBat.length} declared BAT launchers and no CMD`,
+  JSON.stringify(rootBat) === JSON.stringify(allowedRootBat) && rootCmd.length === 0,
+  [...rootBat, ...rootCmd].join(', '));
 check('Android BAT helpers are grouped by purpose under scripts/android', ['build','dev','install','eas','verify','maintenance'].every((group) => fs.existsSync(path.join(root, 'scripts/android', group))));
 check('Retired companion Web source is absent from Android',
   ['src/web','public','vercel.json','src/app/_layout.web.tsx', 'src/app/+html.tsx', 'scripts/windows/web',

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "description": "Family Bloom Android-first only. Legacy Expo Web companion moved outside Android.",
+  "description": "Android root: exactly two launchers (Metro, Build & Share); update and historical BATs live under scripts/.",
   "batFiles": [
-    "Family_Bloom_AUTO_UPDATE_FULL.bat",
+    "Family_Bloom_BUILD_METRO.bat",
     "Family_Bloom_BUILD_APK_TO_SHARE.bat",
     "scripts/android/Family_Bloom_MENU.bat",
     "scripts/android/build/Family_Bloom_Android_RUN_TEST.bat",
@@ -34,6 +34,7 @@
     "scripts/maintenance/Family_Bloom_Cleanup_Generated_JS.bat",
     "scripts/maintenance/Family_Bloom_Refresh_Vietnamese_Music.bat",
     "scripts/setup/Family_Bloom_Install_And_Doctor.bat",
-    "scripts/setup/Family_Bloom_Sync_Dependencies.bat"
+    "scripts/setup/Family_Bloom_Sync_Dependencies.bat",
+    "scripts/android/maintenance/legacy/Family_Bloom_AUTO_UPDATE_FULL.bat"
   ]
 }

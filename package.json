@@ -186,7 +186,8 @@
     "avatar:check": "node scripts/tests/release/test-m3r4-avatar-picker-and-progress.cjs && node scripts/tests/release/test-m3r4r3-background-avatar-queue.cjs && node scripts/tests/release/audit-toast-context.cjs",
     "family:r6:check": "node scripts/tests/release/test-m3r4r6-root-avatar-lifecycle.cjs",
     "appearance:architecture:check": "node scripts/tests/release/test-r3r3-appearance-local-first.cjs",
-    "android:separation:check": "node scripts/tests/release/test-android-only-no-legacy-web.cjs"
+    "android:separation:check": "node scripts/tests/release/test-android-only-no-legacy-web.cjs",
+    "root:launchers:check": "node scripts/tests/release/test-r11r4r2r1-root-launchers.cjs"
   },
   "private": true,
   "expo": {

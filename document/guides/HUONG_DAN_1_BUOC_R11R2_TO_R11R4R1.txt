@@ -1,0 +1,26 @@
+HUONG DAN LUU TRU (chi danh cho ban R11R2 cu; khong ap dung voi R11R4R2+)
+Launcher lich su: scripts\android\maintenance\legacy\00_CAP_NHAT_R11R2_LEN_R11R4R1.cmd
+
+FAMILY BLOOM - R11R2 -> R11R4R1 (ONE STEP)
+
+CHI CAN 1 GOI PATCH NAY. KHONG CAN CAP NHAT R11R3/R11R4 RIENG.
+
+1. Giai nen ZIP PATCH vao 1 thu muc MOI. KHONG giai nen de len du an.
+2. Mo CMD tai thu muc vua giai nen.
+3. CHAY KIEM TRA (khong ghi bat ky file nao):
+   node R11R2_TO_R11R4R1.cjs check "D:\Family Bloom App + Server\Family_Bloom"
+4. Neu [CHECK PASS], CHAY CAP NHAT (tu sao luu va kiem tra SHA):
+   node R11R2_TO_R11R4R1.cjs install "D:\Family Bloom App + Server\Family_Bloom"
+5. Khi [INSTALL PASS], build lai APK Release TAI THU MUC DU AN DANG DUNG.
+
+CO THE double-click 00_CAP_NHAT_R11R2_LEN_R11R4R1.cmd de check va cai trong 1 lan.
+
+GHI CHU:
+- Chi danh cho R11R2 (hoac nguon R11 da cap nhat mot phan R3/R4). KHONG dung cho R10.
+- Luon giu ban sao R10 da luu.
+- BAT hien tai, .env, google-services.json, Firebase, Rules, Android native va data KHONG bi sua.
+- Neu [SHA MISMATCH], DUNG LAI va gui log, TUYET DOI KHONG xoa du lieu hoac ep ghi.
+- Noi dung: khoi phuc UI card R10, Home Event ticket rieng, animation login/Welcome/tab, 4 bai test Welcome cap nhat, Motion Lab.
+- APK tren thiet bi thuc CHUA duoc xac minh trong ban release nay.
+- Quan trong: ban fix R11R4R1 cu dung script fb-r11r4-build-gate-fix.cjs o ROOT PATCH ma khong co trong ROOT FULL CODE.
+  Goi nay da tao script R11R2_TO_R11R4R1.cjs ngay ROOT cua CA HAI ZIP.

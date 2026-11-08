@@ -182,6 +182,16 @@
     "Family_Bloom_CLEAN_APPLY_FULL.bat",
     "Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat",
     "Family_Bloom_EAS_BUILD_TEST.bat",
-    "Family_Bloom_EAS_UPDATE_TEST.bat"
+    "Family_Bloom_EAS_UPDATE_TEST.bat",
+    "00_CAP_NHAT_R11R2_LEN_R11R4R1.cmd",
+    "00_CAP_NHAT_R6_AN_TOAN.cmd",
+    "00_CAP_NHAT_R7_AN_TOAN.cmd",
+    "00_MO_CAP_NHAT_FAMILY_BLOOM.cmd",
+    "00_TACH_WEB_ANDROID_AN_TOAN.cmd",
+    "R11R3_MOTION_RECOVERY.cmd",
+    "R11R4_MOTION_INSTALL.cmd",
+    "R11_MOTION_SAFE_UPDATE.cmd",
+    "R11R4R2_RELEASE_NOTES.txt",
+    "HUONG_DAN_1_BUOC.txt"
   ]
 }

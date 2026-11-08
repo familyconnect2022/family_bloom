@@ -1,0 +1,14 @@
+Family Bloom Android R11R4R2 - Planner moderation placement (2026-11-07)
+Baseline: user-provided FULL CODE R11R4R1 (2026-11-05).
+
+CHANGES:
+- In PlannerShell, move admin-only moderation card under Lịch / Sự kiện switch.
+- No alteration of authentication, Firestore Rules, game state, animation,
+  event creation, theme, calendar, event lists, or Android root BAT files.
+- Native regression: node scripts/tests/release/test-r11r4r2-planner-ui.cjs
+- Route regression: npm run route:check
+- Original planner regression: npm run planner:events:check
+
+APPLY: unzip FULL CODE into new folder or use supplied SAFE PATCH on R11R4R1.
+Then build APK with the existing Family_Bloom_BUILD_APK_TO_SHARE.bat.
+No APK/device/Firestore live checks are claimed.
