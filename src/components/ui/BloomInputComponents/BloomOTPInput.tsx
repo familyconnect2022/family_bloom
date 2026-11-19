@@ -26,7 +26,7 @@ export const BloomOTPInput: React.FC<BloomOTPInputProps> = ({
 
   
   const [code, setCode] = useState<string[]>(Array(length).fill(""));
-  const inputsRef = useRef<Array<BloomScaledInput | null>>([]);
+  const inputsRef = useRef<Array<React.ElementRef<typeof BloomScaledInput> | null>>([]);
   const { revealInput } = useBloomKeyboardFocus();
 
   const handleChange = (text: string, index: number) => {
@@ -47,7 +47,7 @@ export const BloomOTPInput: React.FC<BloomOTPInputProps> = ({
     }
   };
 
-  const handleKeyPress = (e: NativeSyntheticEvent<BloomScaledInputKeyPressEventData>, index: number) => {
+  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) => {
     if (e.nativeEvent.key === "Backspace" && !code[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }

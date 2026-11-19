@@ -137,8 +137,13 @@ const buildRelationSummaryMap = (
   };
   for (const relationship of relationships) {
     if (relationship.type === "partner") {
-      add(relationship.personAId, `Vợ/Chồng: ${name(relationship.personBId)}`);
-      add(relationship.personBId, `Vợ/Chồng: ${name(relationship.personAId)}`);
+      const label = relationship.partnerStatus === "married" ? "Vợ/Chồng"
+        : relationship.partnerStatus === "partner" ? "Bạn đời"
+        : relationship.partnerStatus === "divorced" ? "Đã ly hôn"
+        : relationship.partnerStatus === "separated" ? "Ly thân"
+        : relationship.partnerStatus === "widowed" ? "Góa" : "Quan hệ chưa rõ";
+      add(relationship.personAId, `${label}: ${name(relationship.personBId)}`);
+      add(relationship.personBId, `${label}: ${name(relationship.personAId)}`);
       continue;
     }
     add(relationship.personAId, `Con: ${name(relationship.personBId)}`);
@@ -200,6 +205,29 @@ const buildLayoutRelationshipIndex = (relationships: FamilyRelationship[]): Fami
     addPartner(relationship.personBId, relationship.personAId);
   }
 
+  // VISUAL ANCHOR ONLY: when a single-parent child belongs visually beside
+  // a verified shared child of a unique "partner" family, center the row unit
+  // beneath that union instead of pushing it to its lone parent's outside edge.
+  // Raw relationships remain unchanged: this map is used for x/y only.
+  const confirmed = (edge: FamilyRelationship) => edge.type === "parent_child"
+    && (edge.subtype === "biological" || edge.subtype === "adoptive");
+  const confirmedParents = new Map<string, string[]>();
+  for (const edge of relationships) {
+    if (!confirmed(edge)) continue;
+    confirmedParents.set(edge.personBId,[...(confirmedParents.get(edge.personBId)??[]),edge.personAId]);
+  }
+  for (const [childId, parents] of confirmedParents) {
+    if (parents.length !== 1 || (parentIdsByChild.get(childId)?.length ?? 0) !== 1) continue;
+    const soleParentId = parents[0];
+    const eligible = relationships.filter((edge) => edge.type === "partner"
+      && edge.partnerStatus === "partner"
+      && (edge.personAId === soleParentId || edge.personBId === soleParentId))
+      .map((edge) => edge.personAId === soleParentId ? edge.personBId : edge.personAId)
+      .filter((otherId) => [...confirmedParents.entries()].some(([otherChildId, otherParents]) =>
+        otherChildId !== childId && otherParents.includes(soleParentId) && otherParents.includes(otherId)));
+    const unique = [...new Set(eligible)];
+    if (unique.length === 1) parentIdsByChild.set(childId,[soleParentId,unique[0]]);
+  }
   return { parentIdsByChild, partnerIdsByPerson };
 };
 
@@ -492,6 +520,8 @@ export const adaptFamilyGraphSnapshot = (
     fromId: relationship.personAId,
     toId: relationship.personBId,
     type: relationship.type,
+    subtype: relationship.type === "parent_child" ? relationship.subtype : null,
+    partnerStatus: relationship.type === "partner" ? relationship.partnerStatus : null,
   }));
 
   return { people, connections, canvasWidth, canvasHeight };
@@ -554,6 +584,8 @@ export const refreshFamilyGraphVisualProfiles = (
     fromId: relationship.personAId,
     toId: relationship.personBId,
     type: relationship.type,
+    subtype: relationship.type === "parent_child" ? relationship.subtype : null,
+    partnerStatus: relationship.type === "partner" ? relationship.partnerStatus : null,
   }));
   return { ...previous, people, connections };
 };

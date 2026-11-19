@@ -24,7 +24,7 @@ export default function HomeKitchenScreen() {
   const router = useRouter();
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader
           eyebrow="BẾP NHÀ MÌNH"
           title="Hôm nay mình nấu gì?"

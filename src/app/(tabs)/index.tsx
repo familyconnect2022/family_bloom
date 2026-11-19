@@ -454,7 +454,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
         <BloomRouteEntrance><BloomHeroHeader
           eyebrow={greetingForNow().toUpperCase()}

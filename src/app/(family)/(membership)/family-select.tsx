@@ -37,7 +37,7 @@ export default function FamilySelectScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader
         eyebrow="CHỌN NGÔI NHÀ ĐỂ TIẾP TỤC"
         title="Bạn muốn trở về nhà nào?"

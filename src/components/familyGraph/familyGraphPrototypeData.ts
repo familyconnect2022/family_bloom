@@ -41,6 +41,10 @@ export type FamilyGraphPrototypeConnection = {
   fromId: string;
   toId: string;
   type: "parent_child" | "partner";
+  /** Metadata used for visual classification only; legacy prototype links can omit it. */
+  subtype?: "biological" | "adoptive" | "step" | "unknown" | null;
+  /** Visual-only union state from the recorded Firebase relationship. */
+  partnerStatus?: "married" | "partner" | "separated" | "divorced" | "widowed" | null;
 };
 
 export const FAMILY_GRAPH_CANVAS = {

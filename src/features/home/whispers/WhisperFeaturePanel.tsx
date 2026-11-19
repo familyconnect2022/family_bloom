@@ -73,7 +73,7 @@ export function WhisperFeaturePanel() {
   const [savedInfoVisible, setSavedInfoVisible] = useState(false);
   const [messageInvalid, setMessageInvalid] = useState(false);
   const [recipientInvalid, setRecipientInvalid] = useState(false);
-  const messageRef = useRef<BloomScaledInput>(null);
+  const messageRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
 
   useEffect(() => {
     if (!activeFamilyId || !uid) return;

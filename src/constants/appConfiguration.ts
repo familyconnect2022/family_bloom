@@ -58,8 +58,9 @@ export const APP_CONFIG_DEFAULTS = {
       familyUnitGap: 96,
       /** First generation top position on the logical canvas. */
       generationTop: 24,
-      /** R5: 264-pt row pitch keeps protruding 3-D floral caps separated at all view modes. */
-      generationStep: 264,
+      /** GRAPH-LINE-01 Android: 344 logical units create a safe sibling/label corridor
+       * around 132x176 card + ornamental overshoot. Never copied from CSS viewport. */
+      generationStep: 344,
       /** Free canvas space below the last generation. */
       canvasBottomPadding: 96,
       /** Collision-routing spatial hash. Keep close to one node slot for stable local routing. */

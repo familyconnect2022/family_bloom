@@ -549,7 +549,7 @@ export default function BoardGameBotTestScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader eyebrow="INTERNAL · GAME FOUNDATION" title="Bloom Bot · protocol test" subtitle="Chỉ kiểm tra server, realtime, lời mời và recovery. Không dùng lại board/route/lifecycle cũ." variant="game" onBack={() => router.back()} compact roundedBottom />
       <Modal transparent visible={!!chessInvite && chessInvite.testBotDirection === "bot_to_user"} animationType="fade" onRequestClose={() => undefined}>
         <View style={__a3_styles.bloomShade}>

@@ -63,7 +63,7 @@ export default function MomentUploadDiagnosticsScreen() {
   };
 
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-    <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+    <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
     <BloomHeroHeader eyebrow="PRIVATE · DEVELOPER" title="Lỗi upload Moment" subtitle="Đọc phản hồi Cloudinary thật · không chứa thông tin bí mật" variant="profile" onBack={() => router.back()} compact roundedBottom />
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={__a3_styles.content}>
       <BloomCard style={__a3_styles.card}>

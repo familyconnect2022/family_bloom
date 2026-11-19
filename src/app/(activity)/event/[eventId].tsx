@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../../../components/ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -299,6 +300,6 @@ const styles = createBloomStyles(() => StyleSheet.create({
   mediaPressed: { opacity: 0.76 },
   mediaFallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface },
   mediaPlay: { position: "absolute", left: 10, bottom: 10, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(58,38,46,0.58)", alignItems: "center", justifyContent: "center" },
-  mediaMore: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(54,34,42,0.5)", alignItems: "center", justifyContent: "center" },
+  mediaMore: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(54,34,42,0.5)", alignItems: "center", justifyContent: "center" },
   mediaMoreText: { color: COLORS.white, fontSize: 23, fontWeight: "900" },
 }));

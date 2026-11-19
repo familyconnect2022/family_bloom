@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../../../components/ui/bloomAbsoluteFill";
 import { getBloomStatusBarStyle } from "../../../constants/theme";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
@@ -695,7 +696,7 @@ export default function FamilyGraphAdminScreen() {
   if (!isAdmin) {
     return (
       <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-        <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+        <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
         <View style={__a3_styles.screen}>
           <AdminHeader title="Quản lý phả hệ" onBack={() => router.back()} />
           <View style={__a3_styles.centerState}>
@@ -710,7 +711,7 @@ export default function FamilyGraphAdminScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <View style={__a3_styles.screen}>
         <AdminHeader title="Xây phả hệ" onBack={() => router.back()} onTree={goToTree} />
 
@@ -1153,7 +1154,8 @@ const RelationshipModal = memo(function RelationshipModal({
         subtype:type==='parent_child'?subtype:null,partnerStatus:type==='partner'?partnerStatus:null,
         startDate:null,endDate:null,createdByUid:'',createdAt:stamp,updatedAt:stamp,
       });
-      const existing=new Set(snapshot.relationships.map(r=>r.id));
+      const currentSnapshot = { familyId, persons: people, relationships };
+      const existing = new Set(currentSnapshot.relationships.map(r => r.id));
       const proposed:FamilyRelationship[] = mode==='partner'
         ? baseIds[0]!==targetIds[0]?[make(baseIds[0],targetIds[0],'partner')]:[]
         : (mode==='parent_of'?baseIds:targetIds).flatMap(a=>
@@ -1162,7 +1164,7 @@ const RelationshipModal = memo(function RelationshipModal({
       if (additions.length>80) {
         Alert.alert('Quá nhiều quan hệ cùng lúc','Chia thành các nhóm tối đa 80 mối nối để kiểm tra an toàn.');return;
       }
-      const issues=checkGraphRelationshipCandidates(snapshot,additions);
+      const issues=checkGraphRelationshipCandidates(currentSnapshot, additions);
       const blocker=issues.find(i=>i.severity==='block');
       if (blocker) {Alert.alert('Quan hệ chưa hợp lệ',`${blocker.code}: ${blocker.message}`);return;}
       const warnings=issues.filter(i=>i.severity==='warning');
@@ -1629,7 +1631,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   emptyText: { marginTop: 6, color: COLORS.secondaryText, fontSize: 12, lineHeight: 18, textAlign: "center" },
   pressed: { opacity: 0.65 },
   modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(61,43,49,0.28)" },
+  backdrop: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(61,43,49,0.28)" },
   sheet: { maxHeight: "91%", backgroundColor: COLORS.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 9, overflow: "hidden" },
   relationshipSheet: { maxHeight: "88%" },
   relationshipPickerSheet: { height: "92%", maxHeight: "92%" },
@@ -1646,6 +1648,8 @@ const styles = createBloomStyles(() => StyleSheet.create({
   relationshipSelectedAvatarText: { color: COLORS.primaryText, fontSize: 11, fontWeight: "900" },
   relationshipSelectedName: { flex: 1, minWidth: 0, color: COLORS.primaryText, fontSize: 11.2, fontWeight: "800" },
   relationshipSelectedBranch: { color: COLORS.secondaryText, fontSize: 9.5, fontWeight: "700" },
+  pickerLoading: { flex: 1, minHeight: 150, alignItems: "center", justifyContent: "center", gap: 10 },
+  pickerLoadingText: { color: COLORS.secondaryText, fontSize: 12 },
   pickerBackButton: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface },
   pickerHeaderCopy: { flex: 1, minWidth: 0, marginHorizontal: 9 },
   pickerDoneButton: { minHeight: 34, paddingHorizontal: 11, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },

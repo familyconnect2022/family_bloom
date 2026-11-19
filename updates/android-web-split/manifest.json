@@ -1,0 +1,406 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "FamilyBloom_R7_ANDROID_ONLY_2026-11-05",
+  "baseline": "FamilyBloom_NODE_R7_FULL_CODE_2026-11-05.zip",
+  "androidVersionCode": 143045,
+  "baselineZipSHA256": "17831b932fcd9b628361c74521e0f241fe2421f3e34b1ee0a33185ae2c496b49",
+  "instructions": "Only run against exact R7; external Web source archive is separate; no Firebase deployment.",
+  "operations": [
+    {
+      "path": "Family_Bloom_AUTO_UPDATE_FULL.bat",
+      "before": "144e4e59aea939a5677139e6000fa3e9e44f6e7b72838b9d9f8b2aafec7210c9",
+      "after": "2ad071c93fc7d2011ccbe71ef13a113c826a61a3fbb385e9f95d6056fc154331",
+      "optionalPreserveExisting": true
+    },
+    {
+      "path": "HUONG_DAN_CHAY_UPDATE_FB12_FB15.txt",
+      "before": "778ee9d3bfcd3a41b4c5762a6e7ee26ee7501a4e0683f46dbe892a898c82863e",
+      "after": null
+    },
+    {
+      "path": "R5_README.txt",
+      "before": "28adf0e1acf72f7fcfafe1ffe3617f748831afd5c705209ebaa4c5b123f0d645",
+      "after": null
+    },
+    {
+      "path": "app.json",
+      "before": "3ff25e6bbddec8bb5825d60875c89d82cd9dff5e29ff22be4820c065605403d8",
+      "after": "6f7298097af5e9558d62d23b0afe13e4cd11df3ec134c8ddea99689afdc27407"
+    },
+    {
+      "path": "assets/images/favicon.png",
+      "before": "a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba",
+      "after": null
+    },
+    {
+      "path": "document/guides/LEGACY_HUONG_DAN_CHAY_UPDATE_FB12_FB15.txt",
+      "before": null,
+      "after": "778ee9d3bfcd3a41b4c5762a6e7ee26ee7501a4e0683f46dbe892a898c82863e"
+    },
+    {
+      "path": "document/guides/LEGACY_R5_README.txt",
+      "before": null,
+      "after": "28adf0e1acf72f7fcfafe1ffe3617f748831afd5c705209ebaa4c5b123f0d645"
+    },
+    {
+      "path": "document/releases/android-only-split/RELEASE_NOTES.md",
+      "before": null,
+      "after": "a0982d8126c4460a3e4f60d48c27caf08d1c586429a5d6c35021945a02dfcc11"
+    },
+    {
+      "path": "document/releases/phase-17/web/PHASE_17_9W1_BUILD_REPORT.md",
+      "before": "128bf9e17d6e2b40315662b070b0c733474e6a4f42cef7448173b447d35c6437",
+      "after": null
+    },
+    {
+      "path": "document/releases/phase-17/web/PHASE_17_9W2_BUILD_REPORT.md",
+      "before": "553ff04e49a1c34e002c5d71814f7d60948c11657261bde0dc2a98ec4ba0249c",
+      "after": null
+    },
+    {
+      "path": "document/releases/phase-17/web/PHASE_17_9W3_A18_BUILD_REPORT.md",
+      "before": "150c821bfc5e0a9896a936ede8c428db1f405659279b7097ba97183bb77d8c1a",
+      "after": null
+    },
+    {
+      "path": "document/web/WEB_PARITY_README.md",
+      "before": "44beedc3c9ec9390fd7516e2c9895711b63237ff119d0bbf67f7c0f3fa73ec1a",
+      "after": null
+    },
+    {
+      "path": "document/web/WEB_W1_README.md",
+      "before": "d2256477208ec1a36bf923d369d01a65c7fabf478afbe5b8a48d03b22c10d05f",
+      "after": null
+    },
+    {
+      "path": "document/web/WEB_W3_README.md",
+      "before": "44beedc3c9ec9390fd7516e2c9895711b63237ff119d0bbf67f7c0f3fa73ec1a",
+      "after": null
+    },
+    {
+      "path": "package.json",
+      "before": "fc95f6ee99cb8413e02ad071887001bb0728ef707a9b6b1b722e73dc1d498031",
+      "after": "f6bd873c8553e22931d3a043e0be16915faf415fa72fe845575d98c2616a2506"
+    },
+    {
+      "path": "public/apple-touch-icon.png",
+      "before": "9d5838773b19f7839f8a4d129c9015e8733ed608d9805b2f4edca3a317c1aad2",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/capture.ogg",
+      "before": "3c9ed240a9dee111060827c3119a7f995fe59cc1bb2df0480d416b1cda437d49",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/castle.ogg",
+      "before": "d2751a63465998b3b54242886729447925632faa00f23885fa722d66fef0a052",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/game-end.ogg",
+      "before": "1aed00e2d227c7e817701d990ac03544c74a56b66fe96fd95264d9a7bf83cd96",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/game-start.ogg",
+      "before": "06e0d18dd6801c6fd0d66e5b334a34b51ea9f816873f6fc3ec358f295ee61d11",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/illegal.ogg",
+      "before": "7ea53f905e001494cacb3edb9fede68334cfe3f6912f36fe36b4e75cea3b0fdb",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/move-check.ogg",
+      "before": "87feb46901b1444fe83b4046dd7a3d257e5aed676f098a465c2b67c835bd96c8",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/move-opponent.ogg",
+      "before": "cae4ab9a90b7c4f4bb4c54bc54f69a6402c455db8006a12f69910b11ca037639",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/move-self.ogg",
+      "before": "b83fa922e24204904af65e49071052fbff6e94c77fdd060f297180154cd7ce99",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/premove.ogg",
+      "before": "1f6df838878dea4a1c1aabf4d0e741427d0f4c36d82b8a70e6c433344e2d2dcb",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/promote.ogg",
+      "before": "e50106de2c3f504bee6c30dcbcfcbbed8e9778bf3f70438c80b6530dafc21fbb",
+      "after": null
+    },
+    {
+      "path": "public/audio/board-game/tenseconds.ogg",
+      "before": "6aeb0d8f8f2216419fb0f7b06d1442e7fb0d839e563ef6bb0c9c4b6df3f5bf96",
+      "after": null
+    },
+    {
+      "path": "public/icon-192.png",
+      "before": "a1ca8d2e7210d518b19fe92b17c19eeabe25675f5ad488c8805af785d8dbc4be",
+      "after": null
+    },
+    {
+      "path": "public/icon-512.png",
+      "before": "388ad1d81c283ec89c31990c45a2cc50e603fbcafd227cb3b0d105162f8bf2d7",
+      "after": null
+    },
+    {
+      "path": "public/manifest.json",
+      "before": "1f9883ffe958c6e29756e7211777f147ffca73fea0393cd0053b6296047a8466",
+      "after": null
+    },
+    {
+      "path": "scripts/android/Family_Bloom_MENU.bat",
+      "before": "0d0914653f9bc052e1255ec331368f637dd5fd4b452117f450fd4cd12737762c",
+      "after": "ea4cd2d1d88a9f260a4b91c9d58b929115359da9518a1d834023df5aeba6d9d4"
+    },
+    {
+      "path": "scripts/android/build/Family_Bloom_WEB_RUN_TEST.bat",
+      "before": "328b1fb8eea383af9d462fc2ec51d391044e19653bc42ffa3468d2cb4b2ff3b9",
+      "after": null
+    },
+    {
+      "path": "scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat",
+      "before": "cd609f402ea7878b13fd6a37bb601fcdddbcbdd3967f8ec2aa4d7a640bab8683",
+      "after": "8ebf6146c74cf130672624a3b4467ee3f21b7f12656305c74a33cb0fb6b2d113"
+    },
+    {
+      "path": "scripts/check-web-firebase-version.js",
+      "before": "3bbacc75b8253d978f89a453e13d2fcfcc0bd84b2f800214f1b9f5cd15677394",
+      "after": null
+    },
+    {
+      "path": "scripts/maintenance/check-project-structure.js",
+      "before": "f072356335b9eddbf92df7c98f81d1d73c07466d59aa6141145ee10e0ad5ecb6",
+      "after": "af9dafc466b11562d3d657daea882ff898412b2adec45da0f8a2f1dd94934dbf"
+    },
+    {
+      "path": "scripts/setup/bat-entrypoints-manifest.json",
+      "before": "9e49376affaca74b75b4955d1f247a820b8a35256c839cde9bdabcbd46d596cf",
+      "after": "966c18e69cc9174a3fc2e6ab52c84e536092ec8a32fa13d8f953cc9fcae3a3da"
+    },
+    {
+      "path": "scripts/setup/script-migration-map.json",
+      "before": "9a573ac33a2d7cd5008ff4c2c2ed53dd48e5d0a5767220c65ac9b134d5bec0b2",
+      "after": "b3d5464d63160f47664f4d2584cfc105112a3740fed527274591adfa7f610e28"
+    },
+    {
+      "path": "scripts/tests/history/test-phase17_9w1-web-companion.js",
+      "before": "3e821109f04274e2b22eb2145440e71eb16cd6117e6e7263293f67b227420766",
+      "after": null
+    },
+    {
+      "path": "scripts/tests/history/test-phase17_9w2-web-parity.js",
+      "before": "84def9a3c9b7ee0b3a94925595856a74f466d872018e5a9591ae972e66223d31",
+      "after": null
+    },
+    {
+      "path": "scripts/tests/history/test-phase17_9w3-web-stability-visual-rebuild.js",
+      "before": "cbd5f4b47e60e814d0040f5c471735331decacd6da2243773d1505d374bf001e",
+      "after": null
+    },
+    {
+      "path": "scripts/tests/release/test-android-only-no-legacy-web.cjs",
+      "before": null,
+      "after": "a9ef0ccdf7a59731ffad2d235689aa86e28a74a79cd495c73f90f9f36b25327b"
+    },
+    {
+      "path": "scripts/tests/release/test-h25r2r7r1-bulletin-deferred.cjs",
+      "before": "493a86ef66e8e52ba5c447790312560de4d62643673095b6f28f59af33d30bb6",
+      "after": "c3f4a61cdca60496e445c97ed8a65fd4e5ac2fecf412e8abce509bd80dae1d43"
+    },
+    {
+      "path": "scripts/tests/release/test-h25r2r7r2r1-flags-regression.cjs",
+      "before": "0e38937957db51d4bfc0150c8577cf4f808bdb78262182c73b1d8cc60fe709e5",
+      "after": "9cd37c83207d7e552061b3c50e7d3b30434949443385a36e48286c0826cbd2ba"
+    },
+    {
+      "path": "scripts/tests/release/test-r3r14r3r2-dev-platform-menu.cjs",
+      "before": "55d9c4311ebc060d025e5f094d83dffa9b40357abac4b847e8b46b6c2d120d73",
+      "after": "748adf90d9dad3fd1ae15fdd3d105afdb832ce94af7b8624a2c0bd2e7f63e708"
+    },
+    {
+      "path": "scripts/tests/release/test-r3r14r3r3-menu-gates.cjs",
+      "before": "dc5ed033dff619f16ccbaae09fdba6745980f8a002ab68a3310d70febb4aaef4",
+      "after": "60fb252797f0b15cb7bc5f2b7174f5eee9da2da0b65bdee0ba238e1f72f1054d"
+    },
+    {
+      "path": "scripts/windows/web/Family_Bloom_WEB_EXPORT.bat",
+      "before": "e58bbccbacc671a0e3fb55e3e8089da9c9ebea0280afc27af5fb780a72e050b9",
+      "after": null
+    },
+    {
+      "path": "scripts/windows/web/Family_Bloom_WEB_PREVIEW.bat",
+      "before": "c03267f4641cb287953de8df3eac7392bab20ac18bac36dcde6485ea50c7a08a",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/_layout.web.tsx",
+      "before": "6e586294448e07a5f86aee37335e60d66a51324d817118b11f59ffc0aa106657",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/family.web.tsx",
+      "before": "f83fe278b6067239e1b406f1ab68a6398bf26a734f8daf1623cb7b3dca2ebec5",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/index.web.tsx",
+      "before": "e4e87fb5c7c0303421fdbf40192a2c89efcfcdb8edfe6f5530e6723f6aff2e56",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/moments.web.tsx",
+      "before": "2335ce59a9e40a2b995a283ed21c3f350570e306b436af67f8891778831b4d94",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/planner.web.tsx",
+      "before": "ac5ab6cbc3353487fc5e3e016b6509c721699366deafe5e8be5acd674b4e0c10",
+      "after": null
+    },
+    {
+      "path": "src/app/(tabs)/play.web.tsx",
+      "before": "5c0b2fc08263b289b1bf8b7b3ce4a79578d895d9596a671deb42cea7b3cdd5f9",
+      "after": null
+    },
+    {
+      "path": "src/app/+html.tsx",
+      "before": "9bd11ea9d39e71021432514a13ab23355ca423275e4ba5c62aac88f67df615c5",
+      "after": null
+    },
+    {
+      "path": "src/app/_layout.web.tsx",
+      "before": "558d49afa8f639c6fff7b8df3c7a1f662ab0f51243e0fa0ffd8749cdb3a16dba",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebFamilyManager.tsx",
+      "before": "738a029adf5c80e92fec8cc83b1f28bbe1de460f0d3a91f71db7cef34499156b",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebLoginScreen.tsx",
+      "before": "9dc8ee764c15af752935a5dbcce5d54b57bf742f0dd03e776460bb2e1c4709bf",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebMemoryTools.tsx",
+      "before": "19ca85511c2e525b07b29433fbbd195d8e2ae11640940735ac1b4fc05f83c7fa",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebOverlay.tsx",
+      "before": "292cb082379752b188304623c0f670d4fb01d335613c00f2c844cbfd87a3ac2c",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebPrimitives.tsx",
+      "before": "73c4b7c6c894ac3916b965b3b46cfb6d147d9959c5b646f985dc26b3f974744d",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebRootGate.tsx",
+      "before": "8b8761769cedcb471eed7daf64b66ae335a63998f9b91b203d9a2a557124a78d",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebRuntimeBoundary.tsx",
+      "before": "80683808799717dbe80a2b42f48def0e6801931b94cefde286ef544d9bb836ff",
+      "after": null
+    },
+    {
+      "path": "src/web/components/WebTabShell.tsx",
+      "before": "6793d91b8ec18a9adac0d765804df8af3b402e3aceb565000769e05ead9a8b13",
+      "after": null
+    },
+    {
+      "path": "src/web/context/WebAuthContext.tsx",
+      "before": "c964c1447fc05de1a88edc972edfcc3a699a4b28a9f510342d75b8d389bc8207",
+      "after": null
+    },
+    {
+      "path": "src/web/context/WebFamilyContext.tsx",
+      "before": "65b4fed409b727bf23c41b8f49043df949de3ba38cadf81b1e4a2b7268bb6926",
+      "after": null
+    },
+    {
+      "path": "src/web/firebaseWeb.ts",
+      "before": "d7d62fcacaa81cfe91a027b23a378ec9fb21e6cbe689856578dd97816d9e1806",
+      "after": null
+    },
+    {
+      "path": "src/web/games/WebFamilyMiniGames.tsx",
+      "before": "3d7048e36587986a5ee201506770f59fb2d5cbddcad8bd11c38a33bba4331f3e",
+      "after": null
+    },
+    {
+      "path": "src/web/hooks/useWebCollection.ts",
+      "before": "7bb933d1439bc549c8ed02df35ac9b81d4a942cdf91d8bd40ee61a98f0470ec7",
+      "after": null
+    },
+    {
+      "path": "src/web/hooks/useWebDocument.ts",
+      "before": "ff9af880b178c8af14effba85adba45193cbda6a30d99cf1c10eb11ff49634fb",
+      "after": null
+    },
+    {
+      "path": "src/web/pages/GraphWebPage.tsx",
+      "before": "f3566e7e0744835d2ac6db6aea66d3b7ad265f160db5f512fc1973e1a30a6ce8",
+      "after": null
+    },
+    {
+      "path": "src/web/pages/HomeWebPage.tsx",
+      "before": "cfb3599ca0b250916a63342a798f09121ca0c686b86b28a650ea811f0adc0c1e",
+      "after": null
+    },
+    {
+      "path": "src/web/pages/MomentsWebPage.tsx",
+      "before": "869244cfd0f7ea28fc6738f08646f14eb5a82d15eb695b3df27fd2abd83123f5",
+      "after": null
+    },
+    {
+      "path": "src/web/pages/PlannerWebPage.tsx",
+      "before": "abd24075249dbab2d65682a8314b22a543d1dd99b314aadf5bb38da3222655ca",
+      "after": null
+    },
+    {
+      "path": "src/web/pages/PlayWebPage.tsx",
+      "before": "a02f8222c1bbfbce164f83976af51064e5f4a4b5368b8be21a7e40a901d3dce8",
+      "after": null
+    },
+    {
+      "path": "src/web/services/webFamilyService.ts",
+      "before": "91ad317c6473391ed8a4ef5fd03d719d9bb2a970e910928ff137542b7ac6c8d7",
+      "after": null
+    },
+    {
+      "path": "src/web/services/webFeatureService.ts",
+      "before": "1b041dcd8e00cc888c68e1da3fb91fd0f555a6ea88fe4508e9bb13a98f2d9a74",
+      "after": null
+    },
+    {
+      "path": "src/web/services/webHomeGameService.ts",
+      "before": "7f686b977c675cd68dce1e4b1a8a8d9db1b87d26b13181c8eb6e0f0c7938ef39",
+      "after": null
+    },
+    {
+      "path": "src/web/styles/WebGlobalStyles.tsx",
+      "before": "b29faf556ee9ffc999ef60a43fcb13c5d0968db770f6b720badbc210301b5e23",
+      "after": null
+    },
+    {
+      "path": "vercel.json",
+      "before": "c9f919afde8c87f63f90152a687e06f42135608d37cb824dae702845c2e973ff",
+      "after": null
+    }
+  ]
+}

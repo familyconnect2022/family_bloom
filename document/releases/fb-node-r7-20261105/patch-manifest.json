@@ -1,0 +1,22 @@
+{
+  "release": "Family Bloom Node R7 dynamic genealogical generation numbering",
+  "baseline": "Exact Node R6 source, no old root updater BAT change required",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "src/components/familyGraph/familyGraphLiveAdapter.ts",
+      "before": "5a6956b3dc5f88a2026d1b2893ae6929ece8dc11f01b6bea3710804ad904e8a0",
+      "after": "34c6121a294d07e2f3f4482d66d52552ad8435161caea70569748bf53664f3f9"
+    },
+    {
+      "path": "src/components/familyGraph/familyGraphSceneBuilder.ts",
+      "before": "b7cdd54aec0e47fb13b376cc69201f21feb893da89105499fb707fb97c8b4d26",
+      "after": "4a5834998e2f2d7f51deff5c448649a8d8ea8717b3b0ecdd88e4551c80c9dcaa"
+    }
+  ],
+  "remove": [],
+  "extra": [
+    "scripts/tests/release/test-node-r7-dynamic-generations.cjs"
+  ]
+}

@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -173,6 +174,7 @@ export function FamilyGraphPersonSheet({
   onEditPerson,
   onDeletePerson,
   onDeleteRelationship,
+  onEditRelationship,
   directRelationships = [],
   familyId,
   showPrototypeNote = true,
@@ -189,6 +191,7 @@ export function FamilyGraphPersonSheet({
   onEditPerson?: (personId: string) => void;
   onDeletePerson?: (personId: string) => void | Promise<void>;
   onDeleteRelationship?: (relationshipId: string) => void | Promise<void>;
+  onEditRelationship?: (relationshipId: string, personId: string) => void;
   directRelationships?: DirectRelationshipItem[];
   familyId?: string | null;
   showPrototypeNote?: boolean;
@@ -828,7 +831,7 @@ export function FamilyGraphPersonSheet({
                       <View style={__a3_styles.simpleEmpty}><Text style={__a3_styles.simpleEmptyText}>Chưa có quan hệ trực tiếp nào được nối cho người này.</Text></View>
                     )}
                   </View>
-                  {canEdit && onDeleteRelationship && sortedDirectRelationships.length > 0 && (
+                  {canEdit && (onDeleteRelationship || onEditRelationship) && sortedDirectRelationships.length > 0 && (
                     <View style={__a3_styles.relationshipManageCard}>
                       <View style={__a3_styles.relationshipManageHeader}>
                         <View style={__a3_styles.relationshipManageIcon}>
@@ -836,7 +839,7 @@ export function FamilyGraphPersonSheet({
                         </View>
                         <View style={__a3_styles.relationshipManageCopy}>
                           <Text style={__a3_styles.relationshipManageTitle}>Sửa đường nối</Text>
-                          <Text style={__a3_styles.relationshipManageHint}>Xóa một đường tạo nhầm sẽ giữ nguyên cả hai người trong phả hệ.</Text>
+                          <Text style={__a3_styles.relationshipManageHint}>Bút chì sửa từng mối nối; nút xóa không xóa hồ sơ người.</Text>
                         </View>
                       </View>
                       {sortedDirectRelationships.map((relationship, index) => (
@@ -847,14 +850,22 @@ export function FamilyGraphPersonSheet({
                               <Ionicons name={relationship.type === "partner" ? "heart-outline" : "git-branch-outline"} size={16} color={__a3Colors.primary} />
                               <Text style={__a3_styles.relationshipManageLabel}>{relationship.label}</Text>
                             </View>
-                            <Pressable
+                            {onEditRelationship && person && <Pressable
+                              accessibilityLabel={`Sửa mối quan hệ ${relationship.label}`}
+                              onPress={() => onEditRelationship(relationship.id, person.id)}
+                              hitSlop={8}
+                              style={({ pressed }) => [__a3_styles.relationshipDeleteButton, pressed && __a3_styles.pressed]}
+                            >
+                              <Ionicons name="create-outline" size={18} color={__a3Colors.primary} />
+                            </Pressable>}
+                            {onDeleteRelationship && <Pressable
                               accessibilityLabel={`Xóa đường quan hệ ${relationship.label}`}
                               onPress={() => setRelationshipToDelete(relationship)}
                               hitSlop={8}
                               style={({ pressed }) => [__a3_styles.relationshipDeleteButton, pressed && __a3_styles.pressed]}
                             >
                               <Ionicons name="trash-outline" size={16} color={__a3Colors.destructive} />
-                            </Pressable>
+                            </Pressable>}
                           </View>
                         </View>
                       ))}
@@ -1393,7 +1404,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   albumMediaTile: { borderRadius: 18, overflow: "hidden", backgroundColor: COLORS.softSurface, borderWidth: 1, borderColor: COLORS.border, position: "relative" },
   albumPreview: { width: "100%", height: "100%", backgroundColor: COLORS.surface },
   albumMediaImage: { width: "100%", height: "100%" },
-  albumPreviewPlaceholder: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
+  albumPreviewPlaceholder: { ...BLOOM_ABSOLUTE_FILL, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
   albumFallback: { flex: 1, alignItems: "center", justifyContent: "center", gap: 5 },
   albumFallbackText: { color: COLORS.primary, fontSize: 10.5, fontWeight: "800" },
   albumVideoBadge: { position: "absolute", right: 8, bottom: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(80,49,61,0.72)", alignItems: "center", justifyContent: "center" },

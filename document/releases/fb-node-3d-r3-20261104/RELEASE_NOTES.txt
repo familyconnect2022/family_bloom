@@ -1,0 +1,15 @@
+FAMILY BLOOM — APPROVED 3D FAMILY TREE NODE R3 (2026-11-04)
+
+BASIS: User-supplied FB12-FB15 FULL CODE -> verified Node Visual R2 FULL CODE; app version 1.3.35 unchanged.
+
+Node geometry: 112×124 -> 120×148 logical units, in same 128-unit slot; geometry version 2; nodeHeight and all routing / viewport data share same dimensions. Generation pitch remains 216, connection graph unchanged.
+
+Design: 3 original APPROVED RGBA PNGs from user: woman pink 3-D roses, man green 3-D leaves and no flowers, unspecified lavender mixed blue/pink roses; each split into independent *top/*bottom decorations to maintain aspect ratio. Side borders drawn native. 3 originals bundled for traceability. Top and bottom never intercept touch.
+
+Name: safe opaque backing, 5 lines, min font scale 0.68 for long Vietnamese names; avatar 43, years 14 high. Note icon only if description.trim() non-empty. Its dedicated 29x29+hitSlop target is separate from the main card Detail target. Generation badge is a single numeral. Two redundant buttons remain removed.
+
+Not changed: relationship topology, image/avatar persistence, Firestore or security rules, Person detail theme, chess/Xiangqi, Study Corner.
+
+Installer: SHA-256 bound to clean R2 OR FB12-FB15 baseline; full-source backup before changes, reject unexpected modifications. Use 00_MO_CAP_NHAT_FAMILY_BLOOM.cmd from extracted ZIP.
+
+QA: TS transpilation and safe updater simulation on Windows file paths are not a substitute for an actual Android Release APK, so inspect layout at 3/5/full tree, Name 5-6 words, no description/has description, and all gender states. No claim of live device or Firebase validation.

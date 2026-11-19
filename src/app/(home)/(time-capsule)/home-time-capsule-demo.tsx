@@ -8,7 +8,7 @@ export default function HomeTimeCapsuleDemoScreen() {
   const router = useRouter();
   return (
     <>
-      <StatusBar translucent backgroundColor="transparent" style="light" />
+      <StatusBar style="light" />
       <TimeCapsuleRevealPrototype onBack={() => router.back()} />
     </>
   );

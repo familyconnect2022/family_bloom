@@ -21,7 +21,7 @@ export default function HomeGamesScreen() {
   const router = useRouter();
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={theme.colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={theme.resolvedMode === "dark" ? "light" : "dark"} />
+      <StatusBar style={theme.resolvedMode === "dark" ? "light" : "dark"} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader
           eyebrow="TRÒ CHƠI NHÀ MÌNH"

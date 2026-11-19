@@ -3,6 +3,8 @@ import { metroTestLogsEnabled } from "../diagnostics/metroLogging";
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
 import { authService } from "@/services/auth/authService";
+import { nativeSingleSessionPreview, NativeSessionGateError, type NativeLease } from "@/services/auth/nativeSingleSessionPreview";
+import { nativeSecureSessionPreview, type SecureSession } from "@/services/auth/nativeSecureSessionPreview";
 import { internetReachabilityService } from "@/services/network/internetReachabilityService";
 import { classifyVerificationIssue, isTransientVerificationIssue, type VerificationIssue } from "@/services/navigation/sessionVerificationIssue";
 import { acceptMembershipServerProof, deferMembershipError, type MembershipServerProof } from "@/services/navigation/authoritativeMembershipProof";
@@ -19,7 +21,7 @@ import { familyHomeWarmCache } from "../services/bootstrap/familyHomeWarmCache";
 import { localNotificationService } from "../services/push/localNotificationService";
 import { pushTokenService } from "../services/push/pushTokenService";
 import { resetSharedRealtimeRegistry } from "../services/realtime/sharedRealtimeRegistry";
-import { ConfirmationResult, User } from "@react-native-firebase/auth";
+import { ConfirmationResult, User, getAuth } from "@react-native-firebase/auth";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { AuthStatus, ProfileStatus, UserFamilyMembership, UserProfile } from "../types";
@@ -109,8 +111,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Undefined = initial observer not delivered; null = confirmed signed-out.
   const authUidRef = useRef<string | null | undefined>(undefined);
   const interactiveLoginUid = useRef<string | null>(null);
+  const nativeLeaseRef = useRef<NativeLease | null>(null);
+  const secureSessionRef = useRef<SecureSession | null>(null);
   const cacheHydratedUidRef = useRef<string | null>(null);
   const { showToast } = useBloomToast();
+  const sessionToastRef=useRef(showToast);
+  sessionToastRef.current=showToast;
 
   profileRef.current = userProfile;
   familiesRef.current = families;
@@ -255,11 +261,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setWelcomeCheckedKey(null);
     setUserProfile(null);
     setFamilies([]);
-    setUser(currentUser);
-    setAuthStatus(currentUser ? "signed-in" : "signed-out");
+    setUser(null);
+    setAuthStatus(currentUser ? "initializing" : "signed-out");
     setFamilyTransition(null);
     resetSharedRealtimeRegistry();
     homeTimeCapsuleService.clearRealtimeCache();
+    nativeLeaseRef.current = null;
+    secureSessionRef.current = null;
 
     if (!currentUser) {
       setWelcomeTarget(null);
@@ -272,19 +280,107 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    setProfileStatus("loading");
-    setMembershipStatus("loading");
-    // P0: Remote profile verification must NEVER depend on a cache read.
-    // AsyncStorage can reject after Android process restoration; previously
-    // that left profileStatus=loading forever and no protected route available.
-    void loadAuthoritativeProfile(currentUser);
-    void bootSessionCache.read(currentUser.uid)
-      .then((cached) => {
-        if (epoch === authEpochRef.current && cached) cacheHydratedUidRef.current = currentUser.uid;
-      })
-      .catch(() => undefined); // cache is optional, not an authorization gate
+    const startAuthoritativeVerification = (verifiedUser: User = currentUser) => {
+      if(epoch !== authEpochRef.current || authUidRef.current !== currentUser.uid)return;
+      // Secure V2 exchanges a fresh Google/OTP identity for a custom-token
+      // Firebase identity with a Rules-readable SID. Never expose the old
+      // User object to the profile/membership listeners after that exchange.
+      if(verifiedUser.uid!==currentUser.uid)return;
+      setUser(verifiedUser);
+      setAuthStatus("signed-in");
+      setProfileStatus("loading");
+      setMembershipStatus("loading");
+      // P0: profile/membership reads are server-verified; cache cannot unlock Home.
+      void loadAuthoritativeProfile(verifiedUser);
+      void bootSessionCache.read(verifiedUser.uid)
+        .then(cached=>{if(epoch === authEpochRef.current && cached)cacheHydratedUidRef.current=currentUser.uid;})
+        .catch(()=>undefined);
+    };
+    if(nativeSecureSessionPreview.requiresSession(currentUser.uid)){
+      // V2 takes priority over the cooperative V1 gate, and no Firestore
+      // listener can start until both the Firebase SID and Gateway agree.
+      setProfileStatus("idle");setMembershipStatus("idle");
+      void nativeSecureSessionPreview.activate(currentUser).then(session=>{
+        if(epoch!==authEpochRef.current||authUidRef.current!==currentUser.uid||!session)return;
+        const verifiedUser=getAuth().currentUser;
+        if(!verifiedUser||verifiedUser.uid!==currentUser.uid)
+          throw new NativeSessionGateError('reauth','Firebase đã thay đổi tài khoản trong lúc kiểm tra phiên.');
+        secureSessionRef.current=session;
+        startAuthoritativeVerification(verifiedUser);
+      }).catch(error=>{
+        if(epoch!==authEpochRef.current||authUidRef.current!==currentUser.uid)return;
+        setAuthStatus("error");
+        if(error instanceof NativeSessionGateError && (error.reason==='replaced'||error.reason==='reauth')){
+          sessionToastRef.current({type:'warning',title:'Phiên đăng nhập đã kết thúc',message:error.message,duration:5000});
+          void authService.signOut().catch(()=>undefined);
+        }else{
+          sessionToastRef.current({type:'warning',title:'Chưa xác minh được phiên bảo mật',message:'Màn hình gia đình tạm khóa. Kiểm tra mạng rồi chọn Thử lại.',duration:5000});
+        }
+      });
+      return;
+    }
+    if(!nativeSingleSessionPreview.requiresSession(currentUser.uid)){
+      startAuthoritativeVerification();return;
+    }
+    // Preview testers must acquire or validate the SAME Gateway lease as Web
+    // before any Family data listener is created or Home can be unlocked.
+    setProfileStatus("idle");setMembershipStatus("idle");
+    void nativeSingleSessionPreview.activate(currentUser).then(lease=>{
+      if(epoch!==authEpochRef.current||authUidRef.current!==currentUser.uid)return;
+      nativeLeaseRef.current=lease;
+      startAuthoritativeVerification();
+    }).catch(error=>{
+      if(epoch!==authEpochRef.current||authUidRef.current!==currentUser.uid)return;
+      setAuthStatus("error");
+      // A missing/replaced lease requires explicit fresh Google/OTP login.
+      // Network/config failures retain Firebase identity but block all routes
+      // and allow the existing Retry button to recheck the server.
+      if(error instanceof NativeSessionGateError && (error.reason==='replaced'||error.reason==='reauth')){
+        sessionToastRef.current({type:'warning',title:'Phiên đăng nhập đã kết thúc',message:error.message,duration:5000});
+        void authService.signOut().catch(()=>undefined);
+      }else{
+        sessionToastRef.current({type:'warning',title:'Chưa xác minh được phiên',message:'Màn hình gia đình tạm khóa. Vui lòng kiểm tra mạng rồi chọn Thử lại.',duration:5000});
+      }
+    });
 
   }), [loadAuthoritativeProfile, authSubscriptionAttempt]);
+
+  // Android counterpart of the Web preview heartbeat. AppState foreground
+  // triggers an immediate check; no background timer is relied on by itself.
+  useEffect(()=>{
+    if(!appActive||authStatus!=="signed-in"||!user||(!nativeLeaseRef.current&&!secureSessionRef.current))return;
+    const currentUser=user,lease=nativeLeaseRef.current,secure=secureSessionRef.current,epoch=authEpochRef.current;
+    let cancelled=false,busy=false;
+    const poll=async()=>{
+      if(cancelled||busy||authUidRef.current!==currentUser.uid)return;
+      busy=true;
+      try{
+        const result=secure
+          ? await nativeSecureSessionPreview.check(currentUser,secure)
+          : await nativeSingleSessionPreview.check(currentUser,lease!);
+        if(cancelled||epoch!==authEpochRef.current||nativeLeaseRef.current!==lease||secureSessionRef.current!==secure)return;
+        if(result==='replaced'){
+          // Block navigation synchronously, then invalidate the old identity.
+          setAuthStatus("initializing");setUser(null);
+          sessionToastRef.current({type:'warning',title:'Phiên đăng nhập đã thay đổi',message:'Tài khoản vừa đăng nhập tại nơi khác.',duration:5000});
+          if(lease)await nativeSingleSessionPreview.forget(lease);
+          nativeLeaseRef.current=null;
+          secureSessionRef.current=null;
+          if(epoch===authEpochRef.current&&authUidRef.current===currentUser.uid)
+            await authService.signOut();
+        }
+      }catch{
+        if(cancelled||epoch!==authEpochRef.current||nativeLeaseRef.current!==lease||secureSessionRef.current!==secure)return;
+        // Fail closed on an unknown network state; do not use the saved lease
+        // to authorize Home. Retry re-subscribes and checks the active lease.
+        setAuthStatus("error");
+        sessionToastRef.current({type:'warning',title:'Không xác minh được phiên',message:'Hãy kết nối lại Internet rồi chọn Thử lại.',duration:4000});
+      }finally{busy=false;}
+    };
+    void poll();
+    const timer=setInterval(()=>void poll(),15000);
+    return()=>{cancelled=true;clearInterval(timer);};
+  },[appActive,authStatus,user?.uid]);
 
   useEffect(() => {
     if (authStatus !== "initializing") return;
@@ -458,6 +554,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const retryFirebaseVerification = useCallback(() => {
     diagnostic.note("SYSTEM", "retry", { result: "user-retry-request" });
+    if(authStatus==="error" && user && (nativeSingleSessionPreview.requiresSession(user.uid)||nativeSecureSessionPreview.requiresSession(user.uid))){
+      // Re-run the lease gate first; never retry data verification while the
+      // Gateway is offline or the old session may have been replaced.
+      authUidRef.current=undefined;
+      setUser(null);setAuthStatus("initializing");
+      setAuthSubscriptionAttempt(current=>current+1);
+      return;
+    }
     if (!user) {
       // The Firebase Auth observer has its own bounded timeout. Never fake
       // signed-out merely because one observer callback is delayed.
@@ -585,6 +689,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = useCallback(async () => {
     const signingOutUid = user?.uid ?? null;
+    const lease=nativeLeaseRef.current;
+    const secureSession=secureSessionRef.current;
+    nativeLeaseRef.current=null;
+    secureSessionRef.current=null;
     if (signingOutUid) {
       await Promise.allSettled([
         localNotificationService.clearForUser(signingOutUid),
@@ -594,6 +702,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         clearFamilyGraphWarmCache(),
       ]);
     }
+    // Server-side cleanup must precede releasing the SID. Rules deny writes
+    // as soon as the SID document is deleted.
+    if(user&&lease)await nativeSingleSessionPreview.release(user,lease);
+    if(user&&secureSession)await nativeSecureSessionPreview.release(user,secureSession);
     resetSharedRealtimeRegistry();
     homeTimeCapsuleService.clearRealtimeCache();
     await authService.signOut();

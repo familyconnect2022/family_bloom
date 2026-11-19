@@ -28,9 +28,9 @@ import {
   putFamilyGraphFocusBshScene,
 } from "./familyGraphFocusBshCache";
 
-export const FAMILY_GRAPH_BSH_VERSION = 1;
-export const FAMILY_GRAPH_SCENE_VERSION = 5;
-export const FAMILY_GRAPH_LAYOUT_VERSION = 2;
+export const FAMILY_GRAPH_BSH_VERSION = 2;
+export const FAMILY_GRAPH_SCENE_VERSION = 6;
+export const FAMILY_GRAPH_LAYOUT_VERSION = 3;
 export const FAMILY_GRAPH_FOCUS_ENTRY_SCALE = 0.95;
 export const FAMILY_GRAPH_FOCUS_ENTRY_VIEWPORT_Y = 0.42;
 
@@ -235,7 +235,7 @@ const shortRevision = (value: string) => {
 export const fingerprintFamilyGraphTopology = (snapshot: FamilyGraphSnapshot) => {
   const personIds = snapshot.persons.map((person) => person.id).sort().join("|");
   const relationships = snapshot.relationships
-    .map((item) => `${item.id}:${item.type}:${item.personAId}:${item.personBId}`)
+    .map((item) => `${item.id}:${item.type}:${item.personAId}:${item.personBId}:${item.subtype ?? ""}:${item.partnerStatus ?? ""}`)
     .sort()
     .join("|");
   return shortRevision(`${snapshot.familyId}::${personIds}::${relationships}`);
@@ -309,14 +309,11 @@ export const buildFamilyGraphModel = (
 
   const personIds = new Set(subgraph.personIds);
   const contextPersonIds = new Set<string>();
-  for (const relationship of subgraph.snapshot.relationships) {
-    if (
-      relationship.type === "parent_child"
-      && relationship.personBId === focusPersonId
-      && personIds.has(relationship.personAId)
-    ) {
-      contextPersonIds.add(relationship.personAId);
-    }
+  for (const ancestor of queryEngine.getAncestorViews(focusPersonId!, {
+    depth: fullDepth,
+    maxPeople: fullDepth,
+  })) {
+    if (personIds.has(ancestor.person.id)) contextPersonIds.add(ancestor.person.id);
   }
 
   const model: FamilyGraphModel = {
@@ -388,13 +385,18 @@ const buildFamilyGraphFocusModelInterruptible = async (
 
   const personIds = new Set(subgraph.personIds);
   const contextPersonIds = new Set<string>();
-  for (const relationship of subgraph.snapshot.relationships) {
-    if (
-      relationship.type === "parent_child"
-      && relationship.personBId === focusPersonId
-      && personIds.has(relationship.personAId)
-    ) {
+  // Ancestor chain, excluding social step parent edges and other branches.
+  const ancestorsToVisit = [focusPersonId];
+  const visitedAncestorIds = new Set([focusPersonId]);
+  for (let index = 0; index < ancestorsToVisit.length; index += 1) {
+    const currentId = ancestorsToVisit[index];
+    for (const relationship of subgraph.snapshot.relationships) {
+      if (relationship.type !== "parent_child" || relationship.subtype === "step") continue;
+      if (relationship.personBId !== currentId || !personIds.has(relationship.personAId)) continue;
+      if (visitedAncestorIds.has(relationship.personAId)) continue;
+      visitedAncestorIds.add(relationship.personAId);
       contextPersonIds.add(relationship.personAId);
+      ancestorsToVisit.push(relationship.personAId);
     }
     if (!(await checkpoint())) return null;
   }
@@ -641,7 +643,7 @@ const buildFamilyGraphFocusProjectionScene = (
     layoutKey,
     partnerUnits: baseScene.geometry.partnerUnits
       .filter((unit) => allowedConnectionIds.has(unit.id) && allowedPersonIds.has(unit.partnerAId) && allowedPersonIds.has(unit.partnerBId))
-      .map((unit) => ({ ...unit, sharedChildIds: unit.sharedChildIds.filter((childId) => allowedPersonIds.has(childId)) })),
+      .map((unit) => ({ ...unit, sharedChildIds: unit.sharedChildIds.filter((childId) => allowedPersonIds.has(childId)), privateChildren: unit.privateChildren.filter((item) => allowedPersonIds.has(item.childId) && allowedPersonIds.has(item.parentId)) })),
     singleParentLinks: baseScene.geometry.singleParentLinks
       .filter((link) => allowedConnectionIds.has(link.id) && allowedPersonIds.has(link.parentId) && allowedPersonIds.has(link.childId)),
     routingPlan,
@@ -813,6 +815,7 @@ const buildFamilyGraphFocusProjectionSceneInterruptible = async (
       partnerUnits.push({
         ...unit,
         sharedChildIds: unit.sharedChildIds.filter((childId) => allowedPersonIds.has(childId)),
+        privateChildren: unit.privateChildren.filter((item) => allowedPersonIds.has(item.childId) && allowedPersonIds.has(item.parentId)),
       });
     }
     if (!(await checkpoint())) return null;

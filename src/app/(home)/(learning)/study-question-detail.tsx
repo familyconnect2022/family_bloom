@@ -32,7 +32,7 @@ function Comments({fid,qid,aid,uid,name}:{fid:string;qid:string;aid:string;uid:s
   
   
  const {showToast}=useBloomToast(),{revealInput}=useBloomKeyboardFocus();
- const commentRef=useRef<BloomScaledInput>(null);
+ const commentRef=useRef<React.ElementRef<typeof BloomScaledInput>>(null);
  const [items,setItems]=useState<StudyComment[]>([]),[cursor,setCursor]=useState<any>(),[more,setMore]=useState(false),[input,setInput]=useState(''),[busy,setBusy]=useState(false);
  const load=useCallback(async(reset:boolean)=>{
   if(busy)return;setBusy(true);

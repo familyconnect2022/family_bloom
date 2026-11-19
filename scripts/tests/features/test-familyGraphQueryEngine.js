@@ -198,7 +198,8 @@ const stepParentOfChild = engine.getRelationshipBetween("stepParent", "child");
 assert.ok(stepParentOfChild);
 assert.strictEqual(stepParentOfChild.kind, "parent");
 assert.strictEqual(stepParentOfChild.lineage, "unknown");
-assert.strictEqual(resolveVietnameseKinship(stepParentOfChild).label, "cha dượng");
+// Cross-region UI terminology: male step-parent uses "cha kế".
+assert.strictEqual(resolveVietnameseKinship(stepParentOfChild).label, "cha kế");
 
 // Step edges are not allowed to fabricate inferred blood ancestry.
 const stepOnlyVsChild = engine.getRelationshipBetween("stepOnly", "child");

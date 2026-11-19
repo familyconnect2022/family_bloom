@@ -142,7 +142,7 @@ export const avatarAsyncSync = {
     if (getAuth().currentUser?.uid !== uid) return "failed";
     return new Promise((resolve) => {
       let finished = false;
-      let stop = () => undefined;
+      let stop: () => void = () => {};
       let timer: ReturnType<typeof setTimeout> | undefined;
       const finish = (result: "complete" | "failed" | "timeout") => {
         if (finished) return;

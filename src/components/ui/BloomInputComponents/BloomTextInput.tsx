@@ -3,7 +3,7 @@ import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { useA3Tokens } from '../../../appearance3/useAppearance3';
 import * as Haptics from "expo-haptics";
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { Animated, Pressable, StyleProp, StyleSheet, TextInput, TextInputFocusEventData, TextInputProps, NativeSyntheticEvent, View, ViewStyle, TextStyle,  } from 'react-native';
+import { Animated, Pressable, StyleProp, StyleSheet, TextInput, TextInputProps, View, ViewStyle, TextStyle,  } from 'react-native';
 import { BloomText as Text } from '../BloomText';
 import { BLOOM_MOTION } from "../../../constants/motion";
 import { useBloomKeyboardFocus } from "../../layout/BloomKeyboardScreen";
@@ -62,7 +62,7 @@ export const BloomTextInput = forwardRef<TextInput, BloomTextInputProps>(({
   const { revealInput } = useBloomKeyboardFocus();
   const isEmbedded = variant === "embedded";
 
-  const handleFocus = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
+  const handleFocus = (event: Parameters<NonNullable<TextInputProps["onFocus"]>>[0]) => {
     setIsFocused(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     Animated.timing(focusAnim, {
@@ -78,7 +78,7 @@ export const BloomTextInput = forwardRef<TextInput, BloomTextInputProps>(({
     onFocus?.(event);
   };
 
-  const handleBlur = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
+  const handleBlur = (event: Parameters<NonNullable<TextInputProps["onBlur"]>>[0]) => {
     setIsFocused(false);
     Animated.timing(focusAnim, {
       toValue: 0,

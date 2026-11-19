@@ -29,7 +29,7 @@ export default function HomeKitchenRecipeScreen() {
   if (!recipe) {
     return (
       <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-        <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+        <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
         <BloomHeroHeader eyebrow="BẾP NHÀ MÌNH" title="Món này đang đi chợ" subtitle="Bloom chưa tìm thấy công thức bạn vừa mở." variant="living" onBack={() => router.back()} roundedBottom compact />
         <View style={__a3_styles.body}><BloomEmptyState icon="restaurant-outline" title="Chưa có công thức" description="Quay lại Bếp Nhà Mình để chọn một món khác nhé." /></View>
       </ScreenContainer>
@@ -38,7 +38,7 @@ export default function HomeKitchenRecipeScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader eyebrow="CÙNG NHAU VÀO BẾP" title={recipe.nameVi} subtitle={recipe.summary} variant="kitchen" onBack={() => router.back()} roundedBottom compact />
         <View style={__a3_styles.body}>
@@ -92,12 +92,12 @@ const styles = createBloomStyles(() => StyleSheet.create({
   rowBorder: { borderTopWidth: 1, borderTopColor: COLORS.border },
   number: { width: 28, height: 28, borderRadius: 12, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
   numberText: { color: COLORS.primaryText, fontSize: 11, fontWeight: "900" },
-  rowText: { flex: 1, color: COLORS.primaryText, fontSize: 13, lineHeight: 18, fontWeight: "650" },
+  rowText: { flex: 1, color: COLORS.primaryText, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   steps: { gap: 9 },
   stepCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 15 },
   stepBadge: { width: 34, height: 34, borderRadius: 14, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
   stepBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: "900" },
-  stepText: { flex: 1, color: COLORS.primaryText, fontSize: 13, lineHeight: 19, fontWeight: "650" },
+  stepText: { flex: 1, color: COLORS.primaryText, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   tipCard: { flexDirection: "row", gap: 10, backgroundColor: COLORS.surfaceFocus },
   tipTitle: { color: COLORS.primaryText, fontSize: 12.5, fontWeight: "900" },
   tipText: { marginTop: 4, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17 },

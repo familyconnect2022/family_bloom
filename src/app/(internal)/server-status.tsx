@@ -80,7 +80,7 @@ export default function ServerStatusScreen() {
    showToast({type:"success",title:"Đã sao chép báo cáo",message:"Bạn có thể dán báo cáo vào cuộc trò chuyện để phân tích lỗi.",duration:3500});
  };
  return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
- <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
+ <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
  <BloomHeroHeader eyebrow="PRIVATE · DEVELOPER" title="Trạng thái các server" subtitle="Render Chess/Xiangqi và Vercel Media · kiểm tra thủ công, không tạo phiên game" variant="profile" onBack={()=>router.back()} compact roundedBottom/>
  <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={__a3_styles.content}>
   <View style={__a3_styles.section}><BloomSectionHeader title="Render · Chess & Xiangqi" subtitle="HTTP /health · cả hai game dùng chung server"/><BloomCard style={__a3_styles.card}>

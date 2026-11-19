@@ -10,6 +10,8 @@ import {
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { ENV } from "../../config/env";
 import { AppError } from "../../types/errors";
+import { nativeSingleSessionPreview } from './nativeSingleSessionPreview';
+import { nativeSecureSessionPreview } from './nativeSecureSessionPreview';
 
 let configured = false;
 
@@ -40,10 +42,14 @@ export const authService = {
       throw new AppError("AUTH_GOOGLE_CANCELLED", "AUTH");
     }
     if (result.type !== "success") {
-      throw new AppError("AUTH_GOOGLE_FAILED", "AUTH", `Google Sign-In returned ${result.type}.`);
+      throw new AppError("AUTH_GOOGLE_FAILED", "AUTH", "Google Sign-In returned an unsupported response.");
     }
     const credential = GoogleAuthProvider.credential(result.data.idToken);
-    await signInWithCredential(getAuth(), credential);
+    // Mark before Firebase delivers onAuthStateChanged, not after it resolves.
+    nativeSingleSessionPreview.markExplicitLogin();
+    nativeSecureSessionPreview.markExplicitLogin();
+    try { await signInWithCredential(getAuth(), credential); }
+    catch(error){nativeSingleSessionPreview.clearExplicitLogin();nativeSecureSessionPreview.clearExplicitLogin();throw error;}
   },
 
   async sendPhoneCode(phoneNumber: string): Promise<ConfirmationResult> {
@@ -51,10 +57,15 @@ export const authService = {
   },
 
   async confirmPhoneCode(confirmation: ConfirmationResult, code: string) {
-    await confirmation.confirm(code.trim());
+    nativeSingleSessionPreview.markExplicitLogin();
+    nativeSecureSessionPreview.markExplicitLogin();
+    try { await confirmation.confirm(code.trim()); }
+    catch(error){nativeSingleSessionPreview.clearExplicitLogin();nativeSecureSessionPreview.clearExplicitLogin();throw error;}
   },
 
   async signOut() {
+    nativeSingleSessionPreview.clearExplicitLogin();
+    nativeSecureSessionPreview.clearExplicitLogin();
     await signOut(getAuth());
     try {
       if (GoogleSignin.getCurrentUser()) await GoogleSignin.signOut();

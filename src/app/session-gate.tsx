@@ -175,7 +175,7 @@ export default function SessionGate() {
           <SessionDiagnosticCard
             authUser={user}
             showWhenHealthy={true}
-            onCopyReport={(report) => Clipboard.setStringAsync(report)}
+            onCopyReport={async (report) => { await Clipboard.setStringAsync(report); }}
           />
         </View>
       ) : (

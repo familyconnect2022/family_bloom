@@ -3,7 +3,7 @@ export type BoardGamePresentationDiagnostic = {
   at: number;
   stage: string;
   detail: string;
-  source: "store" | "bridge" | "root" | "native";
+  source: "store" | "bridge" | "root" | "native" | "chess" | "xiangqi";
   mode?: string | null;
   kind?: string | null;
   gameId?: string | null;

@@ -252,9 +252,9 @@ function GatewayContent({
 
   
   
-  const familyNameInputRef = useRef<BloomScaledInput>(null);
-  const familyKeyInputRef = useRef<BloomScaledInput>(null);
-  const messageInputRef = useRef<BloomScaledInput>(null);
+  const familyNameInputRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
+  const familyKeyInputRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
+  const messageInputRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
 
   return (
     <>

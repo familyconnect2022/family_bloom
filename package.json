@@ -51,7 +51,8 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3",
-    "expo-doctor": "1.20.4"
+    "expo-doctor": "1.20.4",
+    "react-dom": "19.2.3"
   },
   "scripts": {
     "maintenance:map": "node scripts/maintenance/generate-vietnamese-code-map.cjs",
@@ -187,7 +188,8 @@
     "family:r6:check": "node scripts/tests/release/test-m3r4r6-root-avatar-lifecycle.cjs",
     "appearance:architecture:check": "node scripts/tests/release/test-r3r3-appearance-local-first.cjs",
     "android:separation:check": "node scripts/tests/release/test-android-only-no-legacy-web.cjs",
-    "root:launchers:check": "node scripts/tests/release/test-r11r4r2r1-root-launchers.cjs"
+    "root:launchers:check": "node scripts/tests/release/test-r11r4r2r1-root-launchers.cjs",
+    "graph:node:check": "node scripts/tests/features/test-familyGraphNodeR11R4R2R2.cjs"
   },
   "private": true,
   "expo": {

@@ -23,7 +23,7 @@ export default function StudyQuestionCompose(){
   
  const router=useRouter(),{user,userProfile,activeFamilyId}=useAuth();
  const {showToast}=useBloomToast();
- const titleRef=useRef<BloomScaledInput>(null);
+ const titleRef=useRef<React.ElementRef<typeof BloomScaledInput>>(null);
  const [title,setTitle]=useState(''),[subject,setSubject]=useState<StudySubject>('math'),[grade,setGrade]=useState(6);
  const validateBeforeUpload=useCallback(()=>{if(title.trim())return true;showToast({title:'Đặt tên cho câu hỏi 🌸',message:'Hãy nhập một tiêu đề ngắn để cả nhà dễ tìm bài nhé.',type:'warning'});titleRef.current?.focus();return false;},[title,showToast]);
  return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
@@ -42,7 +42,7 @@ export default function StudyQuestionCompose(){
   </BloomKeyboardScreen>
  </ScreenContainer>
 }
-function StudyTitleField({inputRef,title,setTitle}:{inputRef:React.RefObject<BloomScaledInput|null>;title:string;setTitle:(value:string)=>void}){
+function StudyTitleField({inputRef,title,setTitle}:{inputRef:React.RefObject<React.ElementRef<typeof BloomScaledInput>|null>;title:string;setTitle:(value:string)=>void}){
   const __a3Colors = useA3Theme().colors;
   const __a3_s = useA3LegacyStyles(s);
 

@@ -151,7 +151,7 @@ export default function CreateProfileScreen() {
       rootStyle={__a3_styles.container}
       contentContainerStyle={__a3_styles.scrollContent}
     >
-        <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+        <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
         <BloomHeroHeader
           eyebrow="CHÀO MỪNG BẠN ĐẾN BLOOM"
           title="Để cả nhà nhận ra bạn ngay từ lần đầu"

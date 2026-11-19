@@ -1,0 +1,12 @@
+FAMILY BLOOM NODE VISUAL R2 - 2026-11-04
+Source: FB12-FB15 FULL CODE AUTO UPDATE FIXED
+User-approved changes:
+- Female Person: warm floral/cream card; male Person: purple/lilac generation style; unknown Person: white/green minimal.
+- Generation chip shows only its numeral (1,2,3...) not the word "Thế hệ" on member nodes.
+- Removed redundant person detail icon; main card tap still opens detail.
+- Note icon appears only when description has text and opens the Note bubble, not person detail.
+- No modifications to relationship layout, connector geometry, BSH scene builder, Person avatar data, Firebase schema or rules.
+- Native APK/device and live Firebase NOT tested. Node layout needs screenshot QA on real device, 3/5/all generation modes and long names.
+
+Installer: SHA-256 bound to exact FB12-FB15 source baseline; backups existing project source before writing one target TSX file.
+Versions: Android versionCode 143045, package version 1.3.35 unchanged.

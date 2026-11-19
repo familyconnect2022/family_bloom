@@ -352,7 +352,7 @@ export default function FamilyGraphPersonEditorScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <View style={__a3_styles.root}>
         <BloomHeroHeader
           eyebrow={editing ? "CHỈNH THÔNG TIN" : "NGƯỜI MỚI"}

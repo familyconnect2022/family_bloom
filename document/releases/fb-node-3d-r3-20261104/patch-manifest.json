@@ -1,0 +1,49 @@
+{
+  "release": "Family Bloom 3D FRAMES R3: three approved assets, adaptive safe-area nodes, conditional Note",
+  "baseline": "Exact FB12-FB15 AutoUpdate FIXED or NODE VISUAL R2 file hashes (no blind overwrite)",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "src/components/familyGraph/FamilyGraphPrototype.tsx",
+      "before": [
+        "f3570c1debcdb5ba97c0c3681a77e9dd9cda22f36bc84e8ab490ae6116696d6a",
+        "46e45e71043c28228465623526fe274b1cc71aef91f1cec52040561e3166585a"
+      ],
+      "after": "a261fedfb328f1d9cc858b044bf5b18cdb48afbee1a380993d856c43f86835d2"
+    },
+    {
+      "path": "src/components/familyGraph/familyGraphGeometry.ts",
+      "before": [
+        "6fae24d8eea51f8084fcfcead81cff5a177ddac2a0917efa46e40a25ce35751c"
+      ],
+      "after": "83e57b1a447f0cde1bfba3fd1f8f0f0ebed2d9d7bae60f6cdd1d4b8aaa1462dd"
+    },
+    {
+      "path": "src/components/familyGraph/familyGraphPrototypeData.ts",
+      "before": [
+        "8fec294e9838e5b9992150da8c8df076ecea08d0287cea05de8001ad362b25b7"
+      ],
+      "after": "4c91b4ec2c6f10db2bca49a93e467f1b6a01df024f9115934acee8688f735986"
+    },
+    {
+      "path": "src/components/familyGraph/familyGraphConnectorRouting.ts",
+      "before": [
+        "09455ccb3181df1e99355f5641ba6c93267ea91748b628b372fe7e477ddcadac"
+      ],
+      "after": "bc8514e9e695efeb9d966f6a928fa59cbf80fcf798a3414924b852b3cb495df7"
+    }
+  ],
+  "remove": [],
+  "extra": [
+    "assets/images/family-tree/node-3d/female-approved-original.png",
+    "assets/images/family-tree/node-3d/female-bottom.png",
+    "assets/images/family-tree/node-3d/female-top.png",
+    "assets/images/family-tree/node-3d/male-approved-original.png",
+    "assets/images/family-tree/node-3d/male-bottom.png",
+    "assets/images/family-tree/node-3d/male-top.png",
+    "assets/images/family-tree/node-3d/unknown-approved-original.png",
+    "assets/images/family-tree/node-3d/unknown-bottom.png",
+    "assets/images/family-tree/node-3d/unknown-top.png"
+  ]
+}

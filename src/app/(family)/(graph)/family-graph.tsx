@@ -1,19 +1,16 @@
-import { getBloomStatusBarStyle } from "../../../constants/theme";
-import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { BloomText as Text } from '../../../components/ui/BloomText';
 import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
 import { BloomButton } from "../../../components/ui/BloomButtonComponents";
-import { BloomHeroHeader } from "../../../components/ui/BloomHeroHeader";
-import { BloomMotionReveal } from "../../../motion/BloomMotion";
+import { FamilyGraphWebHero } from "../../../components/familyGraph/FamilyGraphWebHero";
 import { FamilyGraphPrototype } from "../../../components/familyGraph/FamilyGraphPrototype";
 import { FamilyGraphFocusHost } from "../../../components/familyGraph/FamilyGraphFocusHost";
-import { getFamilyGraphWarmRecord, updateFamilyGraphViewState } from "../../../components/familyGraph/familyGraphWarmCache";
+import { updateFamilyGraphViewState } from "../../../components/familyGraph/familyGraphWarmCache";
 import {
   buildFamilyGraphRenderSceneInterruptible,
   peekFamilyGraphRenderSceneIdentity,
@@ -38,7 +35,10 @@ import { useA3Theme } from '../../../appearance3/useAppearance3';
 import { useA3LegacyStyles } from '../../../appearance3/compatReactiveStyles';
 
 
-export default function FamilyGraphScreen() {
+export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
+  embeddedInTab?: boolean;
+  onOpenOverview?: () => void;
+} = {}) {
   const __a3Theme = useA3Theme();
 
   const __a3Colors = __a3Theme.colors;
@@ -57,6 +57,9 @@ export default function FamilyGraphScreen() {
   const [screenFocused, setScreenFocused] = useState(true);
   const [graphActivitySession, setGraphActivitySession] = useState<GraphActivitySession | null>(null);
   const [notifyingGraph, setNotifyingGraph] = useState(false);
+  const [searchRequest, setSearchRequest] = useState(0);
+  const [showHeroMenu, setShowHeroMenu] = useState(false);
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [focusOverlayPersonId, setFocusOverlayPersonId] = useState<string | null>(null);
   useFocusEffect(useCallback(() => {
     setScreenFocused(true);
@@ -74,7 +77,6 @@ export default function FamilyGraphScreen() {
   const resolvedFocusId = (requestedFocusId && snapshot.persons.some((person) => person.id === requestedFocusId))
     ? requestedFocusId
     : snapshot.persons.find((person) => person.id === defaultFocusId && person.linkedUid === user?.uid)?.id ?? snapshot.persons.find((person) => person.linkedUid === user?.uid)?.id ?? null;
-  const warmGraph = getFamilyGraphWarmRecord(familyId);
 
   // P2.17.1 — Family Graph route first-paint boundary.
   //
@@ -169,7 +171,7 @@ export default function FamilyGraphScreen() {
   const resolveRelationship = useCallback((sourcePersonId: string, targetPersonId: string) => {
     if (!queryEngine) return null;
     const evidence = queryEngine.getRelationshipBetween(sourcePersonId, targetPersonId);
-    return evidence ? resolveVietnameseKinship(evidence, peopleById) : null;
+    return evidence ? resolveVietnameseKinship(evidence, peopleById, snapshot.relationships) : null;
   }, [peopleById, queryEngine]);
 
   const getFocusSubgraphPreview = useCallback((focusPersonId: string, mode: "3" | "5") => {
@@ -247,18 +249,61 @@ export default function FamilyGraphScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <View style={__a3_styles.screen}>
-        <BloomMotionReveal sceneKey="graph-hero" active={screenFocused} distance={8} startOpacity={0.70}><BloomHeroHeader
-          eyebrow="CÂY GIA ĐÌNH"
-          title="Phả hệ gia đình"
-          subtitle={membership?.familyName
-            ? `${snapshot.persons.length || "Đang mở"} người · ${membership.familyName}`
-            : "Cùng lần theo từng nhánh và lưu lại câu chuyện của các thế hệ."}
-          variant="tree"
-          compact
-          onBack={() => router.back()}
-        /></BloomMotionReveal>
+        <FamilyGraphWebHero
+          count={snapshot.persons.length}
+          familyName={membership?.familyName || 'Gia đình của mình'}
+          onBack={embeddedInTab ? undefined : () => router.back()}
+          onOverview={embeddedInTab ? () => setShowHeroMenu(true) : undefined}
+        />
+
+        <View style={__a3_styles.parityActionRow}>
+          {isAdmin ? (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Duyệt đề xuất phả hệ"
+                onPress={() => router.push('/family-graph-proposals' as never)}
+                style={({ pressed }) => [__a3_styles.parityAction, pressed && __a3_styles.pressed]}
+              >
+                <Ionicons name="checkmark" size={18} color={__a3Colors.primary} />
+                <Text style={__a3_styles.parityActionText}>Duyệt đề xuất</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Quản lý gốc và người trong phả hệ"
+                onPress={() => router.push({ pathname: '/family-graph-admin', params: { from: 'graph' } } as never)}
+                style={({ pressed }) => [__a3_styles.parityAction, pressed && __a3_styles.pressed]}
+              >
+                <Ionicons name="git-branch-outline" size={18} color={__a3Colors.primary} />
+                <Text style={__a3_styles.parityActionText}>Quản lý gốc</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đề xuất thay đổi phả hệ"
+              onPress={() => router.push('/family-graph-proposals' as never)}
+              style={({ pressed }) => [__a3_styles.parityAction, pressed && __a3_styles.pressed]}
+            >
+              <Ionicons name="git-pull-request-outline" size={18} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityActionText}>Đề xuất thay đổi</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={__a3_styles.paritySearchRow}>
+          <Text style={__a3_styles.paritySearchTitle}>Tìm trong phả hệ</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tìm kiếm người trong phả hệ"
+            onPress={() => setSearchRequest((count) => count + 1)}
+            style={({ pressed }) => [__a3_styles.paritySearchButton, pressed && __a3_styles.pressed]}
+          >
+            <Ionicons name="search" size={27} color={__a3Colors.primaryText} />
+          </Pressable>
+        </View>
 
         {isAdmin && graphActivitySession ? (
           <View style={__a3_styles.graphNotice}>
@@ -342,12 +387,13 @@ export default function FamilyGraphScreen() {
               scene={visual}
               memberAvatarByUid={memberAvatarByUid}
               defaultFocusId={visibleFocusId}
-              initialViewMode={warmGraph?.viewState.viewMode}
-              initialCameraSnapshot={warmGraph?.viewState.camera}
+              initialViewMode="all"
+              initialCameraSnapshot={null}
               onViewStateChange={(state) => {
                 if (familyId) updateFamilyGraphViewState(familyId, state);
               }}
               canEdit={isAdmin}
+              onProposePerson={() => router.push('/family-graph-proposals' as never)}
               onEditPerson={(personId) => router.push({
                 pathname: "/family-graph-person-editor",
                 params: { personId },
@@ -355,11 +401,19 @@ export default function FamilyGraphScreen() {
               onAddPerson={() => router.push({ pathname: "/family-graph-admin", params: { from: "graph" } } as never)}
               onDeletePerson={deletePerson}
               onDeleteRelationship={deleteRelationship}
+              onEditRelationship={(relationshipId, personId) => router.push({
+                pathname: "/family-graph-relationship-detail",
+                params: { relationshipId, personId },
+              } as never)}
               resolveRelationship={resolveRelationship}
               getFocusSubgraphPreview={getFocusSubgraphPreview}
               onOpenFocus={setFocusOverlayPersonId}
               initialDetailPersonId={requestedDetailPersonId || null}
-              headerMode="controls"
+              headerMode="none"
+              webParity
+              showAdvancedControls={showAdvancedControls}
+              searchRequest={searchRequest}
+              autoFitOnMount
             />
           )}
         </View>
@@ -368,8 +422,25 @@ export default function FamilyGraphScreen() {
           snapshot={snapshot}
           memberAvatarByUid={memberAvatarByUid}
           personId={focusOverlayPersonId}
+          resolveRelationship={resolveRelationship}
           onYieldBack={() => setFocusOverlayPersonId(null)}
         />
+        <Modal transparent visible={showHeroMenu} animationType="fade" onRequestClose={() => setShowHeroMenu(false)}>
+          <View style={__a3_styles.webMenuBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowHeroMenu(false)} accessibilityLabel="Đóng menu Cây nhà" />
+            <View style={__a3_styles.webMenuCard}>
+              <Text style={__a3_styles.webMenuHeading}>Cây nhà</Text>
+              <Pressable accessibilityRole="button" style={__a3_styles.webMenuChoice} onPress={() => { setShowAdvancedControls((v) => !v); setShowHeroMenu(false); }}>
+                <Ionicons name="options-outline" size={21} color={__a3Colors.primary} />
+                <Text style={__a3_styles.webMenuChoiceText}>{showAdvancedControls ? 'Ẩn điều khiển thế hệ' : 'Điều khiển thế hệ / nhánh'}</Text>
+              </Pressable>
+              {onOpenOverview && <Pressable accessibilityRole="button" style={__a3_styles.webMenuChoice} onPress={() => { setShowHeroMenu(false); onOpenOverview(); }}>
+                <Ionicons name="people-outline" size={21} color={__a3Colors.primary} />
+                <Text style={__a3_styles.webMenuChoiceText}>Tổng quan Cây nhà & thành viên</Text>
+              </Pressable>}
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScreenContainer>
   );
@@ -377,6 +448,11 @@ export default function FamilyGraphScreen() {
 
 const styles = createBloomStyles(() => StyleSheet.create({
   screen: { flex: 1, paddingBottom: 4, backgroundColor: COLORS.background },
+  webMenuBackdrop: { flex: 1, justifyContent: 'center', padding: 26, backgroundColor: 'rgba(35,22,34,0.30)' },
+  webMenuCard: { backgroundColor: COLORS.surface, borderRadius: 24, padding: 18, gap: 5 },
+  webMenuHeading: { color: COLORS.primaryText, fontWeight: '900', fontSize: 17, paddingHorizontal: 8, paddingVertical: 10 },
+  webMenuChoice: { minHeight: 54, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 10 },
+  webMenuChoiceText: { flex: 1, color: COLORS.primaryText, fontSize: 14, fontWeight: '700' },
   topBar: { height: 50, flexDirection: "row", alignItems: "center", marginBottom: 4 },
   iconButton: { width: 42, height: 42, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   iconPlaceholder: { width: 42, height: 42 },
@@ -392,7 +468,27 @@ const styles = createBloomStyles(() => StyleSheet.create({
   graphNoticeButton: { minHeight: 40, borderRadius: 14, paddingHorizontal: 12, backgroundColor: COLORS.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   graphNoticeButtonText: { color: COLORS.white, fontSize: 10.5, fontWeight: "900" },
   disabled: { opacity: 0.58 },
-  graphArea: { flex: 1, marginHorizontal: 10, marginBottom: 4, borderRadius: 26, overflow: "hidden" },
+  graphArea: {
+    flex: 1, minHeight: 210, marginHorizontal: 18, marginTop: 16,
+    marginBottom: 9, borderRadius: 23, overflow: 'hidden',
+    backgroundColor: COLORS.surface, borderColor: COLORS.border, borderWidth: 1,
+  },
+  parityActionRow: {
+    minHeight: 61, paddingHorizontal: 17, paddingTop: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 13,
+  },
+  parityAction: { minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 3 },
+  parityActionText: { color: COLORS.primary, fontSize: 13.5, fontWeight: '800' },
+  paritySearchRow: {
+    paddingHorizontal: 19, minHeight: 63, marginTop: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  paritySearchTitle: { color: COLORS.primaryText, fontSize: 17, fontWeight: '800' },
+  paritySearchButton: {
+    width: 53, height: 53, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+  },
   centerState: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
   emptyIcon: { width: 66, height: 66, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface, marginBottom: 16 },
   stateTitle: { color: COLORS.primaryText, fontSize: 17, fontWeight: "900", textAlign: "center", marginTop: 10 },
@@ -400,3 +496,5 @@ const styles = createBloomStyles(() => StyleSheet.create({
   emptyButton: { marginTop: 20, minWidth: 200 },
   pressed: { opacity: 0.64 },
 }));
+
+export default FamilyGraphScreen;

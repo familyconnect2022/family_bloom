@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../../../components/ui/bloomAbsoluteFill";
 import { useBloomColorsRevision, useBloomTypographyRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -636,7 +637,7 @@ export function TimeCapsuleRevealPrototype({
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.night }]}>
-      <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.colors.night }, backdropStyle]} />
+      <Animated.View style={[BLOOM_ABSOLUTE_FILL, { backgroundColor: theme.colors.night }, backdropStyle]} />
       <View pointerEvents="none" style={styles.ambientField}>
         <View style={[styles.ambientSpotOne, { backgroundColor: theme.colors.ambientOne }]} />
         <View style={[styles.ambientSpotTwo, { backgroundColor: theme.colors.ambientTwo }]} />
@@ -797,7 +798,7 @@ export function TimeCapsuleRevealPrototype({
 
 const styles = createBloomStyles(() => StyleSheet.create({
   root: { flex: 1, overflow: "hidden" },
-  ambientField: { ...StyleSheet.absoluteFillObject, overflow: "hidden" },
+  ambientField: { ...BLOOM_ABSOLUTE_FILL, overflow: "hidden" },
   ambientSpotOne: { position: "absolute", width: 280, height: 280, borderRadius: 999, top: -90, right: -120 },
   ambientSpotTwo: { position: "absolute", width: 320, height: 320, borderRadius: 999, bottom: -170, left: -170 },
 

@@ -1,0 +1,23 @@
+FAMILY BLOOM NODE R7 - DYNAMIC GENERATION LABELS
+Date: 2026-11-05
+Baseline: exact FamilyBloom_NODE_R6_FULL_CODE_2026-11-04.zip source.
+
+Changes:
+- Main genealogy now starts at generation 1 for the oldest known ancestor of each connected family branch.
+- Newly added upstream parents become generation 1; existing ancestor and descendant levels recompute automatically.
+- When an upstream relationship is removed, levels are recomputed; never save/modify a generation field in Firebase.
+- Partner relationships preserve the same level; parent-child relationships advance exactly one level.
+- No 5-generation clamping: all-graph rendering supports deeper trees, while 3/5 view remains a viewport choice.
+- Focus uses the same rebasing rule when its model includes the same ancestor branch.
+- Scene and layout cache versions incremented to invalidate cached old generation labels.
+- Adds regression test for add/remove ancestors, different focus seeds, unrelated branches and nine-generation chains.
+
+Unchanged: Person/Relationship data, Firestore Rules, image assets, 3D node UI, camera/zoom handling, creation flows.
+
+Updater instructions:
+1. Extract R7 PATCH or FULL CODE OUTSIDE existing project.
+2. Run 00_CAP_NHAT_R7_AN_TOAN.cmd from extracted folder.
+3. Choose existing Family Bloom R6 project folder; installer checks SHAs, backs up source before overwriting.
+4. Only build Android after PASS.
+
+Not yet verified: native Windows BAT execution, Android release APK on a real phone, live Firebase read/write flows.

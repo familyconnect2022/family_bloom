@@ -63,7 +63,7 @@ export function PollFeaturePanel() {
   const [localVotes, setLocalVotes] = useState<Record<string, HomePollChoice>>({});
   const [questionInvalid, setQuestionInvalid] = useState(false);
   const [namedResultText, setNamedResultText] = useState<string | null>(null);
-  const questionRef = useRef<BloomScaledInput>(null);
+  const questionRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
 
   useEffect(() => {
     if (uid) setSelectedUids(current => current.includes(uid) ? current : [uid, ...current]);

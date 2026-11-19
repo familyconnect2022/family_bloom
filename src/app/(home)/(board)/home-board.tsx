@@ -84,7 +84,7 @@ function ActiveHomeBoardScreen() {
   const memories = useMemo(() => digest?.memories ?? [], [digest?.memories]);
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader eyebrow="BẢNG TIN NHÀ MÌNH" title="Điều cả nhà cần biết" subtitle="Một bảng tin chung nhẹ nhàng, không trùng với thông báo cá nhân của bạn." variant="notice" onBack={() => router.back()} roundedBottom compact />
         <View style={__a3_styles.body}>

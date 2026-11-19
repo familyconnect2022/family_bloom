@@ -6,7 +6,7 @@ import { calendarService } from "../../services/calendar/calendarService";
 import { familyHomeWarmCache } from "../../services/bootstrap/familyHomeWarmCache";
 import { momentsService } from "../../services/moments/momentsService";
 import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeRegistry";
-import type { FamilyEvent, MomentPost } from "../../types";
+import type { EventPage, FamilyEvent, MomentPage, MomentPost } from "../../types";
 import { getEffectiveEventDate, mergeEventsById } from "../../utils/event";
 import { useAuth } from "../../context/AuthContext";
 import { useFamilyMembers } from "./useFamilyMembers";
@@ -52,7 +52,7 @@ export const useFamilyDashboard = (familyId: string | null | undefined) => {
   useTabLiveEffect("home", (scope) => {
     if (!familyId) return;
     const stops = [
-      subscribeSharedRealtime({
+      subscribeSharedRealtime<EventPage>({
         key: `home.events.upcoming:${familyId}:${DATA_LIMITS.dashboard.upcomingEvents}`,
         listenerName: "home.events.upcoming",
         start: (onData, onError) => calendarService.subscribeUpcoming(
@@ -75,7 +75,7 @@ export const useFamilyDashboard = (familyId: string | null | undefined) => {
         },
         keepAliveMs: 1200,
       }),
-      subscribeSharedRealtime({
+      subscribeSharedRealtime<FamilyEvent[]>({
         key: `home.events.yearly:${familyId}`,
         listenerName: "home.events.yearly",
         start: (onData, onError) => calendarService.subscribeYearly(familyId, onData, onError),
@@ -92,7 +92,7 @@ export const useFamilyDashboard = (familyId: string | null | undefined) => {
         },
         keepAliveMs: 1200,
       }),
-      subscribeSharedRealtime({
+      subscribeSharedRealtime<MomentPage>({
         key: `home.moments.latest:${familyId}:${DATA_LIMITS.dashboard.recentMoments}`,
         listenerName: "home.moments.latest",
         start: (onData, onError) => momentsService.subscribeLatest(

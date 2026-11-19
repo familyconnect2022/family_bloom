@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -304,7 +305,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   counterPill: { borderRadius: 999, backgroundColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 5 },
   counterText: { color: COLORS.white, fontSize: 12, fontWeight: "900" },
   videoPlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface },
-  loadingState: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,245,248,0.16)" },
+  loadingState: { ...BLOOM_ABSOLUTE_FILL, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,245,248,0.16)" },
   loadingBloom: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 11, backgroundColor: "rgba(255,245,248,0.94)", borderWidth: 1, borderColor: "rgba(241,221,229,0.96)" },
   loadingText: { color: COLORS.primaryText, fontSize: 13, fontWeight: "800" },
   playCircle: { width: 62, height: 62, borderRadius: 31, backgroundColor: "rgba(0,0,0,0.52)", alignItems: "center", justifyContent: "center" },

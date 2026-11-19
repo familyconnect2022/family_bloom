@@ -44,7 +44,7 @@ export default function SettingsScreen(){
   const showDeveloperTools=isPerformanceTestAccount(user?.email) && isVerifiedDeveloperAccount(user);
   const initial=(userProfile?.displayName||user?.displayName||"F").trim().slice(0,1).toUpperCase();
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-    <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
+    <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
     <BloomHeroHeader eyebrow="CÀI ĐẶT" title="Góc điều chỉnh của bạn" subtitle="Hồ sơ, mái nhà, lời nhắc và những công cụ nội bộ được giữ gọn ở một nơi." variant="settings" onBack={()=>router.back()} compact roundedBottom/>
     <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
       <BloomCard style={__a3_styles.accountCard}>

@@ -181,7 +181,7 @@ export default function FirestoreDataFaultTestScreen() {
   if (!allowed) return null;
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader eyebrow="PRIVATE · DEVELOPER" title="Thử dữ liệu Firestore lỗi" subtitle="Ghi dữ liệu sai thật, mỗi lần một tình huống. Xóa thủ công qua Firebase Console." variant="profile" compact roundedBottom onBack={() => router.back()} />
       <ScrollView contentContainerStyle={__a3_styles.body} showsVerticalScrollIndicator={false}>
         <BloomCard style={__a3_styles.warningCard}>

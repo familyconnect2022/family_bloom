@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -6,6 +7,7 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, useWindowDimensions, V
 import { BloomText as Text } from '../ui/BloomText';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import type { FamilyGraphSnapshot } from "../../types/familyGraph";
+import type { FamilyGraphVietnameseRelationship } from "../../types/familyGraphQuery";
 import { COLORS } from "../../constants/theme";
 import { FamilyGraphFocusView } from "./FamilyGraphFocusView";
 import {
@@ -35,11 +37,13 @@ export function FamilyGraphFocusHost({
   snapshot,
   personId,
   memberAvatarByUid,
+  resolveRelationship,
   onYieldBack,
 }: {
   snapshot: FamilyGraphSnapshot;
   personId: string | null;
   memberAvatarByUid?: ReadonlyMap<string, string | null>;
+  resolveRelationship?: (sourcePersonId: string, targetPersonId: string) => FamilyGraphVietnameseRelationship | null;
   onYieldBack: () => void;
 }) {
   const __a3Colors = useA3Theme().colors;
@@ -167,6 +171,7 @@ export function FamilyGraphFocusHost({
                 visual={visual}
                 memberAvatarByUid={memberAvatarByUid}
                 personId={personId}
+                resolveRelationship={resolveRelationship}
                 onVisualReady={() => {
                   if (requestRef.current > 0) setVisualReady(true);
                 }}
@@ -205,7 +210,7 @@ export function FamilyGraphFocusHost({
 
 const styles = createBloomStyles(() => StyleSheet.create({
   root: { flex: 1, alignItems: "center", justifyContent: "center" },
-  shield: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(45,31,37,0.22)" },
+  shield: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(45,31,37,0.22)" },
   card: { borderRadius: 28, overflow: "hidden", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, shadowColor: COLORS.shadow, shadowOpacity: 0.2, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
   header: { minHeight: 78, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backButton: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 40, paddingHorizontal: 10, borderRadius: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
@@ -216,7 +221,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   title: { marginTop: 2, fontSize: 17, fontWeight: "900", color: COLORS.primaryText },
   hint: { marginTop: 3, fontSize: 10, fontWeight: "600", color: COLORS.secondaryText },
   graph: { flex: 1, overflow: "hidden", backgroundColor: COLORS.surface },
-  preparingLayer: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.overlay },
+  preparingLayer: { ...BLOOM_ABSOLUTE_FILL, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.overlay },
   preparingInline: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 16, backgroundColor: COLORS.surface, paddingHorizontal: 14, paddingVertical: 10 },
   preparingText: { fontSize: 12, fontWeight: "700", color: COLORS.secondaryText },
   messageCard: { width: "78%", borderRadius: 20, padding: 18, alignItems: "center", backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },

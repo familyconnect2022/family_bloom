@@ -143,7 +143,7 @@ export default function HomeTimeCapsuleDetailScreen() {
   if (showReveal && capsule && revealContent) {
     return (
       <>
-        <StatusBar translucent backgroundColor="transparent" style="light" />
+        <StatusBar style="light" />
         <TimeCapsuleRevealPrototype
           onBack={() => { if (replay) setReplay(false); else router.back(); }}
           initialThemeKey={capsule.revealTheme}
@@ -189,7 +189,7 @@ export default function HomeTimeCapsuleDetailScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader
           eyebrow="NHÀ MÌNH · HỘP THỜI GIAN"

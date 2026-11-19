@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../../components/ui/bloomAbsoluteFill";
 import { BloomScaledInput } from '../../components/ui/BloomScaledInput';
 import { getBloomStatusBarStyle } from "../../constants/theme";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
@@ -188,7 +189,7 @@ export default function MomentsScreen() {
   const listRef = useRef<FlatList<FeedItem>>(null);
   const feedItemsRef = useRef<FeedItem[]>([]);
   const listOffsetRef = useRef(0);
-  const focusedCommentInputRef = useRef<BloomScaledInput | null>(null);
+  const focusedCommentInputRef = useRef<React.ElementRef<typeof BloomScaledInput> | null>(null);
   const keyboardTopRef = useRef<number | null>(null);
   const [keyboardReserve, setKeyboardReserve] = useState(0);
   const [commentScrollLocked, setCommentScrollLocked] = useState(false);
@@ -929,7 +930,7 @@ export default function MomentsScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <KeyboardAvoidingView style={__a3_styles.listRoot} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <FlatList
           ref={listRef}
@@ -1439,7 +1440,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   timelineTargetChoiceText: { color: COLORS.primaryText, fontSize: 10, fontWeight: "900", textAlign: "center" },
   timelineTargetChoiceTextActive: { color: COLORS.onPrimary },
   personPickerSection: { marginBottom: SPACING.md },
-  deepLinkOpening: { ...StyleSheet.absoluteFillObject, zIndex: 40, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
+  deepLinkOpening: { ...BLOOM_ABSOLUTE_FILL, zIndex: 40, backgroundColor: COLORS.background, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
   deepLinkOpeningCard: { width: "100%", maxWidth: 360, borderRadius: 28, paddingHorizontal: 24, paddingVertical: 26, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.focusBorder, alignItems: "center", shadowColor: COLORS.shadow, shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 4 },
   deepLinkOpeningIcon: { width: 60, height: 60, borderRadius: 22, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center", marginBottom: 13 },
   deepLinkOpeningTitle: { color: COLORS.primaryText, fontSize: 17, fontWeight: "900", textAlign: "center" },

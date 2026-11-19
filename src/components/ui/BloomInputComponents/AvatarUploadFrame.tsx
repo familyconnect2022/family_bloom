@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { COLORS } from '../../../constants/theme';
@@ -46,7 +47,7 @@ export const AvatarUploadFrame = ({ size, upload, onRetry, children }: {
   );
 };
 const styles = createBloomStyles(() => StyleSheet.create({
-  track: { ...StyleSheet.absoluteFillObject, borderWidth: 3, borderRadius: 27 },
+  track: { ...BLOOM_ABSOLUTE_FILL, borderWidth: 3, borderRadius: 27 },
   edge: { position: "absolute", borderRadius: 5 },
   statusCorner: { position: "absolute", bottom: -7, left: -8, width: 29, height: 29,
     alignItems: "center", justifyContent: "center", backgroundColor: COLORS.surface, borderRadius: 12 },
