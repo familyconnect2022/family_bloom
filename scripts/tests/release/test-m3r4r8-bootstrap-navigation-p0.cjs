@@ -73,9 +73,16 @@ assert(layout.includes('const showTransitionShield = allowFamilyRoutes && !famil
 console.log('PASS Home transition remains visually shielded until tabs are painted');
 assert(layout.includes('const allowFamilyRoutes = verifiedFamily && welcomeReady && !welcomeBlocking;') && layout.includes('<Stack.Protected guard={allowFamilyRoutes}>'),'Home cannot mount beneath Welcome');n++;
 console.log('PASS Home guard excludes Welcome phase');
-const remote=auth.indexOf('void loadAuthoritativeProfile(currentUser);',auth.indexOf('setProfileStatus("loading");'));
-const cached=auth.indexOf('void bootSessionCache.read(currentUser.uid)',auth.indexOf('setProfileStatus("loading");'));
-assert(remote>=0 && cached>remote && auth.includes('.catch(() => undefined); // cache is optional'),'Firestore check must start independently before noncritical cache read');n++;
+// R16 Secure V2 moved initial verification into a helper receiving the
+// verified Firebase identity. Check within that helper, not against the old
+// `currentUser` expression from the pre-V2 bootstrap implementation.
+const bootstrap=auth.split('const startAuthoritativeVerification =')[1]?.split('if(nativeSecureSessionPreview.requiresSession')[0]||'';
+const remote=bootstrap.indexOf('void loadAuthoritativeProfile(verifiedUser);');
+const cached=bootstrap.indexOf('void bootSessionCache.read(verifiedUser.uid)');
+assert(remote>=0 && cached>remote && bootstrap.includes('.catch(()=>undefined);') &&
+  auth.includes('startAuthoritativeVerification(verifiedUser);') &&
+  auth.includes('nativeSecureSessionPreview.activate(currentUser)'),
+  'Firestore check must precede optional cache and use the V2 verified identity');n++;
 console.log('PASS Profile Firestore read cannot be blocked by failed cache read');
 assert(profileService.includes('getDocFromServer(') && profileService.includes('getAuthoritative: getAuthoritativeProfile') && auth.includes('profileService.getAuthoritative(currentUser.uid)'), 'Missing profile must be confirmed by Firestore server, not stale cache');n++;
 console.log('PASS New UID profile existence determined by authoritative server read');
