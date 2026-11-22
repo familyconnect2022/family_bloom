@@ -1,0 +1,38 @@
+FAMILY BLOOM R11R2 - FIX NHAM SHA BAT (2026-11-05)
+Nguon: R10 Android Full Code; R11 Motion 4.0 Lab trial. Khong thay doi animation.
+
+NGUYEN NHAN
+R11R1 tu choi cap nhat vi Family_Bloom_AUTO_UPDATE_FULL.bat tren may nguoi dung
+co SHA khac ban ZIP R10. BAT la cong cu bao tri, KHONG PHAI ma nguon UI.
+Chua co tep BAT thuc te tren may, nen khong ket luan tai sao no doi.
+
+SUA LOI
+- KHONG doi SHA, KHONG ghi de Family_Bloom_AUTO_UPDATE_FULL.bat tren du an da cai.
+- Van bat buoc doi SHA tat ca cac tep MA NGUON ung dung can sua, nhu Home,
+  BloomPageComponents, Root Layout, Developer Tools, v.v.
+- Hien danh sach tat ca tep ma nguon lech, dung TRUOC KHI GHI; khong bo qua ma nguon.
+- Co backup va rollback nhu R11R1. Khong doi Firebase, .env, API, Render, Vercel.
+- Chi can script R11 Motion rieng, BAT goc R10 con nguyen.
+
+CAI DAT DE NHAT (CLI, khong can chon thu muc)
+1. Giu nguyen R10 ZIP va project dang hoat dong. KHONG cap nhat truc tiep ZIP backup R10.
+2. Giai nen FULL CODE R11R2 vao mot thu muc moi. KHONG giai nen de len project R10.
+3. Tai thu muc FULL CODE R11R2, mo CMD va chay:
+   node scripts\maintenance\fb-r11-motion-safe-update.cjs check "D:\Family Bloom App + Server\Family_Bloom"
+4. Phai co [CHECK PASS] va [PRESERVED]. Neu STOP, giu nguyen va gui log.
+5. Neu CHECK PASS, chay:
+   node scripts\maintenance\fb-r11-motion-safe-update.cjs install "D:\Family Bloom App + Server\Family_Bloom"
+6. Phai co PASS sau khi tao backup va kiem tra. Sau do moi build APK Release
+   voi BAT build APK cua project (giu nguyen BAT goc).
+
+NEU DA GIAI NEN FULL CODE R11R1
+Co the chi lay R11R2_FIX_KIT, giai nen vao THU MUC SOURCE R11R1, ghi de
+3 tep script/manifest/test va them huong dan. Khong giai nen vao project R10.
+Sau do chay cung lenh check va install tai thu muc SOURCE vua sua.
+
+NOTES
+- Lenh hop le la install, khong phai apply.
+- Khong chay script tu thu muc FIX_KIT rieng le; can source FULL CODE co src/motion.
+- Khong can chinh sửa/bỏ qua SHA cua tap tin app, khong mo Windows PowerShell voi quyen admin.
+- Dinh dang them cac tep trong ZIP full la test/source; bat R10 khong duoc thay.
+- Test source tren Linux khong thay the build va runtime tren Windows/Android.

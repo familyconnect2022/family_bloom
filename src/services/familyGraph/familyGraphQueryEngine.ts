@@ -781,9 +781,21 @@ export class FamilyGraphQueryEngine {
 
     addPerson(focusPersonId);
 
-    // One generation only. These IDs are context, not traversal roots.
-    for (const parent of this.getKinshipParentLinks(focusPersonId)) {
-      if (!addPerson(parent.person.id)) break;
+    // GRAPH-LINE-01: the full direct ancestor chain is context, never a
+    // sideways traversal into ancestors' other children. Exclude step-only
+    // social links as evidence for ancestors.
+    const ancestors = this.getAncestorViews(focusPersonId, {
+      depth: this.personsById.size,
+      maxPeople,
+    });
+    for (const ancestor of ancestors) if (!addPerson(ancestor.person.id)) break;
+    const ancestorContextIds = new Set(ancestors.map((item) => item.person.id));
+    const ancestorSpouseIds = new Set<string>();
+    for (const ancestorId of ancestorContextIds) {
+      for (const spouse of this.getPartners(ancestorId)) {
+        if (!ancestorContextIds.has(spouse.id) && spouse.id !== focusPersonId) ancestorSpouseIds.add(spouse.id);
+        if (!addPerson(spouse.id)) break;
+      }
     }
 
     // Preserve the selected union/couple before expanding down the branch.
@@ -801,10 +813,7 @@ export class FamilyGraphQueryEngine {
       // Snapshot the true branch population after descendants are known. Ancestor
       // context was inserted earlier, so explicitly exclude those context IDs from
       // partner expansion; otherwise an ancestor spouse can reopen a sideways tree.
-      const contextParentIds = new Set(
-        this.getKinshipParentLinks(focusPersonId).map((link) => link.person.id),
-      );
-      const branchIds = [...selectedIds].filter((id) => !contextParentIds.has(id));
+      const branchIds = [...selectedIds].filter((id) => !ancestorContextIds.has(id) && !ancestorSpouseIds.has(id));
       for (const personId of branchIds) {
         for (const partner of this.getPartners(personId)) {
           if (!addPerson(partner.id)) break;
@@ -883,10 +892,32 @@ export class FamilyGraphQueryEngine {
 
     addPerson(focusPersonId);
 
-    const parentLinks = this.getKinshipParentLinks(focusPersonId);
-    for (const parent of parentLinks) {
-      if (!addPerson(parent.person.id)) break;
+    // Cooperative upward BFS: all verified ancestors, never their siblings
+    // or the children of other partners. Each slice allows Android Back/cancel.
+    const ancestorContextIds = new Set<string>();
+    const ancestorQueue: string[] = [focusPersonId];
+    const ancestorVisited = new Set<string>([focusPersonId]);
+    for (let index = 0; index < ancestorQueue.length && selectedIds.size < maxPeople; index += 1) {
+      const parentLinks = this.getKinshipParentLinks(ancestorQueue[index]);
+      for (const parent of parentLinks) {
+        const id = parent.person.id;
+        if (ancestorVisited.has(id)) continue;
+        ancestorVisited.add(id);
+        ancestorContextIds.add(id);
+        if (!addPerson(id)) break;
+        ancestorQueue.push(id);
+        if (!(await checkpoint())) return null;
+      }
       if (!(await checkpoint())) return null;
+    }
+
+    const ancestorSpouseIds = new Set<string>();
+    for (const ancestorId of ancestorContextIds) {
+      for (const spouse of this.getPartners(ancestorId)) {
+        if (!ancestorContextIds.has(spouse.id) && spouse.id !== focusPersonId) ancestorSpouseIds.add(spouse.id);
+        if (!addPerson(spouse.id)) break;
+        if (!(await checkpoint())) return null;
+      }
     }
 
     const focusPartners = this.getPartners(focusPersonId);
@@ -915,8 +946,7 @@ export class FamilyGraphQueryEngine {
     }
 
     if (includeDescendantPartners) {
-      const contextParentIds = new Set(parentLinks.map((link) => link.person.id));
-      const branchIds = [...selectedIds].filter((id) => !contextParentIds.has(id));
+      const branchIds = [...selectedIds].filter((id) => !ancestorContextIds.has(id) && !ancestorSpouseIds.has(id));
       for (const personId of branchIds) {
         const partners = this.getPartners(personId);
         for (const partner of partners) {

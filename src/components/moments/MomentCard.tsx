@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { BloomScaledInput } from '../ui/BloomScaledInput';
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
@@ -178,7 +179,7 @@ function MomentCardComponent({
   const [editVisible, setEditVisible] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
   const [postActionBusy, setPostActionBusy] = useState(false);
-  const commentInputRef = useRef<BloomScaledInput>(null);
+  const commentInputRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
   const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reactionVersionRef = useRef(0);
   const desiredReactionRef = useRef<MomentReaction | null>(null);
@@ -971,9 +972,9 @@ const styles = createBloomStyles(() => StyleSheet.create({
   mediaTile: { overflow: "hidden", backgroundColor: COLORS.softSurface, borderRadius: 14 },
   mediaHalf: { width: "49%", height: 184 },
   mediaWide: { width: "100%", height: 230 },
-  videoFallback: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface },
+  videoFallback: { ...BLOOM_ABSOLUTE_FILL, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.softSurface },
   videoOverlay: { position: "absolute", left: 10, bottom: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0,0,0,0.46)", alignItems: "center", justifyContent: "center" },
-  remainingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(44,27,34,0.48)", alignItems: "center", justifyContent: "center" },
+  remainingOverlay: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(44,27,34,0.48)", alignItems: "center", justifyContent: "center" },
   remainingText: { color: COLORS.white, fontSize: 28, fontWeight: "900" },
   personLinks: { paddingHorizontal: 16, paddingBottom: 14, marginTop: 10, gap: 7 },
   personLinksLabel: { flexDirection: "row", alignItems: "center", gap: 5 },

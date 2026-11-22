@@ -33,6 +33,7 @@ import {
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { postFamilyGraphMutation } from "./familyGraphCloudGateway";
+import { concurrentMarriageConflict } from "./familyGraphMarriageGuard";
 
 const nowIso = () => new Date().toISOString();
 
@@ -443,6 +444,12 @@ const directFamilyGraphMutationService = {
         cleanId(input.personBId, "RELATIONSHIP_INVALID"),
       );
       const relationshipId = getPartnerRelationshipId(personAId, personBId);
+      if ((input.partnerStatus ?? "partner") === "married") {
+        const existingMarriages = await listNormalizedRelationships(familyId);
+        if (concurrentMarriageConflict(existingMarriages, personAId, personBId, relationshipId)) {
+          throw new AppError("GRAPH_INTEGRITY_BLOCK", "GRAPH");
+        }
+      }
       const relationship: FamilyRelationship = {
         id: relationshipId,
         familyId,
@@ -568,6 +575,8 @@ const directFamilyGraphMutationService = {
     const relRef = doc(db, FIRESTORE_PATHS.familyRelationship(familyId, relationshipId));
 
     try {
+      const savedRelationships = patch.partnerStatus === "married"
+        ? await listNormalizedRelationships(familyId) : [];
       await runTransaction(db, async (tx) => {
         const snap = await tx.get(relRef);
         if (!snap.exists()) throw new AppError("RELATIONSHIP_NOT_FOUND", "RELATIONSHIP");
@@ -577,6 +586,9 @@ const directFamilyGraphMutationService = {
           familyId,
         );
         if (current.type !== "partner") throw new AppError("RELATIONSHIP_INVALID", "RELATIONSHIP");
+        if (patch.partnerStatus === "married" && concurrentMarriageConflict(
+          savedRelationships, current.personAId, current.personBId, current.id,
+        )) throw new AppError("GRAPH_INTEGRITY_BLOCK", "GRAPH");
         const next: FamilyRelationship = {
           ...current,
           partnerStatus: patch.partnerStatus === undefined ? current.partnerStatus : (patch.partnerStatus ?? "partner"),
@@ -717,3 +729,42 @@ export const familyGraphMutationService = {
   updatePartnerRelationship: (...args: Parameters<typeof directFamilyGraphMutationService.updatePartnerRelationship>) => activeMutationService().updatePartnerRelationship(...args),
   deleteRelationship: (...args: Parameters<typeof directFamilyGraphMutationService.deleteRelationship>) => activeMutationService().deleteRelationship(...args),
 };
+
+/** Android graph detail edit. Rules allow subtype changes but never endpoint changes.
+ * Direct Firestore path deliberately used for this specific metadata-only action;
+ * administrators are independently verified by deployed firestore.rules.
+ */
+export async function updateFamilyGraphParentChildSubtypeDirect(
+  familyIdInput: string,
+  relationshipIdInput: string,
+  nextSubtype: ParentChildSubtype,
+) {
+  requireUser();
+  const familyId = cleanId(familyIdInput, "RELATIONSHIP_INVALID");
+  const relationshipId = cleanId(relationshipIdInput, "RELATIONSHIP_INVALID");
+  if (!["biological", "adoptive", "step", "unknown"].includes(nextSubtype)) {
+    throw new AppError("RELATIONSHIP_INVALID", "RELATIONSHIP");
+  }
+  const db = getFirestore();
+  const ref = doc(db, FIRESTORE_PATHS.familyRelationship(familyId, relationshipId));
+  try {
+    await runTransaction(db, async (tx) => {
+      const saved = await tx.get(ref);
+      if (!saved.exists()) throw new AppError("RELATIONSHIP_NOT_FOUND", "RELATIONSHIP");
+      const rel = normalizeFamilyRelationship(saved.data() as Record<string, unknown>, saved.id, familyId);
+      if (rel.type !== "parent_child") throw new AppError("RELATIONSHIP_INVALID", "RELATIONSHIP");
+      if (nextSubtype === "biological") {
+        const [parent, child] = await Promise.all([
+          tx.get(doc(db, FIRESTORE_PATHS.familyPerson(familyId, rel.personAId))),
+          tx.get(doc(db, FIRESTORE_PATHS.familyPerson(familyId, rel.personBId))),
+        ]);
+        if (!parent.exists() || !child.exists()) throw new AppError("PERSON_NOT_FOUND", "PERSON");
+        assertBiologicalBirthOrder(nextSubtype, parent.data() as Record<string, unknown>, child.data() as Record<string, unknown>);
+      }
+      tx.update(ref, { subtype: nextSubtype, updatedAt: nowIso() });
+    });
+    return { relationshipId };
+  } catch (error) {
+    return toDirectFirestoreError(error);
+  }
+}

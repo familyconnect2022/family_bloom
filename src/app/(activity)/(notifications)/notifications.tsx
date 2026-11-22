@@ -251,7 +251,7 @@ export default function Notifications() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader
         eyebrow="CHUYỆN TRONG NHÀ"
         title="Có gì mới trong nhà?"

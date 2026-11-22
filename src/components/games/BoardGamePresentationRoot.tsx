@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -291,7 +292,7 @@ export function BoardGamePresentationRoot() {
 
 const styles = createBloomStyles(() => StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...BLOOM_ABSOLUTE_FILL,
     zIndex: 10000,
     elevation: 10000,
   },
@@ -394,7 +395,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
     fontWeight: "800",
   },
   fullChrome: {
-    ...StyleSheet.absoluteFillObject,
+    ...BLOOM_ABSOLUTE_FILL,
     zIndex: 20,
     elevation: 20,
   },

@@ -181,7 +181,7 @@ export const homeGameService = {
     const ref = doc(collection(db, sessionsPath(input.familyId)));
     const createdAt = nowIso();
     const seed = `${input.familyId}:${ref.id}:${createdAt}`;
-    let memoryPreview = { caption: "", mediaUrl: "", mediaType: "none" as const };
+    let memoryPreview: { caption: string; mediaUrl: string; mediaType: "none" | "image" | "video" } = { caption: "", mediaUrl: "", mediaType: "none" };
     let memorySecret: Pick<HomeGameSecret, "memoryAuthorUid" | "memoryAuthorName" | "memoryMomentId"> | null = null;
 
     // Moment lookup stays outside the Firestore transaction so the transaction

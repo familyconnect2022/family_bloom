@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,9 @@ import { BloomChipButton } from "../ui/BloomButtonComponents";
 import { BloomTextInput } from "../ui/BloomInputComponents";
 import { FamilyGraphPersonSheet } from "./FamilyGraphPersonSheet";
 import { FamilyGraphPortrait } from "./FamilyGraphPortrait";
+import { FamilyGraphUnionLines, FamilyGraphPrivateChildLabel } from "./FamilyGraphUnionLines";
+import { FamilyGraphRelationPlate } from "./FamilyGraphRelationPlate";
+import { formatFamilyGraphNodeName, getFamilyGraphPlateLabel } from "./familyGraphNodePresentation";
 import { FAMILY_GRAPH_NODE_3D, familyGraphNodeGender } from "./familyGraphNode3dAssets";
 import { applyMainFamilyGraphPanDelta, applyMainFamilyGraphPinchScale } from "./familyGraphMainCamera";
 import type { FamilyGraphRenderScene } from "./familyGraphSceneBuilder";
@@ -92,7 +96,7 @@ const NODE_ORNAMENT_OUTSIDE_RATIO = 0.4;
 // avoids compressing, stretching or cover-cropping the artwork on a portrait node.
 const CONNECTOR_GAP = 8;
 const SIDE_CONNECTOR_GAP = 3;
-const CONNECTOR_RADIUS = 6;
+const CONNECTOR_RADIUS = 8;
 const FAMILY_GRAPH_RENDER_CONFIG = APP_CONFIG_DEFAULTS.familyGraph.render;
 const FAMILY_GRAPH_LAYOUT_CONFIG = APP_CONFIG_DEFAULTS.familyGraph.layout;
 const VIEWPORT_CAMERA_CELL_SIZE = FAMILY_GRAPH_RENDER_CONFIG.viewportCameraCellSize;
@@ -155,9 +159,11 @@ type FamilyGraphPrototypeProps = {
   defaultFocusId?: string | null;
   canEdit?: boolean;
   onEditPerson?: (personId: string) => void;
+  onProposePerson?: (personId: string) => void;
   onAddPerson?: () => void;
   onDeletePerson?: (personId: string) => void | Promise<void>;
   onDeleteRelationship?: (relationshipId: string) => void | Promise<void>;
+  onEditRelationship?: (relationshipId: string, personId: string) => void;
   canvasWidth?: number;
   canvasHeight?: number;
   resolveRelationship?: (sourcePersonId: string, targetPersonId: string) => FamilyGraphVietnameseRelationship | null;
@@ -177,6 +183,11 @@ type FamilyGraphPrototypeProps = {
   headerMode?: "full" | "controls" | "none";
   /** Fit the whole bounded branch into the viewport on first paint. */
   autoFitOnMount?: boolean;
+  /** Web-parity main-tree UI; keeps existing geometry, gestures and detail actions. */
+  webParity?: boolean;
+  showAdvancedControls?: boolean;
+  /** Incremented by the route's Search button; opens the existing functional search modal. */
+  searchRequest?: number;
   /** P2.7: fired only after layout, progressive mount, camera fit and two paint frames. */
   onVisualReady?: () => void;
 };
@@ -191,9 +202,11 @@ export function FamilyGraphPrototype({
   defaultFocusId,
   canEdit = false,
   onEditPerson,
+  onProposePerson,
   onAddPerson,
   onDeletePerson,
   onDeleteRelationship,
+  onEditRelationship,
   canvasWidth,
   canvasHeight,
   resolveRelationship,
@@ -206,6 +219,9 @@ export function FamilyGraphPrototype({
   onRenderedCountChange,
   headerMode = "full",
   autoFitOnMount = false,
+  webParity = false,
+  showAdvancedControls = false,
+  searchRequest = 0,
   onVisualReady,
 }: FamilyGraphPrototypeProps) {
   const __a3Colors = useA3Theme().colors;
@@ -262,6 +278,12 @@ export function FamilyGraphPrototype({
   const [detailSheetYieldPending, setDetailSheetYieldPending] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const lastSearchRequest = useRef(searchRequest);
+  useEffect(() => {
+    if (searchRequest > lastSearchRequest.current) setSearchVisible(true);
+    lastSearchRequest.current = searchRequest;
+  }, [searchRequest]);
+  const [menuPersonId, setMenuPersonId] = useState<string | null>(null);
   const [viewport, setViewport] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [retainedPersonIds, setRetainedPersonIds] = useState<Set<string>>(() =>
     runtimeHydrationRef.current?.retainedPersonIds ?? new Set(),
@@ -325,7 +347,12 @@ export function FamilyGraphPrototype({
         const other = peopleById.get(otherId);
         const otherName = other?.displayName ?? "Thành viên";
         if (connection.type === "partner") {
-          return { id: connection.id, type: connection.type, label: `Vợ/Chồng · ${otherName}` } as const;
+          const label = connection.partnerStatus === "married" ? "Vợ chồng"
+            : connection.partnerStatus === "partner" ? "Bạn đời"
+            : connection.partnerStatus === "divorced" ? "Đã ly hôn"
+            : connection.partnerStatus === "separated" ? "Ly thân"
+            : "Quan hệ đôi";
+          return { id: connection.id, type: connection.type, label: `${label} · ${otherName}` } as const;
         }
         if (connection.fromId === detailPersonId) {
           return { id: connection.id, type: connection.type, label: `Con · ${otherName}` } as const;
@@ -937,6 +964,24 @@ export function FamilyGraphPrototype({
       // Production BSH scene owns the entry camera. Renderer only maps the
       // precomputed canvas point to the measured viewport; it never fit-alls a
       // Focus branch or re-derives coordinates while drawing.
+      if (webParity && autoFitOnMount && visiblePeople.length) {
+        const minX = Math.min(...visiblePeople.map((item) => item.x));
+        const maxX = Math.max(...visiblePeople.map((item) => item.x + FAMILY_GRAPH_CANVAS.nodeWidth));
+        const minY = Math.min(...visiblePeople.map((item) => item.y));
+        const maxY = Math.max(...visiblePeople.map((item) => item.y + NODE_CARD_HEIGHT));
+        const contentWidth = Math.max(1, maxX - minX);
+        const contentHeight = Math.max(1, maxY - minY);
+        const safeWidth = Math.max(1, next.width * 0.88);
+        const safeHeight = Math.max(1, next.height * 0.68);
+        const fitScale = Math.max(MIN_SAFE_SCALE, Math.min(0.50, safeWidth / contentWidth, safeHeight / contentHeight));
+        applyAnchorCamera(
+          { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+          { x: next.width * 0.5, y: next.height * 0.41 },
+          fitScale,
+        );
+        return;
+      }
+
       if (scene?.initialCamera) {
         applyAnchorCamera(
           scene.initialCamera.canvasPoint,
@@ -992,7 +1037,7 @@ export function FamilyGraphPrototype({
         INITIAL_SCALE,
       );
     }
-  }, [autoFitOnMount, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, peopleById, scene, setPan, setScaleValue, overviewCenter, viewAnchorPersonId, visiblePeople]);
+  }, [autoFitOnMount, webParity, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, peopleById, scene, setPan, setScaleValue, overviewCenter, viewAnchorPersonId, visiblePeople]);
 
   const handlePersonSheetDismiss = useCallback(() => {
     setDetailPersonId(null);
@@ -1105,13 +1150,13 @@ export function FamilyGraphPrototype({
         </View>
       )}
 
-      <View style={__a3_styles.modeRow}>
+      {(!webParity || showAdvancedControls) && <View style={__a3_styles.modeRow}>
         <BloomChipButton label="3 thế hệ" selected={viewMode === "3"} onPress={() => handleMode("3")} />
         <BloomChipButton label="5 thế hệ" selected={viewMode === "5"} onPress={() => handleMode("5")} />
         <BloomChipButton label="Toàn phả hệ" selected={viewMode === "all"} onPress={() => handleMode("all")} />
-      </View>
+      </View>}
 
-      {focusSubgraphPreview?.truncated && viewMode !== "all" && (
+      {!webParity && focusSubgraphPreview?.truncated && viewMode !== "all" && (
         <View style={__a3_styles.subgraphNotice}>
           <Ionicons name="leaf-outline" size={14} color={__a3Colors.primary} />
           <Text style={__a3_styles.subgraphNoticeText}>
@@ -1120,7 +1165,7 @@ export function FamilyGraphPrototype({
         </View>
       )}
 
-      <View style={__a3_styles.viewport} onLayout={handleViewportLayout}>
+      <View style={[__a3_styles.viewport, webParity && __a3_styles.parityViewport]} onLayout={handleViewportLayout}>
         <GestureHandlerRootView style={__a3_styles.gestureRoot}>
           <GestureDetector gesture={canvasGesture}>
             <View collapsable={false} style={StyleSheet.absoluteFill}>
@@ -1130,7 +1175,7 @@ export function FamilyGraphPrototype({
                 <Animated.View style={[__a3_styles.canvas, { width: effectiveCanvasWidth, height: effectiveCanvasHeight }, canvasScaleStyle]}>
                   <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPersonId(null)} />
 
-                  {Array.from(new Set(visiblePeople.map((person) => person.generation))).map((generation) => {
+                  {!webParity && Array.from(new Set(visiblePeople.map((person) => person.generation))).map((generation) => {
                     const y = visiblePeople.find((person) => person.generation === generation)?.y ?? 0;
                     return (
                       <View key={`generation-${generation}`} style={[__a3_styles.generationTag, { top: y + 18 }]}>
@@ -1150,6 +1195,14 @@ export function FamilyGraphPrototype({
                     mountedPersonIds={viewportPersonIds}
                   />
 
+                  {scene?.geometry.partnerUnits.flatMap((unit) => unit.privateChildren)
+                    .filter((item) => viewportPersonIds.has(item.childId))
+                    .map((item) => {
+                      const child=peopleById.get(item.childId);
+                      const parent=peopleById.get(item.parentId);
+                      return child && parent?<FamilyGraphPrivateChildLabel key={`private:${item.childId}`}
+                        child={child} parent={parent}/>:null;
+                    })}
                   {viewportPeople.map((person) => (
                     <PersonNode
                       key={person.id}
@@ -1159,8 +1212,11 @@ export function FamilyGraphPrototype({
                       focused={highlightedPersonId === person.id}
                       inFocusedBranch={activeBranchIds.has(person.id)}
                       branchMode={branchMode}
+                      webParity={webParity}
+                      onOpenMenu={setMenuPersonId}
                       onPressPerson={handlePersonPress}
                       onOpenNote={handleNodeNote}
+                      relationLabel={getFamilyGraphPlateLabel(resolveRelationship?.(person.id, highlightedPersonId ?? viewAnchorPersonId ?? initialFocusId ?? person.id)?.label, person.id === (highlightedPersonId ?? viewAnchorPersonId ?? initialFocusId))}
                     />
                   ))}
                 </Animated.View>
@@ -1168,7 +1224,7 @@ export function FamilyGraphPrototype({
             </View>
           </GestureDetector>
 
-          <Pressable
+          {(!webParity || showAdvancedControls) && <Pressable
             accessibilityLabel={branchMode ? "Tắt chế độ mở nhánh" : "Bật chế độ mở nhánh"}
             accessibilityState={{ selected: branchMode }}
             onPress={() => {
@@ -1183,9 +1239,9 @@ export function FamilyGraphPrototype({
           >
             <Ionicons name="git-network-outline" size={24} color={branchMode ? __a3Colors.white : __a3Colors.primaryText} />
             <Text style={[__a3_styles.branchModeButtonText, branchMode && __a3_styles.branchModeButtonTextActive]}>Nhánh</Text>
-          </Pressable>
+          </Pressable>}
 
-          <View style={__a3_styles.zoomControls}>
+          {(!webParity || showAdvancedControls) && <View style={__a3_styles.zoomControls}>
             <Pressable
               accessibilityLabel="Quay về người đang xem"
               onPress={() => {
@@ -1196,17 +1252,46 @@ export function FamilyGraphPrototype({
             >
               <Ionicons name="locate" size={23} color={__a3Colors.primary} />
             </Pressable>
-          </View>
+          </View>}
 
-          <View pointerEvents="none" style={__a3_styles.legend}>
+          {!webParity && <View pointerEvents="none" style={__a3_styles.legend}>
             <LegendDot color={__a3Colors.positive} label="Đang sống" />
             <LegendIcon icon="leaf-outline" label="Đã mất" />
             <LegendIcon icon="link-outline" label="Đã liên kết" />
-          </View>
+          </View>}
         </GestureHandlerRootView>
       </View>
 
       </View>
+
+      <Modal transparent visible={!!menuPersonId} animationType="fade" onRequestClose={() => setMenuPersonId(null)}>
+        <View style={__a3_styles.parityMenuShade}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setMenuPersonId(null)} accessibilityLabel="Đóng menu người thân" />
+          <View style={__a3_styles.parityMenuCard}>
+            <Text style={__a3_styles.parityMenuTitle} numberOfLines={2}>{peopleById.get(menuPersonId ?? "")?.displayName ?? "Người thân"}</Text>
+            <Pressable accessibilityRole="button" onPress={() => { const id = menuPersonId; setMenuPersonId(null); if (id) { setSelectedPersonId(id); setDetailPersonId(id); } }} style={__a3_styles.parityMenuItem}>
+              <Ionicons name="person-circle-outline" size={21} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityMenuText}>Xem chi tiết</Text>
+            </Pressable>
+            {canEdit && onEditPerson && <Pressable accessibilityRole="button" onPress={() => { const id = menuPersonId; setMenuPersonId(null); if (id) onEditPerson(id); }} style={__a3_styles.parityMenuItem}>
+              <Ionicons name="create-outline" size={21} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityMenuText}>Chỉnh sửa người</Text>
+            </Pressable>}
+            {canEdit && onAddPerson && <Pressable accessibilityRole="button" onPress={() => { setMenuPersonId(null); onAddPerson(); }} style={__a3_styles.parityMenuItem}>
+              <Ionicons name="git-branch-outline" size={21} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityMenuText}>Nối / thêm người</Text>
+            </Pressable>}
+            {!canEdit && onProposePerson && <Pressable accessibilityRole="button" onPress={() => { const id = menuPersonId; setMenuPersonId(null); if (id) onProposePerson(id); }} style={__a3_styles.parityMenuItem}>
+              <Ionicons name="create-outline" size={21} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityMenuText}>Mở trang đề xuất</Text>
+            </Pressable>}
+            {onOpenFocus && <Pressable accessibilityRole="button" onPress={() => { const id = menuPersonId; setMenuPersonId(null); if (id) onOpenFocus(id); }} style={__a3_styles.parityMenuItem}>
+              <Ionicons name="scan-outline" size={21} color={__a3Colors.primary} />
+              <Text style={__a3_styles.parityMenuText}>Focus nhánh này</Text>
+            </Pressable>}
+          </View>
+        </View>
+      </Modal>
 
       <Modal transparent visible={!!notePerson} animationType="fade" onRequestClose={() => setOpenNodeNote(null)}>
         <View style={__a3_styles.noteOverlay}>
@@ -1255,6 +1340,7 @@ export function FamilyGraphPrototype({
         onEditPerson={onEditPerson}
         onDeletePerson={onDeletePerson}
         onDeleteRelationship={onDeleteRelationship}
+        onEditRelationship={onEditRelationship}
         directRelationships={detailDirectRelationships}
         familyId={familyId}
         showPrototypeNote={people === undefined}
@@ -1319,8 +1405,11 @@ const PersonNode = memo(function PersonNode({
   focused,
   inFocusedBranch,
   branchMode,
+  webParity,
+  onOpenMenu,
   onPressPerson,
   onOpenNote,
+  relationLabel,
 }: {
   person: FamilyGraphPrototypePerson;
   memberAvatarUrl?: string | null;
@@ -1328,8 +1417,11 @@ const PersonNode = memo(function PersonNode({
   focused: boolean;
   inFocusedBranch: boolean;
   branchMode: boolean;
+  webParity: boolean;
+  onOpenMenu: (personId: string) => void;
   onPressPerson: (personId: string) => void;
   onOpenNote: (personId: string, pageX: number, pageY: number) => void;
+  relationLabel: string | null;
 }) {
   const __a3Theme = useA3Theme();
   const __a3Colors = __a3Theme.colors;
@@ -1347,19 +1439,22 @@ const PersonNode = memo(function PersonNode({
   const hasNote = typeof person.description === "string" && person.description.trim().length > 0;
   // 5–6 Vietnamese name words must fit the name-only region even with Android's
   // different native text metrics (adjustsFontSizeToFit is not reliable there).
-  const nameLength = person.displayName.trim().length;
-  const nameFontSize = nameLength >= 48 ? 9.8 : nameLength >= 36 ? 10.4 : 11.2;
+  const shownName = formatFamilyGraphNodeName(person.displayName);
+  const nameLength = shownName.length;
+  const nameFontSize = nameLength >= 34 ? 10.1 : nameLength >= 25 ? 10.6 : 11.2;
 
   return (
     <View style={[__a3_styles.nodeWrap, { left: person.x, top: person.y }]}>
+      {focused && <View pointerEvents="none" style={__a3_styles.focusMistOuter}><Image source={nodeColors.mist} fadeDuration={0} resizeMode="contain" style={{ width: "100%", height: "100%" }} /></View>}
       <Pressable
-        accessibilityLabel={branchMode ? `Mở nhánh ${person.displayName}` : `Xem thông tin ${person.displayName}`}
+        accessibilityLabel={`${branchMode ? 'Mở nhánh' : 'Xem thông tin'} ${person.displayName}${relationLabel ? `, ${relationLabel}` : ''}`}
         onPress={() => onPressPerson(person.id)}
         style={({ pressed }) => [
           __a3_styles.nodeCard,
           { backgroundColor: nodeColors.bg, borderColor: nodeColors.edge, shadowColor: palette.shadow,
             shadowOpacity: dimmed ? 0.05 : palette.shadowOpacity, elevation: palette.elevation },
           selected && __a3_styles.nodeCardSelected,
+          focused && __a3_styles.nodeCardLifted,
           pressed && __a3_styles.nodePressed,
         ]}
       >
@@ -1399,18 +1494,26 @@ const PersonNode = memo(function PersonNode({
           adjustsFontSizeToFit
           minimumFontScale={0.68}
           ellipsizeMode="tail"
-        >{person.displayName}</Text>
+        >{shownName}</Text>
         <Text allowFontScaling={false} numberOfLines={1} style={[__a3_styles.nodeYears, { color: nodeColors.text, backgroundColor: nodeColors.bg }, dimmed && __a3_styles.nodeYearsDimmed]}>
           {person.birthYear ?? "?"} {person.deathYear ? `– ${person.deathYear}` : person.lifeStatus === "living" ? "– nay" : ""}
         </Text>
       </Pressable>
+      {webParity && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Tùy chọn của ${person.displayName}`}
+          onPress={() => onOpenMenu(person.id)}
+          style={({ pressed }) => [__a3_styles.parityNodeMenu, pressed && __a3_styles.pressed]}
+        >
+          <Ionicons name="ellipsis-horizontal" size={13} color={nodeColors.accent} />
+        </Pressable>
+      )}
       {/* Two independent RGBA ornaments: ~40% outside / ~60% inside the card.
           They are outside the Pressable's border/clip context, so the 3-D details
           remain visible at native scale instead of being cropped by borderRadius.
           The art is not interactive and never intercepts Detail or Note taps. */}
-      <View pointerEvents="none" collapsable={false} style={__a3_styles.nodeTopOrnamentWrap}>
-        <Image source={nodeFrame.top} resizeMode="contain" fadeDuration={0} style={__a3_styles.nodeTopOrnamentImage} />
-      </View>
+      <FamilyGraphRelationPlate label={relationLabel} tint={nodeColors.edge} ink={nodeColors.text} surface={nodeColors.bg} />
       <View pointerEvents="none" collapsable={false} style={__a3_styles.nodeBottomOrnamentWrap}>
         <Image source={nodeFrame.bottom} resizeMode="contain" fadeDuration={0} style={__a3_styles.nodeBottomOrnamentImage} />
       </View>
@@ -1433,8 +1536,11 @@ const PersonNode = memo(function PersonNode({
   previous.person === next.person
   && previous.selected === next.selected
   && previous.focused === next.focused
+  && previous.relationLabel === next.relationLabel
   && previous.inFocusedBranch === next.inFocusedBranch
   && previous.branchMode === next.branchMode
+  && previous.webParity === next.webParity
+  && previous.onOpenMenu === next.onOpenMenu
   && previous.onPressPerson === next.onPressPerson
   && previous.onOpenNote === next.onOpenNote
 ));
@@ -1506,39 +1612,17 @@ const PreparedRetainedGraphConnectors = memo(function PreparedRetainedGraphConne
         const partnersMounted = mountedPersonIds.has(partnerA.id) && mountedPersonIds.has(partnerB.id);
         if (!partnersMounted) return null;
         const partnerActive = activeBranchIds.has(partnerA.id) && activeBranchIds.has(partnerB.id);
-        const hasMountedChild = unit.sharedChildIds.some((childId) => mountedPersonIds.has(childId));
-        return (
-          <View key={`prepared-union:${unit.id}`} pointerEvents="none" style={StyleSheet.absoluteFill}>
-            <PreparedPartnerConnector
-              partnerA={partnerA}
-              partnerB={partnerB}
-              active={partnerActive}
-                  />
-            {hasMountedChild ? (
-              <PreparedUnionStemConnector
-                partnerA={partnerA}
-                partnerB={partnerB}
-                active={partnerActive}
-                      />
-            ) : null}
-            {unit.sharedChildIds.map((childId) => {
-              if (!mountedPersonIds.has(childId)) return null;
-              const child = peopleById.get(childId);
-              if (!child) return null;
-              return (
-                <PreparedUnionChildConnector
-                  key={`prepared-union-child:${unit.id}:${childId}`}
-                  partnerA={partnerA}
-                  partnerB={partnerB}
-                  child={child}
-                  active={partnerActive && activeBranchIds.has(childId)}
-                            canvasWidth={canvasWidth}
-                  laneOffset={geometry.routingPlan.laneOffsetByChildId.get(childId) ?? 0}
-                />
-              );
-            })}
-          </View>
-        );
+        const childIds = [...unit.sharedChildIds, ...unit.privateChildren.map((item) => item.childId)];
+        const children = childIds
+          .filter((childId) => mountedPersonIds.has(childId))
+          .map((id) => peopleById.get(id))
+          .filter((child): child is FamilyGraphPrototypePerson => Boolean(child))
+          .sort((left, right) => left.x - right.x || left.id.localeCompare(right.id));
+        return <FamilyGraphUnionLines key={`prepared-union:${unit.id}`}
+          partnerA={partnerA} partnerB={partnerB} children={children}
+          unit={unit} active={partnerActive}
+          color={partnerActive ? "#9D6B87" : "#C8BFC8"}
+          thickness={partnerActive ? 2.3 : 1.5}/>;
       })}
       {geometry.singleParentLinks.map((link) => {
         if (!mountedPersonIds.has(link.parentId) || !mountedPersonIds.has(link.childId)) return null;
@@ -2811,6 +2895,17 @@ function LegendIcon({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; lab
 }
 
 const styles = createBloomStyles(() => StyleSheet.create({
+  parityNodeMenu: {
+    position: "absolute", right: -4, top: -5, zIndex: 15,
+    width: 25, height: 25, borderRadius: 14,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: "center", justifyContent: "center", elevation: 5,
+  },
+  parityMenuShade: { flex: 1, justifyContent: "center", alignItems: "center", padding: 26, backgroundColor: "rgba(25,18,28,0.30)" },
+  parityMenuCard: { width: "100%", maxWidth: 360, padding: 18, borderRadius: 24, backgroundColor: COLORS.surface, gap: 5 },
+  parityMenuTitle: { color: COLORS.primaryText, fontSize: 17, fontWeight: "900", paddingHorizontal: 6, paddingVertical: 10 },
+  parityMenuItem: { minHeight: 51, borderRadius: 14, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 12 },
+  parityMenuText: { color: COLORS.primaryText, fontSize: 14, fontWeight: "700" },
   baseGraphLayer: { flex: 1 },
   root: { flex: 1 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 10, paddingHorizontal: 18 },
@@ -2879,6 +2974,10 @@ const styles = createBloomStyles(() => StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  parityViewport: {
+    minHeight: 0, marginTop: 0, marginHorizontal: 0,
+    borderRadius: 0, borderWidth: 0,
+  },
   gestureRoot: {
     flex: 1,
   },
@@ -2922,11 +3021,12 @@ const styles = createBloomStyles(() => StyleSheet.create({
   nodeCard: {
     width: NODE_CARD_WIDTH,
     height: NODE_CARD_HEIGHT,
+    zIndex: 1,
     borderRadius: 19,
     borderWidth: 1.6,
     borderColor: COLORS.border,
     alignItems: "center",
-    paddingTop: 26, // Clear of the upper ornament's 20-pt inner half
+    paddingTop: 23, // Engraved plate above border; keep portrait/name readable
     paddingHorizontal: 6,
     paddingBottom: 23, // Clear of the lower ornament's 22-pt inner half
     overflow: "visible",
@@ -2934,6 +3034,13 @@ const styles = createBloomStyles(() => StyleSheet.create({
     shadowRadius: 8,
   },
   nodeCardSelected: { transform: [{ scale: 1.018 }] },
+  nodeCardLifted: { transform: [{ translateY: -3 }, { scale: 1.025 }] },
+  focusMistOuter: {
+    position: 'absolute', zIndex: 0, top: -35, left: -30,
+    width: FAMILY_GRAPH_CANVAS.nodeWidth + 60,
+    height: NODE_CARD_HEIGHT + 78,
+    opacity: 0.92,
+  },
   nodePressed: { opacity: 0.74 },
   avatarFrame: {
     width: AVATAR_SIZE,
@@ -3185,7 +3292,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   subgraphNoticeActionText: { color: COLORS.primaryText, fontSize: 10.5, fontWeight: "900" },
   pressed: { opacity: 0.62 },
   searchModalRoot: { flex: 1, justifyContent: "flex-start", paddingTop: 90, paddingHorizontal: 16 },
-  searchBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(62,45,51,0.28)" },
+  searchBackdrop: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(62,45,51,0.28)" },
   searchSheet: { borderRadius: 26, backgroundColor: COLORS.surface, padding: 16, maxHeight: "72%" },
   searchHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   searchTitle: { color: COLORS.primaryText, fontSize: 17, fontWeight: "900" },

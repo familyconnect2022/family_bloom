@@ -1,0 +1,17 @@
+FAMILY BLOOM / NODE 3D R4 — RELEASE NOTES (2026-11-04)
+
+BASELINE: user-approved R3 FULL CODE; R2 is accepted when matching its exact pre-release hashes.
+
+CHANGE: the three original approved 3D decorations are kept byte-for-byte unchanged.
+Female: pink 3D roses and leaves. Male: green 3D leaves, no flowers. Unspecified: purple mixed pink-and-blue roses.
+Each frame uses only TWO transparent cap images (TOP and BOTTOM) positioned absolutely *outside the card content*, on the OUTER wrapper. They overhang by 40% to avoid touching the next generation row; 60% is inside. The sides are drawn with native border; the cap images NEVER resize disproportionately or clip to a rounded card background.
+
+GEOMETRY: node slot 144x176, visible card 132x176 (was 128x148 and 120x148). Both connector geometry and routing defaults use 176 height. Cache geometry version incremented 2 -> 3. Generation pitch 216 and relationship layout logic unchanged. Decoration vertical extent stays below 216 to preserve a gap between neighboring generations. NOTE: the app scales the entire graph when viewing all generations, so visual size still depends on zoom.
+
+SAFE AREA: Card top padding 26, avatar 44, name region 57 for up to 5 lines, years 14 high, lower safe padding 23, note tap 29x29 (plus hitSlop 6) at lower-right, distinct from body Detail pressable. Name font follows length (not Android text auto-fit alone). Transparent decorations do not steal touches (pointerEvents=none). No-description => no Note icon.
+
+UNMODIFIED: Person field contract uses `description`, Firestore and Rules unchanged. Person Detail continues to follow app theme. No changes to relationship algorithms, Firebase, Chess/Xiangqi, Study Corner or other features.
+
+INSTALL: extract ZIP completely to a separate folder. Open 00_MO_CAP_NHAT_FAMILY_BLOOM.cmd. Select the live Family Bloom project, confirm backup and wait for PASS. Installer validates SHA-256 exact R2/R3 baseline or R4 already applied; refuses unexpected changes; performs source backup before writes. Build/test a Release APK after installing.
+
+LIMITATION: This release is verified statically and with simulated updater installation; it has NOT been visually tested on an actual Android phone nor against live Firebase.

@@ -1,0 +1,19 @@
+FAMILY BLOOM - FB12/FB15 AUTO UPDATE - Windows
+
+1. EXTRACT the whole FULL CODE ZIP to a new separate folder. Do NOT run from inside ZIP Explorer preview.
+2. Double click: 00_MO_CAP_NHAT_FAMILY_BLOOM.cmd
+   Or run Family_Bloom_AUTO_UPDATE_FULL.bat from that extracted folder.
+3. Select the EXISTING Family Bloom app folder, not the extracted source.
+4. Wait for CHECK PASS, confirm Y, and wait for PASS. It backs up before writing.
+5. Never choose the project folder until you are sure it has the expected baseline.
+
+If double-click immediately closes or Windows file association is broken:
+- Press Win+R, type cmd, and press Enter.
+- Type: cmd /k call "C:\PATH\TO\EXTRACTED\00_MO_CAP_NHAT_FAMILY_BLOOM.cmd"
+- Replace C:\PATH\TO\EXTRACTED with the actual extracted directory.
+- The window stays open so you can photograph the full error.
+
+The automatic updater requires Node.js installed on Windows and a verified
+Hero Reading Veil or FB01-FB10 source baseline. It does not build APK.
+This repair fixes the CMD parser issue in the update BAT and synchronizes
+the expected SHA-256 with the updated installer. App source is unchanged.

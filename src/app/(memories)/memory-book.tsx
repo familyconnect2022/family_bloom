@@ -102,7 +102,7 @@ export default function MemoryBookScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background} keyboardSafe>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader
         eyebrow="KỶ YẾU BLOOM"
         title={scope === "person" ? `Câu chuyện của ${personName}` : "Cuốn sách của Nhà Mình"}

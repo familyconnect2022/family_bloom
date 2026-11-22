@@ -229,7 +229,7 @@ export default function HomeTimeCapsuleComposeScreen() {
 
   return (
     <View style={__a3_styles.root}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomKeyboardScreen contentContainerStyle={__a3_styles.scrollContent}>
         <BloomHeroHeader
           eyebrow={editId ? "CHỈNH SỬA HỘP THỜI GIAN" : "TẠO HỘP THỜI GIAN"}

@@ -490,6 +490,15 @@ service cloud.firestore {
     // Family Bloom M3: verified Moment lifecycle.
     // Only Firebase Admin on Vercel writes /momentMediaUploads. A signed upload
     // must be checked against that record before attaching new media.
+    // Session Gateway Admin-SDK-only state. Never expose leases to client SDKs.
+    // This does not revoke old Firebase ID tokens; global token binding is a separate migration.
+    match /bloom_session_private_v1/{uid} {
+      allow read, write: if false;
+    }
+    match /bloom_session_private_v2/{uid} {
+      allow read, write: if false;
+    }
+
     match /momentMediaUploads/{assetId} {
       allow read, write: if false;
     }

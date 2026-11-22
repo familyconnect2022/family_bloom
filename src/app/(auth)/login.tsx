@@ -28,7 +28,8 @@ export default function Login() {
 
   
   const router = useRouter();
-  const { loginWithGoogle, sendPhoneCode, isLoadingPhone } = useAuth();
+  const { loginWithGoogle, sendPhoneCode, isLoadingPhone, singleSessionNotice,
+    googleLoginPhase, googleLoginNotice } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const googleBusyRef = useRef(false);
@@ -50,7 +51,7 @@ export default function Login() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomKeyboardScreen contentContainerStyle={__a3_styles.container}>
         <BloomRouteEntrance kind="login">
         <BloomHeroHeader
@@ -72,6 +73,12 @@ export default function Login() {
             <View style={__a3_styles.miniBloom}><Ionicons name="flower-outline" size={22} color={__a3Colors.primary} /></View>
           </View>
 
+          {!!singleSessionNotice && (
+            <Text accessibilityRole="alert" style={__a3_styles.sessionNotice}>{singleSessionNotice}</Text>
+          )}
+          {!!googleLoginNotice && (
+            <Text accessibilityRole="alert" style={__a3_styles.sessionNotice}>{googleLoginNotice}</Text>
+          )}
           <BloomTextInput
             value={phoneNumber}
             onChangeText={setPhoneNumber}
@@ -101,6 +108,14 @@ export default function Login() {
             isLoading={isLoadingGoogle}
             onPress={handleGoogle}
           />
+          {isLoadingGoogle && (
+            <Text accessibilityLiveRegion="polite" style={__a3_styles.loginProgress}>
+              {googleLoginPhase === 'play-services' ? 'Đang kết nối dịch vụ Google…'
+                : googleLoginPhase === 'account-picker' ? 'Đang chờ chọn tài khoản Google…'
+                : googleLoginPhase === 'firebase' ? 'Đang xác thực với Firebase…'
+                : 'Đang chuẩn bị đăng nhập…'}
+            </Text>
+          )}
           <Text style={__a3_styles.promise}>Bloom chỉ dùng thông tin cần thiết để giữ đúng ngôi nhà và kỷ niệm của bạn.</Text>
         </View>
         </BloomRouteEntrance>
@@ -130,10 +145,14 @@ const styles = createBloomStyles(() => StyleSheet.create({
   title: { fontSize: 25, fontWeight: "900", color: COLORS.primaryText, letterSpacing: -0.4 },
   subtitle: { marginTop: 5, fontSize: 13.5, color: COLORS.secondaryText, fontWeight: "600" },
   inputFlag: { width: 24, height: 22, borderRadius: 5 },
-  primaryButton: { width: "100%", marginTop: 2 },
+  // Login-only: on some Android GPUs an elevated, non-clipped pill draws square/white corner artifacts.
+  // Clip the coloured surface to a true capsule and disable native elevation/shadow here only.
+  primaryButton: { width: "100%", marginTop: 2, borderRadius: 999, overflow: "hidden", elevation: 0, shadowOpacity: 0, shadowRadius: 0 },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 18 },
   divider: { flex: 1, height: 1, backgroundColor: COLORS.border },
   orText: { color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "900", letterSpacing: 0.9 },
-  googleButton: { width: "100%" },
+  googleButton: { width: "100%", borderRadius: 999, overflow: "hidden", elevation: 0, shadowOpacity: 0, shadowRadius: 0 },
+  sessionNotice: { marginBottom: 12, fontSize: 13, lineHeight: 20, color: COLORS.primaryText },
+  loginProgress: { marginTop: 10, textAlign: 'center', fontSize: 12, color: COLORS.secondaryText },
   promise: { marginTop: 16, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, textAlign: "center" },
 }));

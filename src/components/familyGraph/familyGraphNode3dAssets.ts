@@ -4,16 +4,19 @@
 export const FAMILY_GRAPH_NODE_3D = {
   female: {
     top: require("../../../assets/images/family-tree/node-3d/female-top.png"),
+    mist: require("../../../assets/images/family-tree/node-3d/focus-mist-female.png"),
     bottom: require("../../../assets/images/family-tree/node-3d/female-bottom.png"),
     bg: "#FFFDF9", edge: "#D9A27D", accent: "#B64D7D", text: "#523243",
   },
   male: {
     top: require("../../../assets/images/family-tree/node-3d/male-top.png"),
+    mist: require("../../../assets/images/family-tree/node-3d/focus-mist-male.png"),
     bottom: require("../../../assets/images/family-tree/node-3d/male-bottom.png"),
     bg: "#F8FCF7", edge: "#327947", accent: "#27683B", text: "#274233",
   },
   unknown: {
     top: require("../../../assets/images/family-tree/node-3d/unknown-top.png"),
+    mist: require("../../../assets/images/family-tree/node-3d/focus-mist-unknown.png"),
     bottom: require("../../../assets/images/family-tree/node-3d/unknown-bottom.png"),
     bg: "#FCF9FF", edge: "#9962B3", accent: "#8753A7", text: "#40324F",
   },

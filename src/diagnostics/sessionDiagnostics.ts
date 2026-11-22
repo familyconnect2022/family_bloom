@@ -26,6 +26,9 @@ export type SafeDetail = Partial<{
   firebaseCode: string;
   attempt: number;
   elapsedMs: number;
+  // Geometry of the native Welcome text-safe region (no personal data).
+  width: number;
+  height: number;
   listenerReady: boolean;
   serverReady: boolean;
   cacheOnly: boolean;
@@ -171,6 +174,9 @@ function sanitizeDetail(detail?: SafeDetail): SafeDetail | undefined {
   }
   if (typeof detail.attempt === 'number' && Number.isFinite(detail.attempt)) clean.attempt = Math.min(100, Math.max(0, Math.trunc(detail.attempt)));
   if (typeof detail.elapsedMs === 'number' && Number.isFinite(detail.elapsedMs)) clean.elapsedMs = Math.min(86400000, Math.max(0, Math.trunc(detail.elapsedMs)));
+  // Only finite, clamped viewport measurements are retained for layout diagnostics.
+  if (typeof detail.width === 'number' && Number.isFinite(detail.width)) clean.width = Math.min(10000, Math.max(0, Math.trunc(detail.width)));
+  if (typeof detail.height === 'number' && Number.isFinite(detail.height)) clean.height = Math.min(10000, Math.max(0, Math.trunc(detail.height)));
   for (const name of ['listenerReady', 'serverReady', 'cacheOnly', 'profileExists', 'membershipExists', 'activeFamilyMatched'] as const) {
     if (typeof detail[name] === 'boolean') clean[name] = detail[name];
   }

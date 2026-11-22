@@ -67,6 +67,7 @@ const RootRouteGate = ({
     membershipStatus,
     showWelcome,
     welcomeReady,
+    singleSessionStatus,
     userProfile,
   } = useAuth();
   const segments = useSegments();
@@ -88,7 +89,7 @@ const RootRouteGate = ({
     if (pickingAvatar) return;
     // Protected routes may all be unavailable while identity/profile is loading.
     // Always park on the public, data-free anchor before mounting private UI.
-    const identityPending = (authStatus === "initializing" || authStatus === "error")
+    const identityPending = (authStatus === "initializing" || authStatus === "error" || singleSessionStatus === 'unavailable')
       || (!!user && (profileStatus === "loading" || profileStatus === "idle"))
       || (profileStatus === "ready" && (membershipStatus === "loading" || membershipStatus === "error" || !welcomeReady));
     // Welcome must be shown over the safe anchor, NOT over an already-mounted Home.
@@ -143,6 +144,7 @@ const RootRouteGate = ({
   }, [
     activeFamilyId,
     authStatus,
+    singleSessionStatus,
     families,
     familySelectionRequired,
     familyTransition,
@@ -186,6 +188,7 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
     membershipStatus,
     showWelcome,
     welcomeReady,
+    singleSessionStatus,
   } = useAuth();
   const [navigationStable, setNavigationStable] = useState(false);
   const [nativeStackHostLaidOut, setNativeStackHostLaidOut] = useState(false);
@@ -194,8 +197,10 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
   const pathname = usePathname();
   const { families, familySelectionRequired } = useAuth();
   const verifiedProfile = !!user && !!userProfile && userProfile.uid === user.uid
-    && authStatus === "signed-in" && profileStatus === "ready";
-  const verifiedFamily = authStatus === "signed-in" && canEnterFamilyHome({
+    && authStatus === "signed-in" && profileStatus === "ready" &&
+    (singleSessionStatus === 'off' || singleSessionStatus === 'active');
+  const verifiedFamily = authStatus === "signed-in" &&
+    (singleSessionStatus === 'off' || singleSessionStatus === 'active') && canEnterFamilyHome({
     uid: user?.uid, profileUid: userProfile?.uid, profileStatus, membershipStatus,
     activeFamilyId, verifiedMembershipFamilyIds: families.map(item => item.familyId),
     familySelectionRequired,
@@ -415,9 +420,10 @@ function FamilySession({ criticalVisualAssetsReady }: { criticalVisualAssetsRead
 
   
   
-  const { user, userProfile, activeFamilyId, families, familySelectionRequired, authStatus, profileStatus, membershipStatus } = useAuth();
+  const { user, userProfile, activeFamilyId, families, familySelectionRequired, authStatus, profileStatus, membershipStatus, singleSessionStatus } = useAuth();
   const sessionKey = useMemo(() => `${user?.uid ?? "guest"}:${activeFamilyId ?? "no-family"}`, [activeFamilyId, user?.uid]);
-  const authenticatedGameShellReady = authStatus === "signed-in" && canEnterFamilyHome({
+  const authenticatedGameShellReady = authStatus === "signed-in" &&
+    (singleSessionStatus === 'off' || singleSessionStatus === 'active') && canEnterFamilyHome({
     uid: user?.uid, profileUid: userProfile?.uid, profileStatus, membershipStatus,
     activeFamilyId, verifiedMembershipFamilyIds: families.map(item => item.familyId),
     familySelectionRequired,

@@ -411,7 +411,7 @@ export const eventService = {
     familyId: string,
     onChange: (page: EventPage) => void,
     onError?: (error: unknown) => void,
-    pageSize = DATA_LIMITS.events.realtimePage,
+    pageSize: number = DATA_LIMITS.events.realtimePage,
   ) {
     const q = query(
       collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId)),
@@ -426,7 +426,7 @@ export const eventService = {
     familyId: string,
     onChange: (page: EventPage) => void,
     onError?: (error: unknown) => void,
-    pageSize = DATA_LIMITS.events.realtimePage,
+    pageSize: number = DATA_LIMITS.events.realtimePage,
   ) {
     const q = query(
       collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId)),
@@ -458,7 +458,7 @@ export const eventService = {
     );
   },
 
-  async listMoreUpcoming(familyId: string, cursor: EventPageCursor | null, pageSize = DATA_LIMITS.events.realtimePage): Promise<EventPage> {
+  async listMoreUpcoming(familyId: string, cursor: EventPageCursor | null, pageSize: number = DATA_LIMITS.events.realtimePage): Promise<EventPage> {
     if (!cursor) return { items: [], cursor: null, hasMore: false };
     const snapshot = await getDocs(query(
       collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId)),
@@ -470,7 +470,7 @@ export const eventService = {
     return pageFromSnapshot(snapshot, pageSize, familyId);
   },
 
-  async listMorePast(familyId: string, cursor: EventPageCursor | null, pageSize = DATA_LIMITS.events.realtimePage): Promise<EventPage> {
+  async listMorePast(familyId: string, cursor: EventPageCursor | null, pageSize: number = DATA_LIMITS.events.realtimePage): Promise<EventPage> {
     if (!cursor) return { items: [], cursor: null, hasMore: false };
     const snapshot = await getDocs(query(
       collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId)),

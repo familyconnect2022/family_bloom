@@ -78,7 +78,7 @@ export default function FamilyGraphIntegrityTestScreen() {
   };
   if (!allowed) return <ScreenContainer><View style={__a3_styles.center}><Text style={__a3_styles.body}>Chỉ tài khoản developer đã xác minh được mở công cụ này.</Text><Pressable onPress={()=>router.replace('/settings' as never)}><Text style={__a3_styles.link}>Quay lại</Text></Pressable></View></ScreenContainer>;
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-    <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
+    <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
     <BloomHeroHeader eyebrow="DEVELOPER · GRAPH INTEGRITY" title="Kiểm tra tính hợp lý" subtitle="Chỉ chạy khi bấm. Không thay đổi bất kỳ hồ sơ hay quan hệ nào." variant="family" onBack={()=>router.back()} compact roundedBottom/>
     <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
       <Text style={__a3_styles.head}>Kiểm thử trên dữ liệu giả</Text>

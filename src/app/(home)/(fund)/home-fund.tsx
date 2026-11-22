@@ -686,7 +686,7 @@ export default function HomeFundScreen() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
         <BloomHeroHeader eyebrow="QUỸ GIA ĐÌNH" title="Cùng giữ quỹ nhà mình" subtitle="Một người chịu trách nhiệm chính, có thể nhờ thêm người hỗ trợ. Mọi khoản thu chi đều có lịch sử rõ ràng." variant="fund" onBack={() => router.back()} roundedBottom compact />
         <View style={__a3_styles.body}>

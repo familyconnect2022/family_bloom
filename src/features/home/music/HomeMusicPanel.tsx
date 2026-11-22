@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../../../components/ui/bloomAbsoluteFill";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -60,7 +61,7 @@ const TrackArtwork = memo(function TrackArtwork({ track, size = 46 }: { track: H
   return (
     <View style={[__a3_styles.artwork, { width: size, height: size, borderRadius: Math.round(size * 0.28) }]}> 
       {track.artworkUrl ? (
-        <Image source={{ uri: track.artworkUrl }} style={StyleSheet.absoluteFillObject} contentFit="cover" recyclingKey={track.id} transition={100} />
+        <Image source={{ uri: track.artworkUrl }} style={BLOOM_ABSOLUTE_FILL} contentFit="cover" recyclingKey={track.id} transition={100} />
       ) : (
         <Ionicons name="musical-notes" size={Math.round(size * 0.4)} color={__a3Colors.primary} />
       )}

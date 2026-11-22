@@ -66,7 +66,7 @@ export function BloomFullScreenFlow({
         if (!backDisabled) onBack();
       }}
     >
-      <StatusBar translucent backgroundColor="transparent" style={getBloomStatusBarStyle()} />
+      <StatusBar style={getBloomStatusBarStyle()} />
       <SafeAreaView style={__a3_styles.safeArea} edges={["left", "right", "bottom"]} testID={testID}>
         <BloomHeroHeader
           eyebrow={eyebrow}

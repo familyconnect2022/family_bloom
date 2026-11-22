@@ -36,9 +36,9 @@ export default function StudyQuestions(){
 
   
  const router=useRouter(),{activeFamilyId}=useAuth();
- const [items,setItems]=useState<StudyQuestion[]>([]),[cursor,setCursor]=useState<any>(),[hasMore,setHasMore]=useState(true);
+ const [items,setItems]=useState<StudyQuestion[]>([]),[cursor,setCursor]=useState<any>(undefined),[hasMore,setHasMore]=useState(true);
  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[subject,setSubject]=useState('all'),[term,setTerm]=useState('');
- const busyRef=useRef(false),cursorRef=useRef<any>(),moreRef=useRef(true),epoch=useRef(0);
+ const busyRef=useRef(false),cursorRef=useRef<any>(undefined),moreRef=useRef(true),epoch=useRef(0);
  const load=useCallback(async(reset:boolean)=>{
   if(!activeFamilyId||busyRef.current||(!reset&&!moreRef.current))return;
   const requestEpoch=epoch.current;busyRef.current=true;setLoading(true);setError('');
@@ -50,7 +50,7 @@ export default function StudyQuestions(){
   }catch(e){if(requestEpoch===epoch.current)setError(studyErrorMessage(e,'tải câu hỏi').message);}finally{busyRef.current=false;if(requestEpoch===epoch.current)setLoading(false)}
  },[activeFamilyId]);
  useFocusEffect(useCallback(()=>{
-  epoch.current+=1;const cached=activeFamilyId&&memoized.get(activeFamilyId);
+  epoch.current+=1;const cached=activeFamilyId ? memoized.get(activeFamilyId) : undefined;
   if(cached?.expires&&cached.expires>Date.now()){setItems(cached.items);}
   cursorRef.current=undefined;moreRef.current=true;setCursor(undefined);setHasMore(true);void load(true);
   return()=>{epoch.current+=1;busyRef.current=false};

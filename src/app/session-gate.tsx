@@ -31,6 +31,7 @@ export default function SessionGate() {
     authStatus, profileStatus, membershipStatus, welcomeReady,
     verificationIssue, user, userProfile, families, activeFamilyId,
     familySelectionRequired, showWelcome, dismissWelcome, retryFirebaseVerification,
+    singleSessionStatus, singleSessionNotice, logout,
   } = useAuth();
   // The SAME authoritative UID/Profile/Membership/Family/Welcome gate that
   // protects (tabs) decides whether /session-gate may display the letter.
@@ -45,7 +46,7 @@ export default function SessionGate() {
   const authFailed = authStatus === "error";
   const profileFailed = !!user && profileStatus === "error";
   const memberFailed = !!user && profileStatus === "ready" && membershipStatus === "error";
-  const failed = authFailed || profileFailed || memberFailed;
+  const failed = authFailed || profileFailed || memberFailed || singleSessionStatus === 'unavailable';
   // Cloud/Auth observer callbacks occasionally remain pending on Android after
   // Google Activity hand-off. Keep the user on the safe route, but offer retry.
   const [stalled, setStalled] = useState(false);
@@ -101,7 +102,9 @@ export default function SessionGate() {
     : profileFailed ? (verificationIssue?.kind === "permission" ? "PRO-103" : "PRO-101")
     : memberFailed ? (verificationIssue?.kind === "permission" ? "MEM-202" : "MEM-201")
     : pendingCodeForSessionGate(stageCode);
-  const detail = authFailed
+  const detail = singleSessionStatus === 'unavailable'
+    ? (singleSessionNotice || 'Chưa thể xác minh phiên đăng nhập Android.')
+    : authFailed
     ? "Chưa xác nhận được tài khoản. Bạn vẫn được giữ đăng nhập để thử lại."
     : profileFailed
       ? "Chưa tải được hồ sơ của bạn. Dữ liệu vẫn được giữ nguyên, hãy thử lại nhé."
@@ -171,11 +174,17 @@ export default function SessionGate() {
             <Ionicons name="refresh" size={18} color={__a3Colors.onPrimary} />
             <Text style={__a3_styles.retryText}>Thử lại</Text>
           </Pressable>
+          {singleSessionStatus === 'unavailable' && (
+            <Pressable accessibilityRole="button" accessibilityLabel="Đăng xuất để đăng nhập lại"
+              onPress={() => { void logout(); }} style={__a3_styles.logoutRetryButton}>
+              <Text style={__a3_styles.logoutRetryText}>Đăng xuất và đăng nhập lại</Text>
+            </Pressable>
+          )}
           <Text style={__a3_styles.footnote}>Dữ liệu hiện có được giữ nguyên. Bloom sẽ không mở nhà khi chưa xác nhận đúng tài khoản.</Text>
           <SessionDiagnosticCard
             authUser={user}
             showWhenHealthy={true}
-            onCopyReport={(report) => Clipboard.setStringAsync(report)}
+            onCopyReport={async (report) => { await Clipboard.setStringAsync(report); }}
           />
         </View>
       ) : (
@@ -208,6 +217,8 @@ const styles = createBloomStyles(() => StyleSheet.create({
   failureTitle: { fontSize: 18, fontWeight: "900", color: COLORS.primary, textAlign: "center" },
   retryButton: { minHeight: 48, paddingHorizontal: 27, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, backgroundColor: COLORS.primary, borderRadius: 15, marginTop: 5 },
   retryText: { fontSize: 15, fontWeight: "800", color: COLORS.onPrimary },
+  logoutRetryButton: { minHeight: 40, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  logoutRetryText: { fontSize: 13, fontWeight: '700', color: COLORS.primaryText },
   stageCode: { fontSize: 10, color: COLORS.secondaryText, textAlign: "center" },
   footnote: { fontSize: 11, lineHeight: 17, textAlign: "center", color: COLORS.secondaryText },
   footer: { marginTop: 24, marginBottom: 26, flexDirection: "row", gap: 7, alignItems: "center" },

@@ -320,7 +320,7 @@ export const momentsService = {
     familyId: string,
     onChange: (page: MomentPage) => void,
     onError?: (error: unknown) => void,
-    pageSize = DATA_LIMITS.moments.initialFeed,
+    pageSize: number = DATA_LIMITS.moments.initialFeed,
   ) {
     const q = query(
       collection(getFirestore(), FIRESTORE_PATHS.moments(familyId)),

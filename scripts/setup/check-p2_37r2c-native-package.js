@@ -32,8 +32,8 @@ const eas = JSON.parse(read('eas.json'));
 const localPkg = JSON.parse(read('modules/family-bloom-overlay/package.json'));
 const config = JSON.parse(read('modules/family-bloom-overlay/expo-module.config.json'));
 
-if (app.expo?.version === '1.3.35' && app.expo?.android?.versionCode === 143045) pass('app.json binary identity = 1.3.35 / 143045');
-else fail('app.json must be version 1.3.35 with Android versionCode 143045');
+if (app.expo?.version === '1.3.42' && app.expo?.android?.versionCode === 143052) pass('app.json binary identity = 1.3.42 / 143052');
+else fail('app.json must be version 1.3.42 with Android versionCode 143052');
 
 if (eas.cli?.appVersionSource === 'local') pass('EAS appVersionSource=local locks app.json versionCode into build');
 else fail('eas.json must set cli.appVersionSource=local');
@@ -113,7 +113,7 @@ if (requireEffectiveConfig) {
         const effective = JSON.parse(r.stdout.trim());
         if (effective.android?.package === 'com.familybloom.android') pass('effective Expo config package=com.familybloom.android');
         else fail(`effective Expo package mismatch: ${effective.android?.package || 'missing'}`);
-        if (effective.version === '1.3.35' && effective.android?.versionCode === 143045) pass('effective Expo config = 1.3.35 / versionCode 143045');
+        if (effective.version === '1.3.42' && effective.android?.versionCode === 143052) pass('effective Expo config = 1.3.42 / versionCode 143052');
         else fail(`effective Expo binary identity mismatch: ${effective.version || '?'} / ${effective.android?.versionCode || '?'}`);
       } catch (error) {
         fail(`could not parse expo config JSON: ${error instanceof Error ? error.message : String(error)}`);

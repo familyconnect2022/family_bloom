@@ -2,7 +2,12 @@ import { familyBloomSessionDiagnostics as diagnostic } from "../diagnostics/sess
 import { metroTestLogsEnabled } from "../diagnostics/metroLogging";
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
-import { authService } from "@/services/auth/authService";
+import { authService, GoogleLoginTimeoutError, type GoogleLoginPhase } from "@/services/auth/authService";
+import {
+  activateAndroidSession, checkAndroidSession, clearAndroidLoginIntent, forgetAndroidLease,
+  markAndroidLoginIntent, releaseAndroidSession, singleSessionEnabled,
+  type AndroidLease, type AndroidSessionError,
+} from "@/services/auth/androidSingleSession";
 import { internetReachabilityService } from "@/services/network/internetReachabilityService";
 import { classifyVerificationIssue, isTransientVerificationIssue, type VerificationIssue } from "@/services/navigation/sessionVerificationIssue";
 import { acceptMembershipServerProof, deferMembershipError, type MembershipServerProof } from "@/services/navigation/authoritativeMembershipProof";
@@ -58,6 +63,8 @@ export type AuthContextType = {
   verificationIssue: VerificationIssue | null;
   isInitializing: boolean;
   isLoadingPhone: boolean;
+  googleLoginPhase: GoogleLoginPhase | null;
+  googleLoginNotice: string | null;
   loginWithGoogle: () => Promise<void>;
   sendPhoneCode: (phoneNumber: string) => Promise<boolean>;
   confirmPhoneCode: (code: string) => Promise<boolean>;
@@ -67,6 +74,9 @@ export type AuthContextType = {
   /** Recheck Firebase for this same UID without signing out or trusting cache. */
   retryFirebaseVerification: () => void;
   logout: () => Promise<void>;
+  singleSessionStatus: "off" | "checking" | "active" | "unavailable";
+  singleSessionNotice: string | null;
+  retrySingleSession: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -92,6 +102,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>("idle");
   const [verificationIssue, setVerificationIssue] = useState<VerificationIssue | null>(null);
   const [isLoadingPhone, setIsLoadingPhone] = useState(false);
+  const [googleLoginPhase, setGoogleLoginPhase] = useState<GoogleLoginPhase | null>(null);
+  const [googleLoginNotice, setGoogleLoginNotice] = useState<string | null>(null);
+  const [singleSessionStatus, setSingleSessionStatus] = useState<"off" | "checking" | "active" | "unavailable">("off");
+  const [singleSessionNotice, setSingleSessionNotice] = useState<string | null>(null);
+  const [sessionRetryAttempt, setSessionRetryAttempt] = useState(0);
+  const sessionLeaseRef = useRef<AndroidLease | null>(null);
+  const sessionCheckBusyRef = useRef(false);
+  const sessionRetryUserRef = useRef<User | null>(null);
+  const lastSessionCheckAtRef = useRef(0);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
@@ -255,8 +274,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setWelcomeCheckedKey(null);
     setUserProfile(null);
     setFamilies([]);
-    setUser(currentUser);
-    setAuthStatus(currentUser ? "signed-in" : "signed-out");
+    // Do not unlock any protected UI until the Preview Gateway validates the
+    // native lease. The normal Android path remains byte-for-byte equivalent
+    // when the feature is disabled for this UID.
+    const needsLease = !!currentUser && singleSessionEnabled(currentUser.uid);
+    sessionLeaseRef.current = null;
+    sessionRetryUserRef.current = needsLease ? currentUser : null;
+    setSingleSessionStatus(needsLease ? "checking" : "off");
+    setUser(needsLease ? null : currentUser);
+    setAuthStatus(needsLease ? "initializing" : currentUser ? "signed-in" : "signed-out");
     setFamilyTransition(null);
     resetSharedRealtimeRegistry();
     homeTimeCapsuleService.clearRealtimeCache();
@@ -274,15 +300,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setProfileStatus("loading");
     setMembershipStatus("loading");
-    // P0: Remote profile verification must NEVER depend on a cache read.
-    // AsyncStorage can reject after Android process restoration; previously
-    // that left profileStatus=loading forever and no protected route available.
-    void loadAuthoritativeProfile(currentUser);
-    void bootSessionCache.read(currentUser.uid)
-      .then((cached) => {
-        if (epoch === authEpochRef.current && cached) cacheHydratedUidRef.current = currentUser.uid;
-      })
-      .catch(() => undefined); // cache is optional, not an authorization gate
+    // Both Firebase profile and family authorization must wait for the native
+    // lease when enabled; Firestore cache cannot bypass this first check.
+    const authorize = () => {
+      if (authUidRef.current !== currentUser.uid || epoch !== authEpochRef.current) return;
+      setUser(currentUser);
+      setAuthStatus("signed-in");
+      void loadAuthoritativeProfile(currentUser);
+      void bootSessionCache.read(currentUser.uid)
+        .then((cached) => {
+          if (epoch === authEpochRef.current && cached) cacheHydratedUidRef.current = currentUser.uid;
+        }).catch(() => undefined);
+    };
+    if (!needsLease) { authorize(); return; }
+    void activateAndroidSession(currentUser).then((lease) => {
+      if (epoch !== authEpochRef.current || authUidRef.current !== currentUser.uid) return;
+      if (!lease) return; // the UID was never eligible for this Preview mode
+      sessionLeaseRef.current = lease;
+      sessionRetryUserRef.current = null;
+      lastSessionCheckAtRef.current = Date.now();
+      setSingleSessionStatus("active");
+      setSingleSessionNotice(null);
+      authorize();
+    }).catch((error: AndroidSessionError) => {
+      if (epoch !== authEpochRef.current || authUidRef.current !== currentUser.uid) return;
+      if (error.reason === "replaced" || error.reason === "reauth") {
+        setSingleSessionNotice(error.message);
+        setUser(null);
+        setAuthStatus("initializing");
+        // A forced eviction must NOT invalidate Google SSO shared between
+        // Android dual-app clones. Only this app's Firebase credential is cleared.
+        void authService.signOutFirebaseOnly().catch(() => {
+          setSingleSessionStatus('unavailable');
+          setAuthStatus('error');
+          setSingleSessionNotice('Không thể kết thúc phiên cũ. Hãy thử đăng xuất rồi đăng nhập lại.');
+        });
+        return;
+      }
+      // Backend failure is NOT evidence of session replacement. Keep Firebase
+      // credential but block access until the user retries verification.
+      setSingleSessionStatus("unavailable");
+      setSingleSessionNotice(error.message);
+      setAuthStatus("error");
+    });
 
   }), [loadAuthoritativeProfile, authSubscriptionAttempt]);
 
@@ -447,6 +507,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Reconcile an interrupted background avatar upload on foreground/resume.
   // Never start a job for another Firebase Auth identity.
+
+  const retrySingleSession = useCallback(() => {
+    if (sessionRetryUserRef.current && singleSessionStatus === "unavailable") {
+      // Retry pending claim/check without silently taking over a restored UID.
+      authUidRef.current = undefined;
+      setAuthStatus("initializing");
+      setAuthSubscriptionAttempt(v => v + 1);
+      setSessionRetryAttempt(v => v + 1);
+      return;
+    }
+    setSessionRetryAttempt(v => v + 1);
+  }, [singleSessionStatus]);
+
+  // Cooperative foreground check: no re-render on a healthy heartbeat. A
+  // replaced lease immediately unmounts protected UI before local sign-out.
+  // This does NOT revoke direct Firebase SDK access at Rules level; see README.
+  useEffect(() => {
+    const lease = sessionLeaseRef.current;
+    if (!user || !lease || user.uid !== lease.uid || !singleSessionEnabled(user.uid)) return;
+    let alive = true;
+    const uid = user.uid;
+    const verify = async () => {
+      if (!alive || sessionCheckBusyRef.current || !appActive || avatarPickerActivity.isPicking()) return;
+      sessionCheckBusyRef.current = true;
+      try {
+        const result = await checkAndroidSession(user, lease);
+        if (!alive || authUidRef.current !== uid || sessionLeaseRef.current !== lease) return;
+        if (result === 'replaced') {
+          // Do not release: the new device's current lease belongs to B.
+          sessionLeaseRef.current = null;
+          setSingleSessionNotice('Tài khoản đã đăng nhập trên thiết bị khác. Phiên trên máy này đã kết thúc.');
+          setSingleSessionStatus('checking');
+          setUser(null);
+          setAuthStatus('initializing');
+          await forgetAndroidLease(lease);
+          await authService.signOutFirebaseOnly();
+          await Promise.allSettled([
+            bootSessionCache.clear(uid), familyHomeWarmCache.clearUser(uid),
+            clearFamilyGraphWarmCache(), localNotificationService.clearForUser(uid),
+            pushTokenService.disableCurrentDevice(uid),
+          ]);
+        } else {
+          lastSessionCheckAtRef.current = Date.now();
+          setSingleSessionStatus(s => s === 'active' ? s : 'active');
+          setSingleSessionNotice(null);
+        }
+      } catch {
+        if (!alive || authUidRef.current !== uid || sessionLeaseRef.current !== lease) return;
+        // Never declare the old lease valid on a transport error.
+        setSingleSessionStatus('unavailable');
+        setSingleSessionNotice('Không thể xác minh phiên. Kiểm tra Internet rồi thử lại.');
+      } finally { sessionCheckBusyRef.current = false; }
+    };
+    // On app resume check immediately; on healthy foreground check every 20s.
+    if (appActive) void verify();
+    const timer = setInterval(() => { if (appActive) void verify(); }, 20000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [user?.uid, appActive, sessionRetryAttempt]);
+
   useEffect(() => {
     if (!user || !appActive || profileStatus !== "ready") return;
     // Do not install a global toast observer: it overwrote the save-screen
@@ -458,6 +577,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const retryFirebaseVerification = useCallback(() => {
     diagnostic.note("SYSTEM", "retry", { result: "user-retry-request" });
+    if (singleSessionStatus === 'unavailable') {
+      retrySingleSession();
+      return;
+    }
     if (!user) {
       // The Firebase Auth observer has its own bounded timeout. Never fake
       // signed-out merely because one observer callback is delayed.
@@ -481,7 +604,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setMembershipAttempt((current) => current + 1); // cleanup old watcher
     }
     // No signed-in data is accepted as verified merely by calling Retry.
-  }, [authStatus, loadAuthoritativeProfile, membershipStatus, profileStatus, user]);
+  }, [authStatus, loadAuthoritativeProfile, membershipStatus, profileStatus, user, singleSessionStatus, retrySingleSession]);
 
   // A bounded automatic repair when Internet becomes reachable or the app
   // resumes. Does not retry permission-denied and cannot loop indefinitely.
@@ -584,6 +707,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [showToast, welcomeTarget]);
 
   const logout = useCallback(async () => {
+    clearAndroidLoginIntent();
+    setSingleSessionNotice(null);
+    const lease = sessionLeaseRef.current;
+    // Keep Google Play Services untouched in dual-app Preview mode even for
+    // a manual local logout: the other clone may still use the same SSO broker.
+    const previewIdentity = !!lease || !!sessionRetryUserRef.current;
+    sessionLeaseRef.current = null;
+    if (lease && user?.uid === lease.uid) await releaseAndroidSession(user, lease);
     const signingOutUid = user?.uid ?? null;
     if (signingOutUid) {
       await Promise.allSettled([
@@ -596,7 +727,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     resetSharedRealtimeRegistry();
     homeTimeCapsuleService.clearRealtimeCache();
-    await authService.signOut();
+    if (previewIdentity) await authService.signOutFirebaseOnly();
+    else await authService.signOut();
     cacheHydratedUidRef.current = null;
     setConfirmation(null);
     setPendingPhoneNumber(null);
@@ -615,17 +747,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [showToast]);
 
   const loginWithGoogle = useCallback(async () => {
+    setGoogleLoginNotice(null);
     try {
       if (!(await ensureInternetForAuth())) return;
-      await authService.signInWithGoogle();
+      markAndroidLoginIntent();
+      await authService.signInWithGoogle((phase) => setGoogleLoginPhase(phase));
     } catch (error) {
-      // A backend/auth failure is not itself proof that the phone is offline.
-      // Refresh the independent Internet probe to give accurate guidance.
-      if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
+      clearAndroidLoginIntent();
+      if (error instanceof GoogleLoginTimeoutError) {
+        // Persistent visible error, because a short Toast may expire while
+        // Android's cloned Google account picker is still on screen.
+        setGoogleLoginNotice(error.message);
+        showToast({ type: 'warning', title: 'Đăng nhập chưa hoàn tất', message: error.message, duration: 5000 });
+      } else if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
+        setGoogleLoginNotice('Không có Internet để đăng nhập. Vui lòng thử lại khi có mạng.');
         showToast({ type: "warning", title: "Kết nối Internet bị gián đoạn", message: "Không thể hoàn tất đăng nhập lúc này. Hãy kiểm tra Wi-Fi hoặc dữ liệu di động.", duration: 4000 });
       } else {
         showToast({ ...parseAppError(error), duration: 3500 });
       }
+    } finally {
+      // Always stop the login spinner on timeout/cancel/error.
+      setGoogleLoginPhase(null);
     }
   }, [ensureInternetForAuth, showToast]);
 
@@ -662,10 +804,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoadingPhone(true);
     try {
       if (!(await ensureInternetForAuth())) return false;
+      markAndroidLoginIntent();
       await authService.confirmPhoneCode(confirmation, code);
       setConfirmation(null);
       return true;
     } catch (error) {
+      clearAndroidLoginIntent();
       if (await internetReachabilityService.checkNow({ force: true }) === "offline") {
         showToast({ type: "warning", title: "Mất kết nối khi xác nhận", message: "Mã vẫn còn trên màn hình. Hãy kiểm tra Internet rồi thử lại.", duration: 4000 });
       } else {
@@ -746,6 +890,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     welcomeReady,
     isInitializing: authStatus === "initializing" || profileStatus === "loading" || membershipStatus === "loading",
     isLoadingPhone,
+    googleLoginPhase,
+    googleLoginNotice,
     loginWithGoogle,
     sendPhoneCode,
     confirmPhoneCode,
@@ -756,11 +902,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     dismissWelcome,
     requestWelcomeForFamily,
     logout,
+    singleSessionStatus,
+    singleSessionNotice,
+    retrySingleSession,
   }), [
     user, userProfile, families, activeMembership, familySelectionRequired, familyTransition, welcomeReady,
     switchFamily, completeFamilyTransition, authStatus, profileStatus, membershipStatus, verificationIssue, welcomeTarget, isLoadingPhone,
-    loginWithGoogle, sendPhoneCode, confirmPhoneCode, resendPhoneCode, pendingPhoneNumber,
+    googleLoginPhase, googleLoginNotice, loginWithGoogle, sendPhoneCode, confirmPhoneCode, resendPhoneCode, pendingPhoneNumber,
     refreshProfile, retryFirebaseVerification, dismissWelcome, requestWelcomeForFamily, logout,
+    singleSessionStatus, singleSessionNotice, retrySingleSession,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

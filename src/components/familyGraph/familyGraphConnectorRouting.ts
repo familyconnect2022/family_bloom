@@ -359,6 +359,9 @@ export const buildFamilyGraphConnectorRoutingPlan = ({
   for (const connection of connections) {
     if (connection.type !== "parent_child") continue;
     if (!peopleById.has(connection.fromId) || !peopleById.has(connection.toId)) continue;
+    // Step-parent edges remain independently routed but NEVER determine the
+    // child's biological family group or give a false shared-parent trunk.
+    if (connection.subtype === "step") continue;
     const parents = parentsByChild.get(connection.toId) ?? [];
     parents.push(connection.fromId);
     parentsByChild.set(connection.toId, parents);

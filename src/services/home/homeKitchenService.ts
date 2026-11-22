@@ -45,7 +45,7 @@ const normalizeTags = (tags: KitchenPreferenceTag[]) => {
   const valid = new Set<KitchenPreferenceTag>(["normal", "vegetarian", "lowerSugar", "controlledCarb", "lowerSodium"]);
   const normalized = Array.from(new Set(tags.filter(tag => valid.has(tag)))).slice(0, 5);
   const custom = normalized.filter(tag => tag !== "normal");
-  return custom.length ? custom : ["normal"];
+  return custom.length ? custom : (["normal"] as KitchenPreferenceTag[]);
 };
 
 const hasCustomFilters = (tags: KitchenPreferenceTag[]) => normalizeTags(tags).some(tag => tag !== "normal");

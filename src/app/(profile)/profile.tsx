@@ -305,7 +305,7 @@ export default function Profile() {
 
   return (
     <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-      <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+      <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
       <BloomHeroHeader
         eyebrow="HỒ SƠ GIA ĐÌNH"
         title="Family CV"
@@ -685,7 +685,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   interestEditChipActive: { backgroundColor: COLORS.accentBg, borderColor: COLORS.primary },
   interestEditText: { color: COLORS.secondaryText, fontSize: 11.5, fontWeight: "800" },
   interestEditTextActive: { color: COLORS.primaryText },
-  editHint: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: COLORS.softSurface, borderRadius: 16, padding: 12 },
+  editHintPanel: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: COLORS.softSurface, borderRadius: 16, padding: 12 },
   editHintText: { flex: 1, color: COLORS.secondaryText, fontSize: 11.5, lineHeight: 17 },
   logoutOverlay: {
     flex: 1,

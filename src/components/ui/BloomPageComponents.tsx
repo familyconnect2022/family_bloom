@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "./bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { useA3Theme } from '../../appearance3/useAppearance3';
 import { createBloomStyles } from '../../theme/createBloomStyles';
@@ -153,9 +154,9 @@ export function BloomCard({
     style,
   ];
   const content = <>
-    {artwork ? <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { overflow: 'hidden', borderRadius: 17, opacity: 0.32 }]}>
-      <Image source={artwork} resizeMode="cover" style={StyleSheet.absoluteFillObject}/>
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.surface, opacity: 0.52 }]}/>
+    {artwork ? <View pointerEvents="none" style={[BLOOM_ABSOLUTE_FILL, { overflow: 'hidden', borderRadius: 17, opacity: 0.32 }]}>
+      <Image source={artwork} resizeMode="cover" style={BLOOM_ABSOLUTE_FILL}/>
+      <View style={[BLOOM_ABSOLUTE_FILL, { backgroundColor: colors.surface, opacity: 0.52 }]}/>
     </View> : null}
     {children}
   </>;

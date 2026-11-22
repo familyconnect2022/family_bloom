@@ -1,0 +1,17 @@
+{
+  "release": "Family Bloom NODE VISUAL R2: numeric generation, gender styles, no duplicate profile buttons",
+  "baseline": "FB12-FB15 Person Node Note description, AUTO UPDATE FIXED (exact source hash)",
+  "baseVersionCode": 143045,
+  "version": "1.3.35 unchanged",
+  "replace": [
+    {
+      "path": "src/components/familyGraph/FamilyGraphPrototype.tsx",
+      "before": [
+        "46e45e71043c28228465623526fe274b1cc71aef91f1cec52040561e3166585a"
+      ],
+      "after": "f3570c1debcdb5ba97c0c3681a77e9dd9cda22f36bc84e8ab490ae6116696d6a"
+    }
+  ],
+  "remove": [],
+  "extra": []
+}

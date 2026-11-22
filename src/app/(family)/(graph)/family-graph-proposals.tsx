@@ -122,7 +122,7 @@ export default function GraphProposals() {
   }).then(ok=>{if(ok)void decide(decision);});
   if(!familyId)return <ScreenContainer><Text style={__a3_styles.text}>Hãy chọn gia đình trước.</Text></ScreenContainer>;
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-    <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
+    <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} />
     <BloomHeroHeader
       eyebrow={isAdmin ? "CHĂM SÓC PHẢ HỆ" : "GÓP Ý PHẢ HỆ"}
       title={isAdmin ? "Cùng giữ phả hệ thật đúng" : "Góp một điều bạn biết"}

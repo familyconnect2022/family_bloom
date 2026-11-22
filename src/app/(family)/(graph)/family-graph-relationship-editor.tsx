@@ -29,6 +29,8 @@ import { useA3LegacyStyles } from '../../../appearance3/compatReactiveStyles';
 type RelationshipMode = "parent_of" | "child_of" | "partner";
 type PickerSide = "base" | "target";
 
+// UI labels are relative to the Person currently being edited. The storage
+// remains an oriented parent_child edge, independent of word order.
 const parentSubtypeLabel: Record<ParentChildSubtype, string> = {
   biological: "Con ruột",
   adoptive: "Con nuôi",

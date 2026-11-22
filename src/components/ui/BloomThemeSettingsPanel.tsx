@@ -52,7 +52,7 @@ export function BloomThemeSettingsPanel() {
                 <Image source={getBloomHeroArt('home', id)} placeholder={getBloomHeroPreview('home', id)} placeholderContentFit="cover" recyclingKey={id} contentFit="cover" contentPosition="top" cachePolicy="memory-disk" priority="high" transition={0} style={__a3_styles.paletteHeroArt} accessibilityIgnoresInvertColors />
                 <View style={[__a3_styles.previewCard, { backgroundColor: sample.surface, borderColor: sample.border }]}>
                   <View style={[__a3_styles.previewDot, { backgroundColor: sample.primary }]} />
-                  <View style={[__a3_styles.previewLine, { backgroundColor: sample.text }]} />
+                  <View style={[__a3_styles.previewLine, { backgroundColor: sample.primaryText }]} />
                   <View style={[__a3_styles.previewLineShort, { backgroundColor: sample.muted }]} />
                 </View>
                 {active && <View style={[__a3_styles.selectedIcon, { backgroundColor: sample.primary }]}>

@@ -1,7 +1,7 @@
 {
   "name": "family-bloom",
   "main": "expo-router/entry",
-  "version": "1.3.35",
+  "version": "1.3.42",
   "dependencies": {
     "@expo/ui": "~57.0.21",
     "@expo/vector-icons": "^15.0.2",
@@ -51,7 +51,8 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3",
-    "expo-doctor": "1.20.4"
+    "expo-doctor": "1.20.4",
+    "react-dom": "19.2.3"
   },
   "scripts": {
     "maintenance:map": "node scripts/maintenance/generate-vietnamese-code-map.cjs",
@@ -187,7 +188,11 @@
     "family:r6:check": "node scripts/tests/release/test-m3r4r6-root-avatar-lifecycle.cjs",
     "appearance:architecture:check": "node scripts/tests/release/test-r3r3-appearance-local-first.cjs",
     "android:separation:check": "node scripts/tests/release/test-android-only-no-legacy-web.cjs",
-    "root:launchers:check": "node scripts/tests/release/test-r11r4r2r1-root-launchers.cjs"
+    "root:launchers:check": "node scripts/tests/release/test-r11r4r2r1-root-launchers.cjs",
+    "graph:node:check": "node scripts/tests/features/test-familyGraphNodeR11R4R2R2.cjs",
+    "single-session:check": "node --test scripts/tests/release/test-r16r8-native-session.cjs scripts/tests/release/test-r16r8-session-ts-config.cjs scripts/tests/release/test-r16r8-clone-login-recovery.cjs",
+    "single-session:config-check": "node scripts/setup/check-r16r8-single-session-config.cjs",
+    "login:pill-edges-check": "node scripts/tests/release/test-r16r8-login-pill-edges.cjs"
   },
   "private": true,
   "expo": {

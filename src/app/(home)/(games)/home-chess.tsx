@@ -119,7 +119,7 @@ export default function ChessFamilyLobby() {
   };
 
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={PALETTE.background}>
-    <StatusBar translucent backgroundColor="transparent" style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
+    <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={__a3_styles.page}>
       <View style={[__a3_styles.hero,{backgroundColor:PALETTE.background}]}>
         <Pressable accessibilityLabel="Về Trò chơi Nhà Mình" onPress={()=>router.back()} style={__a3_styles.back}><Ionicons name="arrow-back" size={20} color={PALETTE.deep}/></Pressable>

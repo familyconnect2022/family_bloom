@@ -38,7 +38,7 @@ export default function LearningLibrary(){
  const shown=items.filter(x=>(subject==='all'||x.subject===subject)&&(!grade||x.grade===grade)&&
   (!search.trim()||[x.title,x.unit,x.topic].join(' ').toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi'))));
  return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
-  <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')} translucent backgroundColor="transparent"/>
+  <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
   <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="BLOOM EDUCATION" title="Góc học tập" subtitle="Chỉ những bài đã được kiểm duyệt trong Content Studio" onBack={()=>router.back()}/>
   <ScrollView contentContainerStyle={__a3_s.body} keyboardShouldPersistTaps="handled">
    <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/study-questions' as never)} accessibilityRole="button">

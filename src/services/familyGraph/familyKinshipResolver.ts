@@ -1,4 +1,4 @@
-import type { FamilyPerson, ParentChildSubtype, PartnerStatus } from "../../types/familyGraph";
+import type { FamilyPerson, FamilyRelationship, ParentChildSubtype, PartnerStatus } from "../../types/familyGraph";
 import type {
   FamilyGraphDerivedLineage,
   FamilyGraphRelationshipBetweenResult,
@@ -59,7 +59,7 @@ const genderWord = (
 const parentLabel = (person: FamilyPerson, subtype: ParentChildSubtype | null): string => {
   if (subtype === "biological") return genderWord(person, "cha ruột", "mẹ ruột", "cha/mẹ ruột");
   if (subtype === "adoptive") return genderWord(person, "cha nuôi", "mẹ nuôi", "cha/mẹ nuôi");
-  if (subtype === "step") return genderWord(person, "cha dượng", "mẹ kế", "cha/mẹ theo quan hệ kế");
+  if (subtype === "step") return genderWord(person, "cha kế", "mẹ kế", "cha/mẹ kế");
   return genderWord(person, "cha", "mẹ", "cha/mẹ");
 };
 
@@ -67,7 +67,7 @@ const childLabel = (person: FamilyPerson, subtype: ParentChildSubtype | null): s
   const base = genderWord(person, "con trai", "con gái", "con");
   if (subtype === "biological") return `${base} ruột`;
   if (subtype === "adoptive") return `${base} nuôi`;
-  if (subtype === "step") return `${base} theo quan hệ kế`;
+  if (subtype === "step") return "con kế";
   return base;
 };
 
@@ -99,6 +99,27 @@ const siblingLabel = (
     };
   }
   return { label: "anh/chị/em", relativeAge };
+};
+
+
+/** Confirmed half siblings require TWO known biological parents for BOTH people. */
+export const classifyDocumentedSiblingLineage = (
+  sourceId: string, targetId: string,
+  relationships: readonly FamilyRelationship[],
+  people: ReadonlyMap<string, FamilyPerson>,
+): string | null => {
+  const collect = (childId: string) => [...new Set(relationships
+    .filter((edge) => edge.type === 'parent_child' && edge.subtype === 'biological' && edge.personBId === childId)
+    .map((edge) => edge.personAId))];
+  const a = collect(sourceId), b = collect(targetId);
+  if (a.length !== 2 || b.length !== 2) return null;
+  const shared = a.filter((id) => b.includes(id));
+  if (shared.length === 2) return 'ruột';
+  if (shared.length !== 1) return null;
+  const parent = people.get(shared[0]);
+  if (parent?.gender === 'male') return 'cùng cha khác mẹ';
+  if (parent?.gender === 'female') return 'cùng mẹ khác cha';
+  return 'cùng một cha/mẹ';
 };
 
 const cousinLabel = (
@@ -169,6 +190,7 @@ const relationshipDetail = (
 export const resolveVietnameseKinship = (
   result: FamilyGraphRelationshipBetweenResult,
   peopleById?: ReadonlyMap<string, FamilyPerson>,
+  relationships?: readonly FamilyRelationship[],
 ): FamilyGraphVietnameseRelationship => {
   const source = result.sourcePerson;
   const target = result.targetPerson;
@@ -191,6 +213,10 @@ export const resolveVietnameseKinship = (
     case "sibling": {
       const sibling = siblingLabel(source, target);
       label = sibling.label;
+      if (relationships && peopleById) {
+        const detail = classifyDocumentedSiblingLineage(source.id, target.id, relationships, peopleById);
+        if (detail) label = `${label} ${detail}`;
+      }
       relativeAge = sibling.relativeAge;
       break;
     }
@@ -233,7 +259,24 @@ export const resolveVietnameseKinship = (
       relativeAge = cousin.relativeAge;
       break;
     }
-    case "unrelated":
+    case "unrelated": {
+      // A child of a CURRENT spouse is not automatically the focus person's
+      // biological child. The label is contextual and never persisted.
+      const spouse = relationships?.find((edge) => edge.type === "partner"
+        && (edge.partnerStatus === "married" || edge.partnerStatus === "partner")
+        && (edge.personAId === target.id || edge.personBId === target.id));
+      const spouseId = spouse?.personAId === target.id ? spouse.personBId : spouse?.personBId === target.id ? spouse.personAId : null;
+      const biologicalParentId = spouseId && relationships?.some((edge) => edge.type === "parent_child"
+        && edge.subtype === "biological" && edge.personAId === spouseId && edge.personBId === source.id);
+      const targetIsParent = relationships?.some((edge) => edge.type === "parent_child"
+        && edge.personAId === target.id && edge.personBId === source.id);
+      if (biologicalParentId && !targetIsParent) {
+        const spousePerson = peopleById?.get(spouseId!);
+        label = spousePerson?.gender === "male" ? "con riêng của chồng"
+          : spousePerson?.gender === "female" ? "con riêng của vợ" : "con riêng của bạn đời";
+      } else label = "chưa xác định quan hệ trong dữ liệu hiện có";
+      break;
+    }
     default:
       label = "chưa xác định quan hệ trong dữ liệu hiện có";
       break;

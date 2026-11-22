@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import React, { useMemo, useRef, useState } from "react";
@@ -117,7 +118,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   title: { fontSize: 20, color: COLORS.primaryText, fontWeight: "900" },
   help: { color: COLORS.secondaryText, lineHeight: 19, fontSize: 12, marginBottom: 18, alignSelf: "stretch" },
   cropBox: { width: AVATAR_BOX, height: AVATAR_BOX, overflow: "hidden", backgroundColor: COLORS.softSurface, borderRadius: 24 },
-  cropBorder: { ...StyleSheet.absoluteFillObject, borderWidth: 2, borderColor: COLORS.border, borderRadius: 24 },
+  cropBorder: { ...BLOOM_ABSOLUTE_FILL, borderWidth: 2, borderColor: COLORS.border, borderRadius: 24 },
   zoomControls: { marginTop: 17, flexDirection: "row", alignItems: "center", gap: 30 },
   zoomButton: { width: 46, height: 40, borderRadius: 15, backgroundColor: COLORS.softSurface, justifyContent: "center", alignItems: "center" },
   zoomText: { fontSize: 15, color: COLORS.primaryText, fontWeight: "800" },

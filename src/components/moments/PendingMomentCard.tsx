@@ -1,3 +1,4 @@
+import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -207,7 +208,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  more: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(54,34,42,0.54)", alignItems: "center", justifyContent: "center" },
+  more: { ...BLOOM_ABSOLUTE_FILL, backgroundColor: "rgba(54,34,42,0.54)", alignItems: "center", justifyContent: "center" },
   moreText: { color: COLORS.white, fontSize: 27, fontWeight: "900" },
   progressBlock: { gap: 7 },
   progressTrack: { height: 6, borderRadius: 999, backgroundColor: COLORS.softSurface, overflow: "hidden" },

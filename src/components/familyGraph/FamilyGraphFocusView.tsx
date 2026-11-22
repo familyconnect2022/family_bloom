@@ -2,6 +2,11 @@ import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
 import { FamilyGraphPortrait } from "./FamilyGraphPortrait";
+import { FamilyGraphUnionLines, FamilyGraphPrivateChildLabel } from "./FamilyGraphUnionLines";
+import type { FamilyGraphGeometry } from "./familyGraphGeometry";
+import { FamilyGraphRelationPlate } from "./FamilyGraphRelationPlate";
+import { formatFamilyGraphNodeName, getFamilyGraphPlateLabel } from "./familyGraphNodePresentation";
+import type { FamilyGraphVietnameseRelationship } from "../../types/familyGraphQuery";
 import { FAMILY_GRAPH_NODE_3D, familyGraphNodeGender, FAMILY_GRAPH_ORNAMENT_WIDTH, FAMILY_GRAPH_ORNAMENT_TOP_HEIGHT, FAMILY_GRAPH_ORNAMENT_BOTTOM_HEIGHT, FAMILY_GRAPH_ORNAMENT_OUTSIDE_RATIO } from "./familyGraphNode3dAssets";
 import { memo, startTransition, useCallback, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, View } from 'react-native';
@@ -57,18 +62,40 @@ const FocusConnectors = memo(function FocusConnectors({
   people,
   connections,
   mountedIds,
+  geometry,
 }: {
   people: FamilyGraphPrototypePerson[];
   connections: FamilyGraphPrototypeConnection[];
   mountedIds: Set<string>;
+  geometry: FamilyGraphGeometry;
 }) {
   const __a3_styles = useA3LegacyStyles(styles);
 
   
   const byId = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
+  const covered = useMemo(() => new Set([
+    ...geometry.partnerUnits.flatMap((unit) => [
+      ...unit.sharedChildIds.map((childId) => `${unit.partnerAId}->${childId}`),
+      ...unit.sharedChildIds.map((childId) => `${unit.partnerBId}->${childId}`),
+      ...unit.privateChildren.map((item) => `${item.parentId}->${item.childId}`),
+    ]),
+  ]), [geometry.partnerUnits]);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {connections.map((connection) => {
+      {geometry.partnerUnits.map((unit) => {
+        if (!mountedIds.has(unit.partnerAId) || !mountedIds.has(unit.partnerBId)) return null;
+        const partnerA=byId.get(unit.partnerAId),partnerB=byId.get(unit.partnerBId);
+        if (!partnerA || !partnerB) return null;
+        const children=[...unit.sharedChildIds,...unit.privateChildren.map((item)=>item.childId)]
+          .filter((id)=>mountedIds.has(id)).map((id)=>byId.get(id))
+          .filter((child):child is FamilyGraphPrototypePerson=>!!child)
+          .sort((a,b)=>a.x-b.x || a.id.localeCompare(b.id));
+        return <FamilyGraphUnionLines key={unit.id} unit={unit}
+          partnerA={partnerA} partnerB={partnerB} children={children}
+          active={true} color={COLORS.selectedBackground}/>;
+      })}
+      {connections.filter((connection)=>connection.type==="parent_child"
+        && !covered.has(`${connection.fromId}->${connection.toId}`)).map((connection) => {
         if (!mountedIds.has(connection.fromId) || !mountedIds.has(connection.toId)) return null;
         const from = byId.get(connection.fromId);
         const to = byId.get(connection.toId);
@@ -91,13 +118,35 @@ const FocusConnectors = memo(function FocusConnectors({
         const endX = centerX(to);
         const endY = topY(to);
         const midY = startY + Math.max(8, (endY - startY) / 2);
-        return (
-          <View key={connection.id} pointerEvents="none" style={StyleSheet.absoluteFill}>
+        // Two quarter-circles replace sharp orthogonal corners in Focus View.
+        // Direct biological parent-child edges remain solid even across remarriage.
+        const deltaX = endX - startX;
+        const radius = Math.min(8, Math.abs(deltaX) / 3,
+          Math.max(0, midY - startY) / 2, Math.max(0, endY - midY) / 2);
+        if (Math.abs(deltaX) < 2 || radius < 2) {
+          return <View key={connection.id} pointerEvents="none" style={StyleSheet.absoluteFill}>
             <View style={[__a3_styles.verticalLine, { left: startX, top: startY, height: Math.max(1, midY - startY) }]} />
-            <View style={[__a3_styles.horizontalLine, { left: Math.min(startX, endX), top: midY, width: Math.max(1, Math.abs(endX - startX)) }]} />
+            <View style={[__a3_styles.horizontalLine, { left: Math.min(startX, endX), top: midY, width: Math.max(1, Math.abs(deltaX)) }]} />
             <View style={[__a3_styles.verticalLine, { left: endX, top: midY, height: Math.max(1, endY - midY) }]} />
-          </View>
-        );
+          </View>;
+        }
+        const right = deltaX > 0;
+        const edge = { borderColor: COLORS.selectedBackground, borderStyle: 'solid' as const };
+        return <View key={connection.id} pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <View style={[__a3_styles.verticalLine, { left: startX, top: startY, height: Math.max(1, midY - radius - startY) }]} />
+          <View style={[{ position: 'absolute', left: right ? startX : startX - radius, top: midY - radius,
+            width: radius, height: radius, ...edge },
+            right ? { borderLeftWidth: 1.5, borderBottomWidth: 1.5, borderBottomLeftRadius: radius }
+              : { borderRightWidth: 1.5, borderBottomWidth: 1.5, borderBottomRightRadius: radius }]} />
+          <View style={[__a3_styles.horizontalLine, { left: Math.min(startX, endX) + radius, top: midY,
+            width: Math.max(1, Math.abs(deltaX) - 2 * radius) }]} />
+          <View style={[{ position: 'absolute', left: right ? endX - radius : endX, top: midY,
+            width: radius, height: radius, ...edge },
+            right ? { borderTopWidth: 1.5, borderRightWidth: 1.5, borderTopRightRadius: radius }
+              : { borderTopWidth: 1.5, borderLeftWidth: 1.5, borderTopLeftRadius: radius }]} />
+          <View style={[__a3_styles.verticalLine, { left: endX, top: midY + radius,
+            height: Math.max(1, endY - midY - radius) }]} />
+        </View>;
       })}
     </View>
   );
@@ -108,10 +157,12 @@ const FocusPersonCard = memo(function FocusPersonCard({
   person,
   memberAvatarUrl,
   focused,
+  relationLabel,
 }: {
   person: FamilyGraphPrototypePerson;
   memberAvatarUrl?: string | null;
   focused: boolean;
+  relationLabel: string | null;
 }) {
   const __a3Colors = useA3Theme().colors;
   const __a3_styles = useA3LegacyStyles(styles);
@@ -119,10 +170,12 @@ const FocusPersonCard = memo(function FocusPersonCard({
   
   const initials = person.displayName.trim().split(/\s+/).slice(-2).map(part => part[0]?.toUpperCase() ?? "").join("") || "?";
   const nodeColors = FAMILY_GRAPH_NODE_3D[familyGraphNodeGender(person.gender)];
-  const nameLength = person.displayName.trim().length;
-  const nameSize = nameLength >= 48 ? 9.8 : nameLength >= 36 ? 10.4 : 11.2;
+  const shownName = formatFamilyGraphNodeName(person.displayName);
+  const nameLength = shownName.length;
+  const nameSize = nameLength >= 34 ? 10 : nameLength >= 25 ? 10.5 : 11.2;
   return (
     <View style={[__a3_styles.nodeWrap, { left: person.x, top: person.y }]} pointerEvents="none">
+      {focused && <Image source={nodeColors.mist} resizeMode="contain" fadeDuration={0} style={__a3_styles.focusMistOuter} />}
       <View style={[__a3_styles.nodeCard, { backgroundColor: nodeColors.bg, borderColor: nodeColors.edge }, focused && __a3_styles.nodeCardFocused]}>
         <View style={[__a3_styles.generationBadge, { backgroundColor: nodeColors.accent }]}>
           <Text allowFontScaling={false} style={__a3_styles.generationBadgeText}>{person.generation}</Text>
@@ -132,15 +185,13 @@ const FocusPersonCard = memo(function FocusPersonCard({
           {person.linkedAccount && <View style={__a3_styles.linkBadge}><Ionicons name="link" size={11} color={__a3Colors.primary} /></View>}
         </View>
         <Text allowFontScaling={false} numberOfLines={5} style={[__a3_styles.nodeName, { color: nodeColors.text, fontSize: nameSize }]}>
-          {person.displayName}
+          {shownName}
         </Text>
         <Text allowFontScaling={false} numberOfLines={1} style={[__a3_styles.nodeYears, { color: nodeColors.text }]}>
           {person.birthYear ?? "?"}{person.deathYear ? ` – ${person.deathYear}` : person.lifeStatus === "living" ? " – nay" : ""}
         </Text>
       </View>
-      <View pointerEvents="none" collapsable={false} style={__a3_styles.topOrnamentWrap}>
-        <Image source={nodeColors.top} resizeMode="contain" fadeDuration={0} style={__a3_styles.ornamentImage} />
-      </View>
+      <FamilyGraphRelationPlate label={relationLabel} tint={nodeColors.edge} ink={nodeColors.text} surface={nodeColors.bg} />
       <View pointerEvents="none" collapsable={false} style={__a3_styles.bottomOrnamentWrap}>
         <Image source={nodeColors.bottom} resizeMode="contain" fadeDuration={0} style={__a3_styles.ornamentImage} />
       </View>
@@ -152,11 +203,13 @@ export const FamilyGraphFocusView = memo(function FamilyGraphFocusView({
   visual,
   memberAvatarByUid,
   personId,
+  resolveRelationship,
   onVisualReady,
 }: {
   visual: FamilyGraphRenderScene;
   memberAvatarByUid?: ReadonlyMap<string, string | null>;
   personId: string;
+  resolveRelationship?: (sourcePersonId: string, targetPersonId: string) => FamilyGraphVietnameseRelationship | null;
   onVisualReady?: () => void;
 }) {
   const __a3_styles = useA3LegacyStyles(styles);
@@ -386,9 +439,17 @@ export const FamilyGraphFocusView = memo(function FamilyGraphFocusView({
                   </View>
                 );
               })}
-              <FocusConnectors people={visual.people} connections={visual.connections} mountedIds={retainedIds} />
+              <FocusConnectors people={visual.people} connections={visual.connections} mountedIds={retainedIds} geometry={visual.geometry} />
+              {visual.geometry.partnerUnits.flatMap((unit)=>unit.privateChildren)
+                .filter((item)=>retainedIds.has(item.childId))
+                .map((item)=>{
+                  const child=peopleById.get(item.childId),parent=peopleById.get(item.parentId);
+                  return child&&parent?<FamilyGraphPrivateChildLabel key={`private:${item.childId}`}
+                    child={child} parent={parent}/>:null;
+                })}
               {mountedPeople.map((person) => (
-                <FocusPersonCard key={person.id} person={person} memberAvatarUrl={person.linkedUid ? memberAvatarByUid?.get(person.linkedUid) : null} focused={person.id === personId} />
+                <FocusPersonCard key={person.id} person={person} memberAvatarUrl={person.linkedUid ? memberAvatarByUid?.get(person.linkedUid) : null} focused={person.id === personId}
+                  relationLabel={getFamilyGraphPlateLabel(resolveRelationship?.(person.id, personId)?.label, person.id === personId)} />
               ))}
             </Animated.View>
           </Animated.View>
@@ -403,12 +464,17 @@ const styles = createBloomStyles(() => StyleSheet.create({
   canvas: { position: "absolute", left: 0, top: 0 },
   nodeWrap: { position: "absolute", width: FAMILY_GRAPH_CANVAS.nodeWidth, height: NODE_HEIGHT, alignItems: "center", overflow: "visible" },
   nodeCard: {
-    width: NODE_WIDTH, height: NODE_HEIGHT, borderRadius: 19, borderWidth: 1.6,
-    alignItems: "center", paddingTop: 26, paddingHorizontal: 6, paddingBottom: 23, overflow: "visible",
+    width: NODE_WIDTH, height: NODE_HEIGHT, zIndex: 1, borderRadius: 19, borderWidth: 1.6,
+    alignItems: "center", paddingTop: 23, paddingHorizontal: 6, paddingBottom: 23, overflow: "visible",
     shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
-  nodeCardFocused: { borderWidth: 2.1 },
+  nodeCardFocused: { transform: [{ translateY: -3 }, { scale: 1.025 }] },
+  focusMistOuter: {
+    position: 'absolute', zIndex: 0, top: -35, left: -30,
+    width: FAMILY_GRAPH_CANVAS.nodeWidth + 60,
+    height: NODE_HEIGHT + 78, opacity: 0.92,
+  },
   avatar: { width: 44, height: 44, borderRadius: 21, padding: 2, borderWidth: 1.4, alignItems: "center", justifyContent: "center", position: "relative", marginTop: 0 },
   avatarText: { fontSize: 15, fontWeight: "900", color: COLORS.primaryText },
   linkBadge: { position: "absolute", right: -4, bottom: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: COLORS.border },
