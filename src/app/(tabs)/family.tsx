@@ -8,7 +8,7 @@ import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { BloomText as Text } from '../../components/ui/BloomText';
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { FamilySwitcherModal } from "../../components/family/FamilySwitcherModal";
@@ -46,6 +46,7 @@ function FamilyOverview() {
   const router = useRouter();
   const [familySwitcherVisible, setFamilySwitcherVisible] = useState(false);
   const [memberPageSize, setMemberPageSize] = useState(18);
+  const [memberSearch, setMemberSearch] = useState('');
   const { user, userProfile, families } = useAuth();
   const membership = families.find((item) => item.familyId === userProfile?.activeFamilyId);
   const isAdmin = membership?.role === "admin" || membership?.role === "owner";
@@ -57,6 +58,12 @@ function FamilyOverview() {
     const weight = (role: string) => role === "owner" ? 0 : role === "admin" ? 1 : role === "member" ? 2 : 3;
     return weight(a.role) - weight(b.role) || a.displayName.localeCompare(b.displayName, "vi");
   }), [members]);
+
+  const shownMembers = useMemo(() => {
+    const query = memberSearch.trim().toLocaleLowerCase("vi");
+    return query ? sortedMembers.filter(member =>
+      `${member.displayName} ${member.shortName ?? ""}`.toLocaleLowerCase("vi").includes(query)) : sortedMembers;
+  }, [sortedMembers, memberSearch]);
 
   const openFamilyGraph = useCallback(() => {
     // Navigation must never depend on a Firestore probe. The graph screen already
@@ -137,9 +144,20 @@ function FamilyOverview() {
             title="Thành viên trong nhà"
             subtitle={sortedMembers.length ? `${sortedMembers.length} người đang cùng ở trong tổ ấm này` : "Bloom đang tải danh sách thành viên"}
           />
+          <View style={__a3_styles.memberSearchBox}>
+            <Ionicons name="search-outline" size={19} color={__a3Colors.primary}/>
+            <TextInput
+              accessibilityLabel="Tìm thành viên trong nhà"
+              value={memberSearch}
+              onChangeText={setMemberSearch}
+              placeholder="Tìm theo tên thành viên…"
+              placeholderTextColor={__a3Colors.secondaryText}
+              style={__a3_styles.memberSearchInput}
+            />
+          </View>
           {sortedMembers.length ? (
             <BloomCard style={__a3_styles.membersCard}>
-              {sortedMembers.slice(0, memberPageSize).map((member, index) => (
+              {shownMembers.slice(0, memberPageSize).map((member, index) => (
                 <View key={member.uid}>
                   <Pressable
                     onPress={() => router.push(`/member/${member.uid}` as never)}
@@ -163,14 +181,17 @@ function FamilyOverview() {
                     </View>
                     <Ionicons name="chevron-forward" size={17} color={__a3Colors.secondaryText} />
                   </Pressable>
-                  {index < Math.min(sortedMembers.length, memberPageSize) - 1 && <View style={__a3_styles.memberDivider} />}
+                  {index < Math.min(shownMembers.length, memberPageSize) - 1 && <View style={__a3_styles.memberDivider} />}
                 </View>
               ))}
-              {sortedMembers.length > memberPageSize && (
+              {shownMembers.length > memberPageSize && (
                 <Pressable accessibilityRole="button" accessibilityLabel="Tải thêm thành viên" onPress={() => setMemberPageSize(n => n + 18)} style={__a3_styles.loadMembersButton}>
                   <Ionicons name="chevron-down-circle-outline" color={__a3Colors.primary} size={20} />
-                  <Text style={__a3_styles.loadMembersText}>Xem thêm {Math.min(18, sortedMembers.length - memberPageSize)} thành viên</Text>
+                  <Text style={__a3_styles.loadMembersText}>Xem thêm {Math.min(18, shownMembers.length - memberPageSize)} thành viên</Text>
                 </Pressable>
+              )}
+              {shownMembers.length === 0 && (
+                <Text style={__a3_styles.memberNoMatches}>Không tìm thấy thành viên phù hợp.</Text>
               )}
             </BloomCard>
           ) : (
@@ -342,6 +363,9 @@ const styles = createBloomStyles(() => StyleSheet.create({
   timelineHeroText: { marginTop: 3, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 14, fontWeight: "600" },
 
   membersCard: { paddingVertical: 4, paddingHorizontal: 14 },
+  memberSearchBox: { marginBottom: 10, minHeight: 46, flexDirection: "row", gap: 8, alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 15, backgroundColor: COLORS.surface, paddingHorizontal: 12 },
+  memberSearchInput: { flex: 1, minWidth: 0, paddingVertical: 11, color: COLORS.primaryText, fontSize: 14 },
+  memberNoMatches: { textAlign: "center", paddingVertical: 18, color: COLORS.secondaryText, fontSize: 12 },
   loadMembersButton: { minHeight: 51, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: COLORS.border },
   loadMembersText: { fontSize: 12, color: COLORS.primary, fontWeight: "900" },
   memberRow: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 10 },

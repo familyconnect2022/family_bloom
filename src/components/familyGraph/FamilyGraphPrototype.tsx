@@ -185,6 +185,8 @@ type FamilyGraphPrototypeProps = {
   autoFitOnMount?: boolean;
   /** Web-parity main-tree UI; keeps existing geometry, gestures and detail actions. */
   webParity?: boolean;
+  /** One-shot entry camera target after a confirmed relation is written. */
+  entryFocusPersonId?: string | null;
   showAdvancedControls?: boolean;
   /** Incremented by the route's Search button; opens the existing functional search modal. */
   searchRequest?: number;
@@ -220,6 +222,7 @@ export function FamilyGraphPrototype({
   headerMode = "full",
   autoFitOnMount = false,
   webParity = false,
+  entryFocusPersonId = null,
   showAdvancedControls = false,
   searchRequest = 0,
   onVisualReady,
@@ -961,6 +964,20 @@ export function FamilyGraphPrototype({
         return;
       }
 
+      // Relation-save entry: center the newly connected person at a readable
+      // camera scale, 20% above the regular node-focused entry camera.
+      // Ordinary entry still follows the normal full-tree fit below.
+      const entryPerson = entryFocusPersonId ? peopleById.get(entryFocusPersonId) : null;
+      if (entryPerson) {
+        applyAnchorCamera(
+          { x: entryPerson.x + FAMILY_GRAPH_CANVAS.nodeWidth / 2,
+            y: entryPerson.y + NODE_CARD_HEIGHT / 2 },
+          { x: next.width / 2, y: next.height * 0.42 },
+          Math.min(1.35, INITIAL_SCALE * 1.2),
+        );
+        return;
+      }
+
       // Production BSH scene owns the entry camera. Renderer only maps the
       // precomputed canvas point to the measured viewport; it never fit-alls a
       // Focus branch or re-derives coordinates while drawing.
@@ -1037,7 +1054,7 @@ export function FamilyGraphPrototype({
         INITIAL_SCALE,
       );
     }
-  }, [autoFitOnMount, webParity, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, peopleById, scene, setPan, setScaleValue, overviewCenter, viewAnchorPersonId, visiblePeople]);
+  }, [autoFitOnMount, webParity, entryFocusPersonId, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, initialCameraSnapshot, initialFocusId, peopleById, scene, setPan, setScaleValue, overviewCenter, viewAnchorPersonId, visiblePeople]);
 
   const handlePersonSheetDismiss = useCallback(() => {
     setDetailPersonId(null);

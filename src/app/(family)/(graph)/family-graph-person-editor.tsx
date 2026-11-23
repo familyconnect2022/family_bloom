@@ -321,7 +321,14 @@ export default function FamilyGraphPersonEditorScreen() {
         message: editing ? "Thông tin đã được cập nhật." : graphNoticeSent ? "Hồ sơ đã lưu; cả nhà có thông báo trong Chuyện trong nhà." : "Hồ sơ đã lưu. Mở Cây nhà và chọn Báo cả nhà để gửi lại.",
         duration: 2600,
       });
-      router.back();
+      // A successful standalone creation keeps the editor ready for the next person.
+      // Editing an existing person still returns to its previous screen.
+      if (editing) {
+        router.back();
+      } else {
+        setDraft({ ...EMPTY_PERSON });
+        setAvatarUpload({ phase: "idle", progress: null });
+      }
     } catch (error) {
       if (draft.avatarDirty) setAvatarUpload({ phase: "failed", progress: null });
       showToast({ ...parseAppError(error), duration: 4200 });

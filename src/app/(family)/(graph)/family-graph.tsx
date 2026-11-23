@@ -46,7 +46,7 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
 
   
   const router = useRouter();
-  const params = useLocalSearchParams<{ focusPersonId?: string; detailPersonId?: string }>();
+  const params = useLocalSearchParams<{ focusPersonId?: string; focusZoom?: string; detailPersonId?: string }>();
   const { showToast } = useBloomToast();
   const { user, userProfile, families } = useAuth();
   const familyId = userProfile?.activeFamilyId ?? null;
@@ -381,12 +381,13 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
             </View>
           ) : (
             <FamilyGraphPrototype
-              key={`${familyId}:${user?.uid}`}
+              key={`${familyId}:${user?.uid}:${requestedFocusId}`}
               familyName={membership?.familyName || "Gia đình của mình"}
               familyId={familyId}
               scene={visual}
               memberAvatarByUid={memberAvatarByUid}
               defaultFocusId={visibleFocusId}
+              entryFocusPersonId={requestedFocusId || null}
               initialViewMode="all"
               initialCameraSnapshot={null}
               onViewStateChange={(state) => {

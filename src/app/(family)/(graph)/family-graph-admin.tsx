@@ -402,7 +402,14 @@ export default function FamilyGraphAdminScreen() {
           duration: 2600,
         });
       }
-      setPersonModalVisible(false);
+      if (editingPersonId) {
+        setPersonModalVisible(false);
+      } else {
+        // Standalone person creation is repeatable without navigating to Full Tree.
+        setPersonDraft({ ...EMPTY_PERSON });
+        setEditingPersonId(null);
+        setSelectedPersonId(null);
+      }
     } catch (nextError) {
       showToast({ ...parseAppError(nextError), duration: 4200 });
     } finally {

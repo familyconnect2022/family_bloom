@@ -270,7 +270,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
           notified = true;
         } catch { graphActivitySessionService.record(familyId, { kind: "relationship_added" }); }
         showToast({ type: notified ? "success" : "warning", title: "Đã nối gia phả", message: notified ? "Đã tạo quan hệ và thông báo cho cả nhà." : "Đã tạo quan hệ nhưng chưa gửi được thông báo; có thể chọn Báo cả nhà để gửi lại.", duration: 3000 });
-        router.back();
+        router.replace({ pathname: "/family-graph", params: { focusPersonId: b, focusZoom: "1.2" } } as never);
         return;
       }
 
@@ -301,7 +301,11 @@ export default function FamilyGraphRelationshipEditorScreen() {
         message: created ? `Đã tạo ${created} đường${existing ? ` · ${existing} đường đã có` : ""}.${notified ? " Đã báo cả nhà." : " Chưa gửi được thông báo, có thể báo lại từ Cây nhà."}` : `${existing} đường đã tồn tại, dữ liệu được giữ nguyên.`,
         duration: 3000,
       });
-      router.back();
+      if (created > 0) {
+        // Route intent is consumed only by the Graph camera after the new branch is loaded.
+        const connectedPersonId = targetIds[0] ?? childIds[0] ?? baseIds[0];
+        router.replace({ pathname: "/family-graph", params: { focusPersonId: connectedPersonId, focusZoom: "1.2" } } as never);
+      }
     } catch (nextError) {
       showToast({ ...parseAppError(nextError), duration: 4200 });
     } finally {
