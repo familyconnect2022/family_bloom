@@ -49,7 +49,7 @@ export default function HomeGamesScreen() {
           </View>
           <BloomCard tone="soft" style={styles.note}>
             <Ionicons name="shield-checkmark-outline" size={22} color={theme.colors.primary} />
-            <Text style={styles.noteText}>Hai trò cờ giữ nguyên các chức năng mời đấu, chơi toàn màn hình, Mini, phục hồi ván và đồng bộ với máy chủ hiện tại.</Text>
+            <Text style={styles.noteText}>Chọn một trò cờ để mời người thân cùng chơi hoặc tiếp tục ván cờ của bạn.</Text>
           </BloomCard>
         </View>
       </ScrollView>
@@ -60,12 +60,12 @@ const baseStyles = createBloomStyles(() => StyleSheet.create({
   content: { paddingBottom: 50 },
   body: { paddingHorizontal: 16, paddingTop: 20, gap: 20 },
   row: { flexDirection: "row", gap: 12 },
-  card: { flex: 1, minHeight: 228, alignItems: "center", gap: 10, padding: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  card: { flex: 1, minWidth: 0, minHeight: 244, alignItems: "center", gap: 10, padding: 14, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   icon: { width: 66, height: 66, borderRadius: 20, backgroundColor: COLORS.softSurface, alignItems: "center", justifyContent: "center" },
   piece: { width: 57, height: 57 },
   title: { color: COLORS.primaryText, fontSize: 16, fontWeight: "900" },
-  description: { minHeight: 52, color: COLORS.secondaryText, fontSize: 11, lineHeight: 17, textAlign: "center" },
-  action: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 10, minHeight: 36, borderRadius: 13, backgroundColor: COLORS.primary, alignSelf: "stretch" },
+  description: { flex: 1, minHeight: 68, color: COLORS.secondaryText, fontSize: 11, lineHeight: 17, textAlign: "center" },
+  action: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 10, minHeight: 40, marginTop: "auto", borderRadius: 13, backgroundColor: COLORS.primary, alignSelf: "stretch" },
   actionText: { color: COLORS.white, fontWeight: "900", fontSize: 11.5 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   noteText: { flex: 1, color: COLORS.secondaryText, fontSize: 12, lineHeight: 18 },

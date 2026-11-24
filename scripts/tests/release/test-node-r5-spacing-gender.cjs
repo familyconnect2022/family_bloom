@@ -24,8 +24,8 @@ assert.ok(cfg.familyUnitGap >= 90, 'R5: distinct family groups remain separated'
 const genders = ['male', 'female', 'other'];
 const people = genders.map((gender, i) => ({id: `p${i}`, familyId: 'test', displayName: `Person ${i}`, gender, lifeStatus: 'living'}));
 const relationships = [
-  {id: 'partners', personAId: 'p0', personBId: 'p1', type: 'partner'},
-  {id: 'child', personAId: 'p0', personBId: 'p2', type: 'parent_child'},
+  {id: 'partners', personAId: 'p0', personBId: 'p1', type: 'partner', partnerStatus:'married'},
+  {id: 'child', personAId: 'p0', personBId: 'p2', type: 'parent_child', subtype:'biological'},
 ];
 const result = adaptFamilyGraphSnapshot({persons: people, relationships});
 assert.equal(result.people.length, 3);

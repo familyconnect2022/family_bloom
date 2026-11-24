@@ -58,6 +58,7 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
   const [graphActivitySession, setGraphActivitySession] = useState<GraphActivitySession | null>(null);
   const [notifyingGraph, setNotifyingGraph] = useState(false);
   const [searchRequest, setSearchRequest] = useState(0);
+  const [focusPickRequest, setFocusPickRequest] = useState(0);
   const [showHeroMenu, setShowHeroMenu] = useState(false);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [focusOverlayPersonId, setFocusOverlayPersonId] = useState<string | null>(null);
@@ -255,7 +256,9 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
           count={snapshot.persons.length}
           familyName={membership?.familyName || 'Gia đình của mình'}
           onBack={embeddedInTab ? undefined : () => router.back()}
-          onOverview={embeddedInTab ? () => setShowHeroMenu(true) : undefined}
+          onOverview={embeddedInTab ? () => onOpenOverview?.() : undefined}
+          onSearch={() => setSearchRequest(count => count + 1)}
+          compact
         />
 
         <View style={__a3_styles.parityActionRow}>
@@ -294,14 +297,15 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
         </View>
 
         <View style={__a3_styles.paritySearchRow}>
-          <Text style={__a3_styles.paritySearchTitle}>Tìm trong phả hệ</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tìm kiếm người trong phả hệ"
-            onPress={() => setSearchRequest((count) => count + 1)}
-            style={({ pressed }) => [__a3_styles.paritySearchButton, pressed && __a3_styles.pressed]}
-          >
-            <Ionicons name="search" size={27} color={__a3Colors.primaryText} />
+          <View style={__a3_styles.parityPill}>
+            <Text style={__a3_styles.parityPillText}>Cây phả hệ</Text>
+          </View>
+          <View style={{ flex: 1 }}/>
+          <Pressable accessibilityRole="button" accessibilityLabel="Chọn người để Focus"
+            onPress={() => setFocusPickRequest(count => count + 1)}
+            style={__a3_styles.parityFocusAction}>
+            <Ionicons name="scan-outline" size={20} color={__a3Colors.primary}/>
+            <Text style={__a3_styles.parityFocusText}>Focus</Text>
           </Pressable>
         </View>
 
@@ -414,6 +418,7 @@ export function FamilyGraphScreen({ embeddedInTab = false, onOpenOverview }: {
               webParity
               showAdvancedControls={showAdvancedControls}
               searchRequest={searchRequest}
+              focusPickRequest={focusPickRequest}
               autoFitOnMount
             />
           )}
@@ -480,6 +485,12 @@ const styles = createBloomStyles(() => StyleSheet.create({
   },
   parityAction: { minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 3 },
   parityActionText: { color: COLORS.primary, fontSize: 13.5, fontWeight: '800' },
+  parityPill: { borderRadius: 999, backgroundColor: COLORS.primary,
+    paddingHorizontal: 13, paddingVertical: 9 },
+  parityPillText: { color: COLORS.white, fontSize: 12, fontWeight: '800' },
+  parityHint: { color: COLORS.secondaryText, fontSize: 11.5, fontWeight: '700' },
+  parityFocusAction: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  parityFocusText: { color: COLORS.primary, fontSize: 12.5, fontWeight: '800' },
   paritySearchRow: {
     paddingHorizontal: 19, minHeight: 63, marginTop: 2,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

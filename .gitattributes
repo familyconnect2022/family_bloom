@@ -1,0 +1,3 @@
+# R16R11R14: exact bytes are part of the release SHA-256 contract.
+# Do not rewrite EOL on checkout, even with Windows core.autocrlf=true.
+* -text

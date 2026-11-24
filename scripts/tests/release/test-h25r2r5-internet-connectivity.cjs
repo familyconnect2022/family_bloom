@@ -18,7 +18,7 @@ test('Reachability dedupes concurrent probes',manager.includes('if (pending) ret
 test('Banner auto-checks on foreground, never polls in background',banner.includes("AppState.addEventListener('change'") && banner.includes("if (!active && timer)") && banner.includes("if (active && !wasActive) void run()"));
 test('Banner is nonblocking and disappears when Internet is online',banner.includes('pointerEvents="none"') && banner.includes("status !== 'offline'"));
 test('Banner mounted above game/route plane for anonymous and signed-in screens',layout.indexOf('<BloomInternetBanner />') > layout.indexOf('<BoardGamePresentationRoot'));
-test('Google button immediately shows loading and rejects duplicate presses',login.includes('googleBusyRef.current = true') && login.includes('isLoading={isLoadingGoogle}') && login.includes('onPress={handleGoogle}'));
+test('Google button immediately shows loading and rejects duplicate presses',login.includes('googleBusyRef.current = true') && login.includes('setIsLoadingGoogle(true)') && login.includes('googleBusyRef.current = false') && login.includes('setIsLoadingGoogle(false)') && login.includes('isLoading={isLoadingGoogle}') && login.includes('keepTextWhileLoading') && login.includes('onPress={handleGoogle}'));
 test('Both login methods and OTP guard Internet prior to auth call',auth.includes('if (!(await ensureInternetForAuth())) return;') && (auth.match(/if \(!\(await ensureInternetForAuth\(\)\)\) return false;/g)||[]).length===2);
 test('Network loss never signs out Firebase identity',!manager.includes('signOut') && !banner.includes('signOut') && !auth.includes('authService.signOut()\n    welcomeRequestedRef.current = true;'));
 

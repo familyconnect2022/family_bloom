@@ -12,6 +12,7 @@ try {
   for (const rel of [
     'src/constants/appConfiguration.ts',
     'src/components/familyGraph/familyGraphPrototypeData.ts',
+    'src/components/familyGraph/familyGraphWebSubtreeLayout.ts',
     'src/components/familyGraph/familyGraphLiveAdapter.ts',
   ]) {
     const file = path.join(root, rel);
@@ -33,8 +34,8 @@ try {
     nickname: null, birthDate: null, birthYear: null, birthPlace: null, deathDate: null,
     deathYear: null, lifeStatus: 'living', birthOrder: null, avatarUrl: null,
     description: null, createdByUid: 'admin', createdAt: '2026-01-01', updatedAt: '2026-01-01' });
-  const parent = (a, b) => ({ id: `p-${a}-${b}`, familyId, type: 'parent_child', personAId: a, personBId: b });
-  const partner = (a, b) => ({ id: `s-${a}-${b}`, familyId, type: 'partner', personAId: a, personBId: b });
+  const parent = (a, b) => ({ id: `p-${a}-${b}`, familyId, type: 'parent_child', personAId: a, personBId: b, subtype: 'biological' });
+  const partner = (a, b) => ({ id: `s-${a}-${b}`, familyId, type: 'partner', personAId: a, personBId: b, partnerStatus: 'married' });
   const ppl = [p('Lan', 'female'), p('Don', 'male'), p('Bich', 'female'), p('Nhan', 'male'), p('Minh', 'male')];
   const rel = [partner('Lan','Don'), parent('Lan','Bich'), parent('Don','Bich'), parent('Bich','Nhan'), parent('Nhan','Minh')];
   const snapshot = (persons, relationships) => ({ familyId, persons, relationships });

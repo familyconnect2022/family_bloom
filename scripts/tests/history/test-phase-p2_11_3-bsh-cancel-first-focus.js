@@ -29,6 +29,7 @@ const runtimeFiles = [
   "src/constants/appConfiguration.ts",
   "src/services/familyGraph/familyGraphQueryEngine.ts",
   "src/components/familyGraph/familyGraphPrototypeData.ts",
+  "src/components/familyGraph/familyGraphWebSubtreeLayout.ts",
   "src/components/familyGraph/familyGraphLiveAdapter.ts",
   "src/components/familyGraph/familyGraphRevision.ts",
   "src/components/familyGraph/familyGraphViewport.ts",

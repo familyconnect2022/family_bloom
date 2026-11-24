@@ -67,6 +67,7 @@ type PersonDraft = {
 };
 
 type RelationshipMode = "parent_of" | "child_of" | "partner";
+import {limitForRelationshipSide,toggleRelationshipPerson,validateRelationshipPeople} from "../../../utils/relationshipSelectionPolicy";
 type RelationshipModalConfig = { basePersonId: string | null; mode: RelationshipMode } | null;
 
 type GraphConfirmAction =
@@ -405,7 +406,7 @@ export default function FamilyGraphAdminScreen() {
       if (editingPersonId) {
         setPersonModalVisible(false);
       } else {
-        // Standalone person creation is repeatable without navigating to Full Tree.
+        // Keep add-person modal open, clearing the prior committed draft.
         setPersonDraft({ ...EMPTY_PERSON });
         setEditingPersonId(null);
         setSelectedPersonId(null);
@@ -417,12 +418,12 @@ export default function FamilyGraphAdminScreen() {
     }
   };
 
-  const openRelationship = useCallback((basePersonId?: string, mode: RelationshipMode = "parent_of") => {
+  const openRelationship = useCallback((basePersonId?: string, mode: RelationshipMode | null = null) => {
     router.push({
       pathname: "/family-graph-relationship-editor",
       params: {
         ...(basePersonId ? { basePersonId } : {}),
-        mode,
+        ...(mode?{mode}:{}),
       },
     } as never);
   }, [router]);
@@ -1020,7 +1021,7 @@ const RelationshipModal = memo(function RelationshipModal({
   familyId: string | null;
   people: FamilyPerson[];
   relationships: FamilyRelationship[];
-  initialMode: RelationshipMode;
+  initialMode: RelationshipMode | null;
   initialBasePersonId: string | null;
   onClose: () => void;
 }) {
@@ -1029,7 +1030,7 @@ const RelationshipModal = memo(function RelationshipModal({
 
   
   const { showToast } = useBloomToast();
-  const [mode, setMode] = useState<RelationshipMode>(initialMode);
+  const [mode, setMode] = useState<RelationshipMode | null>(initialMode);
   const [subtype, setSubtype] = useState<ParentChildSubtype>("unknown");
   const [partnerStatus, setPartnerStatus] = useState<PartnerStatus>("married");
   const [baseIds, setBaseIds] = useState<string[]>(initialBasePersonId ? [initialBasePersonId] : []);
@@ -1102,6 +1103,7 @@ const RelationshipModal = memo(function RelationshipModal({
   const childIds = mode === "parent_of" ? targetIds : baseIds;
 
   const batchStats = useMemo(() => {
+    if (!mode) return {requested:0,existing:0,conflict:0};
     if (mode === "partner") {
       const a = baseIds[0];
       const b = targetIds[0];
@@ -1126,24 +1128,25 @@ const RelationshipModal = memo(function RelationshipModal({
   const preview = selectedNames.length && referenceNames.length
     ? mode === "partner"
       ? `${joinNames(selectedNames)} là ${partnerStatusLabel[partnerStatus].toLowerCase()} của ${joinNames(referenceNames)}.`
-      : `${joinNames(selectedNames)} ${parentChildPhrase(mode, subtype)} ${joinNames(referenceNames)}.`
+      : `${joinNames(selectedNames)} ${mode?parentChildPhrase(mode, subtype):"chưa chọn quan hệ"} ${joinNames(referenceNames)}.`
     : "Chọn đủ hai phía để Bloom kiểm tra các đường quan hệ sẽ tạo.";
 
   const changeMode = (nextMode: RelationshipMode) => {
+    if(mode===nextMode)return;
     setMode(nextMode);
-    if (nextMode === "partner") {
-      setBaseIds(baseIds.slice(0, 1));
-      setTargetIds(targetIds.slice(0, 1));
-    }
+    setBaseIds(initialBasePersonId?[initialBasePersonId]:[]);
+    setTargetIds([]);
+    setPickerSide(null);
   };
 
   const disabled = busy
-    || baseIds.length === 0
-    || targetIds.length === 0
+    || !!validateRelationshipPeople(mode,baseIds,targetIds)
     || batchStats.conflict > 0
     || (mode === "partner" && (baseIds.length !== 1 || targetIds.length !== 1 || batchStats.existing > 0));
 
   const submitRelationship = async (warningsApproved=false) => {
+    const invalid=validateRelationshipPeople(mode,baseIds,targetIds);
+    if(invalid){showToast({type:'warning',title:'Chưa thể nối',message:invalid});return;}
     if (!familyId || baseIds.length === 0 || targetIds.length === 0 || busy) {
       if (!busy) showToast({ type: "warning", title: "Chưa đủ người", message: "Hãy chọn người ở cả hai phía của mối quan hệ." });
       return;
@@ -1249,14 +1252,15 @@ const RelationshipModal = memo(function RelationshipModal({
 
   const togglePickerPerson = useCallback((personId: string) => {
     if (!pickerSide) return;
-    const single = mode === "partner";
-    const toggle = (current: string[]) => {
-      if (single) return current[0] === personId ? [] : [personId];
-      return current.includes(personId) ? current.filter((id) => id !== personId) : [...current, personId];
+    if(!mode)return;
+    const toggle = (current:string[]) => {
+      const result=toggleRelationshipPerson(current,personId,mode,pickerSide);
+      if(result.blocked)showToast({type:'warning',title:'Đã đủ số người',message:'Chỉ chọn tối đa 2 cha/mẹ hoặc 1 người cho quan hệ đôi.'});
+      return result.ids;
     };
     if (pickerSide === "base") setBaseIds(toggle);
     else setTargetIds(toggle);
-  }, [mode, pickerSide]);
+  }, [mode, pickerSide,showToast]);
 
   const renderSelectionSummary = (side: "base" | "target", label: string, ids: string[]) => {
     const selected = ids.map((id) => peopleById.get(id)).filter((person): person is FamilyPerson => !!person);
@@ -1310,7 +1314,7 @@ const RelationshipModal = memo(function RelationshipModal({
       subtitle={pickerSide
         ? mode === "partner"
           ? "Quan hệ vợ/chồng chỉ chọn một người mỗi phía. Bạn có thể quay lại để đổi loại quan hệ."
-          : "Có thể chọn nhiều người. Bloom xếp theo tên gọi để bạn tìm nhanh hơn."
+          : mode ? `Bên cha/mẹ tối đa 2 người; bên con không giới hạn · đang chọn ${limitForRelationshipSide(mode,pickerSide??"base")===Infinity?"nhiều người":`tối đa ${limitForRelationshipSide(mode,pickerSide??"base")}`}.` : "Chọn loại quan hệ trước."
         : "Chọn hai phía, nói Bloom biết họ liên hệ với nhau thế nào, rồi xem lại trước khi lưu."}
       variant="relationship"
       compactHeader={!!pickerSide}
@@ -1379,9 +1383,9 @@ const RelationshipModal = memo(function RelationshipModal({
             </View>
           </View>
 
-          {renderSelectionSummary("base", "1. Người được chọn", baseIds)}
 
-          <Field label="2. Loại quan hệ">
+
+          <Field label="1. Loại/chiều quan hệ (bắt buộc chọn)">
             <View style={__a3_styles.chips}>
               <BloomChipButton label="Là cha/mẹ của" icon="arrow-down-circle-outline" selected={mode === "parent_of"} onPress={() => changeMode("parent_of")} />
               <BloomChipButton label="Là con của" icon="arrow-up-circle-outline" selected={mode === "child_of"} onPress={() => changeMode("child_of")} />
@@ -1389,6 +1393,7 @@ const RelationshipModal = memo(function RelationshipModal({
             </View>
           </Field>
 
+          {!mode&&<Text style={__a3_styles.relationshipPreviewSentence}>Chưa chọn loại quan hệ. Hãy chọn trước khi chọn người.</Text>}
           {mode === "partner" ? (
             <Field label="Trạng thái quan hệ">
               <View style={__a3_styles.chips}>
@@ -1397,7 +1402,7 @@ const RelationshipModal = memo(function RelationshipModal({
                 ))}
               </View>
             </Field>
-          ) : (
+          ) : mode ? (
             <Field label="Loại cha/mẹ – con">
               <View style={__a3_styles.chips}>
                 {(Object.keys(parentSubtypeLabel) as ParentChildSubtype[]).map((nextSubtype) => (
@@ -1405,9 +1410,10 @@ const RelationshipModal = memo(function RelationshipModal({
                 ))}
               </View>
             </Field>
-          )}
+          ) : null}
 
-          {renderSelectionSummary("target", "3. Người tham chiếu", targetIds)}
+          {mode&&renderSelectionSummary("base", "2. Người bắt đầu", baseIds)}
+          {mode&&renderSelectionSummary("target", "3. Người tham chiếu", targetIds)}
 
           <View style={[__a3_styles.relationshipPreview, batchStats.conflict > 0 && __a3_styles.relationshipPreviewWarning]}>
             <View style={__a3_styles.relationshipPreviewTitleRow}>

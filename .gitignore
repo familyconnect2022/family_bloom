@@ -197,3 +197,8 @@ document/legacy-import/
 # google-services.json
 # app.json / app.config.js
 # .env.example / server/.env.example
+
+# R16R11R14: these are audited SOURCE files, not generated output.
+!/.env.main.example
+!/scripts/android/build/
+!/document/phase-h25/education/FAMILY_BLOOM_RULES_L1R7R1_BEFORE_LESSON_READER.rules.bak

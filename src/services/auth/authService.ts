@@ -61,6 +61,12 @@ export const authService = {
     onPhase?.('play-services');
     await withGoogleDeadline(GoogleSignin.hasPlayServices(), 'play-services', 15000);
     onPhase?.('account-picker');
+    // Explicit Google login should offer account choice after a prior logout.
+    // Clear only this app's Google SDK selection right before showing the picker.
+    // Never run this on forced/remote eviction (signOutFirebaseOnly).
+    // If Google Play Services cannot reset the selection, do not silently reuse
+    // a previous account: surface a retryable error instead.
+    await withGoogleDeadline(GoogleSignin.signOut(), 'play-services', 5000);
     // Late completion of an OS account picker after the deadline never starts
     // a Firebase sign-in: only the awaited result can advance to the next step.
     const result = await withGoogleDeadline(GoogleSignin.signIn(), 'account-picker', 60000);
@@ -95,13 +101,13 @@ export const authService = {
   async signOut() {
     await signOut(getAuth());
     try {
-      if (GoogleSignin.getCurrentUser()) {
-        // Firebase logout has already succeeded. Never keep the app waiting
-        // forever for the optional Google SDK cleanup.
-        await withGoogleDeadline(GoogleSignin.signOut(), 'play-services', 5000);
-      }
+      // Clear the SDK account even if getCurrentUser is null while the native
+      // broker still remembers the last Google account on a dual-app phone.
+      // Firebase logout has already succeeded; cleanup is bounded to 5 s.
+      await withGoogleDeadline(GoogleSignin.signOut(), 'play-services', 5000);
     } catch {
-      // A clone/phone-auth user may not support a Google SDK sign-out.
+      // A phone-auth user may not have an active Google SDK account.
+      // Next explicit Google login repeats the selection reset before picker.
     }
   },
 };

@@ -1,4 +1,5 @@
 import { APP_CONFIG_DEFAULTS } from "../../constants/appConfiguration";
+import { reserveFamilyGraphWebSubtrees } from "./familyGraphWebSubtreeLayout";
 import type { FamilyGraphSnapshot, FamilyPerson, FamilyRelationship } from "../../types/familyGraph";
 import {
   FAMILY_GRAPH_CANVAS,
@@ -412,7 +413,12 @@ export const adaptFamilyGraphSnapshot = (
   const allPeopleById = new Map(snapshot.persons.map((person) => [person.id, person]));
   const connectedPersonIds = new Set<string>();
   const renderRelationships = snapshot.relationships.filter((relationship) => {
-    const valid = allPeopleById.has(relationship.personAId) && allPeopleById.has(relationship.personBId);
+    const eligible = relationship.type === "parent_child"
+      ? (relationship.subtype === "biological" || relationship.subtype === "adoptive" || relationship.subtype === "step")
+      : (relationship.partnerStatus === "married" || relationship.partnerStatus === "partner"
+        || relationship.partnerStatus === "divorced" || relationship.partnerStatus === "widowed");
+    const valid = eligible && relationship.personAId !== relationship.personBId
+      && allPeopleById.has(relationship.personAId) && allPeopleById.has(relationship.personBId);
     if (valid) {
       connectedPersonIds.add(relationship.personAId);
       connectedPersonIds.add(relationship.personBId);
@@ -467,6 +473,10 @@ export const adaptFamilyGraphSnapshot = (
     const units = rowUnits.get(generation) ?? [];
     positionGenerationUnits(units, generation, provisionalCanvasWidth, relationshipIndex.parentIdsByChild, positioned);
   }
+  // R16R11R1: Web connected-preview parity. Reserve complete descendant
+  // branches BEFORE building the immutable scene and connector routes.
+  // This does not write Firebase or invent relationship/lineage membership.
+  reserveFamilyGraphWebSubtrees(renderPersons, renderRelationships, positioned);
 
   let minX = Number.POSITIVE_INFINITY;
   let maxRight = Number.NEGATIVE_INFINITY;
@@ -538,7 +548,12 @@ export const refreshFamilyGraphVisualProfiles = (
   const allPeopleById = new Map(snapshot.persons.map((person) => [person.id, person]));
   const connectedPersonIds = new Set<string>();
   const renderRelationships = snapshot.relationships.filter((relationship) => {
-    const valid = allPeopleById.has(relationship.personAId) && allPeopleById.has(relationship.personBId);
+    const eligible = relationship.type === "parent_child"
+      ? (relationship.subtype === "biological" || relationship.subtype === "adoptive" || relationship.subtype === "step")
+      : (relationship.partnerStatus === "married" || relationship.partnerStatus === "partner"
+        || relationship.partnerStatus === "divorced" || relationship.partnerStatus === "widowed");
+    const valid = eligible && relationship.personAId !== relationship.personBId
+      && allPeopleById.has(relationship.personAId) && allPeopleById.has(relationship.personBId);
     if (valid) {
       connectedPersonIds.add(relationship.personAId);
       connectedPersonIds.add(relationship.personBId);

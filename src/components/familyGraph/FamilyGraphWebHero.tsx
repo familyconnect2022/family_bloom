@@ -12,12 +12,14 @@ import { getBloomHeroTextShade } from '../../theme/storybookShadeRegistry';
  * Native system type is intentional: this header should not inherit the legacy
  * serif title treatment used on Android detail subpages. */
 export function FamilyGraphWebHero({
-  count, familyName, onBack, onOverview,
+  count, familyName, onBack, onOverview, onSearch, compact = false,
 }: {
   count: number;
   familyName: string;
   onBack?: () => void;
   onOverview?: () => void;
+  onSearch?: () => void;
+  compact?: boolean;
 }) {
   const theme = useA3Theme();
   const { height: windowHeight } = useWindowDimensions();
@@ -27,6 +29,29 @@ export function FamilyGraphWebHero({
   const mastheadHeight = useMemo(
     () => Math.max(208, Math.min(292, Math.round(windowHeight * 0.295))),
     [windowHeight],
+  );
+  // R16R11R1: Web's approved small genealogy masthead leaves the canvas
+  // visible instead of consuming one third of the phone with a hero image.
+  if (compact) return (
+    <View testID="family-graph-web-hero" style={[styles.compactRoot, { paddingTop: insets.top + 6, backgroundColor: theme.colors.background }]}>
+      <View style={styles.compactRow}>
+        {onBack ? <Pressable accessibilityRole="button" accessibilityLabel="Trở về"
+          onPress={onBack} style={[styles.compactIcon, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Ionicons name="arrow-back" size={25} color={theme.colors.primaryText}/>
+        </Pressable> : onOverview ? <Pressable accessibilityRole="button" accessibilityLabel="Mở quản lý Cây nhà"
+          onPress={onOverview} style={[styles.compactIcon, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Ionicons name="arrow-back" size={25} color={theme.colors.primaryText}/>
+        </Pressable> : <View style={styles.compactIcon}/>}
+        <View style={styles.compactCopy}>
+          <Text numberOfLines={2} style={[styles.compactTitle,{color:theme.colors.primaryText}]}>Gia phả gia đình</Text>
+          <Text numberOfLines={1} style={[styles.compactMeta,{color:theme.colors.secondaryText}]}>{familyName} · {count} người</Text>
+        </View>
+        {onSearch && <Pressable accessibilityRole="button" accessibilityLabel="Tìm người trong cây gia đình"
+          onPress={onSearch} style={[styles.compactIcon,{backgroundColor:theme.colors.surface,borderColor:theme.colors.border}]}>
+          <Ionicons name="search" size={24} color={theme.colors.primaryText}/>
+        </Pressable>}
+      </View>
+    </View>
   );
   return (
     <View testID="family-graph-web-hero" style={[styles.root, { height: mastheadHeight, backgroundColor: theme.colors.background }]}>
@@ -75,6 +100,13 @@ export function FamilyGraphWebHero({
 
 const styles = StyleSheet.create({
   root: { width: '100%', overflow: 'hidden' },
+  compactRoot: { width: '100%', paddingHorizontal: 16, paddingBottom: 10 },
+  compactRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72 },
+  compactIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center' },
+  compactCopy: { flex: 1, gap: 3, minWidth: 0 },
+  compactTitle: { fontSize: 19, fontWeight: '800', lineHeight: 25 },
+  compactMeta: { fontSize: 12.5, lineHeight: 18 },
   fog: { position: 'absolute', left: -1, right: -1, bottom: -1, height: '31%' },
   controls: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', alignItems: 'center', zIndex: 4 },
   topButton: { width: 43, height: 43, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.89)' },

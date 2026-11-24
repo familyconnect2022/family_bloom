@@ -13,11 +13,13 @@ assert(metro.includes('scripts\\android\\dev\\Family_Bloom_Android_Debug_Build_A
 assert(metro.includes('choice /C 12'));
 assert(metro.includes('exit /b %errorlevel%'));
 const share=fs.readFileSync(path.join(root,'Family_Bloom_BUILD_APK_TO_SHARE.bat'),'utf8');
-assert(share.includes('scripts\\android\\build\\Family_Bloom_BUILD_APK_TO_SHARE.bat'));
+assert(share.includes('scripts\\android\\build\\Build-And-Sign.ps1'));
+assert(share.includes('powershell.exe'), 'Root APK share must invoke secured signing PowerShell');
+assert(fs.existsSync(path.join(root,'scripts/android/build/Build-And-Sign.ps1')), 'Signed release script is missing');
 const history=['00_CAP_NHAT_R11R2_LEN_R11R4R1.cmd','00_CAP_NHAT_R6_AN_TOAN.cmd','00_CAP_NHAT_R7_AN_TOAN.cmd','00_MO_CAP_NHAT_FAMILY_BLOOM.cmd','00_TACH_WEB_ANDROID_AN_TOAN.cmd','R11R3_MOTION_RECOVERY.cmd','R11R4_MOTION_INSTALL.cmd','R11_MOTION_SAFE_UPDATE.cmd','Family_Bloom_AUTO_UPDATE_FULL.bat'];
 for(const name of history) assert(file('scripts/android/maintenance/legacy/'+name),'Missing legacy '+name);
 assert(file('scripts/android/maintenance/Family_Bloom_AUTO_UPDATE_FULL.bat'));
 assert(!file('HUONG_DAN_1_BUOC.txt')&&!file('R11R4R2_RELEASE_NOTES.txt'));
 assert(file('document/releases/R11R4R2_RELEASE_NOTES.txt'));
 assert(file('document/guides/HUONG_DAN_1_BUOC_R11R2_TO_R11R4R1.txt'));
-console.log('R11R4R2R1 ROOT BAT & DOC CONTRACT: PASS (2 launchers, no root CMD, history preserved)');
+console.log('R16R4-SIGNING-R2 ROOT BAT CONTRACT: PASS (2 launchers, secured signing, history preserved)');

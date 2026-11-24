@@ -18,8 +18,8 @@ const native = read('modules/family-bloom-overlay/android/src/main/java/expo/mod
 check(tabs.includes('workspaceRoot: { flex: 1, backgroundColor: COLORS.background, overflow: "hidden" }'), 'tab workspace owns a normal flex layout root');
 check(tabs.includes('navigatorRoot: { flex: 1, backgroundColor: COLORS.background, overflow: "hidden" }'), 'tab navigator host restored to flex:1');
 check(!tabs.includes('navigatorRoot: { ...StyleSheet.absoluteFillObject'), 'tab navigator host is not absoluteFillObject');
-check(tabs.includes('<View style={styles.navigatorRoot} collapsable={false}>'), 'tab navigator host remains non-collapsable for stable native measurement');
-check(tabs.includes('sceneStyle: styles.tabScene') && !tabs.includes('reservedTabBarHeight'), 'floating tab dock does not reserve an opaque navigator footer; screen scrollers own bottom inset');
+check(tabs.includes('<View style={__a3_styles.navigatorRoot} collapsable={false}>'), 'tab navigator host remains non-collapsable for stable native measurement');
+check(tabs.includes('sceneStyle: __a3_styles.tabScene') && !tabs.includes('reservedTabBarHeight'), 'floating tab dock does not reserve an opaque navigator footer; screen scrollers own bottom inset');
 check(tabs.includes('tabScene: { flex: 1, backgroundColor: "transparent" }'), 'each tab scene owns flex:1 and transparent background');
 check(rootLayout.includes('<Stack') && rootLayout.includes('navigationPlane: { flex: 1'), 'root Stack remains on normal flex navigation plane');
 check(presentation.includes('return null;') && !presentation.includes('<FamilyBloomOverlayHost'), 'React presentation controller still renders no overlay View');

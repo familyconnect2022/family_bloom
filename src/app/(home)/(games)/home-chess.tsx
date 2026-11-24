@@ -76,7 +76,7 @@ export default function ChessFamilyLobby() {
       if(!alive.current)return;
       setSlots(items);setConnecting(false);setOnline(true);
     },e=>{
-      if(alive.current){setConnecting(false);setOnline(false);showToast({title:"Chưa tải được danh sách mời",message:e.message,type:"warning"});}
+      if(alive.current){setConnecting(false);setOnline(false);showToast({title:"Chưa tải được danh sách mời",message:"Vui lòng kiểm tra kết nối và thử lại.",type:"warning"});}
     });
     return ()=>{alive.current=false;unsub();};
   },[familyId,user?.uid,showToast]));
@@ -96,7 +96,7 @@ export default function ChessFamilyLobby() {
       });
       // Global ChessChallengeGate owns the authoritative 60s countdown + cancel.
       showToast({ type: "success",title:"Đã gửi lời thách đấu",message:`Đang chờ ${player.shortName||player.displayName} trả lời trong 60 giây.`,duration:3500});
-    }catch(e){showToast({title:"Không gửi được lời mời",message:e instanceof Error?e.message:String(e),type:"warning",duration:4500});}
+    }catch(e){showToast({title:"Không gửi được lời mời",message:"Chưa thực hiện được thao tác. Vui lòng thử lại.",type:"warning",duration:4500});}
     finally{sendingRef.current=null;if(alive.current)setSendingUid(null);}
   };
 
@@ -114,7 +114,7 @@ export default function ChessFamilyLobby() {
       }else if(response.data.kind==="pending"){showToast({ type: "warning",title:"Lời mời đang chờ",message:"Vui lòng xử lý lời mời hiện tại trước khi tạo ván mới."});}
       else if(response.data.kind==="busy_other_game"){showToast({ type: "warning",title:"Đang có ván ở trò khác",message:"Hãy kết thúc hoặc thu nhỏ ván đang chơi trước nhé."});}
       else showToast({ type: "info",title:"Sảnh đã sẵn sàng",message:"Chọn thành viên gia đình để gửi lời mời."});
-    }catch(e){showToast({title:"Chưa khôi phục được",message:e instanceof Error?e.message:String(e),type:"warning"});}
+    }catch(e){showToast({title:"Chưa khôi phục được",message:"Chưa thực hiện được thao tác. Vui lòng thử lại.",type:"warning"});}
     finally{recoveringRef.current=false;if(alive.current)setRecovering(false);}
   };
 
@@ -126,9 +126,9 @@ export default function ChessFamilyLobby() {
         <Text style={[__a3_styles.eyebrow,{color:PALETTE.deep}]}>✦ BLOOM ARENA · CỜ VUA ✦</Text>
         <Image source={ART} style={__a3_styles.royalPiece} resizeMode="contain"/>
         <Text style={__a3_styles.title}>Đấu trường Cờ vua</Text>
-        <Text style={__a3_styles.subtitle}>Một cuộc đấu trí vui cùng người thân trong Nhà Mình. Gửi lời mời cho người thân, không cần họ đang online!</Text>
+        <Text style={__a3_styles.subtitle}>Một cuộc đấu trí vui cùng người thân trong Nhà Mình. Gửi lời mời cho người thân, không cần họ đang trực tuyến!</Text>
         <View style={__a3_styles.heroStats}>
-          <View style={__a3_styles.statItem}><View style={[__a3_styles.onlineDot,{backgroundColor:online?__a3Colors.selectedBackground:__a3Colors.selectedBackground}]}/><Text style={__a3_styles.statText}>{connecting?"Đang kết nối…":online?"Lời mời Firebase":"Chưa kết nối Firebase"}</Text></View>
+          <View style={__a3_styles.statItem}><View style={[__a3_styles.onlineDot,{backgroundColor:online?__a3Colors.selectedBackground:__a3Colors.selectedBackground}]}/><Text style={__a3_styles.statText}>{connecting?"Đang kết nối…":online?"Có thể mời":"Chưa sẵn sàng"}</Text></View>
           <View style={__a3_styles.statDivider}/>
           <View style={__a3_styles.statItem}><Ionicons name="people" size={15} color={PALETTE.deep}/><Text style={__a3_styles.statText}>{readyCount} người sẵn sàng</Text></View>
         </View>
@@ -139,18 +139,18 @@ export default function ChessFamilyLobby() {
           <Text style={__a3_styles.sectionTitle}>Chọn thời gian</Text>
           <View style={__a3_styles.timeRow}>{options.map(o=><Pressable key={o.id} onPress={()=>setSelectedControl(o.id)}
             style={[__a3_styles.timeChip,{backgroundColor:selectedControl===o.id?PALETTE.primary:PALETTE.pale,borderColor:selectedControl===o.id?PALETTE.primary:PALETTE.border}]}><Text style={[__a3_styles.timeText,{color:selectedControl===o.id?__a3Colors.white:PALETTE.deep}]}>{o.id}</Text></Pressable>)}</View>
-          <Text style={__a3_styles.helper}>Đồng hồ do máy chủ quản lý · Hai người sẵn sàng mới bắt đầu.</Text>
+          <Text style={__a3_styles.helper}>Ván cờ bắt đầu khi cả hai người đã sẵn sàng.</Text>
         </View>
         <View style={__a3_styles.sectionHead}><View><Text style={__a3_styles.sectionEyebrow}>THÁCH ĐẤU NGƯỜI NHÀ</Text><Text style={__a3_styles.sectionTitle}>Mời người thân cùng chơi</Text></View><View style={[__a3_styles.countPill,{backgroundColor:PALETTE.pale}]}><Text style={[__a3_styles.countText,{color:PALETTE.deep}]}>{readyCount} có thể mời</Text></View></View>
-        <Text style={__a3_styles.description}>Danh sách thành viên từ Firebase. Có thể mời dù đối phương chưa mở ứng dụng; thời hạn phản hồi là 60 giây.</Text>
+        <Text style={__a3_styles.description}>Có thể mời người thân ngay cả khi họ chưa mở ứng dụng. Người nhận có 60 giây để phản hồi.</Text>
         {memberError?<Text style={__a3_styles.empty}>Không tải được danh sách tài khoản. Hãy kiểm tra quyền gia đình.</Text>:null}
         {loadingMembers?<Text style={__a3_styles.empty}>Đang lấy danh sách thành viên…</Text>:players.length===0?<Text style={__a3_styles.empty}>Chưa có tài khoản người thân khác trong gia đình.</Text>:
           players.map(person=><ArenaPlayerRow key={person.uid} member={person} presence={slots[person.uid]?"busy":undefined} inviteWithoutPresence theme={PALETTE} waiting={sendingUid!==null||!online} sending={sendingUid===person.uid} onChallenge={()=>void invitePlayer(person.uid)}/>)}
         <Pressable onPress={()=>void resume()} disabled={recovering} style={[__a3_styles.resume,{borderColor:PALETTE.border}]}>{recovering?<ActivityIndicator size="small" color={PALETTE.primary}/>:<Ionicons name="refresh-circle-outline" color={PALETTE.primary} size={23}/>}<Text style={[__a3_styles.resumeText,{color:PALETTE.deep}]}>{recovering?"Đang tìm ván cũ…":"Tiếp tục ván đang chơi"}</Text><Ionicons name="arrow-forward" size={17} color={PALETTE.primary}/></Pressable>
         <View style={[__a3_styles.panel,{borderColor:PALETTE.border}]}><Text style={__a3_styles.sectionEyebrow}>CÁCH CHƠI CÙNG NHAU</Text>
-          <ArenaRuleLine icon="people-outline" theme={PALETTE}>Mời thành viên gia đình qua Firebase, không cần họ đang online.</ArenaRuleLine>
+          <ArenaRuleLine icon="people-outline" theme={PALETTE}>Mời người thân ngay cả khi họ chưa mở ứng dụng.</ArenaRuleLine>
           <ArenaRuleLine icon="notifications-outline" theme={PALETTE}>Người nhận có 60 giây để đồng ý hoặc từ chối.</ArenaRuleLine>
-          <ArenaRuleLine icon="sparkles-outline" theme={PALETTE}>Khi cả hai sẵn sàng, bàn cờ Full mở ra; có thể thu nhỏ để dùng các tab khác.</ArenaRuleLine>
+          <ArenaRuleLine icon="sparkles-outline" theme={PALETTE}>Khi cả hai sẵn sàng, bàn cờ mở toàn màn hình; có thể thu nhỏ để dùng các mục khác.</ArenaRuleLine>
         </View>
         <Text style={__a3_styles.footer}>✦ FAMILY BLOOM · PLAY TOGETHER ✦</Text>
       </View>

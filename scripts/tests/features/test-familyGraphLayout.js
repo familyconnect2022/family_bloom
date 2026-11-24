@@ -11,6 +11,7 @@ const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), "family-bloom-layout-"));
 for (const relativePath of [
   "src/constants/appConfiguration.ts",
   "src/components/familyGraph/familyGraphPrototypeData.ts",
+  "src/components/familyGraph/familyGraphWebSubtreeLayout.ts",
   "src/components/familyGraph/familyGraphLiveAdapter.ts",
   "src/components/familyGraph/familyGraphSpatialGrid.ts",
   "src/components/familyGraph/familyGraphViewport.ts",
@@ -85,7 +86,7 @@ const long = byId.get("long");
 const lien = byId.get("lien");
 assert.ok(bich && long && lien);
 assert.strictEqual(bich.generation, long.generation, "partners must share generation");
-assert.ok(Math.abs(bich.x - long.x) < 170, "partners must stay adjacent as one visual unit");
+assert.equal(Math.abs(bich.x - long.x), 144 + 72, "partners use the same fixed 72pt Web gap inside one visual unit");
 const minPair = Math.min(bich.x, long.x);
 const maxPair = Math.max(bich.x, long.x);
 assert.ok(lien.x < minPair || lien.x > maxPair, "sibling must never be inserted between a couple");
@@ -131,12 +132,12 @@ const deepStandard = adaptFamilyGraphSnapshot(
   "deepMinh",
 );
 const deepStandardById = new Map(deepStandard.people.map((p) => [p.id, p]));
-assert.strictEqual(deepStandardById.get("deepMinh").generation, 3, "standard canvas behavior must remain unchanged");
+assert.strictEqual(deepStandardById.get("deepMinh").generation, 4, "main and Focus now share the same 4-generation hierarchy");
 
 // Phase 6.4 visual-compat spacing is intentionally wider than Phase 6.3,
 // while staying compact enough to preserve the Bloom tree language.
 const configuredGenerationStep = APP_CONFIG_DEFAULTS.familyGraph.layout.generationStep;
-assert.strictEqual(configuredGenerationStep, 216);
+assert.strictEqual(configuredGenerationStep, 344);
 assert.strictEqual(getFamilyGraphGenerationY(2) - getFamilyGraphGenerationY(1), configuredGenerationStep);
 assert.strictEqual(getFamilyGraphGenerationY(5) - getFamilyGraphGenerationY(4), configuredGenerationStep);
 assert.ok(visual.canvasHeight >= getFamilyGraphGenerationY(5) + 124);
@@ -228,7 +229,7 @@ assert.ok(
   "single-parent child must stay visually closer to its actual parent branch than to another couple",
 );
 const coupleGap = Math.abs(center("nhan2") - center("hong2"));
-assert.ok(coupleGap < 180, "Thanh Nhân + Kim Hồng must remain an adjacent couple unit");
+assert.equal(coupleGap, 144 + 72, "Thanh Nhân + Kim Hồng use the approved Web 72pt couple gap");
 
 const largePersons = [];
 const largeRelationships = [];

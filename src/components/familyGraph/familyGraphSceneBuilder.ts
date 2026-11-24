@@ -29,8 +29,8 @@ import {
 } from "./familyGraphFocusBshCache";
 
 export const FAMILY_GRAPH_BSH_VERSION = 2;
-export const FAMILY_GRAPH_SCENE_VERSION = 6;
-export const FAMILY_GRAPH_LAYOUT_VERSION = 3;
+export const FAMILY_GRAPH_SCENE_VERSION = 7;
+export const FAMILY_GRAPH_LAYOUT_VERSION = 4;
 export const FAMILY_GRAPH_FOCUS_ENTRY_SCALE = 0.95;
 export const FAMILY_GRAPH_FOCUS_ENTRY_VIEWPORT_Y = 0.42;
 

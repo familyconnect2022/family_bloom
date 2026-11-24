@@ -63,6 +63,9 @@ if errorlevel 1 (
   goto :fail
 )
 
+node scripts\android\prepare-android-local.cjs
+if errorlevel 1 goto :fail
+
 echo [overlay] Cleaning legacy files from FULL-over-old updates...
 node scripts\setup\cleanup-overlay-routes.js
 if errorlevel 1 goto :fail
@@ -95,31 +98,7 @@ if errorlevel 1 (
 for /f "delims=" %%M in ('"!ADB!" -s "!DEVICE_SERIAL!" shell getprop ro.product.model 2^>nul') do set "DEVICE_MODEL=%%M"
 echo       Device: !DEVICE_MODEL!  [!DEVICE_SERIAL!]
 
-echo [2/7] Checking npm dependencies...
-set "DEPENDENCIES_READY=1"
-if not exist "node_modules\expo\package.json" set "DEPENDENCIES_READY=0"
-if not exist "node_modules\expo-dev-client\package.json" set "DEPENDENCIES_READY=0"
-if not exist "node_modules\expo-audio\package.json" set "DEPENDENCIES_READY=0"
-if not exist "node_modules\expo-asset\package.json" set "DEPENDENCIES_READY=0"
-if not exist "node_modules\expo-doctor\package.json" set "DEPENDENCIES_READY=0"
-if not exist "node_modules\@react-native-firebase\app\package.json" set "DEPENDENCIES_READY=0"
-node scripts\setup\check-p2_37r2-local-install.js >nul 2>nul
-if errorlevel 1 set "DEPENDENCIES_READY=0"
-if "!DEPENDENCIES_READY!"=="1" (
-  node scripts\setup\check-expo-dependencies.js >nul 2>nul
-  if errorlevel 1 set "DEPENDENCIES_READY=0"
-  node scripts\setup\check-package-lock.js >nul 2>nul
-  if errorlevel 1 set "DEPENDENCIES_READY=0"
-)
-if "!DEPENDENCIES_READY!"=="0" (
-  echo       Dependencies are missing or stale. Running npm install...
-  call npm install --no-audit --no-fund
-  if errorlevel 1 goto :fail
-)
-node scripts\setup\check-expo-dependencies.js
-if errorlevel 1 goto :fail
-node scripts\setup\check-package-lock.js
-if errorlevel 1 goto :fail
+echo [2/7] Existing npm dependencies verified by shared preflight.
 node scripts\setup\check-effective-expo-config.js
 if errorlevel 1 goto :fail
 node scripts\setup\check-board-audio-integrity.js
@@ -180,7 +159,7 @@ if errorlevel 1 (
 echo [INFO] Render backend managed and built separately.
 
 echo [4/7] Regenerating Android native project with the single app identity...
-call npx expo prebuild --platform android --clean
+call npx --no-install expo prebuild --platform android --clean --no-install
 if errorlevel 1 goto :fail
 node scripts\setup\check-generated-android-package.js "%APP_PACKAGE%"
 if errorlevel 1 goto :fail

@@ -20,6 +20,8 @@ export interface BloomButtonProps extends Omit<PressableProps, "disabled"> {
   title: string;
   variant?: ButtonVariant;
   isLoading?: boolean;
+  /** Preserve a readable label beside the spinner (e.g. Google Sign-In). */
+  keepTextWhileLoading?: boolean;
   icon?: BloomIconProp;
   iconPosition?: IconPosition;
   customStyle?: StyleProp<ViewStyle>;
@@ -33,6 +35,7 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
   title,
   variant = "primary",
   isLoading = false,
+  keepTextWhileLoading = false,
   icon,
   iconPosition = "left",
   customStyle,
@@ -101,13 +104,18 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
           vStyles.view,
           variant === "primary" && !isDisabled && [__a3_styles.primaryShadow, { shadowColor: colors.primary }],
           isDisabled && !isLoading && [__a3_styles.disabledButton, { backgroundColor: colors.accentBg, borderColor: colors.border }],
-          isLoading && variant === "primary" && [__a3_styles.loadingPrimaryButton, { backgroundColor: colors.selectedBackground }],
+          isLoading && variant === "primary" && [__a3_styles.loadingPrimaryButton, { backgroundColor: keepTextWhileLoading ? colors.primary : colors.selectedBackground }],
           pressed && variant !== "primary" && { opacity: 0.7 },
           customStyle,
         ]}
         {...rest}
       >
-        {isLoading ? (
+        {isLoading && keepTextWhileLoading ? (
+          <View style={__a3_styles.contentRow}>
+            <ActivityIndicator size="small" color={vStyles.text.color} style={__a3_styles.loadingSpinner} />
+            <Text appearanceRole="body" style={[__a3_styles.baseText, vStyles.text, textStyle]}>{title}</Text>
+          </View>
+        ) : isLoading ? (
           <ActivityIndicator size="small" color={vStyles.text.color} />
         ) : icon ? (
           <View style={__a3_styles.contentRow}>
@@ -146,6 +154,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
     width: "100%",
   },
   baseText: { fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+  loadingSpinner: { marginRight: 10 },
   noIconText: { width: "100%", textAlign: "center", alignSelf: "stretch", includeFontPadding: false },
   solidText: { color: COLORS.onPrimary },
   primaryView: { backgroundColor: COLORS.primary },

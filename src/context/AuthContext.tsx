@@ -710,9 +710,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     clearAndroidLoginIntent();
     setSingleSessionNotice(null);
     const lease = sessionLeaseRef.current;
-    // Keep Google Play Services untouched in dual-app Preview mode even for
-    // a manual local logout: the other clone may still use the same SSO broker.
-    const previewIdentity = !!lease || !!sessionRetryUserRef.current;
+    // Remote replacement never reaches this explicit user-action logout.
+    // The separate forced-eviction handler keeps other clone brokers untouched.
     sessionLeaseRef.current = null;
     if (lease && user?.uid === lease.uid) await releaseAndroidSession(user, lease);
     const signingOutUid = user?.uid ?? null;
@@ -727,8 +726,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     resetSharedRealtimeRegistry();
     homeTimeCapsuleService.clearRealtimeCache();
-    if (previewIdentity) await authService.signOutFirebaseOnly();
-    else await authService.signOut();
+    // This is an explicit local logout. Clear the Google choice as well so
+    // the next user may pick another account. Remote-session eviction still
+    // calls signOutFirebaseOnly() directly and never touches the Google broker.
+    await authService.signOut();
     cacheHydratedUidRef.current = null;
     setConfirmation(null);
     setPendingPhoneNumber(null);

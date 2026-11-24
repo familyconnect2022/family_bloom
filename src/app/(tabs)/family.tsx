@@ -26,6 +26,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useFamilyMembers } from "../../hooks/family/useFamilyMembers";
 import { useA3Theme } from '../../appearance3/useAppearance3';
 import { FamilyGraphScreen } from '../(family)/(graph)/family-graph';
+import { FamilyGraphWebDashboard } from '../../components/familyGraph/FamilyGraphWebDashboard';
 import { useA3LegacyStyles } from '../../appearance3/compatReactiveStyles';
 
 
@@ -578,32 +579,30 @@ const styles = createBloomStyles(() => StyleSheet.create({
   tipText: { marginTop: 5, color: COLORS.secondaryText, fontSize: 11.8, lineHeight: 17 },
 }));
 
-/** Web parity: the family tab is the actual family tree, not a gateway card.
- * Legacy Family Overview stays reachable from the hero overflow so timeline,
- * member list, family switching and other established routes aren't lost. */
+/** Web parity: Cây nhà is a real management dashboard; one explicit
+ * "Khám phá cây gia đình" action enters the whole-tree native canvas.
+ * Keep legacy timeline, family switcher and memory book reachable via utilities.
+ */
 export default function FamilyTab() {
   useTabStartupTask('family');
   const { userProfile } = useAuth();
-  const [showOverview, setShowOverview] = useState(false);
-  // Family enrollment/switcher must remain reachable before an active family exists.
+  const [view, setView] = useState<'dashboard' | 'tree' | 'legacy'>('dashboard');
   if (!userProfile?.activeFamilyId) return <FamilyOverview />;
-  if (showOverview) {
+  if (view === 'legacy') {
     return (
       <View style={{ flex: 1 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Trở về cây phả hệ"
-          onPress={() => setShowOverview(false)}
+        <Pressable accessibilityRole="button" accessibilityLabel="Trở về Cây nhà"
+          onPress={() => setView('dashboard')}
           style={{ position: 'absolute', top: 36, left: 17, zIndex: 100, minHeight: 44,
             flexDirection: 'row', alignItems: 'center', borderRadius: 16,
-            paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.93)' }}
-        >
+            paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.93)' }}>
           <Ionicons name="arrow-back" size={20} color="#A64A75" />
-          <Text style={{ marginLeft: 6, color: '#A64A75', fontWeight: '800' }}>Cây phả hệ</Text>
+          <Text style={{ marginLeft: 6, color: '#A64A75', fontWeight: '800' }}>Cây nhà</Text>
         </Pressable>
         <FamilyOverview />
       </View>
     );
   }
-  return <FamilyGraphScreen embeddedInTab onOpenOverview={() => setShowOverview(true)} />;
+  if (view === 'tree') return <FamilyGraphScreen embeddedInTab onOpenOverview={() => setView('dashboard')} />;
+  return <FamilyGraphWebDashboard onExplore={() => setView('tree')} onLegacy={() => setView('legacy')} />;
 }

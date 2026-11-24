@@ -12,12 +12,13 @@ const page = rd('src/app/(family)/(graph)/family-graph.tsx');
 const canvas = rd('src/components/familyGraph/FamilyGraphPrototype.tsx');
 const hero = rd('src/components/familyGraph/FamilyGraphWebHero.tsx');
 const app = JSON.parse(rd('app.json')).expo;
-assert.match(tab, /return <FamilyGraphScreen embeddedInTab onOpenOverview=/);
+assert.match(tab, /view === 'tree'\) return <FamilyGraphScreen embeddedInTab onOpenOverview=/);
+assert.match(tab, /return <FamilyGraphWebDashboard onExplore=/);
 assert.match(tab, /return <FamilyOverview \/>/, 'keep family switcher and legacy members overview');
 assert.match(page, /<FamilyGraphWebHero/);
 assert.match(page, /Duyệt đề xuất/);
 assert.match(page, /Quản lý gốc/);
-assert.match(page, /Tìm trong phả hệ/);
+assert.match(page, /onSearch=\{\(\) => setSearchRequest/); // compact hero search opens graph search
 assert.match(page, /initialViewMode="all"/);
 assert.match(page, /headerMode="none"[\s\S]*?webParity/);
 assert.match(page, /onProposePerson=/);

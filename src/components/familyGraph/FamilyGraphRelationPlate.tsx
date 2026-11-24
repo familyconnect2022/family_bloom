@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-/** Antique nameplate attached to the upper edge: not a floating pill/button. */
+/** Legacy component retained for old archived previews. R16R11R2: main graph & Focus do not render a floating title plate. */
 export const FamilyGraphRelationPlate = memo(function FamilyGraphRelationPlate({
   label, tint, ink, surface,
 }: { label: string | null; tint: string; ink: string; surface: string }) {

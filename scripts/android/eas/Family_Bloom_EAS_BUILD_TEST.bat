@@ -8,7 +8,7 @@ cd /d "%PROJECT_ROOT%"
 echo ============================================================
 echo  FAMILY BLOOM H25 - EAS ANDROID TEST BUILD
 echo  Profile : family-bloom-test
-echo  EXPECTED: app 1.3.35 / versionCode 143045
+echo  EXPECTED: app 1.3.53 / versionCode 143063
 echo  Native   : P2.37R2C-H25-native-3
 echo  This helper ALWAYS waits for the new build and clears EAS cache.
 echo ============================================================
@@ -179,8 +179,8 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.35
-echo   versionCode : 143045
+echo   app version : 1.3.46
+echo   versionCode : 143063
 echo   native ID   : P2.37R2C-H25-native-3
 echo ------------------------------------------------------------
 echo.
@@ -198,7 +198,7 @@ echo ============================================================
 echo [OK] EAS reports the H25 Android build completed successfully.
 echo Install ONLY the APK produced by THIS build.
 echo After install, Game Foundation MUST show:
-echo   ACTUAL versionCode: 143045
+echo   ACTUAL versionCode: 143063
 echo   FamilyBloomOverlay: YES
 echo   native identity: P2.37R2C-H25-native-3
 echo ============================================================

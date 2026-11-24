@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { FamilyGraphPortrait } from "./FamilyGraphPortrait";
 import { FamilyGraphUnionLines, FamilyGraphPrivateChildLabel } from "./FamilyGraphUnionLines";
 import type { FamilyGraphGeometry } from "./familyGraphGeometry";
-import { FamilyGraphRelationPlate } from "./FamilyGraphRelationPlate";
 import { formatFamilyGraphNodeName, getFamilyGraphPlateLabel } from "./familyGraphNodePresentation";
 import type { FamilyGraphVietnameseRelationship } from "../../types/familyGraphQuery";
 import { FAMILY_GRAPH_NODE_3D, familyGraphNodeGender, FAMILY_GRAPH_ORNAMENT_WIDTH, FAMILY_GRAPH_ORNAMENT_TOP_HEIGHT, FAMILY_GRAPH_ORNAMENT_BOTTOM_HEIGHT, FAMILY_GRAPH_ORNAMENT_OUTSIDE_RATIO } from "./familyGraphNode3dAssets";
@@ -191,7 +190,6 @@ const FocusPersonCard = memo(function FocusPersonCard({
           {person.birthYear ?? "?"}{person.deathYear ? ` – ${person.deathYear}` : person.lifeStatus === "living" ? " – nay" : ""}
         </Text>
       </View>
-      <FamilyGraphRelationPlate label={relationLabel} tint={nodeColors.edge} ink={nodeColors.text} surface={nodeColors.bg} />
       <View pointerEvents="none" collapsable={false} style={__a3_styles.bottomOrnamentWrap}>
         <Image source={nodeColors.bottom} resizeMode="contain" fadeDuration={0} style={__a3_styles.ornamentImage} />
       </View>

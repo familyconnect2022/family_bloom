@@ -96,18 +96,22 @@ export default function Login() {
             onPress={handleSendOTP}
             customStyle={__a3_styles.primaryButton}
             isLoading={isLoadingPhone}
+            textStyle={{ color: __a3Colors.onPrimary }}
             disabled={isLoadingGoogle}
           />
 
           <View style={__a3_styles.dividerRow}><View style={__a3_styles.divider}/><Text style={__a3_styles.orText}>HOẶC</Text><View style={__a3_styles.divider}/></View>
           <BloomButton
-            title="ĐĂNG NHẬP VỚI GOOGLE"
-            icon={<Ionicons name="logo-google" size={22} color={__a3Colors.white} />}
+            title={isLoadingGoogle ? "ĐANG KẾT NỐI GOOGLE…" : "CHỌN TÀI KHOẢN GOOGLE"}
+            icon={<Ionicons name="logo-google" size={22} color={__a3Colors.onPrimary} />}
             customStyle={__a3_styles.googleButton}
-            disabled={isLoadingPhone}
+            disabled={isLoadingPhone || isLoadingGoogle}
             isLoading={isLoadingGoogle}
+            keepTextWhileLoading
+            textStyle={{ color: __a3Colors.onPrimary }}
             onPress={handleGoogle}
           />
+          <Text style={__a3_styles.accountHint}>Bạn có thể chọn tài khoản Google khác sau khi đăng xuất. Nếu đã hủy chọn tài khoản, nhấn lại nút Google để tiếp tục.</Text>
           {isLoadingGoogle && (
             <Text accessibilityLiveRegion="polite" style={__a3_styles.loginProgress}>
               {googleLoginPhase === 'play-services' ? 'Đang kết nối dịch vụ Google…'
@@ -152,6 +156,7 @@ const styles = createBloomStyles(() => StyleSheet.create({
   divider: { flex: 1, height: 1, backgroundColor: COLORS.border },
   orText: { color: COLORS.secondaryText, fontSize: 10.5, fontWeight: "900", letterSpacing: 0.9 },
   googleButton: { width: "100%", borderRadius: 999, overflow: "hidden", elevation: 0, shadowOpacity: 0, shadowRadius: 0 },
+  accountHint: { marginTop: 8, color: COLORS.secondaryText, textAlign: "center", fontSize: 11, lineHeight: 17 },
   sessionNotice: { marginBottom: 12, fontSize: 13, lineHeight: 20, color: COLORS.primaryText },
   loginProgress: { marginTop: 10, textAlign: 'center', fontSize: 12, color: COLORS.secondaryText },
   promise: { marginTop: 16, color: COLORS.secondaryText, fontSize: 10.5, lineHeight: 15, textAlign: "center" },

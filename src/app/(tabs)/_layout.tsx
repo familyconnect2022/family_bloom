@@ -76,8 +76,8 @@ const runtimeTabIdForRoute = (routeName: string | undefined): MainTabId | null =
 // Unlike the former sliding pill, scene navigation is NEVER blocked on an animation.
 const TAB_VISUAL_HEIGHT = 68;
 const TAB_TOUCH_HEIGHT = 82;
-const TAB_OUTER_MARGIN = 16;
-const TAB_FLOAT_GAP = 9;
+const TAB_OUTER_MARGIN = 8;
+const TAB_FLOAT_GAP = 4.5;
 const TAB_BUBBLE_SIZE = 54;
 const TAB_ICON_SIZE = 23;
 const TAB_LIFECYCLE_SETTLE_MS = 155;

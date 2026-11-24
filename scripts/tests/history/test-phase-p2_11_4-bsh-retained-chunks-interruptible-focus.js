@@ -31,6 +31,7 @@ const runtimeFiles = [
   "src/components/familyGraph/familyGraphPrototypeData.ts",
   "src/components/familyGraph/familyGraphSpatialGrid.ts",
   "src/components/familyGraph/familyGraphConnectorRouting.ts",
+  "src/components/familyGraph/familyGraphWebSubtreeLayout.ts",
   "src/components/familyGraph/familyGraphLiveAdapter.ts",
   "src/components/familyGraph/familyGraphRevision.ts",
   "src/components/familyGraph/familyGraphViewport.ts",

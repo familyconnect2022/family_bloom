@@ -33,9 +33,9 @@ function hasVerifiedFamilyTabs(layout, access) {
     groups.some(([,guard,body]) => guard === '!!user && profileStatus === "missing"' && body.includes('name="(profile)/create-profile"')) &&
     groups.some(([,guard,body]) => guard === 'verifiedProfile' && body.includes('name="(family)/(membership)/family-gateway"')) &&
     // Current protected-navigation contract: profile is UID-matched and read.
-    /const\s+verifiedProfile\s*=\s*!!user\s*&&\s*!!userProfile\s*&&\s*userProfile\.uid\s*===\s*user\.uid\s*&&\s*authStatus\s*===\s*["']signed-in["']\s*&&\s*profileStatus\s*===\s*["']ready["']\s*;/.test(layout) &&
+    /const\s+verifiedProfile\s*=\s*!!user\s*&&\s*!!userProfile\s*&&\s*userProfile\.uid\s*===\s*user\.uid\s*&&\s*authStatus\s*===\s*["']signed-in["']\s*&&\s*profileStatus\s*===\s*["']ready["']\s*&&\s*\(singleSessionStatus\s*===\s*'off'\s*\|\|\s*singleSessionStatus\s*===\s*'active'\);/.test(layout) &&
     tabsGroups.length === 1 && tabsGuard === 'allowFamilyRoutes' && !!tabsContent &&
-    layout.includes('const verifiedFamily = authStatus === "signed-in" && canEnterFamilyHome({') &&
+    /const\s+verifiedFamily\s*=\s*authStatus\s*===\s*"signed-in"\s*&&\s*\(singleSessionStatus\s*===\s*'off'\s*\|\|\s*singleSessionStatus\s*===\s*'active'\)\s*&&\s*canEnterFamilyHome\(\{/.test(layout) &&
     // No Home until authoritative Welcome check finishes, even when showWelcome
     // is still false while Firestore has not resolved yet.
     /const\s+allowFamilyRoutes\s*=\s*verifiedFamily\s*&&\s*welcomeReady\s*&&\s*!welcomeBlocking\s*;/.test(layout) &&
@@ -64,6 +64,8 @@ const mutations = [
     'const allowFamilyRoutes = !!user && welcomeReady && !welcomeBlocking;'), familyAccess],
   [mutate('guard={verifiedProfile}', 'guard={!!user}'), familyAccess],
   [mutate('userProfile.uid === user.uid', 'true'), familyAccess],
+  [mutate("(singleSessionStatus === 'off' || singleSessionStatus === 'active');", "true;"), familyAccess],
+  [mutate("(singleSessionStatus === 'off' || singleSessionStatus === 'active') && canEnterFamilyHome({", "canEnterFamilyHome({"), familyAccess],
   [rootLayout, familyAccess.replace('input.profileStatus === "ready"', 'true')],
   [rootLayout, familyAccess.replace('input.membershipStatus === "ready"', 'true')],
   [rootLayout, familyAccess.replace('input.profileUid === input.uid', 'true')],
@@ -82,7 +84,7 @@ check(!native.includes('View(FamilyBloomOverlayHostView::class)') && !native.inc
 check(native.includes('P2.37R2C-H25-native-3') && mod.version==='1.3.18', 'current native identity/module version = P2.37R2C-H25-native-3 / 1.3.18');
 check(native.includes('visibility = View.INVISIBLE') && native.includes('Full/Mini containers retained'), 'IDLE/background keeps persistent rail hidden without destroying containers');
 check(native.includes('bringToFront()') && native.includes('Activity.window.decorView'), 'active presentation can rise only inside Android decor hierarchy');
-check(eas.includes('143045') && eas.includes('P2.37R2C-H25-native-3'), 'EAS helper prints exact current app/native identity');
+check(eas.includes('143059') && eas.includes('P2.37R2C-H25-native-3'), 'EAS helper prints exact current app/native identity');
 check(['scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat','scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat','scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat','scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat','scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat'].every((name)=>fs.existsSync(path.join(root,name))), 'EAS, maintenance, Build & Share helpers remain in managed folders');
 console.log(`\nP2.37R2C-H6 decor rail gate: ${fail?'FAIL':'PASS'} (${pass}/${pass+fail})\n`);
 process.exit(fail?1:0);

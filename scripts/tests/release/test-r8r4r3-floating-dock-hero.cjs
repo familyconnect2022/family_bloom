@@ -18,7 +18,7 @@ check('Only final gesture/tap selection requests scene navigation',tab.includes(
 check('No delayed commit or old sliding indicator',!tab.includes('pendingCommitTimerRef')&&!tab.includes('slidingIndicator')&&!tab.includes('commitDelayMs'));
 check('Tab animation is UI-thread spring, not theme mutation',tab.includes('withSpring(')&&tab.includes('bubbleX.value')&&!/(updateBloomMode|updateBloomPalette|applyLivingAppearance)/.test(tab));
 check('Motion setting supports still icon without spring',tab.includes('stillMotion ? bubbleAt(index, itemWidth)')&&tab.includes('if (!stillMotion) bounce.value'));
-check('Tab dock floats away from device edges',tab.includes('TAB_OUTER_MARGIN = 16')&&tab.includes('TAB_FLOAT_GAP')&&tab.includes('borderRadius: 34'));
+check('Tab dock floats away from device edges',tab.includes('TAB_OUTER_MARGIN = 8')&&tab.includes('TAB_FLOAT_GAP = 4.5')&&tab.includes('borderRadius: 34'));
 check('Navigator still freezes/prewarms scenes and preserves restore gate',tab.includes('freezeOnBlur: true')&&tab.includes('bloomTaskScheduler.schedule')&&tab.includes('tabRuntime.restoreFocus(tabId)'));
 check('Image header preserves illustration aspect ratio instead of excessive cover crop',hero.includes('contentFit="cover"')&&hero.includes('viewportHeight * 0.35')&&hero.includes('styles.storyImageLayer')&&hero.includes('styles.copyWithArtwork'));
 check('Header image follows four palettes and dark mode',hero.includes('getBloomSelection().palette')&&hero.includes('getBloomResolvedMode()')&&hero.includes('getBloomHeroArt(scene, palette)')&&['rose','garden','heritage','midnight'].every(x=>registry.includes('home_'+x+'.webp')));

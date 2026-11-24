@@ -5,7 +5,7 @@ import { avatarFileFromUri } from "../../../services/media/avatarFile";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { BloomText as Text } from '../../../components/ui/BloomText';
 import { BloomKeyboardScreen } from "../../../components/layout/BloomKeyboardScreen";
@@ -208,7 +208,9 @@ export default function FamilyGraphPersonEditorScreen() {
 
   const patch = (next: Partial<PersonDraft>) => setDraft((current) => ({ ...current, ...next }));
 
+  const savingRef=useRef(false);
   const save = async () => {
+    if(savingRef.current)return;
     if (!familyId || !user || busy || !isAdmin) return;
     const currentYear = new Date().getFullYear();
     const birthYearText = draft.birthYear.trim();
@@ -250,7 +252,7 @@ export default function FamilyGraphPersonEditorScreen() {
       description: draft.description.trim() || null,
     };
 
-    setBusy(true);
+    savingRef.current=true;setBusy(true);
     setAvatarUpload({ phase: "idle", progress: null });
     try {
       let savedPersonId = personId;
@@ -261,7 +263,9 @@ export default function FamilyGraphPersonEditorScreen() {
         savedPersonId = created.personId;
       }
 
+      let avatarUpdated=true;
       if (savedPersonId && draft.avatarDirty) {
+        try {
         const oldAvatarAssetId = person?.avatarAssetId ?? null;
         if (!draft.avatarUri) {
           await familyGraphMutationService.setPersonAvatar(familyId, savedPersonId, null, null);
@@ -293,6 +297,12 @@ export default function FamilyGraphPersonEditorScreen() {
         if (oldAvatarAssetId) {
           void momentMediaApi.requestCleanup([oldAvatarAssetId]).catch(() => undefined);
         }
+        } catch {
+          avatarUpdated=false;
+          setAvatarUpload({phase:"failed",progress:null});
+          // A person has already been committed. The optional avatar cannot
+          // turn this into a false Create Person failure or invite a retry.
+        }
       }
 
       let graphNoticeSent = false;
@@ -316,13 +326,13 @@ export default function FamilyGraphPersonEditorScreen() {
         personName: payload.displayName,
       });
       showToast({
-        type: graphNoticeSent || editing ? "success" : "warning",
-        title: editing ? "Đã lưu thay đổi" : graphNoticeSent ? "Đã thêm người và báo cả nhà" : "Đã thêm người, chưa gửi được thông báo",
-        message: editing ? "Thông tin đã được cập nhật." : graphNoticeSent ? "Hồ sơ đã lưu; cả nhà có thông báo trong Chuyện trong nhà." : "Hồ sơ đã lưu. Mở Cây nhà và chọn Báo cả nhà để gửi lại.",
+        type: !avatarUpdated || (!graphNoticeSent&&!editing) ? "warning" : "success",
+        title: !avatarUpdated ? "Đã lưu hồ sơ, ảnh chưa cập nhật" : editing ? "Đã lưu thay đổi" : graphNoticeSent ? "Đã thêm người và báo cả nhà" : "Đã thêm người, chưa gửi được thông báo",
+        message: !avatarUpdated ? "Người thân đã được lưu. Có thể cập nhật ảnh đại diện sau." : editing ? "Thông tin đã được cập nhật." : graphNoticeSent ? "Hồ sơ đã lưu; cả nhà có thông báo trong Chuyện trong nhà." : "Hồ sơ đã lưu. Mở Cây nhà và chọn Báo cả nhà để gửi lại.",
         duration: 2600,
       });
-      // A successful standalone creation keeps the editor ready for the next person.
-      // Editing an existing person still returns to its previous screen.
+      // A successful standalone creation clears all fields, so another person
+      // can be entered immediately. Editing an existing profile still returns.
       if (editing) {
         router.back();
       } else {
@@ -333,7 +343,7 @@ export default function FamilyGraphPersonEditorScreen() {
       if (draft.avatarDirty) setAvatarUpload({ phase: "failed", progress: null });
       showToast({ ...parseAppError(error), duration: 4200 });
     } finally {
-      setBusy(false);
+      savingRef.current=false;setBusy(false);
     }
   };
 

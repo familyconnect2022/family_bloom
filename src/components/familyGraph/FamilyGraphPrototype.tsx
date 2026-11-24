@@ -26,10 +26,10 @@ import { BloomTextInput } from "../ui/BloomInputComponents";
 import { FamilyGraphPersonSheet } from "./FamilyGraphPersonSheet";
 import { FamilyGraphPortrait } from "./FamilyGraphPortrait";
 import { FamilyGraphUnionLines, FamilyGraphPrivateChildLabel } from "./FamilyGraphUnionLines";
-import { FamilyGraphRelationPlate } from "./FamilyGraphRelationPlate";
 import { formatFamilyGraphNodeName, getFamilyGraphPlateLabel } from "./familyGraphNodePresentation";
 import { FAMILY_GRAPH_NODE_3D, familyGraphNodeGender } from "./familyGraphNode3dAssets";
 import { applyMainFamilyGraphPanDelta, applyMainFamilyGraphPinchScale } from "./familyGraphMainCamera";
+import { clampNativeFamilyGraphPan } from "./familyGraphWebCameraBounds";
 import type { FamilyGraphRenderScene } from "./familyGraphSceneBuilder";
 import {
   FAMILY_GRAPH_NODE_CARD_HEIGHT,
@@ -185,11 +185,13 @@ type FamilyGraphPrototypeProps = {
   autoFitOnMount?: boolean;
   /** Web-parity main-tree UI; keeps existing geometry, gestures and detail actions. */
   webParity?: boolean;
-  /** One-shot entry camera target after a confirmed relation is written. */
+  /** Only on entry after a verified relation write: person to center camera. */
   entryFocusPersonId?: string | null;
   showAdvancedControls?: boolean;
   /** Incremented by the route's Search button; opens the existing functional search modal. */
   searchRequest?: number;
+  /** Increments to open the same list in Focus-selection mode (Web parity). */
+  focusPickRequest?: number;
   /** P2.7: fired only after layout, progressive mount, camera fit and two paint frames. */
   onVisualReady?: () => void;
 };
@@ -225,6 +227,7 @@ export function FamilyGraphPrototype({
   entryFocusPersonId = null,
   showAdvancedControls = false,
   searchRequest = 0,
+  focusPickRequest = 0,
   onVisualReady,
 }: FamilyGraphPrototypeProps) {
   const __a3Colors = useA3Theme().colors;
@@ -280,12 +283,26 @@ export function FamilyGraphPrototype({
   // route-level Focus sibling mounts. This is not Focus runtime/camera state.
   const [detailSheetYieldPending, setDetailSheetYieldPending] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [searchForFocus, setSearchForFocus] = useState(false);
   const [searchText, setSearchText] = useState("");
   const lastSearchRequest = useRef(searchRequest);
+  const lastFocusPickRequest = useRef(focusPickRequest);
   useEffect(() => {
-    if (searchRequest > lastSearchRequest.current) setSearchVisible(true);
+    if (searchRequest > lastSearchRequest.current) {
+      setSearchForFocus(false);
+      setSearchText("");
+      setSearchVisible(true);
+    }
     lastSearchRequest.current = searchRequest;
   }, [searchRequest]);
+  useEffect(() => {
+    if (focusPickRequest > lastFocusPickRequest.current) {
+      setSearchForFocus(true);
+      setSearchText("");
+      setSearchVisible(true);
+    }
+    lastFocusPickRequest.current = focusPickRequest;
+  }, [focusPickRequest]);
   const [menuPersonId, setMenuPersonId] = useState<string | null>(null);
   const [viewport, setViewport] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [retainedPersonIds, setRetainedPersonIds] = useState<Set<string>>(() =>
@@ -636,10 +653,31 @@ export function FamilyGraphPrototype({
     );
   }, [searchText, sourcePeople]);
 
+  // Web-parity bounds: use node geometry, NOT the oversized logical canvas.
+  // Keep the same rectangle for JS camera buttons and UI-thread gestures.
+  const treeBounds = useMemo(() => {
+    if (!visiblePeople.length) return { left: 0, top: 0, right: 0, bottom: 0 };
+    let left = Number.POSITIVE_INFINITY;
+    let top = Number.POSITIVE_INFINITY;
+    let right = Number.NEGATIVE_INFINITY;
+    let bottom = Number.NEGATIVE_INFINITY;
+    for (const person of visiblePeople) {
+      left = Math.min(left, person.x);
+      top = Math.min(top, person.y);
+      right = Math.max(right, person.x + FAMILY_GRAPH_CANVAS.nodeWidth);
+      bottom = Math.max(bottom, person.y + NODE_CARD_HEIGHT);
+    }
+    return { left, top, right, bottom };
+  }, [visiblePeople]);
+
   const setPan = useCallback((next: Point) => {
-    activeCameraTranslateX.value = next.x;
-    activeCameraTranslateY.value = next.y;
-  }, [activeCameraTranslateX, activeCameraTranslateY]);
+    const bounded = clampNativeFamilyGraphPan(
+      next.x, next.y, activeCameraScale.value,
+      viewport.width, viewport.height, effectiveCanvasWidth, effectiveCanvasHeight, treeBounds,
+    );
+    activeCameraTranslateX.value = bounded.x;
+    activeCameraTranslateY.value = bounded.y;
+  }, [activeCameraTranslateX, activeCameraTranslateY, activeCameraScale, viewport.width, viewport.height, effectiveCanvasWidth, effectiveCanvasHeight, treeBounds]);
 
   const setScaleValue = useCallback((nextScale: number) => {
     // Không giới hạn UX ở Phase 6.0. Chỉ giữ guard kỹ thuật tối thiểu
@@ -780,6 +818,50 @@ export function FamilyGraphPrototype({
     commitCameraSnapshot(camera.centerX, camera.centerY, camera.scale);
   }, [activeCameraScale, commitCameraSnapshot, effectiveCanvasHeight, effectiveCanvasWidth, peopleById, setPan, viewport]);
 
+  // Web '+' / '-' / full-tree controls, all using the same native bounds.
+  const zoomWebParity = useCallback((factor: number) => {
+    if (!viewport.width || !viewport.height) return;
+    const camera = getFamilyGraphCameraSnapshotFromTransform({
+      transform: {
+        translateX: activeCameraTranslateX.value,
+        translateY: activeCameraTranslateY.value,
+        scale: activeCameraScale.value,
+      }, viewport, canvasWidth: effectiveCanvasWidth, canvasHeight: effectiveCanvasHeight,
+    });
+    const target = Math.min(2.1, Math.max(MIN_SAFE_SCALE, camera.scale * factor));
+    const anchor = getFamilyGraphPanForAnchor({
+      canvasPoint: { x: camera.centerX, y: camera.centerY },
+      viewportPoint: { x: viewport.width / 2, y: viewport.height / 2 },
+      scale: target, canvasWidth: effectiveCanvasWidth, canvasHeight: effectiveCanvasHeight,
+    });
+    setScaleValue(target);
+    setPan(anchor);
+    markUserCameraInteraction();
+    commitUserCameraTransform(activeCameraTranslateX.value, activeCameraTranslateY.value, target);
+  }, [viewport, activeCameraTranslateX, activeCameraTranslateY, activeCameraScale,
+      effectiveCanvasWidth, effectiveCanvasHeight, setScaleValue, setPan,
+      markUserCameraInteraction, commitUserCameraTransform]);
+
+  const fitWebParityTree = useCallback(() => {
+    if (!viewport.width || !viewport.height || !visiblePeople.length) return;
+    const contentWidth = Math.max(1, treeBounds.right - treeBounds.left);
+    const contentHeight = Math.max(1, treeBounds.bottom - treeBounds.top);
+    const scale = Math.max(MIN_SAFE_SCALE, Math.min(0.95,
+      viewport.width * 0.88 / contentWidth, viewport.height * 0.83 / contentHeight));
+    const pan = getFamilyGraphPanForAnchor({
+      canvasPoint: { x: (treeBounds.left + treeBounds.right) / 2,
+        y: (treeBounds.top + treeBounds.bottom) / 2 },
+      viewportPoint: { x: viewport.width / 2, y: viewport.height / 2 },
+      scale, canvasWidth: effectiveCanvasWidth, canvasHeight: effectiveCanvasHeight,
+    });
+    setScaleValue(scale);
+    setPan(pan);
+    markUserCameraInteraction();
+    commitUserCameraTransform(activeCameraTranslateX.value, activeCameraTranslateY.value, scale);
+  }, [viewport, treeBounds, visiblePeople.length, effectiveCanvasWidth,
+      effectiveCanvasHeight, setScaleValue, setPan, markUserCameraInteraction,
+      activeCameraTranslateX, activeCameraTranslateY, commitUserCameraTransform]);
+
   const panGesture = useMemo(() => Gesture.Pan()
     .minDistance(3)
     .maxPointers(1)
@@ -806,8 +888,12 @@ export function FamilyGraphPrototype({
         event.translationX,
         event.translationY,
       );
-      activeCameraTranslateX.value = next.x;
-      activeCameraTranslateY.value = next.y;
+      const bounded = clampNativeFamilyGraphPan(
+        next.x, next.y, activeCameraScale.value,
+        viewport.width, viewport.height, effectiveCanvasWidth, effectiveCanvasHeight, treeBounds,
+      );
+      activeCameraTranslateX.value = bounded.x;
+      activeCameraTranslateY.value = bounded.y;
     })
     .onFinalize(() => {
       "worklet";
@@ -825,6 +911,11 @@ export function FamilyGraphPrototype({
       markUserCameraInteraction,
       commitUserCameraTransform,
       activeCameraScale,
+      viewport.width,
+      viewport.height,
+      effectiveCanvasWidth,
+      effectiveCanvasHeight,
+      treeBounds,
     ]);
 
   const pinchGesture = useMemo(() => Gesture.Pinch()
@@ -873,6 +964,12 @@ export function FamilyGraphPrototype({
       activeCameraTranslateY.value = event.focalY
         - canvasCenterY
         - nextScale * (pinchAnchorCanvasY.value - canvasCenterY);
+      const bounded = clampNativeFamilyGraphPan(
+        activeCameraTranslateX.value, activeCameraTranslateY.value, nextScale,
+        viewport.width, viewport.height, effectiveCanvasWidth, effectiveCanvasHeight, treeBounds,
+      );
+      activeCameraTranslateX.value = bounded.x;
+      activeCameraTranslateY.value = bounded.y;
     })
     .onFinalize(() => {
       "worklet";
@@ -895,6 +992,9 @@ export function FamilyGraphPrototype({
       effectiveCanvasWidth,
       markUserCameraInteraction,
       commitUserCameraTransform,
+      viewport.width,
+      viewport.height,
+      treeBounds,
     ]);
 
   const canvasGesture = useMemo(
@@ -964,14 +1064,12 @@ export function FamilyGraphPrototype({
         return;
       }
 
-      // Relation-save entry: center the newly connected person at a readable
-      // camera scale, 20% above the regular node-focused entry camera.
-      // Ordinary entry still follows the normal full-tree fit below.
+      // Post-relationship navigation: target node centered at a focused scale
+      // increased by 20% from the normal node focus, without disturbing full-fit.
       const entryPerson = entryFocusPersonId ? peopleById.get(entryFocusPersonId) : null;
       if (entryPerson) {
         applyAnchorCamera(
-          { x: entryPerson.x + FAMILY_GRAPH_CANVAS.nodeWidth / 2,
-            y: entryPerson.y + NODE_CARD_HEIGHT / 2 },
+          { x: entryPerson.x + FAMILY_GRAPH_CANVAS.nodeWidth / 2, y: entryPerson.y + NODE_CARD_HEIGHT / 2 },
           { x: next.width / 2, y: next.height * 0.42 },
           Math.min(1.35, INITIAL_SCALE * 1.2),
         );
@@ -1101,6 +1199,11 @@ export function FamilyGraphPrototype({
   const selectFromSearch = useCallback((person: FamilyGraphPrototypePerson) => {
     setSearchVisible(false);
     setSearchText("");
+    if (searchForFocus && onOpenFocus) {
+      setSearchForFocus(false);
+      handleOpenBranch(person.id);
+      return;
+    }
     const alreadyInScope = visiblePeople.some((item) => item.id === person.id);
     if (viewMode !== "all" && !alreadyInScope) {
       // Searching outside a bounded 3/5-generation scope promotes that Person
@@ -1112,7 +1215,7 @@ export function FamilyGraphPrototype({
     setSelectedPersonId(person.id);
     setDetailPersonId(person.id);
     requestAnimationFrame(() => centerOnPerson(person.id));
-  }, [centerOnPerson, ensurePersonMounted, viewMode, visiblePeople]);
+  }, [centerOnPerson, ensurePersonMounted, viewMode, visiblePeople, searchForFocus, onOpenFocus, handleOpenBranch]);
 
   const handlePersonPress = useCallback((personId: string) => {
     if (branchMode) {
@@ -1258,6 +1361,21 @@ export function FamilyGraphPrototype({
             <Text style={[__a3_styles.branchModeButtonText, branchMode && __a3_styles.branchModeButtonTextActive]}>Nhánh</Text>
           </Pressable>}
 
+          {webParity && <View style={__a3_styles.webParityZoomControls}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Phóng to cây phả hệ"
+              onPress={() => zoomWebParity(1.22)} style={__a3_styles.webParityZoomButton}>
+              <Ionicons name="add" size={22} color={__a3Colors.primaryText} />
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Thu nhỏ cây phả hệ"
+              onPress={() => zoomWebParity(1 / 1.22)} style={__a3_styles.webParityZoomButton}>
+              <Ionicons name="remove" size={22} color={__a3Colors.primaryText} />
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Căn giữa toàn bộ phả hệ"
+              onPress={fitWebParityTree} style={__a3_styles.webParityZoomButton}>
+              <Ionicons name="scan-outline" size={22} color={__a3Colors.primaryText} />
+            </Pressable>
+          </View>}
+
           {(!webParity || showAdvancedControls) && <View style={__a3_styles.zoomControls}>
             <Pressable
               accessibilityLabel="Quay về người đang xem"
@@ -1370,7 +1488,7 @@ export function FamilyGraphPrototype({
           <Pressable style={__a3_styles.searchBackdrop} onPress={() => setSearchVisible(false)} />
           <View style={__a3_styles.searchSheet}>
             <View style={__a3_styles.searchHeader}>
-              <Text style={__a3_styles.searchTitle}>Tìm trong phả hệ</Text>
+              <Text style={__a3_styles.searchTitle}>{searchForFocus ? "Chọn người để Focus" : "Tìm trong phả hệ"}</Text>
               <Pressable onPress={() => setSearchVisible(false)} style={__a3_styles.searchClose}>
                 <Ionicons name="close" size={20} color={__a3Colors.primaryText} />
               </Pressable>
@@ -1530,7 +1648,6 @@ const PersonNode = memo(function PersonNode({
           They are outside the Pressable's border/clip context, so the 3-D details
           remain visible at native scale instead of being cropped by borderRadius.
           The art is not interactive and never intercepts Detail or Note taps. */}
-      <FamilyGraphRelationPlate label={relationLabel} tint={nodeColors.edge} ink={nodeColors.text} surface={nodeColors.bg} />
       <View pointerEvents="none" collapsable={false} style={__a3_styles.nodeBottomOrnamentWrap}>
         <Image source={nodeFrame.bottom} resizeMode="contain" fadeDuration={0} style={__a3_styles.nodeBottomOrnamentImage} />
       </View>
@@ -3259,6 +3376,9 @@ const styles = createBloomStyles(() => StyleSheet.create({
   branchModeButtonActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   branchModeButtonText: { color: COLORS.primaryText, fontSize: 8.5, fontWeight: "900" },
   branchModeButtonTextActive: { color: COLORS.onPrimary },
+  webParityZoomControls: { position: "absolute", bottom: 14, right: 12, flexDirection: "row", gap: 8, zIndex: 12 },
+  webParityZoomButton: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.surface,
+    borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
   zoomControls: {
     position: "absolute",
     right: 12,

@@ -2,7 +2,7 @@ import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 import { BloomText as Text } from '../../../components/ui/BloomText';
 import { ScreenContainer } from "../../../components/layout/ScreenContainer";
@@ -17,6 +17,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useFamilyGraph } from "../../../hooks/family/useFamilyGraph";
 import { checkGraphRelationshipCandidates } from "../../../services/familyGraph/familyGraphIntegrity";
 import { getParentChildRelationshipId, getPartnerRelationshipId } from "../../../utils/familyGraph";
+import {limitForRelationshipSide,toggleRelationshipPerson,validateRelationshipPeople} from "../../../utils/relationshipSelectionPolicy";
 import { familyGraphMutationService } from "../../../services/familyGraph/familyGraphMutationService";
 import { graphActivitySessionService } from "../../../services/activity/graphActivitySessionService";
 import { activityService } from "../../../services/activity/activityService";
@@ -53,12 +54,13 @@ const joinNames = (names: string[]) => {
 };
 
 const relationshipSentence = (
-  mode: RelationshipMode,
+  mode: RelationshipMode | null,
   subtype: ParentChildSubtype,
   partnerStatus: PartnerStatus,
   selectedNames: string[],
   referenceNames: string[],
 ) => {
+  if (!mode) return "Hãy chọn loại và chiều quan hệ trước khi chọn người.";
   if (!selectedNames.length || !referenceNames.length) return "Chọn đủ hai phía để Bloom kiểm tra các đường quan hệ sẽ tạo.";
   if (mode === "partner") return `${joinNames(selectedNames)} là ${partnerStatusLabel[partnerStatus].toLowerCase()} của ${joinNames(referenceNames)}.`;
   const relation = subtype === "biological" ? "ruột" : subtype === "adoptive" ? "nuôi" : subtype === "step" ? "kế" : "";
@@ -111,7 +113,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ basePersonId?: string; mode?: string }>();
   const initialBasePersonId = typeof params.basePersonId === "string" && params.basePersonId ? params.basePersonId : null;
-  const initialMode: RelationshipMode = params.mode === "child_of" || params.mode === "partner" ? params.mode : "parent_of";
+  const initialMode: RelationshipMode | null = params.mode === "parent_of" || params.mode === "child_of" || params.mode === "partner" ? params.mode : null;
   const { showToast } = useBloomToast();
   const { user, userProfile, families } = useAuth();
   const familyId = userProfile?.activeFamilyId ?? null;
@@ -119,7 +121,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
   const isAdmin = membership?.role === "owner" || membership?.role === "admin";
   const { snapshot, loading, error } = useFamilyGraph(familyId, user?.uid);
 
-  const [mode, setMode] = useState<RelationshipMode>(initialMode);
+  const [mode, setMode] = useState<RelationshipMode | null>(initialMode);
   const [subtype, setSubtype] = useState<ParentChildSubtype>("unknown");
   const [partnerStatus, setPartnerStatus] = useState<PartnerStatus>("married");
   const [baseIds, setBaseIds] = useState<string[]>(initialBasePersonId ? [initialBasePersonId] : []);
@@ -171,6 +173,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
   const parentIds = mode === "parent_of" ? baseIds : targetIds;
   const childIds = mode === "parent_of" ? targetIds : baseIds;
   const batchStats = useMemo(() => {
+    if (!mode) return {requested:0,existing:0,conflict:0};
     if (mode === "partner") {
       const a = baseIds[0];
       const b = targetIds[0];
@@ -212,24 +215,30 @@ export default function FamilyGraphRelationshipEditorScreen() {
   },[baseIds,targetIds,mode,parentIds,childIds,subtype,partnerStatus,batchStats.requested,snapshot,familyId]);
 
   const changeMode = (nextMode: RelationshipMode) => {
+    if (mode === nextMode) return;
     setMode(nextMode);
-    if (nextMode === "partner") {
-      setBaseIds((current) => current.slice(0, 1));
-      setTargetIds((current) => current.slice(0, 1));
-    }
+    // Reinterpretation of selected people would silently invert kinship.
+    setBaseIds(initialBasePersonId ? [initialBasePersonId] : []);
+    setTargetIds([]);
+    setPickerSide(null);
   };
 
   const togglePerson = useCallback((personId: string) => {
-    if (!pickerSide) return;
-    const single = mode === "partner";
-    const toggle = (current: string[]) => single
-      ? (current[0] === personId ? [] : [personId])
-      : (current.includes(personId) ? current.filter((id) => id !== personId) : [...current, personId]);
-    if (pickerSide === "base") setBaseIds(toggle);
-    else setTargetIds(toggle);
-  }, [mode, pickerSide]);
+    if (!pickerSide || !mode) return;
+    const update = (current:string[]) => {
+      const result=toggleRelationshipPerson(current,personId,mode,pickerSide);
+      if(result.blocked)showToast({type:'warning',title:'Đã đủ số người',message:'Phía cha/mẹ tối đa 2 người; phía vợ/chồng hoặc bạn đời chỉ 1 người.'});
+      return result.ids;
+    };
+    if (pickerSide === "base") setBaseIds(update);
+    else setTargetIds(update);
+  }, [mode, pickerSide, showToast]);
 
+  const savingRef=useRef(false);
   const submit = async (warningsApproved=false) => {
+    if(savingRef.current)return;
+    const selectionError=validateRelationshipPeople(mode,baseIds,targetIds);
+    if(selectionError){showToast({type:'warning',title:'Chưa thể nối',message:selectionError});return;}
     // Prevent bypassing preview on very large Cartesian-product batches.
     if (batchStats.requested > 80) {
       showToast({type:'warning',title:'Xin chia nhỏ lượt nối',message:'Mỗi lần nối tối đa 80 quan hệ để Bloom kiểm tra đầy đủ và tránh làm giật màn hình.',duration:4500});
@@ -249,7 +258,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
       if (!busy) showToast({ type: "warning", title: "Chưa đủ người", message: "Hãy chọn người ở cả hai phía của mối quan hệ." });
       return;
     }
-    setBusy(true);
+    savingRef.current=true;setBusy(true);
     try {
       if (mode === "partner") {
         const a = baseIds[0];
@@ -302,14 +311,14 @@ export default function FamilyGraphRelationshipEditorScreen() {
         duration: 3000,
       });
       if (created > 0) {
-        // Route intent is consumed only by the Graph camera after the new branch is loaded.
+        // Open the full family tree with the newly connected node centred.
         const connectedPersonId = targetIds[0] ?? childIds[0] ?? baseIds[0];
         router.replace({ pathname: "/family-graph", params: { focusPersonId: connectedPersonId, focusZoom: "1.2" } } as never);
       }
     } catch (nextError) {
       showToast({ ...parseAppError(nextError), duration: 4200 });
     } finally {
-      setBusy(false);
+      savingRef.current=false;setBusy(false);
     }
   };
 
@@ -348,7 +357,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
     return <ScreenContainer keyboardSafe><View style={__a3_styles.centerState}><Ionicons name="cloud-offline-outline" size={38} color={__a3Colors.secondaryText} /><Text style={__a3_styles.centerTitle}>Bloom chưa mở được phả hệ lúc này</Text><BloomButton title="Quay lại" variant="outline" onPress={() => router.back()} /></View></ScreenContainer>;
   }
 
-  if (pickerSide) {
+  if (pickerSide && mode) {
     const sideLabel = pickerSide === "base" ? (mode === "child_of" ? "Chọn người con" : mode === "partner" ? "Chọn người thứ nhất" : "Chọn cha/mẹ") : (mode === "child_of" ? "Chọn cha/mẹ" : mode === "partner" ? "Chọn người thứ hai" : "Chọn người con");
     return (
       <ScreenContainer keyboardSafe>
@@ -371,7 +380,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
             contentContainerStyle={__a3_styles.pickerContent}
             ListHeaderComponent={(
               <View style={__a3_styles.pickerHeader}>
-                <View style={__a3_styles.pickerHero}><View style={__a3_styles.pickerHeroIcon}><Ionicons name="people-outline" size={22} color={__a3Colors.primary} /></View><View style={__a3_styles.pickerHeroCopy}><Text style={__a3_styles.pickerHeroTitle}>{activeIds.length ? `${activeIds.length} người đang được chọn` : "Chưa chọn ai"}</Text><Text style={__a3_styles.pickerHeroText}>Sắp xếp theo tên gọi · số bên phải là số nhánh đang nối.</Text></View></View>
+                <View style={__a3_styles.pickerHero}><View style={__a3_styles.pickerHeroIcon}><Ionicons name="people-outline" size={22} color={__a3Colors.primary} /></View><View style={__a3_styles.pickerHeroCopy}><Text style={__a3_styles.pickerHeroTitle}>{activeIds.length ? `${activeIds.length} người đang được chọn` : "Chưa chọn ai"}</Text><Text style={__a3_styles.pickerHeroText}>{limitForRelationshipSide(mode,pickerSide)===Infinity?"Không giới hạn số con được chọn":`Tối đa ${limitForRelationshipSide(mode,pickerSide)} người`} · Số bên phải là số nhánh đã nối.</Text></View></View>
                 <BloomTextInput value={search} onChangeText={setSearch} placeholder="Tìm theo tên…" isSearch leftIcon="search-outline" />
               </View>
             )}
@@ -384,7 +393,7 @@ export default function FamilyGraphRelationshipEditorScreen() {
     );
   }
 
-  const disabled = busy || integrityPreview.blocks > 0 || !baseIds.length || !targetIds.length || batchStats.conflict > 0 || (mode === "partner" && (baseIds.length !== 1 || targetIds.length !== 1 || batchStats.existing > 0));
+  const disabled = busy || !!validateRelationshipPeople(mode,baseIds,targetIds) || integrityPreview.blocks > 0 || batchStats.conflict > 0 || batchStats.requested > 80 || (mode === "partner" && batchStats.existing > 0);
 
   return (
     <ScreenContainer keyboardSafe>
@@ -405,20 +414,9 @@ export default function FamilyGraphRelationshipEditorScreen() {
             roundedBottom
           />
 
-          <View style={__a3_styles.sectionCard}>
-            <View style={__a3_styles.sectionTitleRow}>
-              <View style={__a3_styles.sectionNumber}><Text style={__a3_styles.sectionNumberText}>1</Text></View>
-              <View style={__a3_styles.sectionTitleCopy}>
-                <Text style={__a3_styles.sectionTitle}>Người được chọn</Text>
-                <Text style={__a3_styles.sectionSubtitle}>{mode === "partner" ? "Quan hệ vợ/chồng chọn 1 người ở mỗi phía." : "Có thể chọn nhiều người cùng lúc."}</Text>
-              </View>
-            </View>
-            {renderSelected("base", baseIds, mode === "child_of" ? "Người con" : mode === "partner" ? "Người thứ nhất" : "Cha/Mẹ", mode === "partner" ? "Chọn 1 người" : "Chọn một hoặc nhiều người")}
-          </View>
-
           <View style={[__a3_styles.sectionCard, __a3_styles.relationTypeCard]}>
             <View style={__a3_styles.sectionTitleRow}>
-              <View style={[__a3_styles.sectionNumber, __a3_styles.sectionNumberSoft]}><Text style={__a3_styles.sectionNumberText}>2</Text></View>
+              <View style={[__a3_styles.sectionNumber, __a3_styles.sectionNumberSoft]}><Text style={__a3_styles.sectionNumberText}>1</Text></View>
               <View style={__a3_styles.sectionTitleCopy}>
                 <Text style={__a3_styles.sectionTitle}>Loại quan hệ</Text>
                 <Text style={__a3_styles.sectionSubtitle}>Chọn chiều quan hệ trước khi xác nhận.</Text>
@@ -427,8 +425,9 @@ export default function FamilyGraphRelationshipEditorScreen() {
             <View style={__a3_styles.modeRow}>
               <BloomChipButton label="Cha/Mẹ → Con" selected={mode === "parent_of"} onPress={() => changeMode("parent_of")} />
               <BloomChipButton label="Con → Cha/Mẹ" selected={mode === "child_of"} onPress={() => changeMode("child_of")} />
-              <BloomChipButton label="Vợ/Chồng" selected={mode === "partner"} onPress={() => changeMode("partner")} />
+              <BloomChipButton label="Vợ/Chồng · Bạn đời" selected={mode === "partner"} onPress={() => changeMode("partner")} />
             </View>
+            {!mode&&<Text style={__a3_styles.sectionSubtitle}>Chưa chọn quan hệ · Hãy chọn một trong ba hướng trên rồi chọn người.</Text>}
             {mode === "partner" ? (
               <>
                 <View style={__a3_styles.partnerNotice}>
@@ -438,24 +437,35 @@ export default function FamilyGraphRelationshipEditorScreen() {
                 <Text style={__a3_styles.optionLabel}>Trạng thái</Text>
                 <View style={__a3_styles.modeRow}>{(["married", "partner", "separated", "divorced", "widowed"] as PartnerStatus[]).map((status) => <BloomChipButton key={status} label={partnerStatusLabel[status]} selected={partnerStatus === status} onPress={() => setPartnerStatus(status)} />)}</View>
               </>
-            ) : (
+            ) : mode ? (
               <>
                 <Text style={__a3_styles.optionLabel}>Loại cha/mẹ – con</Text>
                 <View style={__a3_styles.modeRow}>{(["biological", "adoptive", "step", "unknown"] as ParentChildSubtype[]).map((value) => <BloomChipButton key={value} label={parentSubtypeLabel[value]} selected={subtype === value} onPress={() => setSubtype(value)} />)}</View>
               </>
-            )}
+            ) : null}
           </View>
 
-          <View style={__a3_styles.sectionCard}>
+          {mode&&          <View style={__a3_styles.sectionCard}>
+            <View style={__a3_styles.sectionTitleRow}>
+              <View style={__a3_styles.sectionNumber}><Text style={__a3_styles.sectionNumberText}>2</Text></View>
+              <View style={__a3_styles.sectionTitleCopy}>
+                <Text style={__a3_styles.sectionTitle}>Người được chọn</Text>
+                <Text style={__a3_styles.sectionSubtitle}>{mode === "partner" ? "Chọn 1 người" : mode === "parent_of" ? "Chọn tối đa 2 cha/mẹ" : "Chọn những người con"}</Text>
+              </View>
+            </View>
+            {renderSelected("base", baseIds, mode === "child_of" ? "Người con" : mode === "partner" ? "Người thứ nhất" : "Cha/Mẹ", mode === "partner" ? "Chọn 1 người" : mode === "parent_of" ? "Tối đa 2 cha/mẹ" : "Chọn người con")}
+          </View>}
+
+          {mode&&<View style={__a3_styles.sectionCard}>
             <View style={__a3_styles.sectionTitleRow}>
               <View style={__a3_styles.sectionNumber}><Text style={__a3_styles.sectionNumberText}>3</Text></View>
               <View style={__a3_styles.sectionTitleCopy}>
                 <Text style={__a3_styles.sectionTitle}>Người tham chiếu</Text>
-                <Text style={__a3_styles.sectionSubtitle}>{mode === "partner" ? "Chọn người còn lại để tạo cặp 1 ↔ 1." : "Có thể chọn nhiều người ở mỗi phía; Bloom sẽ nối từng cặp phù hợp cho bạn."}</Text>
+                <Text style={__a3_styles.sectionSubtitle}>{mode === "partner" ? "Chọn đúng 1 người còn lại." : mode === "parent_of" ? "Chọn nhiều con (mỗi lần lưu tối đa 80 đường nối)." : "Chọn tối đa 2 cha/mẹ."}</Text>
               </View>
             </View>
-            {renderSelected("target", targetIds, mode === "child_of" ? "Cha/Mẹ" : mode === "partner" ? "Người thứ hai" : "Người con", mode === "partner" ? "Chọn 1 người" : "Chọn một hoặc nhiều người")}
-          </View>
+            {renderSelected("target", targetIds, mode === "child_of" ? "Cha/Mẹ" : mode === "partner" ? "Người thứ hai" : "Người con", mode === "partner" ? "Chọn 1 người" : mode === "child_of" ? "Tối đa 2 cha/mẹ" : "Không giới hạn số con")}
+          </View>}
 
           <View style={[__a3_styles.previewCard, batchStats.conflict > 0 && __a3_styles.previewCardWarning]}>
             <View style={__a3_styles.previewIcon}><Ionicons name={batchStats.conflict > 0 ? "warning-outline" : "sparkles-outline"} size={20} color={batchStats.conflict > 0 ? __a3Colors.primary : __a3Colors.primary} /></View>
