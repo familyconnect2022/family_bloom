@@ -1,0 +1,27 @@
+name: Export pinned Family Bloom source
+on:
+  push:
+    branches: [export/r16r11r20-fullcode]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9f0189ed74799d0f114df3448c7b663fbf84c41f
+          persist-credentials: false
+      - run: |
+          test "$(git rev-parse HEAD)" = "9f0189ed74799d0f114df3448c7b663fbf84c41f"
+          git archive --format=zip --prefix=family_bloom/ --output=family_bloom.zip HEAD
+          sha256sum family_bloom.zip > SHA256SUMS.txt
+          git rev-parse HEAD > COMMIT.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r16r11r20-family_bloom-fullcode
+          path: |
+            family_bloom.zip
+            SHA256SUMS.txt
+            COMMIT.txt
+          if-no-files-found: error
