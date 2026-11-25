@@ -1,0 +1,4 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'../../..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+test('Android upload matches server signed parameters without using direct delete tokens',()=>{const api=read('src/services/media/momentMediaApi.ts'),service=read('src/services/media/cloudinaryService.ts'),context=read('src/context/MomentPublishContext.tsx');assert(api.includes('cleanupMode: "review-v1"'));assert(api.includes('signed.returnDeleteToken !== false'));assert(!service.includes('formData.append("return_delete_token"'));assert(!/delete_by_token|deleteWithToken|response.data\?\.delete_token/.test(service+context));assert(context.includes('momentMediaApi.requestCleanup'));});

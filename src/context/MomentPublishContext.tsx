@@ -7,7 +7,6 @@ import { momentsService } from "../services/moments/momentsService";
 import type { MediaFile } from "../types";
 import type { MomentMedia } from "../types/moments";
 import { momentResumeProgress, normalizeMomentTargetFamilyIds } from "../utils/momentPublishPolicy";
-import { cloudinaryService } from "../services/media/cloudinaryService";
 import { momentMediaApi } from "../services/media/momentMediaApi";
 import { momentUploadErrorMessage } from "../services/media/momentUploadError";
 import { recordMomentUploadFailure } from "../services/media/momentUploadDiagnostic";
@@ -23,7 +22,6 @@ export interface PendingMomentUploadedFile {
   /** False only when Cloudinary succeeded but media_assets metadata could not sync yet. */
   metadataSynced: boolean;
   /** Ephemeral: delete without privileged backend within 10 minutes. */
-  deleteToken?: string;
   cloudName?: string;
 }
 
@@ -235,7 +233,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
               { signal: controller.signal, onAssetCreated: (asset) => { createdAssetIds.add(asset.id); } },
             );
           } catch (error) {
-            const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null; deleteToken?: string; cloudName?: string } } } | null)?.managedUploadCheckpoint;
+            const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null; cloudName?: string } } } | null)?.managedUploadCheckpoint;
             if (checkpoint) {
               const completed: PendingMomentUploadedFile = {
                 fileId: file.id,
@@ -251,7 +249,6 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
                   duration: file.duration ?? undefined,
                 },
                 metadataSynced: false,
-                deleteToken: checkpoint.result.deleteToken,
                 cloudName: checkpoint.result.cloudName,
               };
               completedByFile.set(file.id, completed);
@@ -277,7 +274,6 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
               duration: file.duration ?? undefined,
             },
             metadataSynced: true,
-            deleteToken: uploaded.result.deleteToken,
             cloudName: uploaded.result.cloudName,
           };
           completedByFile.set(file.id, completed);
@@ -375,15 +371,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         // Firestore offline writes can remain unresolved until reconnection.
         // They are queued locally; the HỦY UI must not freeze on network loss.
         await Promise.race([markPending, new Promise<void>((resolve) => setTimeout(resolve, 1800))]);
-        // Android first: delete with the short-lived Cloudinary token, if present.
-        const cleared = await Promise.allSettled([...completedByFile.values()].map(async (entry) => {
-          if (!entry.deleteToken) return;
-          if (await cloudinaryService.deleteWithToken(entry.deleteToken, entry.cloudName)) {
-            await mediaService.markCleanupPending(entry.assetId);
-          }
-        }));
-        void cleared; // Individual failures remain cleanup_pending for Vercel.
-        // Server fallback is best-effort immediately; daily cron handles outages.
+        // Preserve provider bytes. The server queues a review request, not deletion.
         if (momentMediaApi.configured && allIds.length) {
           void momentMediaApi.requestCleanup(allIds).catch(() => undefined);
         }
@@ -394,7 +382,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         });
         clearPendingMomentProgress(task.localId);
         momentUploadToastStore.clear(task.localId);
-        finishTask({ title: "Đã hủy khoảnh khắc", message: "Bài chưa được đăng. Tệp còn sót sẽ tiếp tục được dọn." });
+        finishTask({ title: "Đã hủy khoảnh khắc", message: "Bài chưa được đăng. Tệp chưa dùng được giữ để máy chủ kiểm kê." });
       } else {
         momentUploadToastStore.clear(task.localId);
         const stage = ((error as { __momentStage?: PendingMomentFailureStage } | null)?.__momentStage) ?? "upload";
@@ -563,15 +551,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
       if (item?.uploadedFiles.length) {
         const ids = item.uploadedFiles.map((upload) => upload.assetId);
         void mediaService.markCleanupPendingMany(ids).catch(() => undefined);
-        // A publish request may have committed on Firestore before its ACK was lost.
-        // Never client-delete its media on an ambiguous publish failure. The Vercel
-        // cleanup path checks the actual published post before destroying anything.
-        if (item.failureStage !== "publish") {
-          void Promise.allSettled(item.uploadedFiles.map(async (upload) => {
-            if (upload.deleteToken && await cloudinaryService.deleteWithToken(upload.deleteToken, upload.cloudName))
-              await mediaService.markCleanupPending(upload.assetId);
-          }));
-        }
+        // No direct deletion, even for an explicitly abandoned upload.
         if (momentMediaApi.configured) void momentMediaApi.requestCleanup(ids).catch(() => undefined);
       }
       clearPendingMomentProgress(localId);

@@ -355,6 +355,7 @@ const RootNavigator = ({ runtimeReady, criticalVisualAssetsReady }: { runtimeRea
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule-compose" options={{ animation: getBloomScreenAnimation() }} />
       <Stack.Screen name="(home)/(time-capsule)/home-time-capsule/[capsuleId]" options={{ animation: getBloomScreenAnimation() }} />
       <Stack.Screen name="(home)/(learning)/learning-library" options={{ animation: getBloomScreenAnimation() }} />
+      <Stack.Screen name="(home)/(learning)/learning-editor" options={{ animation: getBloomScreenAnimation(), gestureEnabled:false }} />
       <Stack.Screen name="(home)/(learning)/learning-lesson" options={{ animation: getBloomScreenAnimation() }} />
       <Stack.Screen name="(home)/(learning)/study-questions" options={{ animation: getBloomScreenAnimation() }} />
       <Stack.Screen name="(home)/(learning)/study-question-compose" options={{ animation: getBloomScreenAnimation() }} />

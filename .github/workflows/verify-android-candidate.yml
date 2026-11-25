@@ -1,0 +1,39 @@
+name: Verify Android candidate
+on:
+  push:
+    branches: [test/r16r11r32-android-candidate]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact source bytes before installing dependencies
+        run: node scripts/setup/verify-release-source.cjs
+      - name: Verify editor, publish and media contracts
+        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-media-review.cjs
+      - name: Install dependencies in isolated CI checkout
+        run: npm install --include=dev --no-audit --no-fund
+      - name: Record resolved dependency lock (not committed automatically)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-candidate-resolved-lock
+          path: package-lock.json
+          if-no-files-found: error
+      - run: node scripts/setup/check-package-lock.js
+      - run: npm run route:check
+      - run: npm run source:imports-check
+      - run: npm run source:syntax-check
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Android Metro production bundle (no deploy, no signing)
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        run: npx expo export --platform android --output-dir dist-android-ci

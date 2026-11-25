@@ -35,6 +35,7 @@ import {
 import { AppError } from "../../types/errors";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
+import {checkExisting,checkAssets} from "../../features/learning/familyDocument/publishManager.cjs";
 import { mediaService } from "../media/mediaService";
 import { momentMediaApi } from "../media/momentMediaApi";
 import { familyGraphRepository } from "../familyGraph/familyGraphRepository";
@@ -133,6 +134,8 @@ export const momentsService = {
   ) {
     const timestamp = now();
     const personIds = await validatePersonIds(familyId, input.personIds);
+    const orderedIds = input.media.map(m => m.id);
+    if (new Set(mediaAssetIds).size !== mediaAssetIds.length || orderedIds.length !== mediaAssetIds.length || orderedIds.some(id => !mediaAssetIds.includes(id))) throw new Error("PUBLISH_MEDIA_INVALID");
     const post: MomentPost = {
       id: postId,
       familyId,
@@ -141,7 +144,7 @@ export const momentsService = {
       ...(author.avatarUrl ? { authorAvatarUrl: author.avatarUrl } : {}),
       caption: input.caption.trim(),
       media: input.media,
-      mediaAssetIds: [...mediaAssetIds],
+      mediaAssetIds: orderedIds,
       personIds,
       timelineAudience: input.timelineAudience,
       notifyFamily: input.timelineAudience === "family" && input.notifyFamily === true,
@@ -155,12 +158,21 @@ export const momentsService = {
       updatedAt: timestamp,
     };
 
-    await mediaService.attachAssetsToDocument(
-      mediaAssetIds,
-      FIRESTORE_PATHS.moment(familyId, postId),
-      post as unknown as Record<string, unknown>,
-    );
-    return post;
+    const db = getFirestore();
+    const ref = doc(db, FIRESTORE_PATHS.moment(familyId, postId));
+    return runTransaction(db, async (tx) => {
+      const existing = await tx.get(ref);
+      if (existing.exists()) {
+        checkExisting(existing.data(), post);
+        return normalizeMomentPost(existing.data() as Record<string, unknown>, postId, familyId);
+      }
+      const refs = orderedIds.map(id => doc(db, FIRESTORE_PATHS.mediaAsset(id)));
+      const assets = await Promise.all(refs.map(r => tx.get(r)));
+      checkAssets(post, assets.map(a => a.exists() ? a.data() : null));
+      tx.set(ref, removeUndefinedDeep(post) as unknown as Record<string, unknown>);
+      refs.forEach(r => tx.update(r, {status: "attached", updatedAt: timestamp}));
+      return post;
+    });
   },
 
   async create(

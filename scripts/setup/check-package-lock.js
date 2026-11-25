@@ -37,6 +37,7 @@ const watchedDependencies = [
   'expo-application',
   'expo-audio',
   'expo-asset',
+  'react-native-webview',
 ];
 const watchedDevDependencies = ['expo-doctor'];
 const rootDeps = lock.packages?.['']?.dependencies || {};

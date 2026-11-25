@@ -14,4 +14,7 @@ if (!config.resolver.assetExts.includes('webp')) {
   config.resolver.assetExts.push('webp');
 }
 
+// Offline shared editor is packaged as an asset, never loaded from Vercel.
+if (!config.resolver.assetExts.includes('html')) config.resolver.assetExts.push('html');
+
 module.exports = config;

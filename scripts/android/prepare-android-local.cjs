@@ -26,6 +26,9 @@ function installedProblems(){
 try{
  node('scripts/setup/verify-release-source.cjs','--repair-eol');
  node('scripts/setup/verify-release-source.cjs');
+ if(exists('assets/editor/bundle-provenance.json'))node('scripts/tests/release/test-family-editor-offline.cjs');
+ node('scripts/tests/release/test-family-publish-manager.cjs');
+ node('scripts/tests/release/test-family-media-review.cjs');
  node('scripts/android/configure-main-env.cjs','ensure');
  if(!exists('node_modules')){
   console.log('[DEPS] node_modules absent; installing once, including dev dependencies.');

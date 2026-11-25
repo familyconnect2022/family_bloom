@@ -2162,6 +2162,12 @@ service cloud.firestore {
       }
     }
 
+    // Draft metadata, chunks and private media are accessible only through the authenticated server.
+    match /familyEditorDraftUsers/{document=**} { allow read, write: if false; }
+    match /familyEditorDraftRateLimits/{document=**} { allow read, write: if false; }
+    // Server-only daily Media inventory checkpoint and aggregate reports.
+    match /familyMediaAuditScans/{document=**} { allow read, write: if false; }
+
     match /{document=**} { allow read, write: if false; }
   }
 }
