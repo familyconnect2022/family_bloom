@@ -12,6 +12,8 @@ import {chooseEditorImages} from './nativeImagePicker';
 import {getAuth} from '@react-native-firebase/auth';
 import {checkedFieldValue,readFieldDocument,type FieldValue} from './formDocument.cjs';
 import {useAuth} from '../../../context/AuthContext';
+import {learningSelection,type MomentSelection} from './draftCatalogue.cjs';
+const supportsLearningSelection=(require('../../../../assets/editor/bundle-provenance.json') as {learningSelectionProtocol?:number}).learningSelectionProtocol===1;
 
 // Stable isolated origin for IndexedDB; this host is never contacted over the network.
 const ORIGIN='https://family-editor.invalid/';
@@ -33,15 +35,17 @@ function OfflineEditor({uid,familyId,field,reader,onClose,onApply,finishRef}:Sco
  const [html,setHtml]=useState<string|null>(null),[error,setError]=useState(''),[opened,setOpened]=useState(false);
  // Opt-in only. The R29 artifact contains the native draft bridge; keep disabled in production until live gates pass.
  const syncEnabled=!field&&!reader&&process.env.EXPO_PUBLIC_FAMILY_EDITOR_DRAFTS_ENABLED==='1';
+ const [initialSelection,setInitialSelection]=useState<MomentSelection|null>(null),selectionTaken=useRef(false);
+ useEffect(()=>{if(!syncEnabled||!supportsLearningSelection||selectionTaken.current)return;selectionTaken.current=true;setInitialSelection(learningSelection.take(uid,familyId));},[uid,familyId,syncEnabled]);
  const inflight=useRef<AbortController|null>(null);
  const picker=useRef<string|null>(null),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;picker.current=null;inflight.current?.abort();};},[]);
- const config=useMemo(()=>({uid,familyId,syncEnabled,field,reader,scale:typography.scale,colors:{primaryText:c.primaryText,secondaryText:c.secondaryText,primary:c.primary,onPrimary:c.onPrimary,background:c.background,surface:c.surface,border:c.border,softSurface:c.softSurface,accentBg:c.accentBg}}),[uid,familyId,syncEnabled,field,reader,typography.scale,c]);
+ const config=useMemo(()=>({uid,familyId,syncEnabled,field,reader,initialSelection:initialSelection??undefined,scale:typography.scale,colors:{primaryText:c.primaryText,secondaryText:c.secondaryText,primary:c.primary,onPrimary:c.onPrimary,background:c.background,surface:c.surface,border:c.border,softSurface:c.softSurface,accentBg:c.accentBg}}),[uid,familyId,syncEnabled,field,reader,initialSelection,typography.scale,c]);
  const configRef=useRef(config);configRef.current=config;
  const source=useMemo(()=>html?{html,baseUrl:ORIGIN}:null,[html]);
  const exit=useCallback(()=>{if(closing.current)return;closing.current=true;if(onClose){onClose();return;}if(router.canGoBack())router.back();else router.replace('/learning-library');},[router,onClose]);
  const configure=useCallback(()=>{if(!ready.current)return;const serialized=JSON.stringify(configRef.current).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');web.current?.injectJavaScript(`window.familyBloomStart && window.familyBloomStart(${serialized});true;`);},[]);
- useEffect(()=>{let alive=true;void(async()=>{try{const asset=await Asset.fromModule(MODULE).downloadAsync();if(!asset.localUri)throw Error('missing asset');const content=await new File(asset.localUri).text();if(!content.includes('Content-Security-Policy')||!content.includes('familyBloomStart')||((field||reader)&&!content.includes('FIELD_INVALID_PUBLICATION')))throw Error('invalid bundle');if(alive)setHtml(content);}catch{if(alive)setError('Không mở được bộ Editor đóng gói. Hãy kiểm tra phiên bản ứng dụng.');}})();return()=>{alive=false;};},[]);
+ useEffect(()=>{let alive=true;void(async()=>{try{const asset=await Asset.fromModule(MODULE).downloadAsync();if(!asset.localUri)throw Error('missing asset');const content=await new File(asset.localUri).text();if(!content.includes('Content-Security-Policy')||!content.includes('familyBloomStart')||(supportsLearningSelection&&!content.includes('INVALID_SELECTED_LEARNING_DRAFT'))||((field||reader)&&!content.includes('FIELD_INVALID_PUBLICATION')))throw Error('invalid bundle');if(alive)setHtml(content);}catch{if(alive)setError('Không mở được bộ Editor đóng gói. Hãy kiểm tra phiên bản ứng dụng.');}})();return()=>{alive=false;};},[]);
  useEffect(()=>{configure();},[config,configure]);
  useEffect(()=>{const show=Keyboard.addListener('keyboardDidShow',()=>{keyboard.current=true;}),hide=Keyboard.addListener('keyboardDidHide',()=>{keyboard.current=false;});return()=>{show.remove();hide.remove();};},[]);
  useEffect(()=>{if(!html||opened||error)return;const timeout=setTimeout(()=>setError('Editor không phản hồi. Bản nháp đã lưu vẫn được giữ trên thiết bị.'),15000);return()=>clearTimeout(timeout);},[html,opened,error]);

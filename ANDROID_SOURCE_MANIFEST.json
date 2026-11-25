@@ -1,7 +1,7 @@
 {
-  "release": "R16R11R46",
-  "version": "1.3.65",
-  "versionCode": 143075,
+  "release": "R16R11R47",
+  "version": "1.3.66",
+  "versionCode": 143076,
   "fileCount": 1847,
   "files": [
     {
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 5170,
-      "sha256": "3a8db26a5fbeeceead49b05a8460174306d9bed26874be1e3e3bc01bce2ccb91"
+      "bytes": 5196,
+      "sha256": "6383aeaf2e0ad050df16df17df89465f2d74822542c696adbd14b4d215155c57"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "238d0388e473474a8c0dae7980526a6c92597b8096ee5ca79ad2c85192862a26"
+      "sha256": "653e403196d705cfb760a29c4f53461379354d7cef22157e39875f93f5c95f0e"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -4932,12 +4932,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "f2f87635b453c7f0a38f233bde2dca96ad1a9163ea352d3ee33eff9541bfdd54"
+      "sha256": "afe1560cf4be625c50806a5aaf04c07e5b9453a63b90cc78191e64df2d81a20e"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "e82d8298000c3e5cfc4293229416d2a0796bdcc813239cbc59b95d533f7f3f47"
+      "sha256": "6751904f3b1ef304d9e70de828a030fa770f40d0725b156750a9bf2e06989ae9"
     },
     {
       "path": "patch-manifest.json",
@@ -4967,12 +4967,12 @@
     {
       "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
       "bytes": 13143,
-      "sha256": "9aef1d3da377c1b275991d04d0f531ca8041bb89ee56d7ee01dbcd22105f2b87"
+      "sha256": "7029ba5cdf6708dfa346008f3550def654995b43488e3aafb1c13608eba574e6"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
       "bytes": 10659,
-      "sha256": "42feefe3d693cab1b428956f57c173172b43c66792011cd23d820466ec8496f0"
+      "sha256": "585a7780605e2c63ad58e111117ed8fb57d47deef3ddbbb3f588068e5774630b"
     },
     {
       "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
@@ -5042,7 +5042,7 @@
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
       "bytes": 8906,
-      "sha256": "df79826dbf7f75ff5a4e7bd8ec9c9a57702d07a8af4b0f5d8d494bf33b7fe80a"
+      "sha256": "da4ae4b379c1cf5451f576e3d12a7f7014b6a207e4388b60e30610470f34c929"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5467,7 +5467,7 @@
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
       "bytes": 3954,
-      "sha256": "db3a4f7b5cea1daaf698a1d1c852af390efb018e56fa66e937f82e8a352162d6"
+      "sha256": "05d6aaf362833287f8a549bdae62a34b98a391734ca789b24317c88fbb813091"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "f92311909b1c4c4014cc81b6228e9db77bf80e55dca75f1afb0dd1789d79af14"
+      "sha256": "1c3f7791aac87a2a241f61598258daa2b4637a233f583e213d8b257986fda9bf"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5777,7 +5777,7 @@
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
       "bytes": 3043,
-      "sha256": "ffadf49b544079858edb62f8eed953cb2da2d9d733696552497afe3127dab801"
+      "sha256": "d9019616e7274685dbedc6aa07733f7e042d0992396016b2d6be23a5e9e40179"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h1-kotlin-event-payload.js",
@@ -6727,7 +6727,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 5071,
-      "sha256": "b1126f78c531294d366417fb79a8ad9991c8f6ab58ac92c93dceac8a1a5a5d12"
+      "sha256": "419a50f61e5fd9646d435b6ee470f778fc11e2bb5f6bc8c1dbad48d13f27dbc8"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -6946,8 +6946,8 @@
     },
     {
       "path": "scripts/tests/release/test-r44-draft-catalogue.cjs",
-      "bytes": 5977,
-      "sha256": "0560074087129bad2c646691247c4812f3cb0048ec9dcb3c57deec2ddd25fada"
+      "bytes": 6747,
+      "sha256": "4baac2083e8cd5a09593768480265b58f989c0a41ee2839fb837ae3d91e62af3"
     },
     {
       "path": "scripts/tests/release/test-r44-private-rules-emulator.cjs",
@@ -7332,7 +7332,7 @@
     {
       "path": "src/app/(internal)/board-game-bot-test.tsx",
       "bytes": 43911,
-      "sha256": "10aa00440f74df5218bba7d1d72d8917a9dc453d0dbc7db0f6e2b935c57791b6"
+      "sha256": "b20ca60048ec25a02884565d3f29cb0818bff60f5f80c9d85e99acc8e2917abc"
     },
     {
       "path": "src/app/(internal)/developer-tools.tsx",
@@ -8161,13 +8161,13 @@
     },
     {
       "path": "src/features/learning/familyDocument/DraftCatalogue.tsx",
-      "bytes": 6976,
-      "sha256": "239dec263b68ca4dc1c50021f97e14784c687b14ab2669a83cc1736924625034"
+      "bytes": 7522,
+      "sha256": "a43f13514276777bf4590b455dc6ac9a1a0ac959bba7e8975d39d90499773431"
     },
     {
       "path": "src/features/learning/familyDocument/FamilyEditorScreen.tsx",
-      "bytes": 12681,
-      "sha256": "b08818e022c981f37e06740b42047af8b066d6ad6ba404f3b2f479887fa11c6a"
+      "bytes": 13388,
+      "sha256": "cc22714fe409baec3d23bebf2298b8260b4ee1c62605497d2ca5c6bcddaf816c"
     },
     {
       "path": "src/features/learning/familyDocument/LocalMomentRecovery.tsx",
@@ -8191,13 +8191,13 @@
     },
     {
       "path": "src/features/learning/familyDocument/draftCatalogue.cjs",
-      "bytes": 5702,
-      "sha256": "a67993efabc68f786193437fa097dc1d7b9012967d582cc26a889514a35561fa"
+      "bytes": 5976,
+      "sha256": "ed1242ec9adcc777c552599e97ffbb3e367b4cac4db691184c7da25744612c47"
     },
     {
       "path": "src/features/learning/familyDocument/draftCatalogue.d.cts",
-      "bytes": 1147,
-      "sha256": "f1021f55255bc833403e385135a3d0e47ff05841d556c6c550f4a335ef3a7209"
+      "bytes": 1322,
+      "sha256": "f191abfe992522d0746e2f11f108e6e3e7a60a06663dcd682447d642489e598b"
     },
     {
       "path": "src/features/learning/familyDocument/draftRequest.ts",
@@ -9240,6 +9240,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R46-DEV",
+  "candidate": "R16R11R47-DEV",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

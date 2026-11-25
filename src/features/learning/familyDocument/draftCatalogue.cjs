@@ -44,12 +44,14 @@ async function changeRow(request,row,trash,randomId){
  finally{if(!removed){try{await request({action:'release',...fields});}catch{/* Lease expires; never force takeover or retry a destructive request blindly. */}}}
 }
 // In-memory, single-use navigation handoff; never put private draft IDs in a URL.
-const validSelection=(v)=>v&&v.kind==='moment'&&typeof v.id==='string'&&/^[a-f0-9]{32}$/.test(v.id)&&Number.isSafeInteger(v.revision)&&v.revision>0;
-function createMomentSelection(now=Date.now){let offer=null;return {
- queue(uid,familyId,row){offer=null;if(!key(uid)||!key(familyId)||!validSelection(row))return false;const at=now();if(!Number.isSafeInteger(at)||at<0)return false;offer={uid,familyId,id:row.id,revision:row.revision,at};return true;},
+const validSelection=(v,kind)=>v&&v.kind===kind&&typeof v.id==='string'&&(/^[a-f0-9]{32}$/.test(v.id)||kind==='learning'&&v.id==='legacy')&&Number.isSafeInteger(v.revision)&&v.revision>0;
+function createSelection(kind,now){let offer=null;return {
+ queue(uid,familyId,row){offer=null;if(!key(uid)||!key(familyId)||!validSelection(row,kind))return false;const at=now();if(!Number.isSafeInteger(at)||at<0)return false;offer={uid,familyId,id:row.id,revision:row.revision,at};return true;},
  take(uid,familyId){const value=offer;offer=null;const at=now();if(!value||value.uid!==uid||value.familyId!==familyId||!Number.isSafeInteger(at)||at<value.at||at-value.at>120000)return null;return {draftId:value.id,revision:value.revision};},
  clear(){offer=null;}
 };}
-const momentSelection=createMomentSelection();
+const createMomentSelection=(now=Date.now)=>createSelection('moment',now);
+const createLearningSelection=(now=Date.now)=>createSelection('learning',now);
+const momentSelection=createMomentSelection(),learningSelection=createLearningSelection();
 function checkSelectedMoment(target,result){if(!target||!result||result.draftId!==target.draftId||(target.revision!==undefined&&result.revision!==target.revision)||result.deletedAt!==null)throw Object.assign(Error('REVISION_CONFLICT'),{code:'REVISION_CONFLICT'});return result;}
-module.exports={parsePage,readPage,mergeRows,changeRow,createMomentSelection,momentSelection,checkSelectedMoment};
+module.exports={parsePage,readPage,mergeRows,changeRow,createMomentSelection,momentSelection,createLearningSelection,learningSelection,checkSelectedMoment};

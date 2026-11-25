@@ -10,3 +10,6 @@ export type MomentSelection={draftId:string;revision:number};
 export function createMomentSelection(now?:()=>number):{queue(uid:string,familyId:string,row:CatalogueRow):boolean;take(uid:string,familyId:string):MomentSelection|null;clear():void};
 export const momentSelection:ReturnType<typeof createMomentSelection>;
 export function checkSelectedMoment<T>(target:{draftId:string;revision?:number},result:T):T;
+
+export function createLearningSelection(now?:()=>number):ReturnType<typeof createMomentSelection>;
+export const learningSelection:ReturnType<typeof createLearningSelection>;
