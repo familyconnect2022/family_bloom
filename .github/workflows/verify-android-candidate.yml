@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
       - name: Verify exact source bytes before installing dependencies
         run: node scripts/setup/verify-release-source.cjs
       - name: Verify editor, publish and media contracts
-        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-field-document.cjs scripts/tests/release/test-family-media-review.cjs scripts/tests/release/test-moment-form-draft-client.cjs scripts/tests/release/test-moment-draft-resume.cjs scripts/tests/release/test-moment-draft-images.cjs scripts/tests/release/test-moment-local-recovery.cjs scripts/tests/release/test-r43-native-publish-journal.cjs
+        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-field-document.cjs scripts/tests/release/test-family-media-review.cjs scripts/tests/release/test-moment-form-draft-client.cjs scripts/tests/release/test-moment-draft-resume.cjs scripts/tests/release/test-moment-draft-images.cjs scripts/tests/release/test-moment-local-recovery.cjs scripts/tests/release/test-r43-native-publish-journal.cjs scripts/tests/release/test-r44-draft-catalogue.cjs
       - name: Install dependencies in isolated CI checkout
         run: npm ci --include=dev --no-audit --no-fund
       - name: Record exact pinned dependency lock
@@ -71,3 +71,24 @@ jobs:
           test -n "$APK"
           node scripts/setup/check-p2_37r2c-apk-native-proof.js "$APK"
           node scripts/setup/check-board-audio-apk.js "$APK"
+
+  private-rules-emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install isolated emulator test tools (no app dependency changes)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/bloom-rules" --no-audit --no-fund firebase-tools@14 @firebase/rules-unit-testing@5 firebase@12
+          npm list --prefix "$RUNNER_TEMP/bloom-rules" --depth=0
+      - name: Test private paths with Firestore Emulator only
+        run: |
+          export BLOOM_RULES_TEST_DEPS="$RUNNER_TEMP/bloom-rules"
+          "$BLOOM_RULES_TEST_DEPS/node_modules/.bin/firebase" emulators:exec --only firestore --project demo-family-bloom-r44 --config firebase.json "node scripts/tests/release/test-r44-private-rules-emulator.cjs"

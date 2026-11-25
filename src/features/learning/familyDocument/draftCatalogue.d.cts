@@ -1,0 +1,6 @@
+export type DraftKind='learning'|'moment';
+export type CatalogueRow={kind:DraftKind;id:string;revision:number;at:number;title:string;mediaCount:number;hasVideos:boolean};
+export type CataloguePage={rows:CatalogueRow[];cursor:string|null};
+export function parsePage(kind:DraftKind,trash:boolean,value:unknown,priorCursor?:string|null):CataloguePage;
+export function readPage(request:(body:Record<string,unknown>)=>Promise<unknown>,kind:DraftKind,trash:boolean,cursor?:string|null):Promise<CataloguePage>;
+export function mergeRows(old:CatalogueRow[],added:CatalogueRow[]):CatalogueRow[];
