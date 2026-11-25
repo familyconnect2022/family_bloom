@@ -1,7 +1,7 @@
 {
-  "release": "R16R11R47",
-  "version": "1.3.66",
-  "versionCode": 143076,
+  "release": "R16R11R48",
+  "version": "1.3.67",
+  "versionCode": 143077,
   "fileCount": 1847,
   "files": [
     {
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 5196,
-      "sha256": "6383aeaf2e0ad050df16df17df89465f2d74822542c696adbd14b4d215155c57"
+      "bytes": 5222,
+      "sha256": "2c88d7c5a3872ce2b9f24c96df454b6600b238e7b53cfe80f26517f7ba1787e6"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "653e403196d705cfb760a29c4f53461379354d7cef22157e39875f93f5c95f0e"
+      "sha256": "c28315f43975cfe10f38802e8a92db257e9f98d9d96f50126ee0b1f264d69144"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -156,18 +156,18 @@
     },
     {
       "path": "assets/editor/bundle-provenance.json",
-      "bytes": 340,
-      "sha256": "1ee2f130033351edac86794b740e7b413a5b54f51e0dcfa73f98cb68f6862120"
+      "bytes": 374,
+      "sha256": "38a34399c56ac0e46cd0b444b19efffb61ec24d04486de88f90e374a5fac6cab"
     },
     {
       "path": "assets/editor/family-editor.html",
-      "bytes": 1036190,
-      "sha256": "83add24e9638e7918795a14b37e8f1ca660a96d2cb71f9f03792e730b587c685"
+      "bytes": 1037897,
+      "sha256": "5e7b1de8fae6066013a73bed713ddb9f490825f722740571088518383f6100c1"
     },
     {
       "path": "assets/editor/family-editor.sha256",
       "bytes": 65,
-      "sha256": "289e3250c8554215ec176047fa3e5f63141c5e2c55f99045e2dd714f10b57483"
+      "sha256": "49ebe42eb5bbad869a57883ffe7d14da0b115094a22f3032942238a0bf2a87dc"
     },
     {
       "path": "assets/expo.icon/Assets/expo-symbol 2.svg",
@@ -4932,12 +4932,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "afe1560cf4be625c50806a5aaf04c07e5b9453a63b90cc78191e64df2d81a20e"
+      "sha256": "6d10f617bb0a9953a55b3e809ba66603da148e5469a9200265a8180fa9d5ce23"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "6751904f3b1ef304d9e70de828a030fa770f40d0725b156750a9bf2e06989ae9"
+      "sha256": "e354f68af6dc9377e4bdc61cb5b822eddd2770060d900b9cccdb32fc3f93df5e"
     },
     {
       "path": "patch-manifest.json",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "1c3f7791aac87a2a241f61598258daa2b4637a233f583e213d8b257986fda9bf"
+      "sha256": "60bcf1d0a05319786ca1e2626e45d2c1533b37906b089f02291d85d33db6aac4"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6331,8 +6331,8 @@
     },
     {
       "path": "scripts/tests/release/test-family-editor-offline.cjs",
-      "bytes": 1376,
-      "sha256": "cd6ada6108f64719c99ae19e15df1979fa6fe396c2afaeffd3ecb88c5956e0bb"
+      "bytes": 2215,
+      "sha256": "b91e5ea6880c8d9ff89ea5c6dc8b51f47c538dc94359299b385af779f273c58c"
     },
     {
       "path": "scripts/tests/release/test-family-field-document.cjs",
@@ -6727,7 +6727,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 5071,
-      "sha256": "419a50f61e5fd9646d435b6ee470f778fc11e2bb5f6bc8c1dbad48d13f27dbc8"
+      "sha256": "ca5039f7c9b0e77ace122caa965948e952a97a0e95e834021753f1cf389e6c12"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -8166,8 +8166,8 @@
     },
     {
       "path": "src/features/learning/familyDocument/FamilyEditorScreen.tsx",
-      "bytes": 13388,
-      "sha256": "cc22714fe409baec3d23bebf2298b8260b4ee1c62605497d2ca5c6bcddaf816c"
+      "bytes": 13537,
+      "sha256": "d49539deb912f5eef4c49813ca6d70c0a322f2f799a15592ce18ed1a018b05aa"
     },
     {
       "path": "src/features/learning/familyDocument/LocalMomentRecovery.tsx",
