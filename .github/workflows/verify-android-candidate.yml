@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate]
   workflow_dispatch:
 permissions:
   contents: read
