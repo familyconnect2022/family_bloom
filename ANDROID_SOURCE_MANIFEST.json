@@ -8381,8 +8381,8 @@
     },
     {
       "path": "src/services/error/errorService.ts",
-      "bytes": 17481,
-      "sha256": "64404b98bb687e20d0a8f1037653414b419bd07aaa94da91d218bfb0d0b36b9c"
+      "bytes": 17774,
+      "sha256": "09904a747876575803da31b8aa62b05d0749e35f7da70638890db00d1409e209"
     },
     {
       "path": "src/services/error/runtimeDiagnosticsService.ts",
@@ -8876,8 +8876,8 @@
     },
     {
       "path": "src/types/errors.ts",
-      "bytes": 2414,
-      "sha256": "ffc2b7a2c11098c119c5ea57307db238de5c610e50c716946fdd32f0fe87c055"
+      "bytes": 2444,
+      "sha256": "2d94d8a89aa26d76c97e8551c73e04aec5b7c68a155946ff83349abae2bc68e2"
     },
     {
       "path": "src/types/event.ts",
