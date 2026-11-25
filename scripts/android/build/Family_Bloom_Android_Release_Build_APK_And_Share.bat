@@ -232,7 +232,7 @@ if errorlevel 1 goto :fail
 set "SHARE_SHA_PATH=%SHARE_DIR%\Family_Bloom_LATEST.sha256"
 powershell -NoProfile -Command "$ErrorActionPreference='Stop'; (Get-FileHash -LiteralPath (Join-Path $env:SHARE_DIR 'Family_Bloom_LATEST.apk') -Algorithm SHA256).Hash | Set-Content -Encoding ascii -LiteralPath $env:SHARE_SHA_PATH"
 if errorlevel 1 goto :fail
->"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Family Bloom H25 Firebase Invitations Chess Xiangqi v1.3.63 versionCode 143073 Native P2.37R2C-H25-native-3
+>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Family Bloom H25 Firebase Invitations Chess Xiangqi v1.3.64 versionCode 143074 Native P2.37R2C-H25-native-3
 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Built: !BUILD_STAMP!
 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Package: com.familybloom.android
 >>"%SHARE_DIR%\Family_Bloom_LATEST.txt" echo Client source: H25 Firebase invitations for Chess and Xiangqi. Render deployment stays separate.

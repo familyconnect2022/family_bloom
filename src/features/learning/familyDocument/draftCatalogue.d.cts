@@ -4,3 +4,4 @@ export type CataloguePage={rows:CatalogueRow[];cursor:string|null};
 export function parsePage(kind:DraftKind,trash:boolean,value:unknown,priorCursor?:string|null):CataloguePage;
 export function readPage(request:(body:Record<string,unknown>)=>Promise<unknown>,kind:DraftKind,trash:boolean,cursor?:string|null):Promise<CataloguePage>;
 export function mergeRows(old:CatalogueRow[],added:CatalogueRow[]):CatalogueRow[];
+export function changeRow(request:(body:Record<string,unknown>)=>Promise<unknown>,row:CatalogueRow,trash:boolean,randomId:()=>string):Promise<void>;

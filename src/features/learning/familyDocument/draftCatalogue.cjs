@@ -1,5 +1,5 @@
 'use strict';
-// Shared, read-only catalogue of synced drafts. No lease takeover, mutation or local draft upload.
+// Shared catalogue of synced drafts. No lease takeover, purge or local draft upload.
 const key=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(v);
 const date=v=>Number.isSafeInteger(v)&&v>=0&&v<=8640000000000000;
 const text=v=>typeof v==='string'?Array.from(v.replace(/\s+/g,' ').trim()).slice(0,100).join(''):'';
@@ -24,4 +24,23 @@ async function readPage(request,kind,trash,cursor=null){
  return parsePage(kind,trash,await request(body),cursor);
 }
 function mergeRows(old,added){const rows=new Map();for(const row of [...old,...added]){const k=row.kind+':'+row.id,prev=rows.get(k);if(!prev||row.revision>=prev.revision)rows.set(k,row);}return [...rows.values()].sort((a,b)=>b.at-a.at||a.kind.localeCompare(b.kind)||a.id.localeCompare(b.id));}
-module.exports={parsePage,readPage,mergeRows};
+// Central trash/restore uses existing revision-checked server contracts. Never take over an editor lease.
+async function changeRow(request,row,trash,randomId){
+ if(!row||!['learning','moment'].includes(row.kind)||!key(row.id)||!Number.isSafeInteger(row.revision)||row.revision<1||row.revision>=Number.MAX_SAFE_INTEGER||typeof trash!=='boolean')throw Error('INVALID_DRAFT_ACTION');
+ const draftId=row.id,expectedRevision=row.revision;
+ const matches=h=>h&&h.draftId===draftId&&h.revision===expectedRevision+1;
+ const token=()=>{const v=randomId();if(typeof v!=='string'||!(/^[a-f0-9]{32}$/.test(v)))throw Error('INVALID_OPERATION_ID');return v;};
+ if(row.kind==='moment'){
+  if(!/^[a-f0-9]{32}$/.test(draftId))throw Error('INVALID_DRAFT_ACTION');
+  const r=await request({action:trash?'trashFormDraft':'restoreFormDraft',draftId,expectedRevision,operationId:token()});
+  if(r?.purgeEnabled!==false||!matches(r.draft)||r.draft.kind!=='moment-create'||(trash?!date(r.draft.deletedAt):r.draft.deletedAt!==null))throw Error('INVALID_DRAFT_ACTION_RESPONSE');
+  return;
+ }
+ if(!trash){const r=await request({action:'restoreTrash',draftId,expectedRevision});if(r?.purgeEnabled!==false||!matches(r.draft)||r.draft.kind!=='learning'||!key(r.draft.revisionPointer))throw Error('INVALID_DRAFT_ACTION_RESPONSE');return;}
+ const sessionId=token();const h=(await request({action:'acquire',draftId,sessionId,expectedRevision,kind:'learning',create:false,takeover:false}))?.draft;
+ if(!h||h.draftId!==draftId||h.kind!=='learning'||h.revision!==expectedRevision||!key(h.revisionPointer)||h.lease?.sessionId!==sessionId||!Number.isSafeInteger(h.lease.fence)||h.lease.fence<1)throw Error('INVALID_DRAFT_LEASE');
+ const fields={draftId,expectedRevision,sessionId,fence:h.lease.fence};let removed=false;
+ try{const r=await request({action:'remove',...fields});if(r?.purgeEnabled!==false||r.removed!==true||!matches(r.trash)||!date(r.trash.deletedAt))throw Error('INVALID_DRAFT_ACTION_RESPONSE');removed=true;}
+ finally{if(!removed){try{await request({action:'release',...fields});}catch{/* Lease expires; never force takeover or retry a destructive request blindly. */}}}
+}
+module.exports={parsePage,readPage,mergeRows,changeRow};
