@@ -32,10 +32,10 @@ try{
  node('scripts/android/configure-main-env.cjs','ensure');
  if(!exists('node_modules')){
   console.log('[DEPS] node_modules absent; installing once, including dev dependencies.');
-  run(process.platform==='win32'?'npm.cmd':'npm',['install','--include=dev','--no-audit','--no-fund'],{shell:process.platform==='win32'});
+  run(process.platform==='win32'?'npm.cmd':'npm',[exists('package-lock.json')?'ci':'install','--include=dev','--no-audit','--no-fund'],{shell:process.platform==='win32'});
  }else console.log('[DEPS] Keeping existing node_modules; no automatic npm install.');
  const fail=installedProblems();
- if(fail.length)throw Error('Dependencies need attention:\n'+fail.join('\n')+'\nRun npm install --include=dev --no-audit --no-fund explicitly if needed. No automatic reinstall was attempted.');
+ if(fail.length)throw Error('Dependencies need attention:\n'+fail.join('\n')+'\nRun npm ci --include=dev --no-audit --no-fund explicitly if needed (pinned lockfile). No automatic reinstall was attempted.');
  if(exists('package-lock.json'))node('scripts/setup/check-package-lock.js');
  else console.log('[DEPS] No local lockfile; installed direct package versions checked. Generate lockfile only when intentionally installing dependencies.');
  node('scripts/setup/check-p2_37r2-local-install.js');
