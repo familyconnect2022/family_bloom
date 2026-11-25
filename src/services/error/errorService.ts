@@ -47,6 +47,7 @@ const CATALOG: Record<AppErrorCode, FriendlyError> = {
   COMMENT_EMPTY: { title: "Thiếu nội dung", message: "Bình luận không được để trống.", type: "warning" },
   MOMENT_NOT_FOUND: { title: "Không tìm thấy khoảnh khắc", message: "Bài viết có thể đã bị xóa.", type: "error" },
   MOMENT_NOT_OWNER: { title: "Đây là kỷ niệm của người khác", message: "Chỉ người tạo bài mới có thể sửa hoặc xóa nội dung của bài đó.", type: "info" },
+  MOMENT_RICH_EDIT_REQUIRED: { title: "Cần mở trình soạn thảo", message: "Kỷ niệm có định dạng. Hãy mở trình soạn thảo để sửa mà không làm mất nội dung.", type: "warning" },
   MOMENT_MODERATION_DENIED: { title: "Bạn chưa thể đổi phần này", message: "Chỉ người đang quản lý gia đình mới có thể ẩn hoặc đưa kỷ niệm trở lại.", type: "info" },
   PROPOSAL_CONFLICT: { title: "Câu chuyện này vừa có thay đổi", message: "Bạn xem lại thông tin mới nhất rồi gửi đề xuất một lần nữa nhé.", type: "warning" },
   PROPOSAL_ALREADY_REVIEWED: { title: "Đã xử lý", message: "Đề xuất này đã được xử lý. Hãy tải lại danh sách.", type: "info" },
@@ -118,6 +119,7 @@ const fromProviderError = (error: unknown): AppErrorCode | null => {
   if (code === "comment_empty") return "COMMENT_EMPTY";
   if (code === "moment_not_found") return "MOMENT_NOT_FOUND";
   if (code === "moment_not_owner") return "MOMENT_NOT_OWNER";
+  if (code === "moment_rich_edit_required") return "MOMENT_RICH_EDIT_REQUIRED";
   if (code === "moment_moderation_denied") return "MOMENT_MODERATION_DENIED";
   if (code === "graph_integrity_block") return "GRAPH_INTEGRITY_BLOCK";
   if (code === "graph_permission_denied") return "GRAPH_PERMISSION_DENIED";

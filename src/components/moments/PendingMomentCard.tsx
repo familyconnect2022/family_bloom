@@ -154,12 +154,12 @@ export function PendingMomentCard({
         </View>
       ) : (
         <View style={__a3_styles.failedActions}>
-          <Pressable onPress={onRemove} style={({ pressed }) => [__a3_styles.secondaryButton, pressed && __a3_styles.pressed]}>
+          {item.failureStage!=='publish'&&<Pressable onPress={onRemove} style={({ pressed }) => [__a3_styles.secondaryButton, pressed && __a3_styles.pressed]}>
             <Text style={__a3_styles.secondaryText}>Bỏ bài chờ</Text>
-          </Pressable>
+          </Pressable>}
           <Pressable onPress={onRetry} style={({ pressed }) => [__a3_styles.retryButton, pressed && __a3_styles.pressed]}>
             <Ionicons name="refresh" size={16} color={__a3Colors.white} />
-            <Text style={__a3_styles.retryText}>Thử lại</Text>
+            <Text style={__a3_styles.retryText}>{item.failureStage==='publish'?'Kiểm tra / thử lại':'Thử lại'}</Text>
           </Pressable>
         </View>
       )}

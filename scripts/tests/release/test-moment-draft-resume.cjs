@@ -1,0 +1,13 @@
+"use strict";
+const test=require('node:test'),assert=require('node:assert/strict');
+const {createDraftResume,canAutosave,AUTOSAVE_DELAY}=require('../../../src/features/learning/familyDocument/momentDraftResume.cjs');
+const id='a'.repeat(32),id2='b'.repeat(32);
+const state={enabled:true,current:{deletedAt:null},busy:false,retry:false,disabled:false,hasAttachments:false,caption:'Nhà mình',saved:'old',stamp:'new'};
+function storage(){const m=new Map();return {m,getItem:async k=>m.get(k)??null,setItem:async(k,v)=>{m.set(k,v);},removeItem:async k=>{m.delete(k);}};}
+test('resume pointer survives new session without storing body, scoped to UID and house',async()=>{const s=storage();assert(await createDraftResume(s,'owner','house1').remember(id));assert.equal(await createDraftResume(s,'owner','house1').read(),id);assert.equal(await createDraftResume(s,'owner','house2').read(),null);assert.equal(await createDraftResume(s,'other','house1').read(),null);assert.deepEqual([...s.m.values()],[id]);});
+test('resume rejects invalid IDs and forget only removes matching pointer',async()=>{const s=storage(),r=createDraftResume(s,'owner','house');assert.equal(await r.remember('private text'),false);await r.remember(id);await r.remember(id2);await r.forget(id);assert.equal(await r.read(),id2);await r.forget(id2);assert.equal(await r.read(),null);});
+test('storage failure never claims persistence or throws into editor',async()=>{const fail=()=>{throw Error('storage denied');};const r=createDraftResume({getItem:fail,setItem:fail,removeItem:fail},'owner','house');assert.equal(await r.read(),null);assert.equal(await r.remember(id),false);assert.equal(await r.forget(id),false);});
+test('autosave requires explicit opt-in, existing active draft and changed nonempty text',()=>{assert.equal(AUTOSAVE_DELAY,2500);assert(canAutosave(state));for(const patch of [{enabled:false},{current:null},{current:{deletedAt:0}},{caption:' '},{saved:'new'}])assert(!canAutosave({...state,...patch}));});
+test('autosave pauses during retry, server write, publishing or with attachments',()=>{for(const patch of [{busy:true},{retry:true},{disabled:true},{hasAttachments:true}])assert(!canAutosave({...state,...patch}));});
+
+test('opted-in image autosave accepts image-only draft, pauses on video or empty form',()=>{const image={...state,hasAttachments:true,mediaSupported:true,hasContent:true,caption:''};assert(canAutosave(image));assert(!canAutosave({...image,mediaSupported:false}));assert(!canAutosave({...image,hasContent:false}));assert(!canAutosave({...image,busy:true}));assert(!canAutosave({...image,retry:true}));});

@@ -1,0 +1,73 @@
+name: Verify Android candidate
+on:
+  push:
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify exact source bytes before installing dependencies
+        run: node scripts/setup/verify-release-source.cjs
+      - name: Verify editor, publish and media contracts
+        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-field-document.cjs scripts/tests/release/test-family-media-review.cjs scripts/tests/release/test-moment-form-draft-client.cjs scripts/tests/release/test-moment-draft-resume.cjs scripts/tests/release/test-moment-draft-images.cjs scripts/tests/release/test-moment-local-recovery.cjs scripts/tests/release/test-r43-native-publish-journal.cjs
+      - name: Install dependencies in isolated CI checkout
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Record exact pinned dependency lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-candidate-resolved-lock
+          path: package-lock.json
+          if-no-files-found: error
+      - run: node scripts/setup/check-package-lock.js
+      - run: npm run route:check
+      - run: npm run source:imports-check
+      - run: npm run source:syntax-check
+      - name: TypeScript check
+        run: npm run typecheck
+      - run: node scripts/tests/release/test-r16r11r15-local-preflight.cjs
+      - run: node scripts/tests/release/test-r33-lock-contract.cjs
+      - run: npm run build:entrypoints-check
+      - run: npm run phaseP2_37R2C:check
+      - name: Android Metro production bundle (no deploy, no signing)
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        run: npx expo export --platform android --output-dir dist-android-ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Generate synthetic Firebase config for CI native build only
+        run: node scripts/setup/write-ci-google-services.cjs
+      - name: Generate Android project (synthetic Firebase, no production credentials)
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        run: npx --no-install expo prebuild --platform android --clean --no-install
+      - run: node scripts/setup/check-generated-android-package.js com.familybloom.android
+      - name: Compile unsigned Release APK, never publish or distribute
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        run: |
+          printf '\nandroid { buildTypes { release { signingConfig null } } }\n' >> android/app/build.gradle
+          cd android
+          ./gradlew --no-daemon :app:assembleRelease
+      - name: Inspect APK manifest, DEX and board audio (CI only)
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' -type f | head -n 1)
+          test -n "$APK"
+          node scripts/setup/check-p2_37r2c-apk-native-proof.js "$APK"
+          node scripts/setup/check-board-audio-apk.js "$APK"

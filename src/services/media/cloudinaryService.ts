@@ -68,7 +68,6 @@ export const cloudinaryService = {
           formData.append("folder", signed.folder);
           formData.append("public_id", signed.publicId);
           formData.append("overwrite", "false");
-          formData.append("return_delete_token", "true");
         } else {
           formData.append("upload_preset", preset);
           formData.append("folder", folder);
@@ -90,7 +89,7 @@ export const cloudinaryService = {
           secureUrl, publicId, cloudName: selectedCloudName,
           thumbnailUrl: file.type === "video" ? secureUrl.replace(/\.[^/.]+$/, ".jpg") : secureUrl,
           resourceType: file.type,
-          deleteToken: typeof response.data?.delete_token === "string" ? response.data.delete_token : undefined,
+          // Ignore legacy deletion capabilities; cancellation is reconciled by the Gateway.
         };
       } catch (error) {
         if (options?.signal?.aborted || axios.isCancel(error) || (error as Error)?.name === "AbortError") {
@@ -124,16 +123,4 @@ export const cloudinaryService = {
     throw new AppError("MEDIA_UPLOAD_FAILED", "MEDIA");
   },
 
-  async deleteWithToken(token: string, cloudName = APP_CONFIG.CLOUDINARY.cloudName): Promise<boolean> {
-    if (!token || !/^[\w-]+$/.test(cloudName)) return false;
-    try {
-      const body = new FormData();
-      body.append("token", token);
-      const response = await axios.post(
-        `https://api.cloudinary.com/v1_1/${cloudName}/delete_by_token`,
-        body, { timeout: 12_000 },
-      );
-      return response.data?.result === "ok";
-    } catch { return false; }
-  },
 };

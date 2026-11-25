@@ -1,13 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AppState } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getAuth} from '@react-native-firebase/auth';
+import {createNativeJournal,type NativePublishRecord} from '../features/learning/familyDocument/nativePublishJournal.cjs';
+const nativeRecoveryEnabled=process.env.EXPO_PUBLIC_FAMILY_MOMENT_PUBLISH_RECOVERY_ENABLED==='1';
+const nativeJournal=createNativeJournal(AsyncStorage);
 import { useBloomTaskToast } from "../hooks/ui/useBloomTaskToast";
 import { mediaService } from "../services/media/mediaService";
 import { activityService } from "../services/activity/activityService";
 import { momentsService } from "../services/moments/momentsService";
 import type { MediaFile } from "../types";
-import type { MomentMedia } from "../types/moments";
+import type { MomentMedia, MomentPost } from "../types/moments";
+import {matchesPublishedMoment} from '../features/learning/familyDocument/publishManager.cjs';
 import { momentResumeProgress, normalizeMomentTargetFamilyIds } from "../utils/momentPublishPolicy";
-import { cloudinaryService } from "../services/media/cloudinaryService";
 import { momentMediaApi } from "../services/media/momentMediaApi";
 import { momentUploadErrorMessage } from "../services/media/momentUploadError";
 import { recordMomentUploadFailure } from "../services/media/momentUploadDiagnostic";
@@ -23,7 +28,6 @@ export interface PendingMomentUploadedFile {
   /** False only when Cloudinary succeeded but media_assets metadata could not sync yet. */
   metadataSynced: boolean;
   /** Ephemeral: delete without privileged backend within 10 minutes. */
-  deleteToken?: string;
   cloudName?: string;
 }
 
@@ -33,6 +37,7 @@ export interface PendingMoment {
   familyId: string;
   author: { uid: string; displayName: string; avatarUrl?: string };
   caption: string;
+  richBody?: string | null;
   personIds: string[];
   timelineAudience: "self" | "family" | "persons";
   notifyFamily: boolean;
@@ -47,6 +52,8 @@ export interface PendingMoment {
   createdAt: string;
   error?: string;
   failureStage?: PendingMomentFailureStage;
+  /** Once a commit has been attempted, never treat this task as an abandonable upload. */
+  publishAttempted?: boolean;
 }
 
 interface PublishMomentInput {
@@ -55,6 +62,7 @@ interface PublishMomentInput {
   additionalFamilyIds?: string[];
   author: PendingMoment["author"];
   caption: string;
+  richBody?: string | null;
   /** Person ids are family-scoped, so these only apply to the current/source family. */
   personIds: string[];
   timelineAudience: "self" | "family" | "persons";
@@ -70,7 +78,8 @@ interface MomentPublishContextValue {
   retryMoment: (localId: string) => void;
   removePendingMoment: (localId: string) => void;
   cancelMoment: (localId: string) => void;
-  reconcilePublished: (familyId: string, postIds: string[]) => void;
+  reconcilePublished: (familyId: string, posts: MomentPost[]) => void;
+  checkUnconfirmedPublications:(uid:string,familyId:string)=>Promise<{confirmed:number;unresolved:number}>;
 }
 
 const MomentPublishContext = createContext<MomentPublishContextValue | null>(null);
@@ -148,6 +157,8 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
     const controller = new AbortController();
     abortRef.current.set(task.localId, controller);
     const createdAssetIds = new Set<string>();
+    let publishAttempted=task.publishAttempted===true;
+    let journalRecord:NativePublishRecord|undefined;
     const wasCancelled = () => cancelledRef.current.has(task.localId) || controller.signal.aborted;
     const throwIfCancelled = () => {
       if (wasCancelled()) throw Object.assign(new Error("Moment đã hủy"), { name: "AbortError" });
@@ -174,6 +185,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
 
     try {
       throwIfCancelled();
+      if(nativeRecoveryEnabled){if(getAuth().currentUser?.uid!==task.author.uid)throw Error('AUTH_CHANGED');const earlier=await nativeJournal.list(task.author.uid,task.familyId);if(earlier.some(r=>r.postId!==task.postId))throw Error('PUBLISH_PREVIOUS_UNCONFIRMED');}
       const media = new Array<MomentMedia>(task.files.length);
       const progressById = new Map(task.files.map((file) => [file.id, completedByFile.has(file.id) ? 100 : 0]));
       completedByFile.forEach((item) => {
@@ -235,7 +247,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
               { signal: controller.signal, onAssetCreated: (asset) => { createdAssetIds.add(asset.id); } },
             );
           } catch (error) {
-            const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null; deleteToken?: string; cloudName?: string } } } | null)?.managedUploadCheckpoint;
+            const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null; cloudName?: string } } } | null)?.managedUploadCheckpoint;
             if (checkpoint) {
               const completed: PendingMomentUploadedFile = {
                 fileId: file.id,
@@ -251,7 +263,6 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
                   duration: file.duration ?? undefined,
                 },
                 metadataSynced: false,
-                deleteToken: checkpoint.result.deleteToken,
                 cloudName: checkpoint.result.cloudName,
               };
               completedByFile.set(file.id, completed);
@@ -277,7 +288,6 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
               duration: file.duration ?? undefined,
             },
             metadataSynced: true,
-            deleteToken: uploaded.result.deleteToken,
             cloudName: uploaded.result.cloudName,
           };
           completedByFile.set(file.id, completed);
@@ -327,7 +337,11 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
       throwIfCancelled();
       setPendingMomentProgress(task.localId, 100);
       toast("publishing", 100);
-      patch(task.localId, { status: "publishing", progress: 100, uploadedFiles: [...completedByFile.values()] });
+      const desired={id:task.postId,familyId:task.familyId,authorUid:task.author.uid,caption:task.caption.trim(),richBody:task.richBody??null,media:media.filter(Boolean),mediaAssetIds:media.filter(Boolean).map(m=>m.id),personIds:[...new Set(task.personIds.map(x=>x.trim()).filter(Boolean))].slice(0,24),timelineAudience:task.timelineAudience,notifyFamily:task.timelineAudience==='family'&&task.notifyFamily};
+      // Enter the non-cancellable commit phase before awaiting the durable checkpoint.
+      publishAttempted=true;
+      patch(task.localId, { status: "publishing", publishAttempted:true, progress: 100, uploadedFiles: [...completedByFile.values()] });
+      if(nativeRecoveryEnabled){if(getAuth().currentUser?.uid!==task.author.uid)throw Error('AUTH_CHANGED');journalRecord=await nativeJournal.mark(desired);if(getAuth().currentUser?.uid!==task.author.uid)throw Error('AUTH_CHANGED');}
       try {
         const post = await momentsService.publishWithAssets(
           task.familyId,
@@ -335,12 +349,13 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
           task.author,
           {
             caption: task.caption,
+            richBody: task.richBody ?? null,
             media: media.filter(Boolean),
             personIds: task.personIds,
             timelineAudience: task.timelineAudience,
             notifyFamily: task.timelineAudience === "family" && task.notifyFamily,
           },
-          [...completedByFile.values()].map((item) => item.assetId),
+          desired.mediaAssetIds,
         );
         // Activity is metadata only. A notification failure must never roll back a published family memory.
         // Target Person/account projections can settle a beat after the Moment write on a real device.
@@ -354,6 +369,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
           });
         };
         publishActivity();
+        if(journalRecord&&nativeJournal.matches(journalRecord,post))await nativeJournal.clear(journalRecord,true).catch(()=>false);
       } catch (error) {
         throw Object.assign(error instanceof Error ? error : new Error(String(error)), { __momentStage: "publish" as const });
       }
@@ -363,7 +379,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
       patch(task.localId, { status: "published", progress: 100, failureStage: undefined });
       finishTask({ title: "Khoảnh khắc đã được chia sẻ 🌷", message: "Đã đăng xong vào trang Kỷ niệm." });
     } catch (error) {
-      if (wasCancelled()) {
+      if (wasCancelled()&&!publishAttempted) {
         // Aborted requests may still have arrived at Cloudinary. Queue every
         // created media_assets record for privileged reconciliation first.
         const allIds = [...new Set([
@@ -375,15 +391,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         // Firestore offline writes can remain unresolved until reconnection.
         // They are queued locally; the HỦY UI must not freeze on network loss.
         await Promise.race([markPending, new Promise<void>((resolve) => setTimeout(resolve, 1800))]);
-        // Android first: delete with the short-lived Cloudinary token, if present.
-        const cleared = await Promise.allSettled([...completedByFile.values()].map(async (entry) => {
-          if (!entry.deleteToken) return;
-          if (await cloudinaryService.deleteWithToken(entry.deleteToken, entry.cloudName)) {
-            await mediaService.markCleanupPending(entry.assetId);
-          }
-        }));
-        void cleared; // Individual failures remain cleanup_pending for Vercel.
-        // Server fallback is best-effort immediately; daily cron handles outages.
+        // Preserve provider bytes. The server queues a review request, not deletion.
         if (momentMediaApi.configured && allIds.length) {
           void momentMediaApi.requestCleanup(allIds).catch(() => undefined);
         }
@@ -394,17 +402,17 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
         });
         clearPendingMomentProgress(task.localId);
         momentUploadToastStore.clear(task.localId);
-        finishTask({ title: "Đã hủy khoảnh khắc", message: "Bài chưa được đăng. Tệp còn sót sẽ tiếp tục được dọn." });
+        finishTask({ title: "Đã hủy khoảnh khắc", message: "Bài chưa được đăng. Tệp chưa dùng được giữ để máy chủ kiểm kê." });
       } else {
         momentUploadToastStore.clear(task.localId);
-        const stage = ((error as { __momentStage?: PendingMomentFailureStage } | null)?.__momentStage) ?? "upload";
+        const stage:PendingMomentFailureStage = publishAttempted?"publish":((error as { __momentStage?: PendingMomentFailureStage } | null)?.__momentStage) ?? "upload";
         // Keep the stage-specific reason visible on the failed card rather than
         // replacing all failures with a generic "network" toast.
         recordMomentUploadFailure(error, stage);
         const safeReason = momentUploadErrorMessage(error, stage);
         patch(task.localId, {
           status: "failed", uploadedFiles: [...completedByFile.values()],
-          error: safeReason, failureStage: stage,
+          error: safeReason, failureStage: stage, publishAttempted,
         });
         failTask(error, {
           title: "Khoảnh khắc chưa đăng được",
@@ -449,6 +457,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
       familyId,
       author: { ...input.author },
       caption: input.caption,
+      richBody: input.richBody ?? null,
       // FamilyPerson ids are not portable across houses. Secondary copies start unlinked.
       personIds: familyId === input.familyId ? [...input.personIds] : [],
       timelineAudience: familyId === input.familyId ? input.timelineAudience : "self",
@@ -474,7 +483,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   const cancelMoment = useCallback((localId: string) => {
     const task = pendingRef.current.find((item) => item.localId === localId)
       ?? queueRef.current.find((item) => item.localId === localId);
-    if (!task || task.status === "published" || task.status === "publishing" || task.status === "cancelling") return;
+    if (!task || task.status === "published" || task.status === "publishing" || task.status === "cancelling" || task.publishAttempted || task.failureStage === "publish") return;
     cancelledRef.current.add(localId);
     abortRef.current.get(localId)?.abort();
     queueRef.current = queueRef.current.filter((item) => item.localId !== localId);
@@ -556,22 +565,14 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   }, [enqueue]);
 
   const removePendingMoment = useCallback((localId: string) => {
-    if (runningRef.current.has(localId)) return;
+    if (runningRef.current.has(localId) || pendingRef.current.some(item=>item.localId===localId&&(item.publishAttempted||item.failureStage==='publish'))) return;
     queueRef.current = queueRef.current.filter((item) => item.localId !== localId);
     setPendingMoments((current) => {
       const item = current.find((candidate) => candidate.localId === localId);
       if (item?.uploadedFiles.length) {
         const ids = item.uploadedFiles.map((upload) => upload.assetId);
         void mediaService.markCleanupPendingMany(ids).catch(() => undefined);
-        // A publish request may have committed on Firestore before its ACK was lost.
-        // Never client-delete its media on an ambiguous publish failure. The Vercel
-        // cleanup path checks the actual published post before destroying anything.
-        if (item.failureStage !== "publish") {
-          void Promise.allSettled(item.uploadedFiles.map(async (upload) => {
-            if (upload.deleteToken && await cloudinaryService.deleteWithToken(upload.deleteToken, upload.cloudName))
-              await mediaService.markCleanupPending(upload.assetId);
-          }));
-        }
+        // No direct deletion, even for an explicitly abandoned upload.
         if (momentMediaApi.configured) void momentMediaApi.requestCleanup(ids).catch(() => undefined);
       }
       clearPendingMomentProgress(localId);
@@ -579,24 +580,34 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
     });
   }, []);
 
-  const reconcilePublished = useCallback((familyId: string, postIds: string[]) => {
-    if (!familyId || postIds.length === 0) return;
+  const reconcilePublished = useCallback((familyId: string, posts: MomentPost[]) => {
+    if (!familyId || posts.length === 0) return;
 
-    const published = new Set(postIds);
+    const published = new Map(posts.map(post=>[post.id,post]));
     setPendingMoments((current) => {
       let changed = false;
       const next = current.filter((item) => {
-        const shouldRemove = item.familyId === familyId && published.has(item.postId);
+        const live=published.get(item.postId);
+        const media=item.files.map(file=>item.uploadedFiles.find(upload=>upload.fileId===file.id)?.media);
+        const desired={id:item.postId,familyId:item.familyId,authorUid:item.author.uid,caption:item.caption.trim(),richBody:item.richBody,media,mediaAssetIds:media.map(m=>m?.id),personIds:[...new Set(item.personIds.map(x=>x.trim()).filter(Boolean))].slice(0,24),timelineAudience:item.timelineAudience,notifyFamily:item.timelineAudience==='family'&&item.notifyFamily};
+        const shouldRemove = item.familyId === familyId && (item.status==='published'||item.failureStage==='publish') && matchesPublishedMoment(live,desired);
         if (shouldRemove) {
           changed = true;
           clearPendingMomentProgress(item.localId);
         }
         return !shouldRemove;
       });
+      if(changed)pendingRef.current=next;
       return changed ? next : current;
     });
   }, []);
 
+  const checkUnconfirmedPublications=useCallback(async(uid:string,familyId:string)=>{
+    if(!nativeRecoveryEnabled||getAuth().currentUser?.uid!==uid)return {confirmed:0,unresolved:0};
+    const records=await nativeJournal.list(uid,familyId);let confirmed=0;
+    for(const record of records){if(getAuth().currentUser?.uid!==uid)throw Error('AUTH_CHANGED');try{const post=await momentsService.getByIdFromServer(familyId,record.postId);if(getAuth().currentUser?.uid!==uid)throw Error('AUTH_CHANGED');if(nativeJournal.matches(record,post)&&await nativeJournal.clear(record,true))confirmed++;}catch{/* Never infer a failed write from an unavailable server. */}}
+    return {confirmed,unresolved:records.length-confirmed};
+  },[]);
   const failedPendingSignature = useMemo(
     () => pendingMoments
       .filter((item) => item.status === "failed")
@@ -614,8 +625,8 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   );
 
   const value = useMemo(
-    () => ({ failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished }),
-    [failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished],
+    () => ({ failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished, checkUnconfirmedPublications }),
+    [failedPendingMoments, publishMoment, retryMoment, removePendingMoment, cancelMoment, reconcilePublished, checkUnconfirmedPublications],
   );
 
   return <MomentPublishContext.Provider value={value}>{children}</MomentPublishContext.Provider>;

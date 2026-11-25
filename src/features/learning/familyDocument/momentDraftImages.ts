@@ -1,0 +1,10 @@
+import {File,Paths} from 'expo-file-system';
+import * as Legacy from 'expo-file-system/legacy';
+import type {MediaFile} from '../../../types';
+export type DraftAttachment=MediaFile;
+const MAX=2*1024*1024;
+const fail=()=>Object.assign(Error('FORM_IMAGE_LIMIT'),{code:'FORM_IMAGE_LIMIT'});
+const prefix='fb-moment-private-';
+export async function readDraftImage(a:DraftAttachment,allowVideo=false,allowDirect=false){if(!(a.type==='image'&&/^image\/(jpeg|png|webp|gif)$/.test(a.mimeType)||allowVideo&&a.type==='video'&&a.mimeType==='video/mp4'))throw fail();const f=new File(a.uri);const max=allowDirect&&a.type==='video'?16*1024*1024:MAX;if(!f.size||f.size>max)throw fail();const b=await f.base64();if(!b||b.length>Math.ceil(max/3)*4)throw fail();return `data:${a.mimeType};base64,${b}`;}
+export function discardRestoredImages(items:DraftAttachment[]){for(const a of items){try{const f=new File(a.uri);if(f.uri.startsWith(Paths.cache.uri.replace(/\/?$/,'/')+prefix)&&f.exists)f.delete();}catch{/* best effort; app-private cache */}}}
+export async function restoreDraftImages(images:string[],allowVideo=false,allowDirect=false):Promise<DraftAttachment[]>{const items:DraftAttachment[]=[];try{for(const data of images){const m=/^data:(image\/(?:jpeg|png|webp|gif)|video\/mp4);base64,([A-Za-z0-9+/]+={0,2})$/.exec(data);if(!m||m[1]==='video/mp4'&&!allowVideo||m[2].length>Math.ceil((allowDirect&&m[1]==='video/mp4'?16*1024*1024:MAX)/3)*4)throw fail();const id=prefix+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);const name=id+'.'+(m[1]==='image/jpeg'?'jpg':m[1].split('/')[1]);const f=new File(Paths.cache,name);const item:DraftAttachment={id,uri:f.uri,type:m[1]==='video/mp4'?'video':'image',mimeType:m[1],fileName:name};items.push(item);await Legacy.writeAsStringAsync(f.uri,m[2],{encoding:Legacy.EncodingType.Base64});if(!f.size||f.size>(allowDirect&&m[1]==='video/mp4'?16*1024*1024:MAX))throw fail();item.fileSize=f.size;}return items;}catch(e){discardRestoredImages(items);throw e;}}

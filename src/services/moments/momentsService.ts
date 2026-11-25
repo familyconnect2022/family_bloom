@@ -1,9 +1,9 @@
 import {
   collection,
-  deleteDoc,
   endAt,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   getFirestore,
   limit,
@@ -35,6 +35,8 @@ import {
 import { AppError } from "../../types/errors";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
+import {checkedFieldValue,readFieldDocument} from '../../features/learning/familyDocument/formDocument.cjs';
+import {checkExisting,checkAssets,checkEdit,prepareEdit} from "../../features/learning/familyDocument/publishManager.cjs";
 import { mediaService } from "../media/mediaService";
 import { momentMediaApi } from "../media/momentMediaApi";
 import { familyGraphRepository } from "../familyGraph/familyGraphRepository";
@@ -61,6 +63,7 @@ const normalizeMomentPost = (
   authorName: typeof raw.authorName === "string" && raw.authorName.trim() ? raw.authorName : "Thành viên",
   ...(typeof raw.authorAvatarUrl === "string" && raw.authorAvatarUrl ? { authorAvatarUrl: raw.authorAvatarUrl } : {}),
   caption: typeof raw.caption === "string" ? raw.caption : "",
+  ...(typeof raw.richBody==='string'&&readFieldDocument(raw.richBody,raw.caption)?{richBody:raw.richBody}:{}),
   media: Array.isArray(raw.media) ? raw.media.flatMap(value => {
     const r = objectData(value);
     const id = requiredText(r?.id, 180);
@@ -133,6 +136,8 @@ export const momentsService = {
   ) {
     const timestamp = now();
     const personIds = await validatePersonIds(familyId, input.personIds);
+    const orderedIds = input.media.map(m => m.id);
+    if (new Set(mediaAssetIds).size !== mediaAssetIds.length || orderedIds.length !== mediaAssetIds.length || orderedIds.some(id => !mediaAssetIds.includes(id))) throw new Error("PUBLISH_MEDIA_INVALID");
     const post: MomentPost = {
       id: postId,
       familyId,
@@ -140,8 +145,9 @@ export const momentsService = {
       authorName: author.displayName,
       ...(author.avatarUrl ? { authorAvatarUrl: author.avatarUrl } : {}),
       caption: input.caption.trim(),
+      ...(checkedFieldValue(input.richBody,input.caption.trim())!==null?{richBody:input.richBody}:{}),
       media: input.media,
-      mediaAssetIds: [...mediaAssetIds],
+      mediaAssetIds: orderedIds,
       personIds,
       timelineAudience: input.timelineAudience,
       notifyFamily: input.timelineAudience === "family" && input.notifyFamily === true,
@@ -155,12 +161,21 @@ export const momentsService = {
       updatedAt: timestamp,
     };
 
-    await mediaService.attachAssetsToDocument(
-      mediaAssetIds,
-      FIRESTORE_PATHS.moment(familyId, postId),
-      post as unknown as Record<string, unknown>,
-    );
-    return post;
+    const db = getFirestore();
+    const ref = doc(db, FIRESTORE_PATHS.moment(familyId, postId));
+    return runTransaction(db, async (tx) => {
+      const existing = await tx.get(ref);
+      if (existing.exists()) {
+        checkExisting(existing.data(), post);
+        return normalizeMomentPost(existing.data() as Record<string, unknown>, postId, familyId);
+      }
+      const refs = orderedIds.map(id => doc(db, FIRESTORE_PATHS.mediaAsset(id)));
+      const assets = await Promise.all(refs.map(r => tx.get(r)));
+      checkAssets(post, assets.map(a => a.exists() ? a.data() : null));
+      tx.set(ref, removeUndefinedDeep(post) as unknown as Record<string, unknown>);
+      refs.forEach(r => tx.update(r, {status: "attached", updatedAt: timestamp}));
+      return post;
+    });
   },
 
   async create(
@@ -179,6 +194,7 @@ export const momentsService = {
       authorName: author.displayName,
       ...(author.avatarUrl ? { authorAvatarUrl: author.avatarUrl } : {}),
       caption: input.caption.trim(),
+      ...(checkedFieldValue(input.richBody,input.caption.trim())!==null?{richBody:input.richBody}:{}),
       media: input.media,
       mediaAssetIds: [],
       personIds,
@@ -197,6 +213,10 @@ export const momentsService = {
     return post;
   },
 
+  async getByIdFromServer(familyId: string, postId: string) {
+    const snapshot=await getDocFromServer(doc(getFirestore(),FIRESTORE_PATHS.moment(familyId,postId)));
+    return snapshot.exists()?normalizeMomentPost(snapshot.data() as Record<string,unknown>,postId,familyId):null;
+  },
   async getById(familyId: string, postId: string) {
     const snapshot = await getDoc(doc(getFirestore(), FIRESTORE_PATHS.moment(familyId, postId)));
     return snapshot.exists()
@@ -363,70 +383,73 @@ export const momentsService = {
     postId: string,
     input: CreateMomentInput,
     mediaAssetIds: string[],
+    expected: MomentPost,
   ) {
     const uid = getAuth().currentUser?.uid;
-    if (!uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-    const ref = doc(getFirestore(), FIRESTORE_PATHS.moment(familyId, postId));
-    const snapshot = await getDoc(ref);
-    if (!snapshot.exists()) throw new AppError("MOMENT_NOT_FOUND", "MOMENT");
-    const current = normalizeMomentPost(snapshot.data() as Record<string, unknown>, postId, familyId);
-    if (current.authorUid !== uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-
+    if (!uid || expected.authorUid !== uid || expected.id !== postId || expected.familyId !== familyId) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
+    const db = getFirestore();
+    const ref = doc(db, FIRESTORE_PATHS.moment(familyId, postId));
     const personIds = await validatePersonIds(familyId, input.personIds);
-    const nextAssetIds = Array.from(new Set(mediaAssetIds.filter(Boolean)));
-    const removedAssetIds = (current.mediaAssetIds ?? []).filter((assetId) => !nextAssetIds.includes(assetId));
-
-    await mediaService.attachAssetsToDocument(
-      nextAssetIds,
-      FIRESTORE_PATHS.moment(familyId, postId),
-      {
-        caption: input.caption.trim(),
-        media: input.media,
-        mediaAssetIds: nextAssetIds,
-        personIds,
-        timelineAudience: input.timelineAudience,
-        notifyFamily: input.timelineAudience === "family" && input.notifyFamily === true,
-        updatedAt: now(),
-      },
-    );
-
+    const nextAssetIds = [...mediaAssetIds];
+    const originalIds = new Set(expected.media.map(m => m.id));
+    const newIds = nextAssetIds.filter(id => !originalIds.has(id));
+    const desired = {...expected, caption:input.caption.trim(),richBody:checkedFieldValue(input.richBody===undefined&&input.caption.trim()===expected.caption?expected.richBody:input.richBody,input.caption.trim()),media:input.media,mediaAssetIds:nextAssetIds,personIds,timelineAudience:input.timelineAudience,notifyFamily:input.timelineAudience === "family" && input.notifyFamily === true};
+    const removedAssetIds = await runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw new AppError("MOMENT_NOT_FOUND", "MOMENT");
+      const current = normalizeMomentPost(snap.data() as Record<string, unknown>, postId, familyId);
+      if (current.authorUid !== uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
+      if (checkEdit(current,expected,desired) === 'ALREADY_COMMITTED') return (expected.mediaAssetIds ?? []).filter(id=>!nextAssetIds.includes(id));
+      const refs = newIds.map(id=>doc(db,FIRESTORE_PATHS.mediaAsset(id)));
+      const assets = await Promise.all(refs.map(r=>tx.get(r)));
+      const plan = prepareEdit(current,desired,newIds,assets.map(a=>a.exists()?a.data():null));
+      const timestamp = now();
+      tx.update(ref,removeUndefinedDeep({caption:desired.caption,...(desired.richBody!==null||Object.prototype.hasOwnProperty.call(snap.data(),'richBody')?{richBody:desired.richBody}:{}),media:plan.media,mediaAssetIds:plan.mediaAssetIds,personIds,timelineAudience:desired.timelineAudience,notifyFamily:desired.notifyFamily,updatedAt:timestamp}));
+      refs.forEach(r=>tx.update(r,{status:'attached',updatedAt:timestamp}));
+      return plan.removed;
+    });
     if (removedAssetIds.length) {
       try {
         await mediaService.markCleanupPendingMany(removedAssetIds);
-        if (momentMediaApi.configured) {
-          void momentMediaApi.requestCleanup(removedAssetIds).catch(() => undefined);
-        }
-      } catch {
-        // The Moment edit is already committed. Cleanup remains best-effort.
-      }
+        if (momentMediaApi.configured) void momentMediaApi.requestCleanup(removedAssetIds).catch(() => undefined);
+      } catch { /* The edit is committed. Rules block cleanup of referenced media. */ }
     }
   },
 
-  async updateOwnCaption(familyId: string, postId: string, caption: string) {
+  async updateOwnCaption(familyId: string, postId: string, caption: string, expected: MomentPost, richBody?:string|null) {
     const uid = getAuth().currentUser?.uid;
-    if (!uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-    const ref = doc(getFirestore(), FIRESTORE_PATHS.moment(familyId, postId));
-    const snapshot = await getDoc(ref);
-    if (!snapshot.exists()) throw new AppError("MOMENT_NOT_FOUND", "MOMENT");
-    const current = normalizeMomentPost(snapshot.data() as Record<string, unknown>, postId, familyId);
-    if (current.authorUid !== uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-    await updateDoc(ref, { caption: caption.trim(), updatedAt: now() });
+    if (!uid || expected.authorUid !== uid || expected.id !== postId || expected.familyId !== familyId) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
+    const db=getFirestore(),ref = doc(db, FIRESTORE_PATHS.moment(familyId, postId));
+    await runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new AppError("MOMENT_NOT_FOUND", "MOMENT");
+      const current=normalizeMomentPost(snap.data() as Record<string,unknown>,postId,familyId);
+      if(current.authorUid!==uid)throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
+      if(richBody===undefined&&expected.richBody&&caption.trim()!==expected.caption)throw new AppError('MOMENT_RICH_EDIT_REQUIRED','MOMENT');
+      const desired={...expected,caption:caption.trim(),richBody:checkedFieldValue(richBody===undefined?expected.richBody:richBody,caption.trim())};
+      if(checkEdit(current,expected,desired)==='ALREADY_COMMITTED')return;
+      tx.update(ref,{caption:desired.caption,...(desired.richBody!==null||Object.prototype.hasOwnProperty.call(snap.data(),'richBody')?{richBody:desired.richBody}:{}),updatedAt:now()});
+    });
   },
 
   async delete(familyId: string, postId: string) {
     const uid = getAuth().currentUser?.uid;
     if (!uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-    const ref = doc(getFirestore(), FIRESTORE_PATHS.moment(familyId, postId));
-    const snapshot = await getDoc(ref);
-    if (!snapshot.exists()) return;
-    const current = normalizeMomentPost(snapshot.data() as Record<string, unknown>, postId, familyId);
-    if (current.authorUid !== uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
-    await deleteDoc(ref);
-    if (current.mediaAssetIds?.length) {
+    const db = getFirestore();
+    const ref = doc(db, FIRESTORE_PATHS.moment(familyId, postId));
+    const removed = await runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists()) return [];
+      const current = normalizeMomentPost(snapshot.data() as Record<string, unknown>, postId, familyId);
+      if (current.authorUid !== uid) throw new AppError("MOMENT_NOT_OWNER", "MOMENT");
+      tx.delete(ref);
+      return current.mediaAssetIds ?? [];
+    });
+    if (removed.length) {
       try {
-        await mediaService.markCleanupPendingMany(current.mediaAssetIds);
+        await mediaService.markCleanupPendingMany(removed);
         if (momentMediaApi.configured) {
-          void momentMediaApi.requestCleanup(current.mediaAssetIds).catch(() => undefined);
+          void momentMediaApi.requestCleanup(removed).catch(() => undefined);
         }
       } catch {
         // The post is already gone; keep cleanup as best-effort and preserve ownership semantics.

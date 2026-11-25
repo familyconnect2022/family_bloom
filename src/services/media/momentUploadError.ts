@@ -5,6 +5,8 @@ export function momentUploadErrorMessage(error: unknown, phase: "upload" | "publ
   const code = typeof raw?.code === "string" ? raw.code : "";
   const combined = `${code} ${message}`.toLowerCase();
 
+  if (message === "PUBLISH_PREVIOUS_UNCONFIRMED") return "Có bài đăng trước chưa xác nhận. Hãy kiểm tra bài đăng chưa xác nhận trước khi tiếp tục.";
+  if (message === "AUTH_CHANGED") return "Tài khoản đã thay đổi. Giữ nguyên dữ liệu để kiểm tra lại.";
   const apiStatus = message.match(/^MOMENT_MEDIA_API_HTTP_(\d{3})$/);
   if (apiStatus) {
     const status = Number(apiStatus[1]);

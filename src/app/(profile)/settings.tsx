@@ -40,7 +40,7 @@ export default function SettingsScreen(){
 
   
   const router=useRouter();
-  const {user,userProfile,families}=useAuth();
+  const {user,userProfile,families,activeFamilyId}=useAuth();
   const showDeveloperTools=isPerformanceTestAccount(user?.email) && isVerifiedDeveloperAccount(user);
   const initial=(userProfile?.displayName||user?.displayName||"F").trim().slice(0,1).toUpperCase();
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
@@ -61,6 +61,13 @@ export default function SettingsScreen(){
           <SettingRow icon="notifications-outline" title="Thông báo & lời nhắc" caption="Chọn những điều Bloom được phép nhắc trên thiết bị" onPress={()=>router.push('/notification-preferences' as never)}/>
         </BloomCard>
       </View>
+      {user&&activeFamilyId&&<View style={__a3_styles.section}>
+        <BloomSectionHeader title="Bản nháp của tôi" subtitle="Quản lý những nội dung đang viết trong nhà này"/>
+        <BloomCard style={__a3_styles.listCard}>
+          <SettingRow icon="book-outline" title="Góc học tập" caption="Mở bản nháp tài liệu và bài học" onPress={()=>router.push('/learning-editor' as never)}/>
+          {process.env.EXPO_PUBLIC_FAMILY_FORM_DRAFTS_ENABLED==='1'&&<><View style={__a3_styles.divider}/><SettingRow icon="images-outline" title="Kỷ niệm" caption="Mở bản nháp ảnh, video và lời nhắn" onPress={()=>router.push({pathname:'/(tabs)/moments',params:{drafts:'1'}} as never)}/></>}
+        </BloomCard>
+      </View>}
       <View style={__a3_styles.section}>
         <BloomSectionHeader title="Giao diện & chủ đề" subtitle="4 theme · Kiểu chữ · Cỡ chữ · Chuyển động"/>
         <BloomThemeSettingsPanel />

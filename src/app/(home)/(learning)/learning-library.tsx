@@ -41,6 +41,11 @@ export default function LearningLibrary(){
   <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
   <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="BLOOM EDUCATION" title="Góc học tập" subtitle="Chỉ những bài đã được kiểm duyệt trong Content Studio" onBack={()=>router.back()}/>
   <ScrollView contentContainerStyle={__a3_s.body} keyboardShouldPersistTaps="handled">
+   <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/learning-editor' as never)} accessibilityRole="button">
+    <View style={__a3_s.qaIcon}><Ionicons name="create-outline" size={25} color={__a3Colors.primary}/></View>
+    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Family Editor</Text><Text style={__a3_s.qaSubtitle}>Soạn thảo và quản lý bản nháp trên thiết bị</Text></View>
+    <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
+   </Pressable>
    <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/study-questions' as never)} accessibilityRole="button">
     <View style={__a3_s.qaIcon}><Ionicons name="chatbubbles-outline" size={25} color={__a3Colors.primary}/></View>
     <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Cả nhà cùng giải</Text><Text style={__a3_s.qaSubtitle}>Đặt câu hỏi, giải Toán · Lý · Hóa và chia sẻ cách học cùng nhau</Text></View>

@@ -37,6 +37,7 @@ const watchedDependencies = [
   'expo-application',
   'expo-audio',
   'expo-asset',
+  'react-native-webview',
 ];
 const watchedDevDependencies = ['expo-doctor'];
 const rootDeps = lock.packages?.['']?.dependencies || {};
@@ -54,7 +55,13 @@ function validateLockEntry(name, spec, rootSpec, kind) {
   }
 
   const lockEntry = lock.packages?.[`node_modules/${name}`];
-  const lockedVersion = lockEntry?.version;
+  const linked = typeof spec === 'string' && spec.startsWith('file:');
+  const localPath = linked ? spec.slice(5) : null;
+  const lockedVersion = linked ? lock.packages?.[localPath]?.version : lockEntry?.version;
+  if (linked && (lockEntry?.link !== true || lockEntry?.resolved !== localPath)) {
+    console.error(`LOCK LOCAL LINK MISMATCH ${name}`);
+    return false;
+  }
   if (!lockedVersion) {
     console.error(`LOCK ENTRY MISSING ${name}`);
     return false;
@@ -76,6 +83,13 @@ function validateLockEntry(name, spec, rootSpec, kind) {
     console.error(`INVALID installed package metadata ${name}: ${error.message}`);
     return false;
   }
+  if (linked) {
+    const localPackage = JSON.parse(fs.readFileSync(path.join(root, localPath, 'package.json'), 'utf8'));
+    if (localPackage.name !== name || localPackage.version !== lockedVersion) {
+      console.error(`LOCK LOCAL PACKAGE MISMATCH ${name}`);
+      ok = false;
+    }
+  }
   if (installedVersion !== lockedVersion) {
     console.error(`LOCK/INSTALLED MISMATCH ${name}: installed ${installedVersion}, locked ${lockedVersion}`);
     ok = false;
@@ -86,10 +100,10 @@ function validateLockEntry(name, spec, rootSpec, kind) {
 }
 
 let ok = true;
-for (const name of watchedDependencies) {
+for (const name of new Set([...watchedDependencies, ...Object.keys(packageJson.dependencies || {})])) {
   ok = validateLockEntry(name, packageJson.dependencies?.[name], rootDeps[name], 'dependency') && ok;
 }
-for (const name of watchedDevDependencies) {
+for (const name of new Set([...watchedDevDependencies, ...Object.keys(packageJson.devDependencies || {})])) {
   ok = validateLockEntry(name, packageJson.devDependencies?.[name], rootDevDeps[name], 'devDependency') && ok;
 }
 process.exit(ok ? 0 : 1);

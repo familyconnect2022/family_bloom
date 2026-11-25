@@ -33,12 +33,13 @@ export const momentMediaApi = {
 
   async signUpload(assetId: string, signal?: AbortSignal): Promise<{
     cloudName: string; folder: string; publicId: string; apiKey: string;
-    timestamp: number; signature: string; returnDeleteToken: boolean;
+    timestamp: number; signature: string; returnDeleteToken: false;
   }> {
-    const signed = await this.request("/api/media/sign", { assetId }, signal);
+    const signed = await this.request("/api/media/sign", { assetId, cleanupMode: "review-v1" }, signal);
     if (!signed || typeof signed.cloudName !== "string" || !/^[\w-]+$/.test(signed.cloudName) ||
         typeof signed.apiKey !== "string" || typeof signed.folder !== "string" ||
         typeof signed.publicId !== "string" || !/^[A-Za-z0-9_-]{1,180}$/.test(signed.publicId) ||
+        signed.returnDeleteToken !== false ||
         typeof signed.signature !== "string" || !/^[a-f0-9]{40}$/i.test(signed.signature) ||
         !Number.isSafeInteger(Number(signed.timestamp)) || signed.timestamp < 1) {
       throw new Error("MOMENT_MEDIA_BAD_SIGNATURE_RESPONSE");
