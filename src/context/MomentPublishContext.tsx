@@ -31,6 +31,7 @@ export interface PendingMoment {
   familyId: string;
   author: { uid: string; displayName: string; avatarUrl?: string };
   caption: string;
+  richBody?: string | null;
   personIds: string[];
   timelineAudience: "self" | "family" | "persons";
   notifyFamily: boolean;
@@ -53,6 +54,7 @@ interface PublishMomentInput {
   additionalFamilyIds?: string[];
   author: PendingMoment["author"];
   caption: string;
+  richBody?: string | null;
   /** Person ids are family-scoped, so these only apply to the current/source family. */
   personIds: string[];
   timelineAudience: "self" | "family" | "persons";
@@ -331,6 +333,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
           task.author,
           {
             caption: task.caption,
+            richBody: task.richBody ?? null,
             media: media.filter(Boolean),
             personIds: task.personIds,
             timelineAudience: task.timelineAudience,
@@ -437,6 +440,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
       familyId,
       author: { ...input.author },
       caption: input.caption,
+      richBody: input.richBody ?? null,
       // FamilyPerson ids are not portable across houses. Secondary copies start unlinked.
       personIds: familyId === input.familyId ? [...input.personIds] : [],
       timelineAudience: familyId === input.familyId ? input.timelineAudience : "self",

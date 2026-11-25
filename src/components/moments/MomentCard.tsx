@@ -1,3 +1,4 @@
+import {MomentFieldControl,MomentFieldReaderControl} from "../../features/learning/familyDocument/FamilyEditorScreen";
 import { BLOOM_ABSOLUTE_FILL } from "../ui/bloomAbsoluteFill";
 import { BloomScaledInput } from '../ui/BloomScaledInput';
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../theme/BloomThemeProvider';
@@ -178,6 +179,8 @@ function MomentCardComponent({
   const [postMenuVisible, setPostMenuVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
+  const [editRichBody,setEditRichBody]=useState<string|null>(post.richBody??null);
+  const editBaseline = useRef(post);
   const [postActionBusy, setPostActionBusy] = useState(false);
   const commentInputRef = useRef<React.ElementRef<typeof BloomScaledInput>>(null);
   const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,11 +223,11 @@ function MomentCardComponent({
     if (!isOwner || postActionBusy) return;
     setPostActionBusy(true);
     try {
-      await momentsService.updateOwnCaption(familyId, post.id, editCaption);
+      await momentsService.updateOwnCaption(familyId, post.id, editCaption, editBaseline.current,editRichBody);
       setEditVisible(false);
       setPostMenuVisible(false);
-    } catch {
-      void inform({ title: "Chưa sửa được 🌷", message: "Bloom chưa lưu được thay đổi. Bạn thử lại nhé.", icon: "create-outline" });
+    } catch (error) {
+      void inform({ title: "Chưa sửa được 🌷", message: (error as {code?:string})?.code === 'PUBLISH_EDIT_CONFLICT' ? "Kỷ niệm đã được sửa ở thiết bị khác. Bloom giữ nội dung bạn đang soạn và không ghi đè bài mới." : "Bloom chưa lưu được thay đổi. Bạn thử lại nhé.", icon: "create-outline" });
     } finally {
       setPostActionBusy(false);
     }
@@ -232,7 +235,7 @@ function MomentCardComponent({
 
   const requestCloseInlineEdit = () => {
     if (postActionBusy) return;
-    if (editCaption === post.caption) {
+    if (editCaption === post.caption && editRichBody === (post.richBody??null)) {
       setEditVisible(false);
       return;
     }
@@ -246,7 +249,7 @@ function MomentCardComponent({
       destructive: true,
     }).then((discard) => {
       if (!discard) return;
-      setEditCaption(post.caption);
+      setEditCaption(post.caption);setEditRichBody(post.richBody??null);
       setEditVisible(false);
     });
   };
@@ -565,7 +568,7 @@ function MomentCardComponent({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Tùy chọn bài đăng"
-            onPress={() => { setEditCaption(post.caption); setPostMenuVisible(true); }}
+            onPress={() => { setEditCaption(post.caption);setEditRichBody(post.richBody??null); setPostMenuVisible(true); }}
             style={({ pressed }) => [__a3_styles.moreButton, pressed && __a3_styles.reactionPressed]}
           >
             <Ionicons name="ellipsis-horizontal" size={19} color={__a3Colors.secondaryText} />
@@ -574,6 +577,7 @@ function MomentCardComponent({
       </View>
 
       {!!post.caption && <Text style={__a3_styles.caption}>{post.caption}</Text>}
+      <MomentFieldReaderControl caption={post.caption} richBody={post.richBody}/>
       {!!linkedPersons.length && (
         <View style={__a3_styles.personLinks}>
           <View style={__a3_styles.personLinksLabel}>
@@ -759,7 +763,7 @@ function MomentCardComponent({
                 onPress={() => {
                   setPostMenuVisible(false);
                   if (onEditRequest) onEditRequest(post);
-                  else { setEditCaption(post.caption); setEditVisible(true); }
+                  else { editBaseline.current=post; setEditCaption(post.caption);setEditRichBody(post.richBody??null); setEditVisible(true); }
                 }}
               >
                 <Ionicons name="create-outline" size={20} color={__a3Colors.primary} />
@@ -795,7 +799,7 @@ function MomentCardComponent({
         backDisabled={postActionBusy}
       >
         {editVisible && <BloomKeyboardScreen contentContainerStyle={__a3_styles.inlineEditPage}>
-          <BloomTextInput
+          {!editRichBody?<BloomTextInput
             label="Lời của khoảnh khắc"
             value={editCaption}
             onChangeText={setEditCaption}
@@ -803,7 +807,8 @@ function MomentCardComponent({
             multiline
             inputStyle={__a3_styles.editCaptionInput}
             helperText="Cứ viết như cách bạn sẽ kể lại khoảnh khắc này cho người thân sau này."
-          />
+          />:<Text>{editCaption}</Text>}
+          <MomentFieldControl caption={editCaption} richBody={editRichBody} disabled={postActionBusy} onChange={v=>{setEditCaption(v.caption);setEditRichBody(v.richBody);}}/>
           <Pressable
             disabled={postActionBusy}
             onPress={() => void saveOwnEdit()}

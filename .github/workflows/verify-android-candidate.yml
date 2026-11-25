@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
       - name: Verify exact source bytes before installing dependencies
         run: node scripts/setup/verify-release-source.cjs
       - name: Verify editor, publish and media contracts
-        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-media-review.cjs
+        run: node --test scripts/tests/release/test-family-document-foundation.cjs scripts/tests/release/test-family-editor-offline.cjs scripts/tests/release/test-family-publish-manager.cjs scripts/tests/release/test-family-field-document.cjs scripts/tests/release/test-family-media-review.cjs
       - name: Install dependencies in isolated CI checkout
         run: npm ci --include=dev --no-audit --no-fund
       - name: Record exact pinned dependency lock

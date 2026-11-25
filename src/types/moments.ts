@@ -21,6 +21,7 @@ export interface MomentPost {
   authorName: string;
   authorAvatarUrl?: string;
   caption: string;
+  richBody?: string | null;
   media: MomentMedia[];
   /** Durable media_assets references for new posts; legacy posts may omit this field. */
   mediaAssetIds?: string[];
@@ -85,4 +86,4 @@ export interface MomentReactionPage {
   hasMore: boolean;
 }
 
-export type CreateMomentInput = Pick<MomentPost, "caption" | "media" | "personIds" | "timelineAudience" | "notifyFamily">;
+export type CreateMomentInput = Pick<MomentPost, "caption" | "richBody" | "media" | "personIds" | "timelineAudience" | "notifyFamily">;

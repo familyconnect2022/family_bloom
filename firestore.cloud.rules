@@ -2097,6 +2097,10 @@ service cloud.firestore {
       }
 
       match /moments/{postId} {
+        function validRichBody(data) {
+          return !('richBody' in data) || data.richBody == null ||
+            (data.richBody is string && data.richBody.size() <= 65536 && data.caption is string && data.caption.size() <= 16000);
+        }
         allow read: if familyAccess(familyId);
         allow create: if familyAccess(familyId)
           && request.resource.data.id == postId
@@ -2104,6 +2108,7 @@ service cloud.firestore {
           && request.resource.data.authorUid == request.auth.uid
           && personIdsOptional(request.resource.data)
           && timelineAudienceOptional(request.resource.data)
+          && validRichBody(request.resource.data)
           && request.resource.data.visibility == 'family';
 
         // 1) Người tạo được sửa nội dung, media và đích Timeline của bài đăng của chính mình.
@@ -2118,8 +2123,12 @@ service cloud.firestore {
           && personIdsOptional(request.resource.data)
           && (
             (resource.data.authorUid == request.auth.uid
+              && validRichBody(request.resource.data)
+              && (!('richBody' in resource.data) || resource.data.richBody == null
+                || request.resource.data.caption == resource.data.caption
+                || ('richBody' in request.resource.data && request.resource.data.richBody != resource.data.richBody))
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'caption', 'media', 'mediaAssetIds', 'personIds', 'timelineAudience', 'notifyFamily', 'updatedAt'
+                'caption', 'richBody', 'media', 'mediaAssetIds', 'personIds', 'timelineAudience', 'notifyFamily', 'updatedAt'
               ]))
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'reactionCounts', 'commentCount', 'updatedAt'

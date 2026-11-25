@@ -1,9 +1,9 @@
 {
-  "webCommit": "f4d5a38526c5440c1c6a0bf23dc87f72dc49eaf0",
-  "webTree": "31ecd584448a634b9f83c4f40a0c0b3f2b1d6d46",
-  "githubActionsRun": 45573166400,
-  "artifactId": 15002254229,
-  "sha256": "f0689b836baf16e1554d7dcdfdf17a0da04240360557029c5e6da435f30bcfcc",
-  "bytes": 1025408,
+  "webCommit": "d37e8f216b786901dc8290ae6a8e034c82c0e7fd",
+  "webTree": "f1aebf53b443d8066d2fe5e213c6e9ebdcc52b04",
+  "githubActionsRun": 45578097026,
+  "artifactId": 15004409736,
+  "sha256": "83add24e9638e7918795a14b37e8f1ca660a96d2cb71f9f03792e730b587c685",
+  "bytes": 1036190,
   "status": "CI_BUNDLE_BUILT_ANDROID_DEVICE_NOT_TESTED"
 }

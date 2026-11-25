@@ -14,6 +14,7 @@ import { BloomText as Text } from '../../components/ui/BloomText';
 import { BloomKeyboardScreen } from "../../components/layout/BloomKeyboardScreen";
 import { ScreenContainer } from "../../components/layout/ScreenContainer";
 import { useMediaViewer } from "../../components/media/MediaViewerProvider";
+import {MomentFieldControl} from "../../features/learning/familyDocument/FamilyEditorScreen";
 import { MomentCard } from "../../components/moments/MomentCard";
 import { FamilyPersonMultiPicker } from "../../components/familyGraph/FamilyPersonMultiPicker";
 import { PendingMomentCard } from "../../components/moments/PendingMomentCard";
@@ -196,6 +197,7 @@ export default function MomentsScreen() {
   const [modal, setModal] = useState(false);
   const [composerDirty, setComposerDirty] = useState(false);
   const [caption, setCaption] = useState("");
+  const [richBody,setRichBody]=useState<string|null>(null);
   const [memoryPrompt, setMemoryPrompt] = useState<string | null>(null);
   const [selected, setSelected] = useState<MediaFile[]>([]);
   const [previewGridWidth, setPreviewGridWidth] = useState(0);
@@ -204,6 +206,7 @@ export default function MomentsScreen() {
   const [notifyFamily, setNotifyFamily] = useState(false);
   const [editPost, setEditPost] = useState<MomentPost | null>(null);
   const [editCaption, setEditCaption] = useState("");
+  const [editRichBody,setEditRichBody]=useState<string|null>(null);
   const [editTimelineAudience, setEditTimelineAudience] = useState<"self" | "family" | "persons">("self");
   const [editNotifyFamily, setEditNotifyFamily] = useState(false);
   const [editPersonIds, setEditPersonIds] = useState<string[]>([]);
@@ -212,6 +215,9 @@ export default function MomentsScreen() {
   const [editUploadedFiles, setEditUploadedFiles] = useState<Array<{ fileId: string; assetId: string; media: MomentMedia; metadataSynced: boolean }>>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editDirty, setEditDirty] = useState(false);
+  const formScope=JSON.stringify([user?.uid,activeFamilyId]);const previousFormScope=useRef(formScope);
+  const composerScope=useRef(formScope);
+  useEffect(()=>{if(previousFormScope.current===formScope)return;previousFormScope.current=formScope;setModal(false);setCaption("");setRichBody(null);setSelected([]);setPersonIds([]);setComposerDirty(false);setEditPost(null);setEditRichBody(null);setEditCaption("");setEditNewFiles([]);setEditUploadedFiles([]);setEditDirty(false);},[formScope]);
   const [moderationVisible, setModerationVisible] = useState(false);
   const [hiddenPosts, setHiddenPosts] = useState<MomentPost[]>([]);
   const [moderationBusyId, setModerationBusyId] = useState<string | null>(null);
@@ -476,13 +482,14 @@ export default function MomentsScreen() {
 
   const removeSelected = (id: string) => { setComposerDirty(true); setSelected((current) => current.filter((item) => item.id !== id)); };
   const openComposer = useCallback(() => {
+    composerScope.current=formScope;
     setPersonIds([]);
     setMemoryPrompt(null);
     setTimelineAudience("self");
     setNotifyFamily(false);
     setComposerDirty(false);
     setModal(true);
-  }, []);
+  }, [formScope]);
 
   const closeComposerNow = useCallback(() => {
     setModal(false);
@@ -506,7 +513,7 @@ export default function MomentsScreen() {
   }, [closeComposerNow, composerDirty, confirm]);
 
   const create = () => {
-    if (!activeFamilyId || !user || !userProfile || (!caption.trim() && !selected.length)) return;
+    if (composerScope.current!==formScope || !activeFamilyId || !user || !userProfile || (!caption.trim() && !selected.length)) return;
     if (timelineAudience === "persons" && personIds.length === 0) {
       void inform({ title: "Chọn thành viên", message: "Hãy chọn ít nhất một người cho Dòng thời gian, hoặc chuyển về Tôi / Toàn gia đình.", icon: "people-outline" });
       return;
@@ -518,14 +525,14 @@ export default function MomentsScreen() {
         displayName: userProfile.displayName,
         avatarUrl: userProfile.avatarUrl || undefined,
       },
-      caption,
+      caption,richBody,
       personIds: timelineAudience === "persons" ? personIds : [],
       timelineAudience,
       notifyFamily: timelineAudience === "family" && notifyFamily,
       additionalFamilyIds: [],
       files: selected,
     });
-    setCaption("");
+    setCaption("");setRichBody(null);
     setSelected([]);
     setPersonIds([]);
     setTimelineAudience("self");
@@ -536,7 +543,7 @@ export default function MomentsScreen() {
 
   const openEditPost = useCallback((post: MomentPost) => {
     setEditPost(post);
-    setEditCaption(post.caption);
+    setEditCaption(post.caption);setEditRichBody(post.richBody??null);
     setEditTimelineAudience(post.timelineAudience || (post.personIds?.length ? "persons" : "self"));
     setEditNotifyFamily(post.timelineAudience === "family" && post.notifyFamily === true);
     setEditPersonIds([...(post.personIds || [])]);
@@ -612,7 +619,7 @@ export default function MomentsScreen() {
   }, [editBusy, editExistingMedia.length, editNewFiles.length, editPost]);
 
   const saveEditedPost = useCallback(async () => {
-    if (!editPost || !activeFamilyId || !user || editBusy) return;
+    if (!editPost || !activeFamilyId || editPost.familyId!==activeFamilyId || !user || editPost.authorUid!==user.uid || editBusy) return;
     if (editTimelineAudience === "persons" && editPersonIds.length === 0) {
       void inform({ title: "Chọn thành viên", message: "Hãy chọn ít nhất một người, hoặc chuyển về Tôi / Toàn gia đình.", icon: "people-outline" });
       return;
@@ -710,13 +717,14 @@ export default function MomentsScreen() {
         activeFamilyId,
         editPost.id,
         {
-          caption: editCaption,
+          caption: editCaption,richBody:editRichBody,
           media: nextMedia,
           personIds: editTimelineAudience === "persons" ? editPersonIds : [],
           timelineAudience: editTimelineAudience,
           notifyFamily: editTimelineAudience === "family" && editNotifyFamily,
         },
         nextAssetIds,
+        editPost,
       );
       finishTask({ title: "Đã cập nhật kỷ niệm 🌸", message: "Những thay đổi của bạn đã được lưu." });
       setEditPost(null);
@@ -726,11 +734,11 @@ export default function MomentsScreen() {
       setEditDirty(false);
     } catch (error) {
       setEditUploadedFiles([...uploadedByFile.values()]);
-      failTask(error, { title: "Chưa cập nhật được", message: "Phần đã tải xong vẫn được giữ để bạn thử lưu lại." });
+      failTask(error, { title: "Chưa cập nhật được", message: (error as {code?:string})?.code === 'PUBLISH_EDIT_CONFLICT' ? "Kỷ niệm đã được sửa ở thiết bị khác. Nội dung và tệp đã tải của bạn vẫn được giữ; không ghi đè bài mới." : "Phần đã tải xong vẫn được giữ để bạn thử lưu lại." });
     } finally {
       setEditBusy(false);
     }
-  }, [activeFamilyId, editBusy, editCaption, editExistingMedia, editNewFiles, editPersonIds, editPost, editTimelineAudience, editUploadedFiles, failTask, finishTask, user]);
+  }, [activeFamilyId, editBusy, editCaption, editRichBody, editExistingMedia, editNewFiles, editPersonIds, editPost, editTimelineAudience, editUploadedFiles, failTask, finishTask, user]);
 
   const openEditMediaAt = useCallback((index: number) => {
     if (!editPost) return;
@@ -988,14 +996,15 @@ export default function MomentsScreen() {
       >
         <BloomKeyboardScreen rootStyle={__a3_styles.sheetKeyboard} contentContainerStyle={__a3_styles.editMomentContent}>
 
-              <BloomTextInput
+              {!editRichBody?<BloomTextInput
                 multiline
                 value={editCaption}
                 onChangeText={(value) => { setEditCaption(value); setEditDirty(true); }}
                 placeholder="Viết lại lời bạn muốn lưu giữ…"
                 leftIcon="heart-outline"
                 containerStyle={__a3_styles.captionField}
-              />
+              />:<Text>{editCaption}</Text>}
+              <MomentFieldControl caption={editCaption} richBody={editRichBody} disabled={editBusy} onChange={v=>{setEditCaption(v.caption);setEditRichBody(v.richBody);setEditDirty(true);}}/>
 
               <View style={__a3_styles.timelineTargetBlock}>
                 <Text style={__a3_styles.timelineTargetLabel}>KỶ NIỆM NÀY THUỘC VỀ</Text>
@@ -1175,14 +1184,15 @@ export default function MomentsScreen() {
       >
         <BloomKeyboardScreen rootStyle={__a3_styles.sheetKeyboard} contentContainerStyle={__a3_styles.sheetContent}>
 
-              <BloomTextInput
+              {!richBody?<BloomTextInput
                 multiline
                 value={caption}
                 onChangeText={(value) => { setCaption(value); setComposerDirty(true); }}
                 placeholder="Hôm nay nhà mình có chuyện gì vui?"
                 leftIcon="heart-outline"
                 containerStyle={__a3_styles.captionField}
-              />
+              />:<Text>{caption}</Text>}
+              <MomentFieldControl caption={caption} richBody={richBody} onChange={v=>{setCaption(v.caption);setRichBody(v.richBody);setComposerDirty(true);}}/>
 
               <View style={__a3_styles.promptBlock}>
                 <Text style={__a3_styles.promptHeading}>CHỌN MỘT Ý TƯỞNG ĐỂ BẮT ĐẦU <Ionicons name="sparkles-outline" size={13} /></Text>

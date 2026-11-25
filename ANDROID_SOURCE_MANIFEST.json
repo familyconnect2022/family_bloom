@@ -1,8 +1,8 @@
 {
-  "release": "R16R11R33",
+  "release": "R16R11R34",
   "version": "1.3.54",
   "versionCode": 143064,
-  "fileCount": 1821,
+  "fileCount": 1824,
   "files": [
     {
       "path": ".easignore",
@@ -11,8 +11,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 1636,
-      "sha256": "6359080f355547981466dd495e00c9bf0ff80e360f76b2f74867638d91766933"
+      "bytes": 1752,
+      "sha256": "42e574b141115b30cccb853937c89a589fe7acf6cf8e0d58eba501df9aea6e16"
     },
     {
       "path": ".env.main.example",
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 3552,
-      "sha256": "819b2a27733993ca9f473e1af0799b5ce80e677e0af6e57dce42b1113e452a52"
+      "bytes": 3634,
+      "sha256": "f53a14e1bd16b8da1f1d1927dc34edb7737ba8bd26710c6e360cde704bb68e47"
     },
     {
       "path": ".gitignore",
@@ -157,17 +157,17 @@
     {
       "path": "assets/editor/bundle-provenance.json",
       "bytes": 340,
-      "sha256": "3f160400fafe18c4b4bd1f760c50c7859dd42f5148e9e880b6347248e9bf49f7"
+      "sha256": "1ee2f130033351edac86794b740e7b413a5b54f51e0dcfa73f98cb68f6862120"
     },
     {
       "path": "assets/editor/family-editor.html",
-      "bytes": 1025408,
-      "sha256": "f0689b836baf16e1554d7dcdfdf17a0da04240360557029c5e6da435f30bcfcc"
+      "bytes": 1036190,
+      "sha256": "83add24e9638e7918795a14b37e8f1ca660a96d2cb71f9f03792e730b587c685"
     },
     {
       "path": "assets/editor/family-editor.sha256",
       "bytes": 65,
-      "sha256": "9a336a6109777dd8d250a84e91cb9e54962c725ad3a5da72f7290e3fdc09e8df"
+      "sha256": "289e3250c8554215ec176047fa3e5f63141c5e2c55f99045e2dd714f10b57483"
     },
     {
       "path": "assets/expo.icon/Assets/expo-symbol 2.svg",
@@ -4621,8 +4621,8 @@
     },
     {
       "path": "firestore.cloud.rules",
-      "bytes": 129486,
-      "sha256": "3650fd4d5e0006b0e5cbcee97cd4f08e3bec22741b0aeb3d9559e955d5e1884f"
+      "bytes": 130123,
+      "sha256": "7090a92c1752ba0550d67c71c9a2ce02a101fec5e054a8d43107c57e502bb94c"
     },
     {
       "path": "firestore.indexes.json",
@@ -4631,8 +4631,8 @@
     },
     {
       "path": "firestore.rules",
-      "bytes": 149929,
-      "sha256": "ff230652f7a43b15b8aaf0e98726f883d522f0e63344d8bd05ddaf5bb3900d1b"
+      "bytes": 150566,
+      "sha256": "b929c75e6f1caaffcb138da1c4364d171b24a2c2834adf59c4b1ef07b800e5b4"
     },
     {
       "path": "functions/cloudFeatureFlags.js",
@@ -5136,8 +5136,8 @@
     },
     {
       "path": "scripts/android/prepare-android-local.cjs",
-      "bytes": 2741,
-      "sha256": "16553307a0ef7333320bec10fbb6fcaa4b3be137158e287950277d3cb2b0be2d"
+      "bytes": 2804,
+      "sha256": "7577a970e6f2fb4446fce942de1dd446019c3bb51351f558cba122c06a172b99"
     },
     {
       "path": "scripts/android/session/CAU_HINH_ANDROID_PHIEN_PREVIEW.cmd",
@@ -5196,8 +5196,8 @@
     },
     {
       "path": "scripts/firestore.rules",
-      "bytes": 149504,
-      "sha256": "504e270b788c2ead5c909c8e67eda5d5d2c011451925cb76c9afe0b9b382909e"
+      "bytes": 150141,
+      "sha256": "62095beca18b3fdf4d80f1e77a5371075fd045423131b3617df53bce5179e8fe"
     },
     {
       "path": "scripts/maintenance/Family_Bloom_Cleanup_Expo_Route_JS.bat",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "27f237e9584053e0747c02b508993612ec122078876cb9e2103cc804e68422e5"
+      "sha256": "bffb307f5b1cd08a3cc49e4747790d314e9fcfeacb34cdb264331b4924943bca"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6335,6 +6335,11 @@
       "sha256": "cd6ada6108f64719c99ae19e15df1979fa6fe396c2afaeffd3ecb88c5956e0bb"
     },
     {
+      "path": "scripts/tests/release/test-family-field-document.cjs",
+      "bytes": 4265,
+      "sha256": "7b92b0952abf588e524ed35b7d5e2b578a279838a6bfdc36f050f9938f913d5a"
+    },
+    {
       "path": "scripts/tests/release/test-family-graph-integrity.cjs",
       "bytes": 2096,
       "sha256": "1cd18711c97c819a18558607460c4baf2fc84323b25a64dfb63203a988e79966"
@@ -6346,8 +6351,8 @@
     },
     {
       "path": "scripts/tests/release/test-family-publish-manager.cjs",
-      "bytes": 2017,
-      "sha256": "ff9ccbfe5ce0062173a86f470c1062cbf523755a21678667f198a7a0e5458349"
+      "bytes": 3883,
+      "sha256": "b991b1894c09a88940b52265a1735f50dec151caa3942283c7c49d6f46f41162"
     },
     {
       "path": "scripts/tests/release/test-h22-xiangqi-parity.cjs",
@@ -6701,8 +6706,8 @@
     },
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
-      "bytes": 5016,
-      "sha256": "464cd5a5947dc347805fc042e2d101dc1308b7e276b7bb5b755a355c903a10e2"
+      "bytes": 5071,
+      "sha256": "acfbd6197702eff8039bdf6c6093d5dedda6aa95f33aec1dea491d2c8e1d1ca2"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -7376,8 +7381,8 @@
     },
     {
       "path": "src/app/(tabs)/moments.tsx",
-      "bytes": 74546,
-      "sha256": "d0c50bc335f728006b0932e7dbd0ed75a34f5b34128e8eb2a50bc60569071efe"
+      "bytes": 76178,
+      "sha256": "d3d26c450a4b9e129e79b8afe4bf0149a680debe03a32e4e23b3f6f0230489e8"
     },
     {
       "path": "src/app/(tabs)/planner.tsx",
@@ -7681,8 +7686,8 @@
     },
     {
       "path": "src/components/moments/MomentCard.tsx",
-      "bytes": 56572,
-      "sha256": "f6b1dec12640eb8e57068ff8d1ea56016fd25a355ef766492f1cbbe3b433c74f"
+      "bytes": 57530,
+      "sha256": "973e7b1ef568c359059f4b0ed0a65a03c51f587657c532372ee5ba2bc67aa77a"
     },
     {
       "path": "src/components/moments/MomentFamilyMultiPicker.tsx",
@@ -8026,8 +8031,8 @@
     },
     {
       "path": "src/context/MomentPublishContext.tsx",
-      "bytes": 28141,
-      "sha256": "88e511b29cfd3e24c370e8d43c38c9116639b57010b6f61db622270b0df0e0b0"
+      "bytes": 28282,
+      "sha256": "7f5c5de7ec82f0821394e72e55aa35ad270b4331c46eca35ba0f1624f66635b8"
     },
     {
       "path": "src/context/TabRuntimeContext.tsx",
@@ -8121,8 +8126,8 @@
     },
     {
       "path": "src/features/learning/familyDocument/FamilyEditorScreen.tsx",
-      "bytes": 8547,
-      "sha256": "9c0c8b148153fe082f2fad9d3b27c502f10611d0871e4a1c552b22a6121a42ee"
+      "bytes": 12681,
+      "sha256": "b08818e022c981f37e06740b42047af8b066d6ad6ba404f3b2f479887fa11c6a"
     },
     {
       "path": "src/features/learning/familyDocument/document.cjs",
@@ -8135,19 +8140,29 @@
       "sha256": "910d8ddcd2d9bfb72a601b057c6429291675e213c8beebcf5084c4264b80d8ee"
     },
     {
+      "path": "src/features/learning/familyDocument/formDocument.cjs",
+      "bytes": 8323,
+      "sha256": "98cffffbd1b6b9c019133b68fc9cfa794058de2e3921174c675de9a5b31a7c16"
+    },
+    {
+      "path": "src/features/learning/familyDocument/formDocument.d.cts",
+      "bytes": 438,
+      "sha256": "7e397fe327df3fbc6e4df19c34e7115c106cd6e535982ef140abf69915a2b9a4"
+    },
+    {
       "path": "src/features/learning/familyDocument/nativeImagePicker.ts",
       "bytes": 1869,
       "sha256": "d151b292d38e478120baa47173b7390882e69d5911e7b08032f63848f0b96f7d"
     },
     {
       "path": "src/features/learning/familyDocument/publishManager.cjs",
-      "bytes": 1867,
-      "sha256": "1cf13b1d664295e0c1d3a90745f47caf72bc03330e44f639ba8e4df4886c3272"
+      "bytes": 4939,
+      "sha256": "9e4b408e5ee63a411722aea7c1b1d23878cdc0d420e583fe15b74016f257201b"
     },
     {
       "path": "src/features/learning/familyDocument/publishManager.d.cts",
-      "bytes": 206,
-      "sha256": "aa4e881ea259275f848c19344f84ff712a8ad5591cdfc0087feedea152422f4b"
+      "bytes": 545,
+      "sha256": "bd8dfb4315c0fd91d43791ecd550e64afaaff1c2763cbd63185ea9bd5e8efd66"
     },
     {
       "path": "src/features/learning/familyDocument/session.cjs",
@@ -8631,8 +8646,8 @@
     },
     {
       "path": "src/services/moments/momentsService.ts",
-      "bytes": 25594,
-      "sha256": "eb5c6a80b5024f7779718741d0fc0ef477fe717335aa4104c3d4f4f75579ee29"
+      "bytes": 27676,
+      "sha256": "da03300cbbfd6a91e55e7d0dba1e21ecb04ccfc5f474518ca7e606157729c1c6"
     },
     {
       "path": "src/services/navigation/authoritativeMembershipProof.ts",
@@ -8916,8 +8931,8 @@
     },
     {
       "path": "src/types/moments.ts",
-      "bytes": 2337,
-      "sha256": "238f9dafb4745ade8efc1a9218c882a9513a6de9f72ae3be58f06221dd4a1cf7"
+      "bytes": 2378,
+      "sha256": "dc86deb065b5c96d736e8c3d87e5a6020ad0217b1f6843a165218e24363289f6"
     },
     {
       "path": "src/types/profile.ts",
@@ -9110,6 +9125,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R33-DEV",
-  "candidateStatus": "NOT_RELEASED_NATIVE_BUILD_PENDING"
+  "candidate": "R16R11R34-DEV",
+  "candidateStatus": "NOT_RELEASED_NOT_BUILT"
 }
