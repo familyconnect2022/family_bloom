@@ -3,7 +3,8 @@ import { getBloomStatusBarStyle } from "../../../constants/theme";
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import {Ionicons} from '@expo/vector-icons';
-import {useRouter} from 'expo-router';
+import {useRouter,useLocalSearchParams} from 'expo-router';
+import {LearningHub} from '../../../features/learning/LearningHub';
 import {useCallback,useEffect,useState} from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { BloomText as Text } from '../../../components/ui/BloomText';
@@ -16,7 +17,8 @@ import { useA3Theme } from '../../../appearance3/useAppearance3';
 import { useA3LegacyStyles } from '../../../appearance3/compatReactiveStyles';
 
 const subjects:Record<string,string>={math:'Toán',vietnamese:'Tiếng Việt',literature:'Ngữ văn',english:'Tiếng Anh',physics:'Vật lí',chemistry:'Hóa học'};
-export default function LearningLibrary(){
+export default function LearningLibrary(){const {catalog,subject}=useLocalSearchParams<{catalog?:string;subject?:string}>();return catalog==='1'?<LearningCatalog key={subject||'all'} initialSubject={subject}/>:<LearningHub/>;}
+function LearningCatalog({initialSubject}:{initialSubject?:string}){
   const __a3Theme = useA3Theme();
 
   const __a3Colors = __a3Theme.colors;
@@ -25,8 +27,8 @@ export default function LearningLibrary(){
   
  const router=useRouter();const [items,setItems]=useState<PublishedBloomLesson[]>([]);const [cursor,setCursor]=useState<any>(null);
  const [more,setMore]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const [catalogOpen,setCatalogOpen]=useState(false);
- const [subject,setSubject]=useState('all'),[grade,setGrade]=useState(0),[search,setSearch]=useState('');
+ const [catalogOpen,setCatalogOpen]=useState(true);
+ const [subject,setSubject]=useState(initialSubject&&subjects[initialSubject]?initialSubject:'all'),[grade,setGrade]=useState(0),[search,setSearch]=useState('');
  const fetchPage=useCallback(async(reset=false)=>{
   if(busy&&!reset)return;setBusy(true);setError('');
   try{const result=await listPublishedLessons(reset?undefined:cursor);
@@ -40,28 +42,8 @@ export default function LearningLibrary(){
   (!search.trim()||[x.title,x.unit,x.topic].join(' ').toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi'))));
  return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
   <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
-  <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="VƯỜN TRI THỨC NỞ HOA" title="Góc học tập" subtitle="Cùng nhau học hỏi, chia sẻ và trưởng thành." onBack={()=>router.back()}/>
+  <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="VƯỜN TRI THỨC NỞ HOA" title="Kho bài học" subtitle="Khám phá bài học theo môn và lớp." onBack={()=>router.back()}/>
   <ScrollView contentContainerStyle={__a3_s.body} keyboardShouldPersistTaps="handled">
-   <Pressable style={__a3_s.qaCard} onPress={()=>router.push({pathname:'/learning-editor',params:{publish:'1'}} as never)} accessibilityRole="button">
-    <View style={__a3_s.qaIcon}><Ionicons name="create-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Soạn bài viết</Text><Text style={__a3_s.qaSubtitle}>Viết bài mới và tiếp tục những bản nháp của bạn</Text></View>
-    <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
-   </Pressable>
-   <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/learning-articles' as never)} accessibilityRole="button">
-    <View style={__a3_s.qaIcon}><Ionicons name="book-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Tri thức nhà mình</Text><Text style={__a3_s.qaSubtitle}>Đọc và chia sẻ bài viết cùng gia đình</Text></View>
-    <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
-   </Pressable>
-   <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/study-questions' as never)} accessibilityRole="button">
-    <View style={__a3_s.qaIcon}><Ionicons name="chatbubbles-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Cả nhà cùng giải</Text><Text style={__a3_s.qaSubtitle}>Đặt câu hỏi, giải Toán · Lý · Hóa và chia sẻ cách học cùng nhau</Text></View>
-    <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
-   </Pressable>
-   <Pressable style={__a3_s.qaCard} onPress={()=>setCatalogOpen(v=>!v)} accessibilityRole="button" accessibilityState={{expanded:catalogOpen}}>
-    <View style={__a3_s.qaIcon}><Ionicons name="school-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Kho bài học</Text><Text style={__a3_s.qaSubtitle}>Khám phá bài học theo môn và lớp</Text></View>
-    <Ionicons name={catalogOpen?"chevron-up":"chevron-down"} size={19} color={__a3Colors.primary}/>
-   </Pressable>
    {catalogOpen&&<>
    <BloomScaledInput style={__a3_s.input} value={search} onChangeText={setSearch} placeholder="Tìm tên bài học, chương, chủ đề…" placeholderTextColor={__a3Colors.secondaryText}/>
    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={__a3_s.filters}>

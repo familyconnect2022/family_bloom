@@ -1,10 +1,13 @@
 {
-  "webCommit": "18d2589af9c5e3d1ac0cfda1b042dc633a92b6d6",
-  "webTree": "ddb55fbf640dddf7e3b1527b0489d24f86100590",
-  "githubActionsRun": 45698210581,
-  "artifactId": 15061379105,
-  "sha256": "5e7b1de8fae6066013a73bed713ddb9f490825f722740571088518383f6100c1",
-  "bytes": 1037897,
+  "webCommit": "8e13af653d8ffe3b02e7198b21b9bcccfd2ae845",
+  "webTree": "4a64f87c1f8a9a939c8fde02c34fc2a8aa88bb00",
+  "githubActionsRun": 45839486640,
+  "artifactId": 15127263577,
+  "baseSha256": "7ef6af67de829e536a7f2daefc0b7b287bbdca7faaa1237c3dbe7c2f56bbf6a6",
+  "sha256": "82c057326a2ced3e6d2f573c6f8d0ae7a589092d619e9881e42e550ba8ab2d80",
+  "bytes": 1057796,
   "learningSelectionProtocol": 1,
-  "status": "CI_BUNDLE_BUILT_ANDROID_DEVICE_NOT_TESTED"
+  "articlePublishProtocol": 1,
+  "adapter": "scripts/setup/adapt-r66-editor.cjs",
+  "status": "R66_CI_BUNDLE_WITH_PINNED_NATIVE_HOST_ADAPTER_NOT_DEVICE_TESTED"
 }
