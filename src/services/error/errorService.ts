@@ -43,6 +43,7 @@ const CATALOG: Record<AppErrorCode, FriendlyError> = {
   EVENT_PARTICIPANT_NOT_MEMBER: { title: "Thành viên không còn trong nhà", message: "Danh sách người tham gia có thành viên không còn thuộc gia đình này. Hãy chọn lại.", type: "warning" },
   EVENT_NOT_FOUND: { title: "Không tìm thấy sự kiện", message: "Sự kiện có thể đã được xóa hoặc bạn không còn quyền xem.", type: "error" },
   EVENT_NOT_OWNER: { title: "Chỉ người tạo mới được chỉnh", message: "Bạn chỉ có thể sửa hoặc xóa sự kiện do chính mình tạo.", type: "info" },
+  EVENT_EDIT_CONFLICT: { title: "Sự kiện đã thay đổi", message: "Hãy mở lại sự kiện trước khi lưu. Thay đổi từ thiết bị khác vẫn được giữ.", type: "warning" },
   EVENT_MODERATION_DENIED: { title: "Bạn chưa thể đổi phần này", message: "Chỉ người đang quản lý gia đình mới có thể ẩn hoặc đưa sự kiện trở lại.", type: "info" },
   COMMENT_EMPTY: { title: "Thiếu nội dung", message: "Bình luận không được để trống.", type: "warning" },
   MOMENT_NOT_FOUND: { title: "Không tìm thấy khoảnh khắc", message: "Bài viết có thể đã bị xóa.", type: "error" },
@@ -115,6 +116,7 @@ const fromProviderError = (error: unknown): AppErrorCode | null => {
   if (code === "event_participant_not_member") return "EVENT_PARTICIPANT_NOT_MEMBER";
   if (code === "event_not_found") return "EVENT_NOT_FOUND";
   if (code === "event_not_owner") return "EVENT_NOT_OWNER";
+  if (code === "event_edit_conflict") return "EVENT_EDIT_CONFLICT";
   if (code === "event_moderation_denied") return "EVENT_MODERATION_DENIED";
   if (code === "comment_empty") return "COMMENT_EMPTY";
   if (code === "moment_not_found") return "MOMENT_NOT_FOUND";

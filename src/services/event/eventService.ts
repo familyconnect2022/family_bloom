@@ -9,6 +9,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   startAfter,
   updateDoc,
@@ -34,6 +35,7 @@ import { removeUndefinedDeep } from "../../utils/firestore";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { familyGraphRepository } from "../familyGraph/familyGraphRepository";
 import { readIso } from "../../utils/dataBoundary";
+import { checkEventEdit, eventContentPatch } from "../../features/learning/familyDocument/publishManager.cjs";
 
 const nowIso = () => new Date().toISOString();
 const cleanNullable = (value: unknown) => {
@@ -527,11 +529,18 @@ export const eventService = {
       updatedAt: nowIso(),
     };
 
-    await updateDoc(
-      doc(getFirestore(), FIRESTORE_PATHS.familyEvent(familyId, eventId)),
-      removeUndefinedDeep(updated) as unknown as Record<string, unknown>,
-    );
-    return updated;
+    const db = getFirestore(), ref = doc(db, FIRESTORE_PATHS.familyEvent(familyId, eventId));
+    return runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists()) throw new AppError("EVENT_NOT_FOUND", "EVENT");
+      const live = normalizeFamilyEvent(snapshot.data() as Record<string, unknown>, eventId, familyId);
+      if (getAuth().currentUser?.uid !== uid || live.createdByUid !== uid) throw new AppError("EVENT_NOT_OWNER", "EVENT");
+      let verdict;
+      try { verdict = checkEventEdit(live, current, updated); } catch { throw new AppError("EVENT_EDIT_CONFLICT", "EVENT"); }
+      if (verdict === "ALREADY_COMMITTED") return live;
+      tx.update(ref, removeUndefinedDeep(eventContentPatch(updated)));
+      return { ...live, ...eventContentPatch(updated) } as FamilyEvent;
+    });
   },
 
   async delete(familyId: string, eventId: string): Promise<void> {
