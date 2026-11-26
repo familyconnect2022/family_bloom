@@ -6956,8 +6956,8 @@
     },
     {
       "path": "scripts/tests/release/test-r44-private-rules-emulator.cjs",
-      "bytes": 3738,
-      "sha256": "874ac2482d1843d1c32863fc6ededf6dd11e5dba9e456f0589ae21651a2a64e8"
+      "bytes": 3721,
+      "sha256": "24618f65281778f4db6c429f6563e99ad4bebce63e737091b1ac3bc545ebdce8"
     },
     {
       "path": "scripts/tests/release/test-r8r2-profile-welcome-save-flow.cjs",

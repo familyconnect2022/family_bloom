@@ -11,12 +11,12 @@ const privatePaths=['familyEditorDraftUsers/alice/houses/house/drafts/lesson','f
  const owner=env.authenticatedContext('alice').firestore();await assertSucceeds(getDoc(doc(owner,'users/alice')));checks++;
  for(const db of [owner,env.authenticatedContext('bob').firestore(),env.unauthenticatedContext().firestore()])for(const p of privatePaths){const ref=doc(db,p);await assertFails(getDoc(ref));await assertFails(getDocs(collection(db,p.split('/').slice(0,-1).join('/'))));await assertFails(updateDoc(ref,{marker:'tampered'}));await assertFails(deleteDoc(ref));await assertFails(setDoc(doc(db,p+'-new'),{marker:'created'}));checks+=5;}
  assert.equal(checks,151);console.log('PASS '+checks+' emulator checks (150 denied private operations + 1 positive control)');
- const event=doc(owner,'families/house/events/r55-event'),foreign=doc(env.authenticatedContext('bob').firestore(),'families/house/events/r55-event');
+ const outsider=env.authenticatedContext('bob').firestore(),event=doc(owner,'families/house/events/r55-event'),foreign=doc(outsider,'families/house/events/r55-event');
  const payload={id:'r55-event',familyId:'house',createdByUid:'alice',title:'Test event',personIds:[],moderationStatus:'visible',moderatedByUid:null,moderatedAt:null,createdAt:'2026-11-26T00:00:00.000Z',updatedAt:'2026-11-26T00:00:00.000Z'};
  await assertSucceeds(runTransaction(owner,async tx=>{const snap=await tx.get(event);assert(!snap.exists());tx.set(event,payload);}));
  await assertSucceeds(runTransaction(owner,async tx=>{const snap=await tx.get(event);assert.equal(snap.data().title,payload.title);tx.update(event,{title:'Edited'});}));
  await assertFails(runTransaction(owner,async tx=>{await tx.get(event);tx.update(event,{createdByUid:'bob'});}));
  await assertFails(getDoc(foreign));
- await assertFails(runTransaction(env.authenticatedContext('bob').firestore(),async tx=>{await tx.get(foreign);tx.update(foreign,{title:'Tampered'});}));
+ await assertFails(runTransaction(outsider,async tx=>{await tx.get(foreign);tx.update(foreign,{title:'Tampered'});}));
  assert.equal((await getDoc(event)).data().title,'Edited');console.log('PASS event transaction and access checks (5 rules assertions + final state)');
  }finally{await env.cleanup();}})().catch(e=>{console.error(e);process.exitCode=1;});
