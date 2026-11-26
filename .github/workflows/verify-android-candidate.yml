@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate, test/r16r11r55-android-diagnostics]
   workflow_dispatch:
 permissions:
   contents: read
@@ -63,10 +63,33 @@ jobs:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
           EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
           EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        shell: bash
         run: |
+          set -o pipefail
           printf '\nandroid { buildTypes { release { signingConfig null } } }\n' >> android/app/build.gradle
           cd android
-          ./gradlew --no-daemon :app:assembleRelease
+          df -h . "$HOME/.gradle"
+          free -h
+          log="$RUNNER_TEMP/bloom-gradle.log"
+          for attempt in 1 2; do
+            if ./gradlew --no-daemon --stacktrace --console=plain :app:assembleRelease 2>&1 | tee "$log"; then
+              exit 0
+            fi
+            df -h . "$HOME/.gradle"
+            free -h
+            if [ "$attempt" = 1 ] && grep -Fq "Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '1.0.0'] was not found" "$log"; then
+              echo 'Gradle plugin resolution failed; retrying once.'
+              continue
+            fi
+            exit 1
+          done
+      - name: Upload Gradle diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gradle-diagnostics
+          path: ${{ runner.temp }}/bloom-gradle.log
+          if-no-files-found: ignore
       - name: Inspect APK manifest, DEX and board audio (CI only)
         run: |
           APK=$(find android/app/build/outputs/apk/release -name '*.apk' -type f | head -n 1)
