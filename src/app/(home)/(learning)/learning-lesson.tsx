@@ -25,7 +25,7 @@ export default function LearningLesson(){
  const [revealed,setRevealed]=useState<number[]>([]);
  useEffect(()=>{let current=true;setBusy(true);setError('');setLesson(null);
   getPublishedLesson(typeof lessonId==='string'?lessonId:'').then(item=>{if(current)setLesson(item)})
-   .catch(e=>{if(current)setError('Không thể mở bài đã duyệt: '+String((e as Error).message||e))})
+   .catch(e=>{if(current)setError('Chưa mở được bài học. Bạn thử lại nhé.')})
    .finally(()=>{if(current)setBusy(false)});
   return()=>{current=false};
  },[lessonId]);

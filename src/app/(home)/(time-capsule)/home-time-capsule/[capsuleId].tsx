@@ -1,3 +1,4 @@
+import {userFacingMessage} from '../../../../services/error/userFacingMessage';
 import { getBloomStatusBarStyle } from "../../../../constants/theme";
 import { useBloomThemeRevision } from '../../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../../theme/createBloomStyles';
@@ -94,7 +95,7 @@ export default function HomeTimeCapsuleDetailScreen() {
       lastLoadedAtRef.current = Date.now();
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không mở được Hộp thời gian.");
+      setError(userFacingMessage(e,"Không mở được Hộp thời gian."));
     } finally {
       setLoading(false);
     }
@@ -180,7 +181,7 @@ export default function HomeTimeCapsuleDetailScreen() {
       setConfirmDelete(false);
       router.replace("/home-time-capsules" as never);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không xóa được Hộp thời gian.");
+      setError(userFacingMessage(e,"Không xóa được Hộp thời gian."));
       setConfirmDelete(false);
     } finally {
       setDeleting(false);

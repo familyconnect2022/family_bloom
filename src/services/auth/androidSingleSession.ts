@@ -26,12 +26,12 @@ export function markAndroidLoginIntent(): void { explicitLoginIntent = true; }
 export function clearAndroidLoginIntent(): void { explicitLoginIntent = false; }
 
 function endpoint(): string {
-  if (!rawEndpoint) throw new AndroidSessionError('config', 'Chưa cấu hình dịch vụ phiên đăng nhập Family Bloom.');
+  if (!rawEndpoint) throw new AndroidSessionError('config', 'Đăng nhập hiện chưa sẵn sàng. Bạn thử lại sau nhé.');
   // Hermes has global URL; do not put any UID/credential in the URL.
   let url: URL;
-  try { url = new URL(rawEndpoint); } catch { throw new AndroidSessionError('config', 'URL dịch vụ phiên không hợp lệ.'); }
+  try { url = new URL(rawEndpoint); } catch { throw new AndroidSessionError('config', 'Chưa thể đăng nhập. Bạn thử lại sau nhé.'); }
   if (url.protocol !== 'https:' || url.username || url.password || url.hash || !url.pathname.endsWith('/api/session')) {
-    throw new AndroidSessionError('config', 'Dịch vụ phiên phải dùng HTTPS và /api/session.');
+    throw new AndroidSessionError('config', 'Chưa thể đăng nhập. Bạn thử lại sau nhé.');
   }
   return url.toString();
 }
@@ -65,18 +65,18 @@ async function request(user: User, action: 'claim'|'check'|'release', token?: st
   if (response.status === 409 && body?.state === 'replaced') return { state: 'replaced' };
   if (!response.ok || !body || typeof body !== 'object') {
     if (response.status === 401) {
-      throw new AndroidSessionError('reauth', 'Phiên xác thực Firebase đã hết hạn. Vui lòng đăng nhập lại.');
+      throw new AndroidSessionError('reauth', 'Vui lòng đăng nhập lại để tiếp tục.');
     }
     if (response.status === 403 || response.status === 404 || response.status === 503) {
-      throw new AndroidSessionError('config', 'Dịch vụ phiên Production chưa sẵn sàng. Hãy kiểm tra cấu hình Gateway.');
+      throw new AndroidSessionError('config', 'Đăng nhập hiện chưa sẵn sàng. Bạn thử lại sau nhé.');
     }
-    throw new AndroidSessionError('unreachable', 'Không thể xác minh phiên Android.');
+    throw new AndroidSessionError('unreachable', 'Chưa thể xác nhận tài khoản. Bạn thử lại nhé.');
   }
   if (body.state === 'active' && (action !== 'claim' ||
     (typeof body.token === 'string' && /^[A-Za-z0-9_-]{43}$/.test(body.token)))) {
     return { state: 'active', token: body.token };
   }
-  throw new AndroidSessionError('unreachable', 'Dữ liệu phiên trả về không hợp lệ.');
+  throw new AndroidSessionError('unreachable', 'Chưa thể xác nhận tài khoản. Bạn thử lại nhé.');
 }
 
 /** Old installs must reauthenticate; never silently claim using persisted Firebase user. */
@@ -93,8 +93,8 @@ export async function activateAndroidSession(user: User): Promise<AndroidLease |
   }
   let stored: string | null;
   try { stored = await withSessionDeadline(AsyncStorage.getItem(key), 6000); }
-  catch { throw new AndroidSessionError('config', 'Không thể truy cập bộ nhớ phiên Android.'); }
-  if (!stored) throw new AndroidSessionError('reauth', 'Phiên đã đổi sang chế độ bảo vệ tài khoản. Vui lòng đăng nhập lại.');
+  catch { throw new AndroidSessionError('config', 'Chưa thể xác nhận tài khoản trên thiết bị này.'); }
+  if (!stored) throw new AndroidSessionError('reauth', 'Vui lòng đăng nhập lại để bảo vệ tài khoản.');
   const lease = { uid: user.uid, token: stored };
   const result = await checkAndroidSession(user, lease);
   if (result === 'replaced') {

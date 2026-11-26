@@ -1,3 +1,4 @@
+import * as Application from 'expo-application';
 import { getBloomStatusBarStyle } from "../../constants/theme";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
@@ -47,7 +48,7 @@ export default function SettingsScreen(){
   const initial=(userProfile?.displayName||user?.displayName||"F").trim().slice(0,1).toUpperCase();
   return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
     <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
-    <BloomHeroHeader eyebrow="CÀI ĐẶT" title="Góc điều chỉnh của bạn" subtitle="Hồ sơ, mái nhà, lời nhắc và những công cụ nội bộ được giữ gọn ở một nơi." variant="settings" onBack={()=>router.back()} compact roundedBottom/>
+    <BloomHeroHeader eyebrow="CÀI ĐẶT" title="Góc điều chỉnh của bạn" subtitle="Hồ sơ, mái nhà và lời nhắc được giữ gọn ở một nơi." variant="settings" onBack={()=>router.back()} compact roundedBottom/>
     <ScrollView contentContainerStyle={__a3_styles.content} showsVerticalScrollIndicator={false}>
       <BloomCard style={__a3_styles.accountCard}>
         <View style={__a3_styles.avatar}>{userProfile?.avatarUrl?<Image source={{uri:userProfile.avatarUrl}} style={StyleSheet.absoluteFill} contentFit="cover"/>:<Text style={__a3_styles.avatarText}>{initial}</Text>}</View>
@@ -84,6 +85,7 @@ export default function SettingsScreen(){
           <SettingRow accent icon="flask-outline" title="Kiểm thử & chẩn đoán" caption="Hiệu năng, thông báo Android và công cụ game — chỉ chạy khi bạn chủ động bấm" onPress={()=>router.push('/developer-tools' as never)}/>
         </BloomCard>
       </View>}
+    <Text style={{color:__a3Colors.secondaryText,textAlign:"center",paddingVertical:12}}>Family Bloom · Phiên bản {Application.nativeApplicationVersion||"1.3.76"}</Text>
     </ScrollView>
   </ScreenContainer>;
 }

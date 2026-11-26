@@ -1,3 +1,4 @@
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { getBloomStatusBarStyle } from "../../../constants/theme";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
@@ -390,7 +391,7 @@ export default function HomeTimeCapsulesScreen() {
       setItems(rows);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tải được Hộp thời gian.");
+      setError(userFacingMessage(e,"Không tải được Hộp thời gian."));
     } finally {
       setLoading(false);
       setRefreshing(false);

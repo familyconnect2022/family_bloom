@@ -103,7 +103,7 @@ export default function SessionGate() {
     : memberFailed ? (verificationIssue?.kind === "permission" ? "MEM-202" : "MEM-201")
     : pendingCodeForSessionGate(stageCode);
   const detail = singleSessionStatus === 'unavailable'
-    ? (singleSessionNotice || 'Chưa thể xác minh phiên đăng nhập Android.')
+    ? (singleSessionNotice || 'Chưa thể xác nhận tài khoản.')
     : authFailed
     ? "Chưa xác nhận được tài khoản. Bạn vẫn được giữ đăng nhập để thử lại."
     : profileFailed
@@ -118,11 +118,11 @@ export default function SessionGate() {
             : membershipStatus !== "ready" && !!user ? "Đang kiểm tra mái nhà và quyền thành viên…"
             : "Đang chuyển đến màn hình phù hợp…";
   const verificationHint = verificationIssue?.kind === "permission"
-    ? "Firebase không cho phép đọc dữ liệu. Hãy kiểm tra quyền tài khoản hoặc Firestore Rules."
+    ? "Bạn chưa thể truy cập thông tin này. Hãy thử lại hoặc liên hệ người quản lý gia đình."
     : verificationIssue?.kind === "timeout"
-      ? "Firebase phản hồi quá thời gian chờ. Đây chưa phải bằng chứng mất Internet."
+      ? "Đang chờ lâu hơn dự kiến. Bạn thử lại nhé."
       : verificationIssue?.kind === "unavailable"
-        ? "Dịch vụ Firebase tạm thời không phản hồi. Bloom sẽ thử xác minh lại khi kết nối phục hồi."
+        ? "Bloom tạm thời chưa thể kết nối. Ứng dụng sẽ thử lại khi kết nối phục hồi."
         : null;
   useEffect(() => {
     if (!stalled || failed || welcomeOnGate) return;
@@ -163,8 +163,10 @@ export default function SessionGate() {
           <Ionicons name="shield-checkmark-outline" size={32} color={__a3Colors.primary} />
           <Text style={__a3_styles.failureTitle}>{failed ? "Chưa xác minh được dữ liệu gia đình" : "Đang xác minh lâu hơn dự kiến"}</Text>
           <Text style={__a3_styles.description}>{verificationHint ?? detail}</Text>
-          <Text style={__a3_styles.stageCode}>Bước xác minh: {stageCode}{verificationIssue ? ` · ${verificationIssue.kind}` : " · đang chờ"}</Text>
-          <Text style={__a3_styles.stageCode}>Mã chẩn đoán: {diagnosisCode}</Text>
+          {typeof __DEV__ !== "undefined" && __DEV__ && canViewDetailedDiagnostics(user) && <>
+            <Text style={__a3_styles.stageCode}>Bước xác minh: {stageCode}{verificationIssue ? ` · ${verificationIssue.kind}` : " · đang chờ"}</Text>
+            <Text style={__a3_styles.stageCode}>Mã chẩn đoán: {diagnosisCode}</Text>
+          </>}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Thử kết nối lại"
@@ -181,11 +183,11 @@ export default function SessionGate() {
             </Pressable>
           )}
           <Text style={__a3_styles.footnote}>Dữ liệu hiện có được giữ nguyên. Bloom sẽ không mở nhà khi chưa xác nhận đúng tài khoản.</Text>
-          <SessionDiagnosticCard
+          {typeof __DEV__ !== "undefined" && __DEV__ && canViewDetailedDiagnostics(user) && <SessionDiagnosticCard
             authUser={user}
             showWhenHealthy={true}
             onCopyReport={async (report) => { await Clipboard.setStringAsync(report); }}
-          />
+          />}
         </View>
       ) : (
         <View style={__a3_styles.loading} accessibilityLiveRegion="polite">

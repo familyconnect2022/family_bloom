@@ -50,6 +50,7 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
   const { colors, sizes } = useA3Tokens();
   const { scaleAnim, handlePressIn, handlePressOut } = useBloomTouchAnimation(disabled, isLoading);
   const isDisabled = !!disabled || isLoading;
+  const preserveLoadingLabel = isLoading && keepTextWhileLoading;
   const flattenedCustomStyle = StyleSheet.flatten(customStyle);
   const hasPercentageWidth =
     typeof flattenedCustomStyle?.width === "string" && flattenedCustomStyle.width.endsWith("%");
@@ -104,16 +105,17 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
           vStyles.view,
           variant === "primary" && !isDisabled && [__a3_styles.primaryShadow, { shadowColor: colors.primary }],
           isDisabled && !isLoading && [__a3_styles.disabledButton, { backgroundColor: colors.accentBg, borderColor: colors.border }],
-          isLoading && variant === "primary" && [__a3_styles.loadingPrimaryButton, { backgroundColor: keepTextWhileLoading ? colors.primary : colors.selectedBackground }],
+          isLoading && variant === "primary" && [__a3_styles.loadingPrimaryButton, { backgroundColor: preserveLoadingLabel ? colors.primary : colors.selectedBackground }],
           pressed && variant !== "primary" && { opacity: 0.7 },
           customStyle,
         ]}
         {...rest}
       >
-        {isLoading && keepTextWhileLoading ? (
-          <View style={__a3_styles.contentRow}>
-            <ActivityIndicator size="small" color={vStyles.text.color} style={__a3_styles.loadingSpinner} />
-            <Text appearanceRole="body" style={[__a3_styles.baseText, vStyles.text, textStyle]}>{title}</Text>
+        {keepTextWhileLoading ? (
+          <View style={__a3_styles.contentRow} collapsable={false}>
+            {isLoading ? <ActivityIndicator size="small" color={vStyles.text.color} style={__a3_styles.loadingSpinner} /> : iconPosition === "left" ? renderIcon(icon, 18, vStyles.iconColor, [__a3_styles.iconLeft, iconStyle]) : null}
+            <Text appearanceRole="body" style={[__a3_styles.baseText, vStyles.text, textStyle, isDisabled && !isLoading && { color: colors.secondaryText }]}>{title}</Text>
+            {!isLoading && iconPosition === "right" && renderIcon(icon, 18, vStyles.iconColor, [__a3_styles.iconRight, iconStyle])}
           </View>
         ) : isLoading ? (
           <ActivityIndicator size="small" color={vStyles.text.color} />
@@ -121,14 +123,14 @@ export const BloomButton: React.FC<BloomButtonProps> = ({
           <View style={__a3_styles.contentRow}>
             {iconPosition === "left" &&
               renderIcon(icon, 18, vStyles.iconColor, [__a3_styles.iconLeft, iconStyle])}
-            <Text appearanceRole={StyleSheet.flatten(textStyle)?.fontSize == null ? "body" : undefined} style={[__a3_styles.baseText, vStyles.text, isDisabled && [__a3_styles.disabledText, { color: colors.secondaryText }], textStyle]}>
+            <Text appearanceRole={StyleSheet.flatten(textStyle)?.fontSize == null ? "body" : undefined} style={[__a3_styles.baseText, vStyles.text, textStyle, isDisabled && [__a3_styles.disabledText, { color: colors.secondaryText }]]}>
               {title}
             </Text>
             {iconPosition === "right" &&
               renderIcon(icon, 18, vStyles.iconColor, [__a3_styles.iconRight, iconStyle])}
           </View>
         ) : (
-          <Text appearanceRole={StyleSheet.flatten(textStyle)?.fontSize == null ? "body" : undefined} style={[__a3_styles.baseText, vStyles.text, __a3_styles.noIconText, isDisabled && [__a3_styles.disabledText, { color: colors.secondaryText }], textStyle]}>
+          <Text appearanceRole={StyleSheet.flatten(textStyle)?.fontSize == null ? "body" : undefined} style={[__a3_styles.baseText, vStyles.text, __a3_styles.noIconText, textStyle, isDisabled && [__a3_styles.disabledText, { color: colors.secondaryText }]]}>
             {title}
           </Text>
         )}

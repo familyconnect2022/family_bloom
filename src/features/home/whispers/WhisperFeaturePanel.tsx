@@ -1,3 +1,5 @@
+import {useBloomTaskToast} from '../../../hooks/ui/useBloomTaskToast';
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { BloomScaledInput } from '../../../components/ui/BloomScaledInput';
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
@@ -107,7 +109,7 @@ export function WhisperFeaturePanel() {
         setHasMore(page.hasMore);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tải được Lời thì thầm.");
+      setError(userFacingMessage(e,"Không tải được Lời thì thầm."));
     } finally {
       setLoading(false);
     }
@@ -122,6 +124,7 @@ export function WhisperFeaturePanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFamilyId, uid, mode]);
 
+  const {finishTask,failTask}=useBloomTaskToast();
   const performSend = useCallback(async () => {
     if (!activeFamilyId || !uid || sending) return;
     setSending(true);
@@ -138,17 +141,18 @@ export function WhisperFeaturePanel() {
         message,
         emotion,
       });
+      finishTask({title:"Đã gửi lời thì thầm"});
       setMessage("");
       setRecipientUid(null);
       setEmotion("heart");
       setMode(audience === "family" ? "family" : "sent");
       setCursor(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không gửi được Lời thì thầm.");
+      setError(userFacingMessage(e,"Không gửi được Lời thì thầm."));failTask(e,{title:"Chưa gửi được lời thì thầm"});
     } finally {
       setSending(false);
     }
-  }, [activeFamilyId, uid, sending, myName, audience, recipientUid, recipient, members, message, emotion, load]);
+  }, [activeFamilyId, uid, sending, myName, audience, recipientUid, recipient, members, message, emotion, load, finishTask, failTask]);
 
   const send = useCallback(() => {
     setError(null);
@@ -186,8 +190,9 @@ export function WhisperFeaturePanel() {
     if (!uid) return;
     try {
       await homeWhisperService.save(uid, item);
+      finishTask({title:"Đã lưu lời thì thầm"});
       setSavedInfoVisible(true);
-    } catch (e) { setError(e instanceof Error ? e.message : "Không lưu được."); }
+    } catch (e) { setError(userFacingMessage(e,"Không lưu được.")); }
   };
 
   return (

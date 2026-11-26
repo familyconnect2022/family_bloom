@@ -25,30 +25,31 @@ export default function LearningLibrary(){
   
  const router=useRouter();const [items,setItems]=useState<PublishedBloomLesson[]>([]);const [cursor,setCursor]=useState<any>(null);
  const [more,setMore]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [catalogOpen,setCatalogOpen]=useState(false);
  const [subject,setSubject]=useState('all'),[grade,setGrade]=useState(0),[search,setSearch]=useState('');
  const fetchPage=useCallback(async(reset=false)=>{
   if(busy&&!reset)return;setBusy(true);setError('');
   try{const result=await listPublishedLessons(reset?undefined:cursor);
    setItems(old=>reset?result.lessons:[...old,...result.lessons.filter(x=>!old.some(v=>v.id===x.id))]);
    setCursor(result.cursor);setMore(result.hasMore);
-  }catch(e){setError('Chưa tải được bài học. Kiểm tra Internet, đăng nhập và Firestore Rules. '+String((e as Error)?.message||e));}
+  }catch(e){setError('Chưa tải được bài học. Bạn kiểm tra kết nối rồi thử lại nhé.');}
   finally{setBusy(false)}
  },[cursor,busy]);
- useEffect(()=>{void fetchPage(true)},[]); // No root listener; only fetch when opened.
+ useEffect(()=>{if(catalogOpen)void fetchPage(true)},[catalogOpen]); // No root listener; only fetch when opened.
  const shown=items.filter(x=>(subject==='all'||x.subject===subject)&&(!grade||x.grade===grade)&&
   (!search.trim()||[x.title,x.unit,x.topic].join(' ').toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi'))));
  return <ScreenContainer edgeToEdgeTop edgeToEdgeHorizontal backgroundColor={__a3Colors.background}>
   <StatusBar style={(__a3Theme.resolvedMode === 'dark' ? 'light' : 'dark')}/>
-  <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="BLOOM EDUCATION" title="Góc học tập" subtitle="Chỉ những bài đã được kiểm duyệt trong Content Studio" onBack={()=>router.back()}/>
+  <BloomHeroHeader variant="learning" compact roundedBottom eyebrow="VƯỜN TRI THỨC NỞ HOA" title="Góc học tập" subtitle="Cùng nhau học hỏi, chia sẻ và trưởng thành." onBack={()=>router.back()}/>
   <ScrollView contentContainerStyle={__a3_s.body} keyboardShouldPersistTaps="handled">
-   <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/learning-editor' as never)} accessibilityRole="button">
+   <Pressable style={__a3_s.qaCard} onPress={()=>router.push({pathname:'/learning-editor',params:{publish:'1'}} as never)} accessibilityRole="button">
     <View style={__a3_s.qaIcon}><Ionicons name="create-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Family Editor</Text><Text style={__a3_s.qaSubtitle}>Soạn thảo và quản lý bản nháp trên thiết bị</Text></View>
+    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Soạn bài viết</Text><Text style={__a3_s.qaSubtitle}>Viết bài mới và tiếp tục những bản nháp của bạn</Text></View>
     <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
    </Pressable>
    <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/learning-articles' as never)} accessibilityRole="button">
     <View style={__a3_s.qaIcon}><Ionicons name="book-outline" size={25} color={__a3Colors.primary}/></View>
-    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Tri thức nhà mình</Text><Text style={__a3_s.qaSubtitle}>Đăng bài đã đồng bộ và đọc bài viết trong gia đình</Text></View>
+    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Tri thức nhà mình</Text><Text style={__a3_s.qaSubtitle}>Đọc và chia sẻ bài viết cùng gia đình</Text></View>
     <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
    </Pressable>
    <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/study-questions' as never)} accessibilityRole="button">
@@ -56,6 +57,12 @@ export default function LearningLibrary(){
     <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Cả nhà cùng giải</Text><Text style={__a3_s.qaSubtitle}>Đặt câu hỏi, giải Toán · Lý · Hóa và chia sẻ cách học cùng nhau</Text></View>
     <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
    </Pressable>
+   <Pressable style={__a3_s.qaCard} onPress={()=>setCatalogOpen(v=>!v)} accessibilityRole="button" accessibilityState={{expanded:catalogOpen}}>
+    <View style={__a3_s.qaIcon}><Ionicons name="school-outline" size={25} color={__a3Colors.primary}/></View>
+    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Kho bài học</Text><Text style={__a3_s.qaSubtitle}>Khám phá bài học theo môn và lớp</Text></View>
+    <Ionicons name={catalogOpen?"chevron-up":"chevron-down"} size={19} color={__a3Colors.primary}/>
+   </Pressable>
+   {catalogOpen&&<>
    <BloomScaledInput style={__a3_s.input} value={search} onChangeText={setSearch} placeholder="Tìm tên bài học, chương, chủ đề…" placeholderTextColor={__a3Colors.secondaryText}/>
    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={__a3_s.filters}>
     {['all',...Object.keys(subjects)].map(k=><Pressable key={k} onPress={()=>setSubject(k)} style={[__a3_s.filter,subject===k&&__a3_s.active]}><Text style={[__a3_s.filterText,subject===k&&__a3_s.activeText]}>{subjects[k]||'Tất cả môn'}</Text></Pressable>)}
@@ -63,16 +70,18 @@ export default function LearningLibrary(){
    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={__a3_s.filters}>
     {[0,...Array.from({length:12},(_,i)=>i+1)].map(g=><Pressable key={g} onPress={()=>setGrade(g)} style={[__a3_s.gradeChip,grade===g&&__a3_s.active]}><Text style={[__a3_s.filterText,grade===g&&__a3_s.activeText]}>{g?'Lớp '+g:'Mọi lớp'}</Text></Pressable>)}
    </ScrollView>
-   <Text style={__a3_s.meta}>Đã tải {items.length} bài đã duyệt từ Firebase · {shown.length} bài đang hiển thị</Text>
+   <Text style={__a3_s.meta}>{shown.length} bài học</Text>
    {shown.map(x=><Pressable key={x.id} onPress={()=>router.push({pathname:'/learning-lesson',params:{lessonId:x.id}} as never)} style={({pressed})=>[__a3_s.card,pressed&&{opacity:.72}]}>
     <View style={__a3_s.cardTop}><Text style={__a3_s.eyebrow}>{subjects[x.subject]||x.subject} · LỚP {x.grade}</Text><Ionicons name="chevron-forward" color={__a3Colors.primary} size={18}/></View>
     <Text style={__a3_s.title}>{x.title}</Text><Text style={__a3_s.caption}>{x.unit} · {x.topic||'Bài học Super Bloom'}</Text>
     <Text style={__a3_s.tag}>📖 Bài học · {x.questions.length} câu hỏi</Text>
    </Pressable>)}
    {!!error&&<View style={__a3_s.warn}><Text style={__a3_s.warnText}>{error}</Text><Pressable onPress={()=>void fetchPage(true)}><Text style={__a3_s.link}>Thử tải lại</Text></Pressable></View>}
-   {!busy&&!error&&!items.length&&<Text style={__a3_s.empty}>Chưa có bài được xuất bản. Hãy duyệt và đồng bộ từ Bloom Content Studio trước.</Text>}
+   {!busy&&!error&&items.length>0&&!shown.length&&<Text style={__a3_s.empty}>Không tìm thấy bài học phù hợp.</Text>}
+   {!busy&&!error&&!items.length&&<Text style={__a3_s.empty}>Những bài học mới sẽ xuất hiện tại đây.</Text>}
    {busy&&<ActivityIndicator color={__a3Colors.primary} size="large"/>}
-   {more&&!busy&&<Pressable style={__a3_s.more} onPress={()=>void fetchPage(false)}><Text style={__a3_s.moreText}>Tải thêm bài đã duyệt</Text></Pressable>}
+   {more&&!busy&&<Pressable style={__a3_s.more} onPress={()=>void fetchPage(false)}><Text style={__a3_s.moreText}>Xem thêm bài học</Text></Pressable>}
+   </>}
   </ScrollView>
  </ScreenContainer>;
 }

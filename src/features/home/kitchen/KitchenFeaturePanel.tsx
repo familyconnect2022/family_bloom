@@ -1,3 +1,4 @@
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
 import { Ionicons } from "@expo/vector-icons";
@@ -89,7 +90,7 @@ export function KitchenFeaturePanel() {
       activeFamilyId,
       uid,
       mine => setMyTags(mine?.tags?.length ? mine.tags : ["normal"]),
-      e => setError(e instanceof Error ? e.message : "Bloom chưa nhớ được lựa chọn ăn uống của bạn. Thử lại một chút nhé."),
+      e => setError(userFacingMessage(e,"Bloom chưa nhớ được lựa chọn ăn uống của bạn. Thử lại một chút nhé.")),
     );
     return unsub;
   }, [activeFamilyId, uid]);
@@ -112,7 +113,7 @@ export function KitchenFeaturePanel() {
     if (!activeFamilyId || !uid) return;
     setSaving(true); setError(null);
     try { await homeKitchenService.saveMyPreferences(activeFamilyId, uid, myTags); }
-    catch (e) { setError(e instanceof Error ? e.message : "Bloom chưa cất được lựa chọn này. Bạn thử lại nhé."); }
+    catch (e) { setError(userFacingMessage(e,"Bloom chưa cất được lựa chọn này. Bạn thử lại nhé.")); }
     finally { setSaving(false); }
   };
 

@@ -1,3 +1,5 @@
+import {useBloomTaskToast} from '../../../hooks/ui/useBloomTaskToast';
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { getBloomStatusBarStyle } from "../../../constants/theme";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
@@ -143,7 +145,7 @@ export default function HomeTimeCapsuleComposeScreen() {
       setOpenTime(date);
       setError(null);
     }).catch(e => {
-      if (alive) setError(e instanceof Error ? e.message : "Không tải được Hộp thời gian để sửa.");
+      if (alive) setError(userFacingMessage(e,"Không tải được Hộp thời gian để sửa."));
     }).finally(() => { if (alive) setLoadingEdit(false); });
     return () => { alive = false; };
   }, [activeFamilyId, editId, uid]);
@@ -159,6 +161,7 @@ export default function HomeTimeCapsuleComposeScreen() {
     return null;
   };
 
+  const {finishTask,failTask}=useBloomTaskToast();
   const save = useCallback(async () => {
     if (!activeFamilyId || !uid || saving) return;
     const validation = validate();
@@ -208,13 +211,14 @@ export default function HomeTimeCapsuleComposeScreen() {
           }).catch(() => undefined);
         }
       }
+      finishTask({title:editId?"Đã cập nhật Hộp thời gian":"Đã tạo Hộp thời gian"});
       router.replace(`/home-time-capsule/${capsuleId}` as never);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không lưu được Hộp thời gian.");
+      setError(userFacingMessage(e,"Không lưu được Hộp thời gian."));failTask(e,{title:"Chưa lưu được Hộp thời gian"});
     } finally {
       setSaving(false);
     }
-  }, [activeFamilyId, audience, authorName, editId, finalOpenAt, finalRecipients, message, previewMode, router, saving, theme, title, uid]);
+  }, [activeFamilyId, audience, authorName, editId, finalOpenAt, finalRecipients, message, previewMode, router, saving, theme, title, uid, finishTask, failTask]);
 
   const requestSave = () => {
     const validation = validate();

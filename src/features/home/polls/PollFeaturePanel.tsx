@@ -1,3 +1,4 @@
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { BloomScaledInput } from '../../../components/ui/BloomScaledInput';
 import { useBloomThemeRevision } from '../../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../../theme/createBloomStyles';
@@ -90,7 +91,7 @@ export function PollFeaturePanel() {
       activeFamilyId,
       uid,
       rows => { setPolls(rows); setLoading(false); setError(null); },
-      e => { setError(e instanceof Error ? e.message : "Không tải được cuộc bỏ phiếu."); setLoading(false); },
+      e => { setError(userFacingMessage(e,"Không tải được cuộc bỏ phiếu.")); setLoading(false); },
     );
     return unsub;
   }, [activeFamilyId, uid]);
@@ -190,7 +191,7 @@ export function PollFeaturePanel() {
       const agree = ballots.filter(b => b.choice === "agree").map(b => b.displayName);
       const disagree = ballots.filter(b => b.choice === "disagree").map(b => b.displayName);
       setNamedResultText(`Đồng ý (${agree.length})${agree.length ? `\n${agree.join(", ")}` : ""}\n\nKhông đồng ý (${disagree.length})${disagree.length ? `\n${disagree.join(", ")}` : ""}`);
-    } catch (e) { setError(e instanceof Error ? e.message : "Không tải được danh sách."); }
+    } catch (e) { setError(userFacingMessage(e,"Không tải được danh sách.")); }
   };
 
   const renderPoll = (poll: HomePoll, ended: boolean) => {

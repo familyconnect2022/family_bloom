@@ -20,10 +20,10 @@ export type GoogleLoginPhase = 'play-services' | 'account-picker' | 'firebase';
 export class GoogleLoginTimeoutError extends Error {
   constructor(public readonly phase: GoogleLoginPhase) {
     super(phase === 'play-services'
-      ? 'Google Play Services không phản hồi. Hãy kiểm tra dịch vụ Google và thử lại.'
+      ? 'Chưa thể mở đăng nhập Google. Bạn thử lại nhé.'
       : phase === 'account-picker'
         ? 'Google chưa hoàn tất đăng nhập. Hãy đóng màn hình chọn tài khoản (nếu còn mở) rồi thử lại.'
-        : 'Firebase xác thực quá lâu. Hãy kiểm tra kết nối rồi thử đăng nhập lại.');
+        : 'Chưa xác nhận được tài khoản. Bạn kiểm tra kết nối rồi thử lại nhé.');
     this.name = 'GoogleLoginTimeoutError';
   }
 }

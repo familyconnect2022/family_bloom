@@ -450,6 +450,7 @@ export function MomentPublishProvider({ children }: { children: React.ReactNode 
   }, [drainQueue]);
 
   const publishMoment = useCallback((input: PublishMomentInput) => {
+    if(momentUploadToastStore.getSnapshot()?.operation==='edit')throw Error('Đang lưu thay đổi kỷ niệm. Bạn vui lòng thử lại.');
     const targetFamilyIds = normalizeMomentTargetFamilyIds(input.familyId, input.additionalFamilyIds);
     const tasks: PendingMoment[] = targetFamilyIds.map((familyId) => ({
       localId: makeLocalId(),

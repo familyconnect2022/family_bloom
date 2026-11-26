@@ -29,6 +29,7 @@ import { BLOOM_MOTION, getBloomScreenAnimation } from "../constants/motion";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FamilyRealtimeProvider } from "../context/FamilyRealtimeContext";
 import { MomentPublishProvider } from "../context/MomentPublishContext";
+import { MomentEditProvider } from "../context/MomentEditContext";
 import { MomentUploadToast } from "../components/moments/MomentUploadToast";
 import { TabStartupProvider, useTabStartup } from "../context/TabStartupContext";
 import { HomeMusicPlayerProvider } from "../context/HomeMusicPlayerContext";
@@ -508,11 +509,11 @@ export default function RootLayout() {
       <MediaViewerProvider>
         <AuthProvider>
           <BloomAppearanceAccountBridge>
-          <MomentPublishProvider>
+          <MomentEditProvider><MomentPublishProvider>
             <HomeMusicPlayerProvider>
               <FamilySession criticalVisualAssetsReady={criticalVisualAssetsReady} />
             </HomeMusicPlayerProvider>
-          </MomentPublishProvider>
+          </MomentPublishProvider></MomentEditProvider>
           </BloomAppearanceAccountBridge>
         </AuthProvider>
       </MediaViewerProvider>

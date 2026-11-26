@@ -91,11 +91,12 @@ export default function Login() {
 
           <BloomButton
             title="TIẾP TỤC"
-            icon={<Ionicons name="arrow-forward" color={__a3Colors.white} size={22} />}
+            icon={<Ionicons name="arrow-forward" color={__a3Colors.onPrimary} size={22} />}
             iconPosition="right"
             onPress={handleSendOTP}
             customStyle={__a3_styles.primaryButton}
             isLoading={isLoadingPhone}
+            keepTextWhileLoading
             textStyle={{ color: __a3Colors.onPrimary }}
             disabled={isLoadingGoogle}
           />
@@ -111,12 +112,11 @@ export default function Login() {
             textStyle={{ color: __a3Colors.onPrimary }}
             onPress={handleGoogle}
           />
-          <Text style={__a3_styles.accountHint}>Bạn có thể chọn tài khoản Google khác sau khi đăng xuất. Nếu đã hủy chọn tài khoản, nhấn lại nút Google để tiếp tục.</Text>
           {isLoadingGoogle && (
             <Text accessibilityLiveRegion="polite" style={__a3_styles.loginProgress}>
-              {googleLoginPhase === 'play-services' ? 'Đang kết nối dịch vụ Google…'
+              {googleLoginPhase === 'play-services' ? 'Đang chuẩn bị đăng nhập…'
                 : googleLoginPhase === 'account-picker' ? 'Đang chờ chọn tài khoản Google…'
-                : googleLoginPhase === 'firebase' ? 'Đang xác thực với Firebase…'
+                : googleLoginPhase === 'firebase' ? 'Đang xác nhận tài khoản…'
                 : 'Đang chuẩn bị đăng nhập…'}
             </Text>
           )}

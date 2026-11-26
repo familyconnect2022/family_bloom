@@ -49,6 +49,8 @@ import { subscribeSharedRealtime } from "../../services/realtime/sharedRealtimeR
 import type { FamilyMember, MediaFile } from "../../types";
 import type { MomentMedia, MomentPost } from "../../types/moments";
 import { useBloomTaskToast } from "../../hooks/ui/useBloomTaskToast";
+import {usePreparedMomentFiles} from "../../hooks/moments/usePreparedMomentFiles";
+import {useMomentEdit} from "../../context/MomentEditContext";
 import { useA3Theme } from '../../appearance3/useAppearance3';
 import { useA3LegacyStyles } from '../../appearance3/compatReactiveStyles';
 
@@ -202,7 +204,9 @@ export default function MomentsScreen() {
   const [caption, setCaption] = useState("");
   const [richBody,setRichBody]=useState<string|null>(null);
   const [memoryPrompt, setMemoryPrompt] = useState<string | null>(null);
-  const [selected, setSelected] = useState<MediaFile[]>([]);
+  const {files:selected,setFiles:setSelected,status:mediaStatus,getReadyFiles}=usePreparedMomentFiles();
+  const pickerBusy=useRef(false);const [picking,setPicking]=useState(false);
+  const createLock=useRef(false);
   const selectedRef=useRef(selected);selectedRef.current=selected;
   const [previewGridWidth, setPreviewGridWidth] = useState(0);
   const [personIds, setPersonIds] = useState<string[]>([]);
@@ -215,7 +219,9 @@ export default function MomentsScreen() {
   const [editNotifyFamily, setEditNotifyFamily] = useState(false);
   const [editPersonIds, setEditPersonIds] = useState<string[]>([]);
   const [editExistingMedia, setEditExistingMedia] = useState<MomentMedia[]>([]);
-  const [editNewFiles, setEditNewFiles] = useState<MediaFile[]>([]);
+  const {files:editNewFiles,setFiles:setEditNewFiles,status:editMediaStatus,getReadyFiles:getReadyEditFiles}=usePreparedMomentFiles();
+  const editPickerBusy=useRef(false);const [editPicking,setEditPicking]=useState(false);
+  const {task:editTask,startEdit,retryEdit,discardEdit}=useMomentEdit();
   const [editUploadedFiles, setEditUploadedFiles] = useState<Array<{ fileId: string; assetId: string; media: MomentMedia; metadataSynced: boolean }>>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editDirty, setEditDirty] = useState(false);
@@ -453,6 +459,9 @@ export default function MomentsScreen() {
   );
 
   const pickMedia = async () => {
+    if(pickerBusy.current)return;pickerBusy.current=true;setPicking(true);
+    const scopeAtPick=composerScope.current;
+    try {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== "granted") {
       void inform({ title: "Cần cấp quyền 🌸", message: "Cho phép Family Bloom truy cập ảnh/video để chia sẻ khoảnh khắc nhé.", icon: "images-outline" });
@@ -466,7 +475,7 @@ export default function MomentsScreen() {
       selectionLimit: 10,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && scopeAtPick===composerScope.current && scopeAtPick===previousFormScope.current) {
       setComposerDirty(true);
       discardRestoredImages(selectedRef.current);
       setSelected(
@@ -483,12 +492,14 @@ export default function MomentsScreen() {
         })),
       );
     }
+    }catch(error){failTask(error,{title:"Chưa mở được ảnh/video",message:"Bạn thử chọn lại nhé."});}finally{pickerBusy.current=false;setPicking(false);}
   };
 
   const removeSelected = (id: string) => { setComposerDirty(true); discardRestoredImages(selectedRef.current.filter(item=>item.id===id)); setSelected((current) => current.filter((item) => item.id !== id)); };
   const openComposer = useCallback(() => {
     setDraftCenter(false);
     composerScope.current=formScope;
+    createLock.current=false;
     setPersonIds([]);
     setMemoryPrompt(null);
     setTimelineAudience("self");
@@ -525,12 +536,15 @@ export default function MomentsScreen() {
   }, [closeComposerNow, composerDirty, confirm]);
 
   const create = () => {
-    if (composerScope.current!==formScope || !activeFamilyId || !user || !userProfile || (!caption.trim() && !selected.length)) return;
+    const readyFiles=getReadyFiles();
+    if(createLock.current||pickerBusy.current||!readyFiles||editTask?.status==="running")return;
+    if (composerScope.current!==formScope || !activeFamilyId || !user || !userProfile || (!caption.trim() && !readyFiles.length)) return;
     if (timelineAudience === "persons" && personIds.length === 0) {
       void inform({ title: "Chọn thành viên", message: "Hãy chọn ít nhất một người cho Dòng thời gian, hoặc chuyển về Tôi / Toàn gia đình.", icon: "people-outline" });
       return;
     }
-    publishMoment({
+    createLock.current=true;
+    try{publishMoment({
       familyId: activeFamilyId,
       author: {
         uid: user.uid,
@@ -542,8 +556,8 @@ export default function MomentsScreen() {
       timelineAudience,
       notifyFamily: timelineAudience === "family" && notifyFamily,
       additionalFamilyIds: [],
-      files: selected,
-    });
+      files: readyFiles,
+    });}catch(error){createLock.current=false;failTask(error,{title:"Chưa đăng được kỷ niệm"});return;}
     setCaption("");setRichBody(null);
     setSelected([]);
     setPersonIds([]);
@@ -554,6 +568,7 @@ export default function MomentsScreen() {
   };
 
   const openEditPost = useCallback((post: MomentPost) => {
+    if(editTask){void inform({title:"Kỷ niệm đang được cập nhật",message:"Hãy hoàn tất lần cập nhật trước trên trang Kỷ niệm.",icon:"images-outline"});return;}
     setEditPost(post);
     setEditCaption(post.caption);setEditRichBody(post.richBody??null);
     setEditTimelineAudience(post.timelineAudience || (post.personIds?.length ? "persons" : "self"));
@@ -563,7 +578,7 @@ export default function MomentsScreen() {
     setEditNewFiles([]);
     setEditUploadedFiles([]);
     setEditDirty(false);
-  }, []);
+  }, [editTask,inform,setEditNewFiles]);
 
   const discardEditUploads = useCallback(() => {
     if (!editUploadedFiles.length) return;
@@ -597,7 +612,9 @@ export default function MomentsScreen() {
   }, [closeEditPostNow, confirm, editBusy, editDirty]);
 
   const pickEditMedia = useCallback(async () => {
-    if (!editPost || editBusy) return;
+    if (!editPost || editBusy || editPickerBusy.current) return;
+    editPickerBusy.current=true;setEditPicking(true);const scopeAtPick=previousFormScope.current;
+    try {
     const remaining = Math.max(0, 10 - editExistingMedia.length - editNewFiles.length);
     if (!remaining) {
       void inform({ title: "Đã đủ 10 tệp", message: "Bạn có thể bỏ bớt ảnh/video hiện tại rồi chọn tệp khác nhé.", icon: "images-outline" });
@@ -614,7 +631,7 @@ export default function MomentsScreen() {
       quality: 0.8,
       selectionLimit: remaining,
     });
-    if (result.canceled) return;
+    if (result.canceled || scopeAtPick!==previousFormScope.current) return;
     setEditDirty(true);
     const picked = result.assets.map((asset, index) => ({
       id: `moment-edit-${Date.now()}-${index}`,
@@ -628,129 +645,18 @@ export default function MomentsScreen() {
       duration: asset.duration ?? null,
     }));
     setEditNewFiles((current) => [...current, ...picked].slice(0, Math.max(0, 10 - editExistingMedia.length)));
-  }, [editBusy, editExistingMedia.length, editNewFiles.length, editPost]);
+    }catch(error){failTask(error,{title:"Chưa mở được ảnh/video",message:"Bạn thử chọn lại nhé."});}finally{editPickerBusy.current=false;setEditPicking(false);}
+  }, [editBusy, editExistingMedia.length, editNewFiles.length, editPost, failTask, inform,setEditNewFiles]);
 
-  const saveEditedPost = useCallback(async () => {
-    if (!editPost || !activeFamilyId || editPost.familyId!==activeFamilyId || !user || editPost.authorUid!==user.uid || editBusy) return;
-    if (editTimelineAudience === "persons" && editPersonIds.length === 0) {
-      void inform({ title: "Chọn thành viên", message: "Hãy chọn ít nhất một người, hoặc chuyển về Tôi / Toàn gia đình.", icon: "people-outline" });
-      return;
-    }
-    if (!editCaption.trim() && !editExistingMedia.length && !editNewFiles.length) {
-      void inform({ title: "Kỷ niệm đang trống", message: "Giữ lại một lời nhắn, ảnh hoặc video trước khi lưu nhé.", icon: "heart-outline" });
-      return;
-    }
-
-    setEditBusy(true);
-    const uploadedByFile = new Map(editUploadedFiles.map((item) => [item.fileId, item]));
-    try {
-      for (const file of editNewFiles) {
-        if (uploadedByFile.has(file.id)) continue;
-        let completed: { fileId: string; assetId: string; media: MomentMedia; metadataSynced: boolean } | null = null;
-        try {
-          const uploaded = await mediaService.uploadManaged(file, {
-            ownerUid: user.uid,
-            familyId: activeFamilyId,
-            purpose: "moment",
-            entityType: "moment",
-            entityId: editPost.id,
-            category: "moments",
-          });
-          completed = {
-            fileId: file.id,
-            assetId: uploaded.asset.id,
-            metadataSynced: true,
-            media: {
-              id: uploaded.asset.id,
-              type: file.type,
-              secureUrl: uploaded.result.secureUrl,
-              publicId: uploaded.result.publicId,
-              thumbnailUrl: uploaded.result.thumbnailUrl || undefined,
-              width: file.width ?? undefined,
-              height: file.height ?? undefined,
-              duration: file.duration ?? undefined,
-            },
-          };
-        } catch (error) {
-          const checkpoint = (error as { managedUploadCheckpoint?: { asset: { id: string }; result: { secureUrl: string; publicId: string; thumbnailUrl?: string | null } } } | null)?.managedUploadCheckpoint;
-          if (!checkpoint) throw error;
-          completed = {
-            fileId: file.id,
-            assetId: checkpoint.asset.id,
-            metadataSynced: false,
-            media: {
-              id: checkpoint.asset.id,
-              type: file.type,
-              secureUrl: checkpoint.result.secureUrl,
-              publicId: checkpoint.result.publicId,
-              thumbnailUrl: checkpoint.result.thumbnailUrl || undefined,
-              width: file.width ?? undefined,
-              height: file.height ?? undefined,
-              duration: file.duration ?? undefined,
-            },
-          };
-          uploadedByFile.set(file.id, completed);
-          setEditUploadedFiles([...uploadedByFile.values()]);
-          await mediaService.setUploaded(checkpoint.asset.id, {
-            secureUrl: checkpoint.result.secureUrl,
-            publicId: checkpoint.result.publicId,
-            thumbnailUrl: checkpoint.result.thumbnailUrl || "",
-            resourceType: file.type,
-          });
-          completed = { ...completed, metadataSynced: true };
-        }
-        if (completed) {
-          uploadedByFile.set(file.id, completed);
-          setEditUploadedFiles([...uploadedByFile.values()]);
-        }
-      }
-
-      for (const uploaded of uploadedByFile.values()) {
-        if (uploaded.metadataSynced) continue;
-        await mediaService.setUploaded(uploaded.assetId, {
-          secureUrl: uploaded.media.secureUrl,
-          publicId: uploaded.media.publicId,
-          thumbnailUrl: uploaded.media.thumbnailUrl || "",
-          resourceType: uploaded.media.type,
-        });
-        uploadedByFile.set(uploaded.fileId, { ...uploaded, metadataSynced: true });
-        setEditUploadedFiles([...uploadedByFile.values()]);
-      }
-
-      const originalAssetIds = new Set(editPost.mediaAssetIds || []);
-      const keptExistingAssetIds = editExistingMedia
-        .map((media) => media.id)
-        .filter((assetId) => originalAssetIds.has(assetId));
-      const newUploads = editNewFiles.map((file) => uploadedByFile.get(file.id)).filter((item): item is { fileId: string; assetId: string; media: MomentMedia; metadataSynced: boolean } => !!item);
-      const nextMedia = [...editExistingMedia, ...newUploads.map((item) => item.media)];
-      const nextAssetIds = [...keptExistingAssetIds, ...newUploads.map((item) => item.assetId)];
-
-      await momentsService.updateOwnPost(
-        activeFamilyId,
-        editPost.id,
-        {
-          caption: editCaption,richBody:editRichBody,
-          media: nextMedia,
-          personIds: editTimelineAudience === "persons" ? editPersonIds : [],
-          timelineAudience: editTimelineAudience,
-          notifyFamily: editTimelineAudience === "family" && editNotifyFamily,
-        },
-        nextAssetIds,
-        editPost,
-      );
-      finishTask({ title: "Đã cập nhật kỷ niệm 🌸", message: "Những thay đổi của bạn đã được lưu." });
-      setEditPost(null);
-      setEditNotifyFamily(false);
-      setEditNewFiles([]);
-      setEditUploadedFiles([]);
-      setEditDirty(false);
-    } catch (error) {
-      setEditUploadedFiles([...uploadedByFile.values()]);
-      failTask(error, { title: "Chưa cập nhật được", message: (error as {code?:string})?.code === 'PUBLISH_EDIT_CONFLICT' ? "Kỷ niệm đã được sửa ở thiết bị khác. Nội dung và tệp đã tải của bạn vẫn được giữ; không ghi đè bài mới." : "Phần đã tải xong vẫn được giữ để bạn thử lưu lại." });
-    } finally {
-      setEditBusy(false);
-    }
-  }, [activeFamilyId, editBusy, editCaption, editRichBody, editExistingMedia, editNewFiles, editPersonIds, editPost, editTimelineAudience, editUploadedFiles, failTask, finishTask, user]);
+  const saveEditedPost = useCallback(() => {
+    const readyFiles=getReadyEditFiles();
+    if(!editPost||!activeFamilyId||editPost.familyId!==activeFamilyId||!user||editPost.authorUid!==user.uid||editBusy||editPickerBusy.current||!readyFiles)return;
+    if(editTimelineAudience==='persons'&&!editPersonIds.length){void inform({title:'Chọn thành viên',message:'Hãy chọn ít nhất một người liên quan.',icon:'people-outline'});return;}
+    if(!editCaption.trim()&&!editExistingMedia.length&&!readyFiles.length){void inform({title:'Kỷ niệm đang trống',message:'Hãy giữ lại lời nhắn, ảnh hoặc video.',icon:'heart-outline'});return;}
+    const accepted=startEdit({post:editPost,uid:user.uid,familyId:activeFamilyId,caption:editCaption,richBody:editRichBody,existing:editExistingMedia,files:readyFiles,personIds:editPersonIds,audience:editTimelineAudience,notify:editNotifyFamily,uploaded:editUploadedFiles});
+    if(!accepted){void inform({title:'Chưa thể lưu lúc này',message:'Hãy chờ lần đăng hoặc cập nhật trước hoàn tất rồi thử lại.',icon:'images-outline'});return;}
+    setEditPost(null);setEditNotifyFamily(false);setEditNewFiles([]);setEditUploadedFiles([]);setEditDirty(false);
+  },[activeFamilyId,editBusy,editCaption,editRichBody,editExistingMedia,editPersonIds,editPost,editTimelineAudience,editNotifyFamily,editUploadedFiles,getReadyEditFiles,startEdit,user,inform,setEditNewFiles]);
 
   const openEditMediaAt = useCallback((index: number) => {
     if (!editPost) return;
@@ -852,6 +758,7 @@ export default function MomentsScreen() {
           />
         </BloomCard>
 
+        {editTask?.status==="failed"&&<BloomCard><Text style={{color:__a3Colors.primaryText,fontWeight:"700"}}>Kỷ niệm chưa cập nhật xong</Text><Text style={{color:__a3Colors.secondaryText}}>{editTask.error}</Text><BloomButton title="Thử lưu lại" onPress={retryEdit}/><BloomButton title="Bỏ lần cập nhật này" variant="outline" onPress={()=>{void confirm({title:"Bỏ lần cập nhật?",message:"Kỷ niệm đã lưu trước đó không bị xóa.",confirmLabel:"Bỏ",cancelLabel:"Giữ lại",destructive:true}).then(ok=>{if(ok)discardEdit();});}}/></BloomCard>}
         <BloomActionCard testID="moment-create-action" icon="images-outline" title="Thêm kỷ niệm" subtitle="Một bức ảnh, một câu chuyện hay lời thương để cả nhà giữ lại" onPress={openComposer} />
 
         {process.env.EXPO_PUBLIC_FAMILY_MOMENT_PUBLISH_RECOVERY_ENABLED==='1'&&user?.uid&&activeFamilyId&&<BloomActionCard icon="checkmark-circle-outline" title="Kiểm tra bài đăng chưa xác nhận" subtitle="Chỉ kiểm tra kết quả trên máy chủ, không tự đăng lại" onPress={()=>{void checkUnconfirmedPublications(user.uid,activeFamilyId).then(r=>inform({title:"Kết quả đăng bài",message:`Đã xác nhận ${r.confirmed} bài. Còn ${r.unresolved} bài chưa rõ kết quả; Bloom giữ nguyên media.`,icon:"checkmark-circle-outline"})).catch(()=>inform({title:"Chưa kiểm tra được",message:"Hãy thử lại khi có kết nối. Không tự gửi lại hoặc xóa media.",icon:"alert-circle-outline"}));}}/>}
@@ -873,7 +780,7 @@ export default function MomentsScreen() {
         )}
       </View>
     </View>
-  ), [themeRevision, canModerate, familyPending.length, hasMore, hiddenPosts.length, membership?.familyName, moments.length, openComposer, openDraftCenter, checkUnconfirmedPublications, inform, user?.uid, activeFamilyId, __a3Colors, __a3_styles]);
+  ), [editTask,retryEdit,discardEdit,confirm,themeRevision, canModerate, familyPending.length, hasMore, hiddenPosts.length, membership?.familyName, moments.length, openComposer, openDraftCenter, checkUnconfirmedPublications, inform, user?.uid, activeFamilyId, __a3Colors, __a3_styles]);
 
   const listEmpty = useCallback(() => {
     if (loading) {
@@ -1075,7 +982,7 @@ export default function MomentsScreen() {
                 </View>
               )}
 
-              <Pressable style={__a3_styles.mediaPicker} disabled={editBusy} onPress={() => void pickEditMedia()}>
+              <Pressable style={__a3_styles.mediaPicker} disabled={editBusy||editPicking} onPress={() => void pickEditMedia()}>
                 <View style={__a3_styles.mediaPickerIcon}><Ionicons name="images-outline" size={22} color={__a3Colors.primary} /></View>
                 <View style={__a3_styles.mediaPickerCopy}>
                   <Text style={__a3_styles.pickerTitle}>Ảnh / Video</Text>
@@ -1100,11 +1007,12 @@ export default function MomentsScreen() {
                         onPress={() => openEditMediaAt(index)}
                         style={[__a3_styles.thumbWrap, { width: previewTileSize, height: previewTileSize }]}
                       >
-                        {type === "video" && !uri ? (
+                        {type === "video" && (entry.kind === "new" || !uri) ? (
                           <View style={__a3_styles.videoPreviewPlaceholder}><Ionicons name="videocam" size={24} color={__a3Colors.primary} /><Text style={__a3_styles.videoPreviewText}>VIDEO</Text></View>
                         ) : (
                           <Image source={{ uri }} style={__a3_styles.thumb} contentFit="cover" transition={0} cachePolicy="memory-disk" />
                         )}
+                        {entry.kind==="new"&&editMediaStatus!=="ready"&&<View pointerEvents="none" style={[BLOOM_ABSOLUTE_FILL,{backgroundColor:__a3Colors.surface,alignItems:"center",justifyContent:"center",gap:5}]}>{editMediaStatus==="preparing"&&<ActivityIndicator color={__a3Colors.primary}/>}<Text style={{fontSize:11,color:__a3Colors.primaryText,textAlign:"center"}}>{editMediaStatus==="error"?"Chưa đọc được tệp":"Đang chuẩn bị…"}</Text></View>}
                         <Pressable
                           disabled={editBusy}
                           onPress={() => {
@@ -1131,11 +1039,13 @@ export default function MomentsScreen() {
                 </View>
               )}
 
+          {editMediaStatus==="error"&&<BloomButton title="Thử chuẩn bị lại ảnh/video" variant="outline" onPress={()=>setEditNewFiles([...editNewFiles])}/>}
           <BloomButton
-            title="Lưu thay đổi"
+            title={editPicking||editMediaStatus==="preparing"?"Đang chuẩn bị ảnh/video…":editMediaStatus==="error"?"Kiểm tra lại ảnh/video":"Lưu thay đổi"}
             icon="checkmark-outline"
-            isLoading={editBusy}
-            disabled={editBusy}
+            keepTextWhileLoading
+            isLoading={editBusy||editPicking||editMediaStatus==="preparing"}
+            disabled={editBusy||editPicking||editMediaStatus!=="ready"}
             onPress={() => void saveEditedPost()}
           />
         </BloomKeyboardScreen>
@@ -1280,7 +1190,7 @@ export default function MomentsScreen() {
                 </View>
               )}
 
-              <Pressable style={__a3_styles.mediaPicker} onPress={pickMedia}>
+              <Pressable style={__a3_styles.mediaPicker} disabled={picking} onPress={pickMedia}>
                 <View style={__a3_styles.mediaPickerIcon}>
                   <Ionicons name="images-outline" size={22} color={__a3Colors.primary} />
                 </View>
@@ -1315,6 +1225,7 @@ export default function MomentsScreen() {
                             recyclingKey={`composer-${file.id}`}
                           />
                         )}
+                        {mediaStatus!=="ready"&&<View pointerEvents="none" style={[BLOOM_ABSOLUTE_FILL,{backgroundColor:__a3Colors.surface,alignItems:"center",justifyContent:"center",gap:5}]}>{mediaStatus==="preparing"&&<ActivityIndicator color={__a3Colors.primary}/>}<Text style={{fontSize:11,color:__a3Colors.primaryText,textAlign:"center"}}>{mediaStatus==="error"?"Chưa đọc được tệp":"Đang chuẩn bị…"}</Text></View>}
                         <Pressable onPress={() => removeSelected(file.id)} style={__a3_styles.removeThumb} hitSlop={6}>
                           <Ionicons name="close" size={13} color={__a3Colors.onPrimary} />
                         </Pressable>
@@ -1330,9 +1241,12 @@ export default function MomentsScreen() {
               )}
 
           {!draftCenter&&(<MomentDraftPanel initialList={draftCenter} uid={user?.uid||""} familyId={activeFamilyId||""} fields={{caption,richBody,audience:timelineAudience,notify:notifyFamily,personIds}} hasAttachments={selected.length>0} attachments={selected} disabled={composerScope.current!==formScope} onRestore={(v,images)=>{discardRestoredImages(selectedRef.current);setSelected(images);setCaption(v.caption);setRichBody(v.richBody);setTimelineAudience(v.audience);setNotifyFamily(v.notify);setPersonIds(v.personIds);setMemoryPrompt(null);setComposerDirty(true);}}/>)}
+          {mediaStatus==="error"&&<BloomButton title="Thử chuẩn bị lại ảnh/video" variant="outline" onPress={()=>setSelected([...selected])}/>}
           <BloomButton
-            title="Đăng & tiếp tục"
-            disabled={!caption.trim() && !selected.length}
+            title={picking||mediaStatus==="preparing"?"Đang chuẩn bị ảnh/video…":mediaStatus==="error"?"Kiểm tra lại ảnh/video":"Đăng kỷ niệm"}
+            keepTextWhileLoading
+            isLoading={picking||mediaStatus==="preparing"}
+            disabled={picking||mediaStatus!=="ready"||editTask?.status==="running"||(!caption.trim()&&!selected.length)}
             onPress={create}
           />
         </BloomKeyboardScreen>

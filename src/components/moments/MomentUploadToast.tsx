@@ -46,9 +46,10 @@ export function MomentUploadToast() {
   if (!value) return null;
   const stopping = value.status === "cancelling";
   const publishing = value.status === "publishing";
+  const editing = value.operation === "edit";
   const percent = Math.max(0, Math.min(100, value.progress));
   const line = stopping ? "Đang hủy và dọn dẹp…" : publishing
-    ? "Đang hoàn tất bài đăng…" : value.status === "queued"
+    ? editing ? "Đang lưu thay đổi…" : "Đang hoàn tất bài đăng…" : value.status === "queued"
       ? "Đang chuẩn bị ảnh / video…"
       : `Đang tải lên · ${percent}%`;
   return (
@@ -61,10 +62,10 @@ export function MomentUploadToast() {
           {value.video && <View style={__a3_styles.playBadge}><Ionicons name="play" color={__a3Colors.white} size={11}/></View>}
         </View>
         <View pointerEvents="none" style={__a3_styles.copy}>
-          <Text style={__a3_styles.title} numberOfLines={1}>{stopping ? "Đang hủy khoảnh khắc" : "Đang tạo khoảnh khắc 🌸"}</Text>
+          <Text style={__a3_styles.title} numberOfLines={1}>{stopping ? "Đang hủy khoảnh khắc" : editing ? "Đang cập nhật kỷ niệm" : "Đang tạo khoảnh khắc 🌸"}</Text>
           <Text style={__a3_styles.detail} numberOfLines={1}>{line}</Text>
         </View>
-        <Pressable
+        {!editing && <Pressable
           accessibilityRole="button"
           accessibilityLabel="Hủy đăng khoảnh khắc"
           disabled={stopping || publishing}
@@ -72,7 +73,7 @@ export function MomentUploadToast() {
           style={({ pressed }) => [__a3_styles.cancel, (stopping || publishing) && __a3_styles.cancelDisabled, pressed && __a3_styles.pressed]}
         >
           <Text style={__a3_styles.cancelText}>{stopping ? "Đang hủy" : publishing ? "Đang lưu" : "Hủy"}</Text>
-        </Pressable>
+        </Pressable>}
         <View pointerEvents="none" style={__a3_styles.track}>
           <View style={[__a3_styles.progress, { width: `${percent}%` }]} />
         </View>

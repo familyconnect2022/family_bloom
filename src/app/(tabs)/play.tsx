@@ -167,7 +167,7 @@ export default function PlayScreen() {
           <View style={__a3_styles.group}>
             <BloomSectionHeader title="Vườn tri thức nở hoa" subtitle="Mỗi ngày khám phá thêm một điều thú vị" />
             <View style={__a3_styles.list}>
-              <HubCard icon="school-outline" title="Góc học tập Super Bloom" description="Học Toán, Tiếng Việt, Văn, Anh, Lí, Hóa theo bài đã xuất bản từ Bloom Content Studio." accent={__a3Colors.iconBackground} badge="Học ngay" onPress={() => router.push("/learning-library" as never)} />
+              <HubCard icon="school-outline" title="Góc học tập" description="Cùng học, đặt câu hỏi và chia sẻ những bài viết của nhà mình." accent={__a3Colors.iconBackground} badge="Học ngay" onPress={() => router.push("/learning-library" as never)} />
             </View>
           </View>
           <View style={__a3_styles.group}>

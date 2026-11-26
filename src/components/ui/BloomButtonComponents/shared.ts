@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Animated, StyleProp, TextStyle, View, ViewStyle } from "react-native";
 
 // One semantic palette for every button, including outline/disabled/focus.
@@ -41,6 +41,7 @@ export const renderIcon = (
 export const useBloomTouchAnimation = (disabled?: boolean | null, isLoading?: boolean) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const isDisabled = !!disabled || !!isLoading;
+  useEffect(() => { scaleAnim.stopAnimation(); scaleAnim.setValue(1); }, [isDisabled, scaleAnim]);
 
   const handlePressIn = () => {
     if (!isDisabled) {

@@ -1,8 +1,8 @@
 {
-  "release": "R16R11R57",
-  "version": "1.3.75",
-  "versionCode": 143085,
-  "fileCount": 1851,
+  "release": "R16R11R58",
+  "version": "1.3.76",
+  "versionCode": 143086,
+  "fileCount": 1854,
   "files": [
     {
       "path": ".easignore",
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 6621,
-      "sha256": "aa4860ea482fd9e614776cd498eff216228ba39a5f0df5f9221f625c5cf78562"
+      "bytes": 6647,
+      "sha256": "1fc5e41ef31e927a29da662fea6b3a7dd4ee828cb06ffac85b02380c35cdb04b"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "55fe91cea19e2afa4af7a0f2748a52a08f1f1c86d426de849662722b0cb55f6e"
+      "sha256": "2149f3115be3064e333d92ff9c1541a9603ebe7e12ced40f5182b6ebf9cef059"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -336,13 +336,13 @@
     },
     {
       "path": "assets/images/family-tree/node-3d/male-bottom.png",
-      "bytes": 151259,
-      "sha256": "d1f4fabdfacdbdbe203aef365dceccde35af6c47a73eb7f8945d81f1ac8b15fd"
+      "bytes": 101086,
+      "sha256": "f716c76c5a352429570b04bcf0a11faf9074e2be81caef6b84800a8b25083edc"
     },
     {
       "path": "assets/images/family-tree/node-3d/male-top.png",
-      "bytes": 136348,
-      "sha256": "33438af186c84d7a589b517803406eb2b6e1abd33fb6ae8143c1d315648cdb2b"
+      "bytes": 93393,
+      "sha256": "653a1cc0d5d944dbae9e3877a26bc82313f45939e09cd46fedfab7f135c5681a"
     },
     {
       "path": "assets/images/family-tree/node-3d/unknown-bottom.png",
@@ -2705,11 +2705,6 @@
       "sha256": "91bdb74cde1552f8119f6063031dfe5614c93bb8577a969bdf219f5109b6a988"
     },
     {
-      "path": "document/phases/phase-14/home-games/PHASE_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP.md",
-      "bytes": 1993,
-      "sha256": "292e0c0ffd1d0de9b60e9a712b1616e37f9c49bf0ab4446f2a0ddf5eb7e60ef6"
-    },
-    {
       "path": "document/phases/phase-14/home/BUILD_CHECK_REPORT_PHASE_14C.txt",
       "bytes": 1356,
       "sha256": "7cac4e52d6b9f01ed596a675b2f2b36d4ad3b987fcee18011985d2060ac22422"
@@ -2798,6 +2793,11 @@
       "path": "document/phases/phase-14/home/PHASE_14J_VALIDATION_REPORT.txt",
       "bytes": 1851,
       "sha256": "54ea62d89f44d0e3d9b7f2d31cb0a1e86174ce82fcf6905e4961dae89e9a8345"
+    },
+    {
+      "path": "document/phases/phase-14/home-games/PHASE_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP.md",
+      "bytes": 1993,
+      "sha256": "292e0c0ffd1d0de9b60e9a712b1616e37f9c49bf0ab4446f2a0ddf5eb7e60ef6"
     },
     {
       "path": "document/phases/phase-14/music/PHASE_14D_NHA_MINH_MUSIC_TODO_IMPLEMENTATION.md",
@@ -4932,12 +4932,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "b0ce932a73a8b093ab7b0b8b69d79151ce40959263530a84fddd161f13a8b4f1"
+      "sha256": "6820d32f24b6d01aa5078464c25259a8fcf4e5ffced5f7f8b4628fe1662e6c89"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "0ed6bf32ccf5f2f8adab3975c2244482ec1a39e3601f9bd802cf704669235b8f"
+      "sha256": "f53192fe60c4e792f18c7a307b9b383c32ecd4733260427f9042b301c205d712"
     },
     {
       "path": "patch-manifest.json",
@@ -4967,12 +4967,12 @@
     {
       "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
       "bytes": 13143,
-      "sha256": "fb939d8dc25adf2f100a3abe38a2afbe02c3d3aecbebe7ca7c20fc33637e1e88"
+      "sha256": "51a7e411760583b36539fe3f41e7589ebe974a306163f99ca81f80490b398f4a"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
       "bytes": 10659,
-      "sha256": "6a91c64599bc1b6f35384c45b2b64a267df67e386c2d63a43de71db5531ae9d9"
+      "sha256": "79b8587fe2e2ee709fb3fb2b6f5cc1708dc75b19624ba16cf3310305a1eac2eb"
     },
     {
       "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
@@ -5042,7 +5042,7 @@
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
       "bytes": 8906,
-      "sha256": "1bbd5c6121d23e06eee66adaf56cec2f0ca0cf1226e884c1ea3d6ac9e5f5b458"
+      "sha256": "57efe3b7f893d1a862a10d8e0f32fcf9140a484fe061dd5edb1baddc24bb92bb"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5467,7 +5467,7 @@
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
       "bytes": 3954,
-      "sha256": "0a4e855d7361c7ca2ba006d4154e2deacb91761b5c1f3f5d6237c6bfe72333da"
+      "sha256": "97c95d51ae77893adddeb0255376939bb6c3fb63bc835a46cff2b2f8b4668f12"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "01e2c795c56cebfa0bd50ee7d1729de50cf38574b76a5bb77723b418885c43e4"
+      "sha256": "e598c3045b777243509e30333dfccedf39296e62ac1dd99403fcf04544693830"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5777,7 +5777,7 @@
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
       "bytes": 3043,
-      "sha256": "788a5c675051a2e7001e3094dd24579b16b9f50d04fc42b82cd0273a6396bbd4"
+      "sha256": "6c8213a9d7f9b626e65c24b69967360a71f93652d8ee365e7ba53798b838defb"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h1-kotlin-event-payload.js",
@@ -6737,7 +6737,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 5071,
-      "sha256": "28fb868315b58e9fa477e048dd929f4e95e5ad1a60bacd0cad7b6bfa0d39ea07"
+      "sha256": "bc1e8e82c709904900b264e415cd16acbdbb53ff55d95ebf7905f6d36783c2ee"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -7141,8 +7141,8 @@
     },
     {
       "path": "src/app/(auth)/login.tsx",
-      "bytes": 8163,
-      "sha256": "c700792e35d9e627a629e639959c9ae39514e901ffc19ced2bc94f1cfbfbbf3a"
+      "bytes": 7984,
+      "sha256": "08b448541091e883552c9309cf529c45183552ac993b9691bfa158d19c95c063"
     },
     {
       "path": "src/app/(auth)/otp.tsx",
@@ -7226,8 +7226,8 @@
     },
     {
       "path": "src/app/(home)/(fund)/home-fund.tsx",
-      "bytes": 66452,
-      "sha256": "3371a0f1c5c90e0eb23576ac9754c285322e666793ab2b800fb18afe2b1e9a1f"
+      "bytes": 66433,
+      "sha256": "4245c02ad3b114d847d5ad5eda02bf17d106fdb72afa5c8e929b382d57d30466"
     },
     {
       "path": "src/app/(home)/(games)/home-chess.tsx",
@@ -7266,13 +7266,13 @@
     },
     {
       "path": "src/app/(home)/(learning)/learning-lesson.tsx",
-      "bytes": 6338,
-      "sha256": "98d013a92a1a0cfc6f68e38fbfa08e770a3c353d8b787878f5fba51ecab5c73a"
+      "bytes": 6324,
+      "sha256": "6fddf37990909d5de2890ec2c991e331f484afe695f4dee9cd270c5fa99b18a1"
     },
     {
       "path": "src/app/(home)/(learning)/learning-library.tsx",
-      "bytes": 9000,
-      "sha256": "e1590d9de53fe24875c6666689ae0e8e6abe3ea11bcc99e305060ff549062311"
+      "bytes": 9631,
+      "sha256": "d34a74ae7329e6c1275b894251298b0fbe4ad3e8b53296f4f68a1a158c0460e5"
     },
     {
       "path": "src/app/(home)/(learning)/study-question-compose.tsx",
@@ -7286,8 +7286,8 @@
     },
     {
       "path": "src/app/(home)/(learning)/study-questions.tsx",
-      "bytes": 8833,
-      "sha256": "065771f1977f5c122f4a10d1c06844efc2ec0057c5c5eda7e214a845252f691e"
+      "bytes": 8771,
+      "sha256": "d32d3db5ea3a8fa3be0e11c2bd6c10c5a7d6fd69e9e1bea02532602a6aa1d6b2"
     },
     {
       "path": "src/app/(home)/(music)/home-music.tsx",
@@ -7300,9 +7300,14 @@
       "sha256": "f73ccf0ccc6d89536e97eb882afd0a67cc288f3f4e009ab543f6e4cc961fa547"
     },
     {
+      "path": "src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx",
+      "bytes": 21658,
+      "sha256": "0294516826f51c5fa7ee2215f47d9759630970086dfceb9b94c8cdb49cf4d082"
+    },
+    {
       "path": "src/app/(home)/(time-capsule)/home-time-capsule-compose.tsx",
-      "bytes": 25782,
-      "sha256": "e0af9b64c509e1f2688b685889dbb84a8c8a3d70e029280241f2a4b201040376"
+      "bytes": 26142,
+      "sha256": "66d73e307b15da2b83e4e03523adba9b961e1d2dd368bd705236f059634e81aa"
     },
     {
       "path": "src/app/(home)/(time-capsule)/home-time-capsule-demo.tsx",
@@ -7310,14 +7315,9 @@
       "sha256": "84c7d0087779b5f55ad152c02926e8e7970c4fb2597c40e7f86e95b530a74916"
     },
     {
-      "path": "src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx",
-      "bytes": 21602,
-      "sha256": "c7edf94166f3675b8b3f9edf415cb3a3bb9360c185651de83546e1b86a211ca7"
-    },
-    {
       "path": "src/app/(home)/(time-capsule)/home-time-capsules.tsx",
-      "bytes": 28322,
-      "sha256": "8eaafd655b711df6cb91dae50173792c98db5ad1932e8164ce243367a207c983"
+      "bytes": 28387,
+      "sha256": "fb2c68d0e1348350422074ba47d837b829c5179824d919c3b33a1ab26605f6c0"
     },
     {
       "path": "src/app/(home)/(whispers)/home-whispers.tsx",
@@ -7347,7 +7347,7 @@
     {
       "path": "src/app/(internal)/board-game-bot-test.tsx",
       "bytes": 43911,
-      "sha256": "9e46d8a6badc5cd0729ec39a34e0488e834a542d48d3e2e8dc35de86eda59a6a"
+      "sha256": "ebbecfc9c44b0c3269e4629a27a69eb132bc6749523489c6ad6053212fd52a64"
     },
     {
       "path": "src/app/(internal)/developer-tools.tsx",
@@ -7411,8 +7411,8 @@
     },
     {
       "path": "src/app/(profile)/settings.tsx",
-      "bytes": 8666,
-      "sha256": "314844c4bcb4a92c1f5e6321b58285fbd3e7a468772ab07d282068b7eca02673"
+      "bytes": 8858,
+      "sha256": "2aa131d34456110e400608810980a84c097d9c464bb7e1d6239fda7b8fbbd270"
     },
     {
       "path": "src/app/(tabs)/_layout.tsx",
@@ -7431,8 +7431,8 @@
     },
     {
       "path": "src/app/(tabs)/moments.tsx",
-      "bytes": 79720,
-      "sha256": "3429e60bd64f9b8e5da91e239ba6cc0951ba18337079f2e788ce7b195c4b8a9e"
+      "bytes": 79527,
+      "sha256": "1892f399b1bddbbef4643d6a85f338a0287a82af64f20a9cf756409528338b37"
     },
     {
       "path": "src/app/(tabs)/planner.tsx",
@@ -7441,18 +7441,18 @@
     },
     {
       "path": "src/app/(tabs)/play.tsx",
-      "bytes": 13480,
-      "sha256": "68a4284389e794f7157c6351505feb06436e6390cc5d4e3d1d227688d28780ca"
+      "bytes": 13446,
+      "sha256": "9e690094eb3937eaceb8230df3d17dcb4b65063048822fddb9cfd6039571e0ff"
     },
     {
       "path": "src/app/_layout.tsx",
-      "bytes": 29247,
-      "sha256": "9b0e9b8c63b41a3b52d99616ba31944ee64aa7dcc572fe1b83f8695961dceb30"
+      "bytes": 29355,
+      "sha256": "6d0c82923b89256333109d127b3915ee72f13cc86624ae2cee1f4239a29c1d89"
     },
     {
       "path": "src/app/session-gate.tsx",
-      "bytes": 14825,
-      "sha256": "643bb7e8f82c0803b599be8fbe9ff84d6fd2e2378ae7e5dceb06b35f53695db9"
+      "bytes": 14963,
+      "sha256": "b0d3630ed734350a72c0ea82008956583511c169580eeb292eb00af9142d35d2"
     },
     {
       "path": "src/app/welcome.tsx",
@@ -7746,8 +7746,8 @@
     },
     {
       "path": "src/components/moments/MomentUploadToast.tsx",
-      "bytes": 6071,
-      "sha256": "2cfa236445d3e71d2fca272880b851389b4add469a718de96f7bfdd4642d12e5"
+      "bytes": 6216,
+      "sha256": "1530b96abc52e682559872da008cb0e3820d364280d631c8fc60fd83e60e0051"
     },
     {
       "path": "src/components/moments/PendingMomentCard.tsx",
@@ -7796,8 +7796,8 @@
     },
     {
       "path": "src/components/ui/BloomButtonComponents/BloomButton.tsx",
-      "bytes": 7884,
-      "sha256": "273840165d8eb3c613b02ede44e917766daad90118ec68d6f1bf1570ebf8251f"
+      "bytes": 8274,
+      "sha256": "f8668c146a406f48609cb3fa7fbeed6068f2df6c2374ede140b641b66ddeb604"
     },
     {
       "path": "src/components/ui/BloomButtonComponents/BloomChipButton.tsx",
@@ -7846,8 +7846,8 @@
     },
     {
       "path": "src/components/ui/BloomButtonComponents/shared.ts",
-      "bytes": 1911,
-      "sha256": "3130136b9f8b00832e65e8fd80c96c72d2c0f91b963878866f0a20abda66d250"
+      "bytes": 2021,
+      "sha256": "8ed6d0efdd7492800018434caa8a335291a13129d3f42c36c99a0f58cc51e969"
     },
     {
       "path": "src/components/ui/BloomButtonComponents/utils.ts",
@@ -8066,8 +8066,8 @@
     },
     {
       "path": "src/context/AuthContext.tsx",
-      "bytes": 47703,
-      "sha256": "1d7a8ac309f2182a14e9e5d95ee4afbcd59c1a696b9ee7a5531b49645ceabc4e"
+      "bytes": 47833,
+      "sha256": "9fbe1e2e8649abc48561c1b691db5b484289fc1a97a6751b66bd0662ed8384de"
     },
     {
       "path": "src/context/FamilyRealtimeContext.tsx",
@@ -8080,9 +8080,14 @@
       "sha256": "bd8fe0a6c41606223a44a2bf2fb60d8841a301c35eb349ff7c04f329bf9c118a"
     },
     {
+      "path": "src/context/MomentEditContext.tsx",
+      "bytes": 7955,
+      "sha256": "f5be9157d727db46c3df314ee9eb94df747f93f3e4da3a2c9bef5bac5007f29f"
+    },
+    {
       "path": "src/context/MomentPublishContext.tsx",
-      "bytes": 31983,
-      "sha256": "64e3dfb25bab642d203696bae2af8a65bbc49a35a08f4187d92ec95d31286be9"
+      "bytes": 32128,
+      "sha256": "bd7513e1d9de622208133d593106bf3ece3b834cdf87f8a09a6eda0662c2258d"
     },
     {
       "path": "src/context/TabRuntimeContext.tsx",
@@ -8146,8 +8151,8 @@
     },
     {
       "path": "src/features/home/kitchen/KitchenFeaturePanel.tsx",
-      "bytes": 13852,
-      "sha256": "6a02df0f02a7a247abd75133eb6dc56d9a5d26c8c7a0f771c0dd17b9177aa19d"
+      "bytes": 13905,
+      "sha256": "b9c6dafe074a76a26af31ee6c222b60c038b09e4f6c1138c99a2f8e9b85a1247"
     },
     {
       "path": "src/features/home/music/HomeMusicPanel.tsx",
@@ -8156,8 +8161,8 @@
     },
     {
       "path": "src/features/home/polls/PollFeaturePanel.tsx",
-      "bytes": 22530,
-      "sha256": "2aaa1fbcf20cacbe4e14668184ddfeaf4ce147bf7ba3316da4e813bbf09245f6"
+      "bytes": 22583,
+      "sha256": "9b2287f1d7f4806b1124eb3cd4261a9866eaa2e95b72d7cabd50fe7225cf5a99"
     },
     {
       "path": "src/features/home/timeCapsule/TimeCapsuleRevealPrototype.tsx",
@@ -8166,13 +8171,13 @@
     },
     {
       "path": "src/features/home/whispers/WhisperFeaturePanel.tsx",
-      "bytes": 25472,
-      "sha256": "bee1b4f9fa983f1dbc1d042876cda6465ea08ee65a21a52820a0e03c4e939dac"
+      "bytes": 25833,
+      "sha256": "3a3a364bfccdc518b47b924fd72d21ad08ac971f0214f72576d938a808cca800"
     },
     {
       "path": "src/features/learning/FamilyArticles.tsx",
-      "bytes": 17268,
-      "sha256": "d31ccbb614d8816ceaeb440582df923a3f12a7c2f6798b070a32e6a1c82ea011"
+      "bytes": 17471,
+      "sha256": "4e9a26a0c8be2d4dd491f5936672b5d71fafbdd126b40124d3551dc5dafba467"
     },
     {
       "path": "src/features/learning/LessonRichView.tsx",
@@ -8435,6 +8440,11 @@
       "sha256": "64f1525e9161c68a2824f9dd4446cc720c9ddaa7602b01ba357be089b7f59352"
     },
     {
+      "path": "src/hooks/moments/usePreparedMomentFiles.ts",
+      "bytes": 1443,
+      "sha256": "fae9ef73730540661c0a0af6277a52cbe49206285f87243d2cc57c61f71734dd"
+    },
+    {
       "path": "src/hooks/profile/useUserProfile.ts",
       "bytes": 242,
       "sha256": "556306a2efc37e53e3a0cfdbec947a37a7983b2bbb17a974b2e84f698cff30a3"
@@ -8471,13 +8481,13 @@
     },
     {
       "path": "src/services/auth/androidSingleSession.ts",
-      "bytes": 6529,
-      "sha256": "a83a4978760675f18de543a6b93b04a5b184d590617ca62f6e3da93966de6817"
+      "bytes": 6515,
+      "sha256": "ce8bbecfd369e5644a3f9fa2671e18710adbc74a99b607e303dffe3af7dba98e"
     },
     {
       "path": "src/services/auth/authService.ts",
-      "bytes": 4999,
-      "sha256": "c72ecfb2c9e64ee56d30133fb4efabf26fa81e7d3caf9fe8ff3b712e30e7ceda"
+      "bytes": 4969,
+      "sha256": "960770a2817d158bd07ac1d658fddc04c4cde3a420c1ba0e7f84b6c770ef8e85"
     },
     {
       "path": "src/services/bootstrap/bootSessionCache.ts",
@@ -8523,6 +8533,11 @@
       "path": "src/services/error/runtimeDiagnosticsService.ts",
       "bytes": 2466,
       "sha256": "99ecdf8aaafdb63c17ddeffce0dc60d06a6cf9c18c83326b6a24d28f161ed901"
+    },
+    {
+      "path": "src/services/error/userFacingMessage.ts",
+      "bytes": 811,
+      "sha256": "be48da0665ef05b4ea2e88313bb33a27df9cf8818eb2d324efbe27b73c1ba52a"
     },
     {
       "path": "src/services/event/eventEntityCache.ts",
@@ -8756,8 +8771,8 @@
     },
     {
       "path": "src/services/media/momentUploadError.ts",
-      "bytes": 3831,
-      "sha256": "95b126de00065ef091333a708e6edd66112e92a0af08580d146e1525a0f3d1f4"
+      "bytes": 1854,
+      "sha256": "de9d0a3961666e693614110bc6c67daa862f672b74d98a2d9daf097a0c5588cb"
     },
     {
       "path": "src/services/memory/memoryBookService.ts",
@@ -8776,8 +8791,8 @@
     },
     {
       "path": "src/services/moments/momentUploadToastStore.ts",
-      "bytes": 1211,
-      "sha256": "96b56f3eea988906298bdc537c50095ab11b101daca66300918b2dfe54776eb8"
+      "bytes": 1271,
+      "sha256": "2a14674b8c02bddd66a5cd7162eed67215fff97ad07f58e812559f5174829fe3"
     },
     {
       "path": "src/services/moments/momentsService.ts",

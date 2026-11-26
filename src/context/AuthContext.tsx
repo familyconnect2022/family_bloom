@@ -2,6 +2,7 @@ import { familyBloomSessionDiagnostics as diagnostic } from "../diagnostics/sess
 import { metroTestLogsEnabled } from "../diagnostics/metroLogging";
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
+import { toAppError } from "@/services/error/errorService";
 import { authService, GoogleLoginTimeoutError, type GoogleLoginPhase } from "@/services/auth/authService";
 import {
   activateAndroidSession, checkAndroidSession, clearAndroidLoginIntent, forgetAndroidLease,
@@ -755,6 +756,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await authService.signInWithGoogle((phase) => setGoogleLoginPhase(phase));
     } catch (error) {
       clearAndroidLoginIntent();
+      if (toAppError(error).code === 'AUTH_GOOGLE_CANCELLED') return;
       if (error instanceof GoogleLoginTimeoutError) {
         // Persistent visible error, because a short Toast may expire while
         // Android's cloned Google account picker is still on screen.

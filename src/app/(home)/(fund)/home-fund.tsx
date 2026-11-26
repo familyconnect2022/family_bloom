@@ -1,3 +1,4 @@
+import {userFacingMessage} from '../../../services/error/userFacingMessage';
 import { BloomScaledInput } from '../../../components/ui/BloomScaledInput';
 import { getBloomStatusBarStyle } from "../../../constants/theme";
 import { useBloomThemeRevision , useBloomColorsRevision, useBloomTypographyRevision} from '../../../theme/BloomThemeProvider';
@@ -226,7 +227,7 @@ function FundEditor({
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không lưu được khoản thu/chi.");
+      setError(userFacingMessage(e,"Không lưu được khoản thu/chi."));
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -388,7 +389,7 @@ function HandoverFlow({ visible, members, currentUid, onClose, onSubmit }: {
     setSaving(true);
     setError(null);
     try { await onSubmit(targetUid, note); onClose(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Chưa gửi được lời mời bàn giao."); }
+    catch (e) { setError(userFacingMessage(e,"Chưa gửi được lời mời bàn giao.")); }
     finally { setSaving(false); }
   };
   return (
@@ -449,7 +450,7 @@ function FundTeamFlow({ visible, members, currentUid, initialUids, initialTasks,
     setSaving(true);
     setError(null);
     try { await onSubmit(items); onClose(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Chưa cập nhật được nhóm quỹ."); }
+    catch (e) { setError(userFacingMessage(e,"Chưa cập nhật được nhóm quỹ.")); }
     finally { setSaving(false); }
   };
   return (
@@ -548,7 +549,7 @@ export default function HomeFundScreen() {
     let settledRows = false;
     let settledControl = false;
     const settle = () => { if (settledSummary && settledRows && settledControl) setLoading(false); };
-    const stopSummary = homeFundService.subscribeSummary(activeFamilyId, (next) => { settledSummary = true; setSummary(next); settle(); }, (e) => { settledSummary = true; setError(e instanceof Error ? e.message : "Không tải được số dư quỹ."); settle(); });
+    const stopSummary = homeFundService.subscribeSummary(activeFamilyId, (next) => { settledSummary = true; setSummary(next); settle(); }, (e) => { settledSummary = true; setError(userFacingMessage(e,"Không tải được số dư quỹ.")); settle(); });
     const stopRows = homeFundService.subscribeRecent(activeFamilyId, (page) => {
       settledRows = true;
       setHeadItems(page.items);
@@ -557,21 +558,21 @@ export default function HomeFundScreen() {
       setExtraItems((current) => current.filter((row) => !page.items.some((head) => head.id === row.id)));
       void refreshMonth();
       settle();
-    }, (e) => { settledRows = true; setError(e instanceof Error ? e.message : "Không tải được lịch sử quỹ."); settle(); });
-    const stopControl = homeFundService.subscribeControl(activeFamilyId, (next) => { settledControl = true; setControl(next); settle(); }, (e) => { settledControl = true; setError(e instanceof Error ? e.message : "Không tải được người giữ quỹ."); settle(); });
+    }, (e) => { settledRows = true; setError(userFacingMessage(e,"Không tải được lịch sử quỹ.")); settle(); });
+    const stopControl = homeFundService.subscribeControl(activeFamilyId, (next) => { settledControl = true; setControl(next); settle(); }, (e) => { settledControl = true; setError(userFacingMessage(e,"Không tải được người giữ quỹ.")); settle(); });
     return () => { stopSummary(); stopRows(); stopControl(); };
   }, [activeFamilyId, refreshMonth]);
 
   useEffect(() => {
     if (!activeFamilyId || !uid || control || uid !== defaultPrimaryUid) return;
-    void homeFundService.ensureInitialControl(activeFamilyId, uid, actorName).catch((e) => setError(e instanceof Error ? e.message : "Chưa khởi tạo được quyền thủ quỹ."));
+    void homeFundService.ensureInitialControl(activeFamilyId, uid, actorName).catch((e) => setError(userFacingMessage(e,"Chưa khởi tạo được quyền thủ quỹ.")));
   }, [activeFamilyId, actorName, control, defaultPrimaryUid, uid]);
 
   useEffect(() => {
     if (!activeFamilyId) return;
     let live = true;
     setStatsLoading(true);
-    void homeFundService.fetchStats(activeFamilyId, statsPeriod).then((next) => { if (live) setStats(next); }).catch((e) => { if (live) setError(e instanceof Error ? e.message : "Không tải được thống kê quỹ."); }).finally(() => { if (live) setStatsLoading(false); });
+    void homeFundService.fetchStats(activeFamilyId, statsPeriod).then((next) => { if (live) setStats(next); }).catch((e) => { if (live) setError(userFacingMessage(e,"Không tải được thống kê quỹ.")); }).finally(() => { if (live) setStatsLoading(false); });
     return () => { live = false; };
   }, [activeFamilyId, statsPeriod, summary.lastAuditId]);
 

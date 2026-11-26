@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 
 export type MomentToastState = {
   localId: string;
+  operation?: "edit";
   status: "queued" | "uploading" | "publishing" | "cancelling";
   progress: number;
   thumbnailUri?: string;
@@ -15,7 +16,7 @@ export const momentUploadToastStore = {
   subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
   set(next: MomentToastState | null) {
     if (next && value && next.localId === value.localId && next.progress === value.progress &&
-      next.status === value.status && next.thumbnailUri === value.thumbnailUri && next.video === value.video) return;
+      next.operation === value.operation && next.status === value.status && next.thumbnailUri === value.thumbnailUri && next.video === value.video) return;
     if (!next && !value) return;
     value = next;
     listeners.forEach((listener) => listener());
