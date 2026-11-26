@@ -85,7 +85,7 @@ export default function SettingsScreen(){
           <SettingRow accent icon="flask-outline" title="Kiểm thử & chẩn đoán" caption="Hiệu năng, thông báo Android và công cụ game — chỉ chạy khi bạn chủ động bấm" onPress={()=>router.push('/developer-tools' as never)}/>
         </BloomCard>
       </View>}
-    <Text style={{color:__a3Colors.secondaryText,textAlign:"center",paddingVertical:12}}>Family Bloom · Phiên bản {Application.nativeApplicationVersion||"1.3.80"}</Text>
+    <Text style={{color:__a3Colors.secondaryText,textAlign:"center",paddingVertical:12}}>Family Bloom · Phiên bản {Application.nativeApplicationVersion||"1.3.81"}</Text>
     </ScrollView>
   </ScreenContainer>;
 }

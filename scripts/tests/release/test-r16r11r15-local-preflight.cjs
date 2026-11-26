@@ -18,16 +18,16 @@ const bad=(v)=>assert.notEqual(v.status,0);
 try{
  for(const f of [pre,env,verify,'scripts/setup/semver-contract.js','.env.main.example'])put(f,read(f));
  for(const f of ['scripts/setup/check-package-lock.js','scripts/setup/check-p2_37r2-local-install.js','scripts/setup/check-expo-route-uniqueness.cjs','scripts/tests/release/test-family-publish-manager.cjs','scripts/tests/release/test-family-field-document.cjs','scripts/tests/release/test-family-media-review.cjs'])put(f,'process.exit(0);\n');
- put('app.json',JSON.stringify({expo:{version:'1.3.80',android:{versionCode:143090}}}));
- put('package.json',JSON.stringify({version:'1.3.80',dependencies:{expo:'~57.0.28'},devDependencies:{typescript:'~6.0.3'}}));
- put('package-lock.json',JSON.stringify({version:'1.3.80',lockfileVersion:3,packages:{'':{dependencies:{expo:'~57.0.28'},devDependencies:{typescript:'~6.0.3'}}}}));
+ put('app.json',JSON.stringify({expo:{version:'1.3.81',android:{versionCode:143091}}}));
+ put('package.json',JSON.stringify({version:'1.3.81',dependencies:{expo:'~57.0.28'},devDependencies:{typescript:'~6.0.3'}}));
+ put('package-lock.json',JSON.stringify({version:'1.3.81',lockfileVersion:3,packages:{'':{dependencies:{expo:'~57.0.28'},devDependencies:{typescript:'~6.0.3'}}}}));
  put('bin/npm',`#!/bin/sh\n[ "$*" = "ci --include=dev --no-audit --no-fund" ] || exit 99\nmkdir -p node_modules/typescript node_modules/expo\nprintf '%s' '{"name":"typescript","version":"6.0.3"}' > node_modules/typescript/package.json\nprintf '%s' '{"name":"expo","version":"57.0.28"}' > node_modules/expo/package.json\necho repaired > npm-called.txt\n`);
  fs.chmodSync(path.join(tmp,'bin/npm'),0o755);
  put('bin/npm.cmd','@echo off\r\nif not "%*"=="ci --include=dev --no-audit --no-fund" exit /b 99\r\nmkdir node_modules\\typescript 2>nul\r\nmkdir node_modules\\expo 2>nul\r\n>node_modules\\typescript\\package.json echo {"name":"typescript","version":"6.0.3"}\r\n>node_modules\\expo\\package.json echo {"name":"expo","version":"57.0.28"}\r\n>npm-called.txt echo repaired\r\n');
  put('src/fixture.ts','const value = 1;\n');
  const paths=[pre,env,verify,'scripts/setup/semver-contract.js','.env.main.example','app.json','package.json','src/fixture.ts','scripts/setup/check-p2_37r2-local-install.js','scripts/setup/check-expo-route-uniqueness.cjs'];
  const files=paths.map(p=>{const bytes=fs.readFileSync(path.join(tmp,p));return {path:p,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')}});
- put('ANDROID_SOURCE_MANIFEST.json',JSON.stringify({release:'R16R11R68',version:'1.3.80',versionCode:143090,fileCount:files.length,files}));
+ put('ANDROID_SOURCE_MANIFEST.json',JSON.stringify({release:'R16R11R69',version:'1.3.81',versionCode:143091,fileCount:files.length,files}));
  // Reject missing production URL on all launch modes; no silent disabled mode.
  bad(run(pre));assert(!fs.existsSync(path.join(tmp,'.env')));
  bad(run(env,'init','http://invalid.test/api/session'));assert(!fs.existsSync(path.join(tmp,'.env')));

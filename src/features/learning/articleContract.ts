@@ -16,3 +16,13 @@ export async function publishCheckedArticle(request:(body:Record<string,unknown>
  if(!validArticle(result.article)||result.article.draftId!==target.draftId||result.article.draftRevision!==target.revision||!result.article.visible||result.article.coverMediaId!==cover)throw Error('INVALID_ARTICLE');
  return result.article;
 }
+
+// Reconcile an uncertain withdrawal by reading the owner's status, never resending the mutation.
+export async function withdrawCheckedArticle(request:(body:Record<string,unknown>)=>Promise<any>,target:Article):Promise<Article>{
+ const matches=(a:any):a is Article=>validArticle(a)&&a.articleId===target.articleId&&a.ownerUid===target.ownerUid&&a.draftId===target.draftId&&a.draftRevision===target.draftRevision&&!a.visible&&a.articleRevision===target.articleRevision+1;
+ let result:any;try{result=await request({action:'withdrawArticle',articleId:target.articleId,expectedArticleRevision:target.articleRevision});}catch(e){
+  if(!['REQUEST_TIMEOUT','NETWORK_ERROR','INVALID_RESPONSE','SYNC_HTTP_ERROR','INTERNAL_ERROR'].includes(String((e as {code?:unknown})?.code)))throw e;
+  try{result=await request({action:'articleStatus',draftId:target.draftId});if(!matches(result.article))throw e;}catch{throw e;}
+ }
+ if(!matches(result.article))throw Error('INVALID_ARTICLE');return result.article;
+}
