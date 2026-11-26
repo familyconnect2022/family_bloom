@@ -46,6 +46,11 @@ export default function LearningLibrary(){
     <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Family Editor</Text><Text style={__a3_s.qaSubtitle}>Soạn thảo và quản lý bản nháp trên thiết bị</Text></View>
     <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
    </Pressable>
+   <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/learning-articles' as never)} accessibilityRole="button">
+    <View style={__a3_s.qaIcon}><Ionicons name="book-outline" size={25} color={__a3Colors.primary}/></View>
+    <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Tri thức nhà mình</Text><Text style={__a3_s.qaSubtitle}>Đăng bài đã đồng bộ và đọc bài viết trong gia đình</Text></View>
+    <Ionicons name="chevron-forward" size={19} color={__a3Colors.primary}/>
+   </Pressable>
    <Pressable style={__a3_s.qaCard} onPress={()=>router.push('/study-questions' as never)} accessibilityRole="button">
     <View style={__a3_s.qaIcon}><Ionicons name="chatbubbles-outline" size={25} color={__a3Colors.primary}/></View>
     <View style={{flex:1,gap:5}}><Text style={__a3_s.qaTitle}>Cả nhà cùng giải</Text><Text style={__a3_s.qaSubtitle}>Đặt câu hỏi, giải Toán · Lý · Hóa và chia sẻ cách học cùng nhau</Text></View>

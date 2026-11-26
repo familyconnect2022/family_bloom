@@ -25,7 +25,7 @@ for %%A in (%*) do (
 )
 echo ============================================================
 echo FAMILY BLOOM H22R5 - ANDROID LOCAL RELEASE APK
-echo com.familybloom.android - versionCode 143084
+echo com.familybloom.android - versionCode 143085
  echo No phone or Metro is required for release APK compilation.
 echo ============================================================
 where node >nul 2>&1

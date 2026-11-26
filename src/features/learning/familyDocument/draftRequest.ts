@@ -1,6 +1,6 @@
 import {getAuth} from '@react-native-firebase/auth';
 import {ENV} from '../../../config/env';
-const actions=new Set(['list','get','acquire','renew','release','stage','commit','read','uploadMedia','readMedia','listTrash','remove','restoreTrash','listFormDrafts','getFormDraft','saveFormDraft','trashFormDraft','restoreFormDraft','stageFormImage','readFormImage','saveFormImages','stageFormMedia','readFormMedia','saveFormMedia','prepareDirectFormVideo','confirmDirectFormVideo']);
+const actions=new Set(['listArticles','articleStatus','publishArticle','readArticle','readArticleMedia','withdrawArticle','list','get','acquire','renew','release','stage','commit','read','uploadMedia','readMedia','listTrash','remove','restoreTrash','listFormDrafts','getFormDraft','saveFormDraft','trashFormDraft','restoreFormDraft','stageFormImage','readFormImage','saveFormImages','stageFormMedia','readFormMedia','saveFormMedia','prepareDirectFormVideo','confirmDirectFormVideo']);
 export async function nativeDraftRequest(uid:string,familyId:string,body:Record<string,unknown>,signal:AbortSignal){
  const user=getAuth().currentUser,base=ENV.momentMediaApiUrl.trim().replace(/\/+$/,'');
  if(!user||user.uid!==uid)throw Object.assign(Error('AUTH_CHANGED'),{code:'AUTH_CHANGED'});

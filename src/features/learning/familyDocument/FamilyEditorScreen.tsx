@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ActivityIndicator,BackHandler,Keyboard,Pressable,View,Modal,Alert} from 'react-native';
-import {useFocusEffect,useRouter} from 'expo-router';
+import {useFocusEffect,useRouter,useLocalSearchParams} from 'expo-router';
 import {Asset} from 'expo-asset';
 import {File} from 'expo-file-system';
 import {WebView,type WebViewMessageEvent} from 'react-native-webview';
@@ -22,19 +22,20 @@ const MODULE=require('../../../../assets/editor/family-editor.html');
 type Scope={uid:string;familyId:string};
 
 export function FamilyEditorScreen(){
+ const {publish}=useLocalSearchParams<{publish?:string}>();
  const {user,activeFamilyId,activeMembership}=useAuth();
  const theme=useA3Theme();
  if(!user||!activeFamilyId||!activeMembership||activeMembership.familyId!==activeFamilyId)return <SafeAreaView style={{flex:1,backgroundColor:theme.colors.background}}><Text>Hãy đăng nhập và chọn nhà trước khi mở Editor.</Text></SafeAreaView>;
- return <OfflineEditor key={JSON.stringify([user.uid,activeFamilyId])} uid={user.uid} familyId={activeFamilyId}/>;
+ return <OfflineEditor key={JSON.stringify([user.uid,activeFamilyId])} uid={user.uid} familyId={activeFamilyId} syncForPublish={publish==='1'}/>;
 }
 type Field={id:string;caption:string;richBody:string|null};
 type Reader={caption:string;richBody:string};
-function OfflineEditor({uid,familyId,field,reader,onClose,onApply,finishRef}:Scope&{field?:Field;reader?:Reader;onClose?:()=>void;onApply?:(value:FieldValue)=>void;finishRef?:React.MutableRefObject<()=>void>}){
+function OfflineEditor({uid,familyId,field,reader,onClose,onApply,finishRef,syncForPublish=false}:Scope&{syncForPublish?:boolean;field?:Field;reader?:Reader;onClose?:()=>void;onApply?:(value:FieldValue)=>void;finishRef?:React.MutableRefObject<()=>void>}){
  const router=useRouter(),theme=useA3Theme(),typography=useA3Typography(),c=theme.colors;
  const web=useRef<WebView>(null),ready=useRef(false),closing=useRef(false),keyboard=useRef(false);
  const [html,setHtml]=useState<string|null>(null),[error,setError]=useState(''),[opened,setOpened]=useState(false);
- // Opt-in only. The R29 artifact contains the native draft bridge; keep disabled in production until live gates pass.
- const syncEnabled=!field&&!reader&&process.env.EXPO_PUBLIC_FAMILY_EDITOR_DRAFTS_ENABLED==='1';
+ // Opt-in: an explicit article workflow enables sync for this editor session only.
+ const syncEnabled=!field&&!reader&&(syncForPublish||process.env.EXPO_PUBLIC_FAMILY_EDITOR_DRAFTS_ENABLED==='1');
  const [initialSelection,setInitialSelection]=useState<MomentSelection|null>(null),selectionTaken=useRef(false);
  const [selectionReady,setSelectionReady]=useState(!syncEnabled||!supportsLearningSelection);
  useEffect(()=>{if(!syncEnabled||!supportsLearningSelection||selectionTaken.current)return;selectionTaken.current=true;setInitialSelection(learningSelection.take(uid,familyId));setSelectionReady(true);},[uid,familyId,syncEnabled]);
