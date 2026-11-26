@@ -1,8 +1,8 @@
 {
-  "release": "R16R11R54",
-  "version": "1.3.73",
-  "versionCode": 143083,
-  "fileCount": 1847,
+  "release": "R16R11R55",
+  "version": "1.3.74",
+  "versionCode": 143084,
+  "fileCount": 1848,
   "files": [
     {
       "path": ".easignore",
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 5378,
-      "sha256": "5884327b929abb5a39743be6d0e4a176ddc3b8bdaedf218386fe307918ae68d8"
+      "bytes": 5537,
+      "sha256": "94b1c657838c354aa3549c1c11677ecbf9fef942c6e62b5b3ab32cc3daee3a8a"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "edaf338c350d99792fd37484e73f9209631ea231b0a78e3683be472d49fb0505"
+      "sha256": "5c3282e11cd237b378b5dd6b30b6d98624630a447a19e1c75e23c038d27fc8c5"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -2705,6 +2705,11 @@
       "sha256": "91bdb74cde1552f8119f6063031dfe5614c93bb8577a969bdf219f5109b6a988"
     },
     {
+      "path": "document/phases/phase-14/home-games/PHASE_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP.md",
+      "bytes": 1993,
+      "sha256": "292e0c0ffd1d0de9b60e9a712b1616e37f9c49bf0ab4446f2a0ddf5eb7e60ef6"
+    },
+    {
       "path": "document/phases/phase-14/home/BUILD_CHECK_REPORT_PHASE_14C.txt",
       "bytes": 1356,
       "sha256": "7cac4e52d6b9f01ed596a675b2f2b36d4ad3b987fcee18011985d2060ac22422"
@@ -2793,11 +2798,6 @@
       "path": "document/phases/phase-14/home/PHASE_14J_VALIDATION_REPORT.txt",
       "bytes": 1851,
       "sha256": "54ea62d89f44d0e3d9b7f2d31cb0a1e86174ce82fcf6905e4961dae89e9a8345"
-    },
-    {
-      "path": "document/phases/phase-14/home-games/PHASE_14T_0A_SINGLE_ANDROID_IDENTITY_CLEANUP.md",
-      "bytes": 1993,
-      "sha256": "292e0c0ffd1d0de9b60e9a712b1616e37f9c49bf0ab4446f2a0ddf5eb7e60ef6"
     },
     {
       "path": "document/phases/phase-14/music/PHASE_14D_NHA_MINH_MUSIC_TODO_IMPLEMENTATION.md",
@@ -4932,12 +4932,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "488279688c54d03efee6a18c82dd4699031117c038d1dd3f3ee4ae06ab69ee75"
+      "sha256": "4be8ae1cfb89fbfad2be9c43466fd3355c0c99fa956d8d7e6e67e1641ab8be5b"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "0ae833ca9b145ec093400f1421b65db72fde1f14efe42ce9d02738e89a310d0d"
+      "sha256": "66ed0043497ac3eca132ba52ab966cbe2a0c63accef62b2dd9c86f9f0aceb387"
     },
     {
       "path": "patch-manifest.json",
@@ -4967,12 +4967,12 @@
     {
       "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
       "bytes": 13143,
-      "sha256": "19d02f37141c68e22f6ab539fea6ff433d148aac31b4430b551839b1a456eb8d"
+      "sha256": "76551927b6686086405bcb73bb3f45703b1b3b492d06e269dc18b2ec4a2feda3"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
       "bytes": 10659,
-      "sha256": "c6902495a85cde4c51ac6bcb0f4167d3430e741d7388b0a0dba09e74ffde0d0b"
+      "sha256": "273582197b7558c800c52c387efcab9ed07cefc1e31ede67cbe95a8b00b7553b"
     },
     {
       "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
@@ -5042,7 +5042,7 @@
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
       "bytes": 8906,
-      "sha256": "09f00e44f67f5ee990f24e006ee82ababb9f4de95ab7508ec307bec0d6ded251"
+      "sha256": "fedcd7ec87148b156b98297e4967d3fe431e3b8fd5a1b4754036d73fe275bc46"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5467,7 +5467,7 @@
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
       "bytes": 3954,
-      "sha256": "6a9acbcf8bac98d9a6a682223f9ca667a55de58dc5efff5e709b2b4205258152"
+      "sha256": "a086e0111c5928bdb7b6b921c8d612aedd0aa37c94d4f6c4f2d39cf6d10ee2b8"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "ed0cdac45b51259f40966cadbad600c92a3c364ef1040e4bb346aafd65e20bec"
+      "sha256": "b875a5a15184f782072fc4e7bf7c0c5e274f7796161908bc58791369a2668839"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5777,7 +5777,7 @@
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
       "bytes": 3043,
-      "sha256": "7966f430510601602028813ac412d48615fa69dd9e8800d6ee0de3874d01da6a"
+      "sha256": "fd1b6725fc9b867d2449827bc055b737a0c92f9b897ee6af063a2a091c95fd74"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h1-kotlin-event-payload.js",
@@ -6320,6 +6320,11 @@
       "sha256": "859318c9c02a9db2d6cc9a31144a80e6b10ae5f2770a9cde706d86cb107abad8"
     },
     {
+      "path": "scripts/tests/release/test-event-transaction-runtime.cjs",
+      "bytes": 4157,
+      "sha256": "deefea8339ee431c6c5cf16b8c1008c54aa6f59c2f22815ef3da103f8de16cb4"
+    },
+    {
       "path": "scripts/tests/release/test-family-cv-r7-contract.cjs",
       "bytes": 5985,
       "sha256": "79977a3a992611e7f5c3dce33f525d59f56e14031ebfb85672028cb21c71b460"
@@ -6727,7 +6732,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 5071,
-      "sha256": "4128b9996d10b7cfc294ba4d4c32d4c2e3a1cd7ab71bfc75f8ea35779764d9bd"
+      "sha256": "3c59141ab71b78d704ec8514ee0a989510a37f4b6dd7b318ceecf5fdbb576acf"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -6951,8 +6956,8 @@
     },
     {
       "path": "scripts/tests/release/test-r44-private-rules-emulator.cjs",
-      "bytes": 2476,
-      "sha256": "8c3423a765c7d0b799f5f01fae3fc24332278ad32a869ffe7974aa23aa3d8ec1"
+      "bytes": 3738,
+      "sha256": "874ac2482d1843d1c32863fc6ededf6dd11e5dba9e456f0589ae21651a2a64e8"
     },
     {
       "path": "scripts/tests/release/test-r8r2-profile-welcome-save-flow.cjs",
@@ -7285,11 +7290,6 @@
       "sha256": "f73ccf0ccc6d89536e97eb882afd0a67cc288f3f4e009ab543f6e4cc961fa547"
     },
     {
-      "path": "src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx",
-      "bytes": 21602,
-      "sha256": "c7edf94166f3675b8b3f9edf415cb3a3bb9360c185651de83546e1b86a211ca7"
-    },
-    {
       "path": "src/app/(home)/(time-capsule)/home-time-capsule-compose.tsx",
       "bytes": 25782,
       "sha256": "e0af9b64c509e1f2688b685889dbb84a8c8a3d70e029280241f2a4b201040376"
@@ -7298,6 +7298,11 @@
       "path": "src/app/(home)/(time-capsule)/home-time-capsule-demo.tsx",
       "bytes": 516,
       "sha256": "84c7d0087779b5f55ad152c02926e8e7970c4fb2597c40e7f86e95b530a74916"
+    },
+    {
+      "path": "src/app/(home)/(time-capsule)/home-time-capsule/[capsuleId].tsx",
+      "bytes": 21602,
+      "sha256": "c7edf94166f3675b8b3f9edf415cb3a3bb9360c185651de83546e1b86a211ca7"
     },
     {
       "path": "src/app/(home)/(time-capsule)/home-time-capsules.tsx",
@@ -7332,7 +7337,7 @@
     {
       "path": "src/app/(internal)/board-game-bot-test.tsx",
       "bytes": 43911,
-      "sha256": "1de76f374db6c961f07e7038d804f076eae802524f4bfa36ceb1898194ce4b44"
+      "sha256": "bc3b329a3f73d620581d36aa95340eb7e66c0c962cb0c0827d709521747a1281"
     },
     {
       "path": "src/app/(internal)/developer-tools.tsx",
@@ -8511,8 +8516,8 @@
     },
     {
       "path": "src/services/event/eventService.ts",
-      "bytes": 26440,
-      "sha256": "6ff13a68d0a84a4b9f1603775e8affc78de845f43cd84c53c2c2eba47875b543"
+      "bytes": 26656,
+      "sha256": "fcd1424db331c72509ca586dc8004aaea892250ac27f0b8bbbaec9c252573cc0"
     },
     {
       "path": "src/services/family/familyJoinService.ts",
@@ -9240,6 +9245,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R54-DEV",
+  "candidate": "R16R11R55-DEV",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

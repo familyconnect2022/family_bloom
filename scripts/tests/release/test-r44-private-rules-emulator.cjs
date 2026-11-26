@@ -3,12 +3,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 if(!process.env.FIRESTORE_EMULATOR_HOST||!/^127\.0\.0\.1:\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST)||!process.env.BLOOM_RULES_TEST_DEPS)throw Error('Local emulator and isolated dependencies required');
 const req=createRequire(path.join(process.env.BLOOM_RULES_TEST_DEPS,'package.json'));
 const {initializeTestEnvironment,assertFails,assertSucceeds}=req('@firebase/rules-unit-testing');
-const {doc,collection,getDoc,getDocs,setDoc,updateDoc,deleteDoc}=req('firebase/firestore');
+const {doc,collection,getDoc,getDocs,setDoc,updateDoc,deleteDoc,runTransaction}=req('firebase/firestore');
 const projectId='demo-family-bloom-r44';
 const rules=fs.readFileSync(path.resolve(__dirname,'../../../firestore.rules'),'utf8');
-const privatePaths=['familyEditorDraftUsers/alice/houses/house/drafts/lesson','familyEditorDraftUsers/alice/houses/house/drafts/lesson/revisions/rev/chunks/0000','familyEditorDraftUsers/alice/houses/house/drafts/lesson/media/asset','familyEditorDraftUsers/alice/houses/house/forms/moment','familyEditorDraftUsers/alice/houses/house/forms/moment/images/asset','familyEditorDraftRateLimits/alice','familyMediaAuditScans/state','familyEditorFormMediaIndex/asset','familyEditorFormMediaReview/state'];
+const privatePaths=['familyEditorDraftUsers/alice/houses/house/drafts/lesson','familyEditorDraftUsers/alice/houses/house/drafts/lesson/revisions/rev/chunks/0000','familyEditorDraftUsers/alice/houses/house/drafts/lesson/media/asset','familyEditorDraftUsers/alice/houses/house/drafts/lesson/revisions/rev/referenceIndex/summary','familyEditorDraftUsers/alice/houses/house/forms/moment','familyEditorDraftUsers/alice/houses/house/forms/moment/images/asset','familyEditorDraftRateLimits/alice','familyMediaAuditScans/state','familyEditorFormMediaIndex/asset','familyEditorFormMediaReview/state'];
 (async()=>{const env=await initializeTestEnvironment({projectId,firestore:{rules}});let checks=0;try{await env.clearFirestore();await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore();await Promise.all([...privatePaths.map(p=>setDoc(doc(db,p),{marker:'test'})),setDoc(doc(db,'users/alice'),{uid:'alice'}),setDoc(doc(db,'families/house'),{ownerId:'alice'}),setDoc(doc(db,'families/house/members/alice'),{uid:'alice',role:'owner'})]);});
  const owner=env.authenticatedContext('alice').firestore();await assertSucceeds(getDoc(doc(owner,'users/alice')));checks++;
  for(const db of [owner,env.authenticatedContext('bob').firestore(),env.unauthenticatedContext().firestore()])for(const p of privatePaths){const ref=doc(db,p);await assertFails(getDoc(ref));await assertFails(getDocs(collection(db,p.split('/').slice(0,-1).join('/'))));await assertFails(updateDoc(ref,{marker:'tampered'}));await assertFails(deleteDoc(ref));await assertFails(setDoc(doc(db,p+'-new'),{marker:'created'}));checks+=5;}
- assert.equal(checks,136);console.log('PASS '+checks+' emulator checks (135 denied private operations + 1 positive control)');
+ assert.equal(checks,151);console.log('PASS '+checks+' emulator checks (150 denied private operations + 1 positive control)');
+ const event=doc(owner,'families/house/events/r55-event'),foreign=doc(env.authenticatedContext('bob').firestore(),'families/house/events/r55-event');
+ const payload={id:'r55-event',familyId:'house',createdByUid:'alice',title:'Test event',personIds:[],moderationStatus:'visible',moderatedByUid:null,moderatedAt:null,createdAt:'2026-11-26T00:00:00.000Z',updatedAt:'2026-11-26T00:00:00.000Z'};
+ await assertSucceeds(runTransaction(owner,async tx=>{const snap=await tx.get(event);assert(!snap.exists());tx.set(event,payload);}));
+ await assertSucceeds(runTransaction(owner,async tx=>{const snap=await tx.get(event);assert.equal(snap.data().title,payload.title);tx.update(event,{title:'Edited'});}));
+ await assertFails(runTransaction(owner,async tx=>{await tx.get(event);tx.update(event,{createdByUid:'bob'});}));
+ await assertFails(getDoc(foreign));
+ await assertFails(runTransaction(env.authenticatedContext('bob').firestore(),async tx=>{await tx.get(foreign);tx.update(foreign,{title:'Tampered'});}));
+ assert.equal((await getDoc(event)).data().title,'Edited');console.log('PASS event transaction and access checks (5 rules assertions + final state)');
  }finally{await env.cleanup();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -189,9 +189,11 @@ const todayStartIso = () => {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
 };
 
+const newEventId = (familyId: string): string => doc(collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId))).id;
+
 export const eventService = {
-  newEventId(familyId: string): string {return doc(collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId))).id;},
-  async create(familyId: string, input: CreateEventInput, id = this.newEventId(familyId)): Promise<FamilyEvent> {
+  newEventId,
+  async create(familyId: string, input: CreateEventInput, id: string = newEventId(familyId)): Promise<FamilyEvent> {
     const db = getFirestore();
     if (!/^[A-Za-z0-9_-]{1,180}$/.test(id) || getAuth().currentUser?.uid !== input.createdByUid) throw new AppError("EVENT_NOT_OWNER", "EVENT");
     const ref = doc(db, FIRESTORE_PATHS.familyEvent(familyId, id));
@@ -210,7 +212,9 @@ export const eventService = {
     return runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (getAuth().currentUser?.uid !== input.createdByUid) throw new AppError("EVENT_NOT_OWNER", "EVENT");
-      const live = snapshot.exists() ? normalizeFamilyEvent(snapshot.data() as Record<string, unknown>, id, familyId) : null;
+      const raw = snapshot.exists() ? snapshot.data() as Record<string, unknown> : null;
+      if (snapshot.exists() && (!raw || raw.id !== id || raw.familyId !== familyId || !readIso(raw.dateISO))) throw new AppError("EVENT_EDIT_CONFLICT", "EVENT");
+      const live = raw ? normalizeFamilyEvent(raw, id, familyId) : null;
       let verdict; try { verdict = checkEventCreate(live, event); } catch { throw new AppError("EVENT_EDIT_CONFLICT", "EVENT"); }
       if (verdict === "ALREADY_COMMITTED" && live) return live;
       tx.set(ref, removeUndefinedDeep(event)); return event;
