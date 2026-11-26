@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 6457,
-      "sha256": "59037271247ba333adcc87730709707a47db52d2c3cf91a42d6b1729ca2b6a10"
+      "bytes": 6473,
+      "sha256": "ed1e9eaa056c1a230f9bbc919a8f3c24e7c7ad9e8271c40d1a435c3354bc35b2"
     },
     {
       "path": ".gitignore",

@@ -68,15 +68,15 @@ jobs:
           set -o pipefail
           printf '\nandroid { buildTypes { release { signingConfig null } } }\n' >> android/app/build.gradle
           cd android
-          df -h . "$HOME/.gradle"
-          free -h
+          df -h . "$HOME" || true
+          free -h || true
           log="$RUNNER_TEMP/bloom-gradle.log"
           for attempt in 1 2; do
             if ./gradlew --no-daemon --stacktrace --console=plain :app:assembleRelease 2>&1 | tee "$log"; then
               exit 0
             fi
-            df -h . "$HOME/.gradle"
-            free -h
+            df -h . "$HOME" || true
+            free -h || true
             if [ "$attempt" = 1 ] && grep -Fq "Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '1.0.0'] was not found" "$log"; then
               echo 'Gradle plugin resolution failed; retrying once.'
               continue
