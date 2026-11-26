@@ -22,3 +22,5 @@ assert.doesNotMatch(context,/signInWithGoogleChooser/);
 assert.match(service,/async signOutFirebaseOnly\(\)/);
 assert.match(service,/GoogleSignin\.signOut\(\)/);
 console.log('[ANDROID R16R11R10 GOOGLE CANCEL/UI PASS] single CTA, spinner+label, cancellation reset, SDK account choice');
+
+assert.match(login,/function LoginButton/);assert.match(login,/<NativeText[^>]*>\{title\}<\/NativeText>/);assert.match(login,/<View collapsable=\{false\}/);assert.doesNotMatch(login,/<BloomRouteEntrance kind="login" delayMs=/);

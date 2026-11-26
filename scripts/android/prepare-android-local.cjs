@@ -31,14 +31,21 @@ try{
  node('scripts/tests/release/test-family-field-document.cjs');
  node('scripts/tests/release/test-family-media-review.cjs');
  node('scripts/android/configure-main-env.cjs','ensure');
- if(!exists('node_modules')){
-  console.log('[DEPS] node_modules absent; installing once, including dev dependencies.');
-  run(process.platform==='win32'?'npm.cmd':'npm',[exists('package-lock.json')?'ci':'install','--include=dev','--no-audit','--no-fund'],{shell:process.platform==='win32'});
- }else console.log('[DEPS] Keeping existing node_modules; no automatic npm install.');
+ if(!exists('package-lock.json'))throw Error('Missing pinned package-lock.json. Restore it from Git before building.');
+ const lock=read('package-lock.json'),pkg=read('package.json');
+ const sameDeps=(x,y)=>JSON.stringify(Object.entries(x||{}).sort(([a],[b])=>a.localeCompare(b)))===JSON.stringify(Object.entries(y||{}).sort(([a],[b])=>a.localeCompare(b)));
+ if(lock.version!==pkg.version||!lock.packages?.['']||!sameDeps(lock.packages[''].dependencies,pkg.dependencies)||!sameDeps(lock.packages[''].devDependencies,pkg.devDependencies))throw Error('Lockfile does not match package.json. Restore the official release lock.');
+ const check=()=>cp.spawnSync(process.execPath,['scripts/setup/check-package-lock.js'],{cwd:root,encoding:'utf8'});
+ const missing=installedProblems(),locked=missing.length?null:check();
+ if(!exists('node_modules')||missing.length||locked?.status!==0){
+  console.log('[DEPS] Repairing missing or mismatched dependencies with pinned npm ci.');
+  if(missing.length)console.log(missing.join('\n'));
+  if(locked?.status!==0&&locked)console.log(locked.stdout||'',locked.stderr||'');
+  run(process.platform==='win32'?'npm.cmd':'npm',['ci','--include=dev','--no-audit','--no-fund'],{shell:process.platform==='win32'});
+ }else console.log('[DEPS] Keeping existing node_modules; dependencies match lockfile.');
  const fail=installedProblems();
- if(fail.length)throw Error('Dependencies need attention:\n'+fail.join('\n')+'\nRun npm ci --include=dev --no-audit --no-fund explicitly if needed (pinned lockfile). No automatic reinstall was attempted.');
- if(exists('package-lock.json'))node('scripts/setup/check-package-lock.js');
- else console.log('[DEPS] No local lockfile; installed direct package versions checked. Generate lockfile only when intentionally installing dependencies.');
+ if(fail.length)throw Error('Dependencies still missing after installation:\n'+fail.join('\n'));
+ node('scripts/setup/check-package-lock.js');
  node('scripts/setup/check-p2_37r2-local-install.js');
  node('scripts/setup/check-expo-route-uniqueness.cjs');
  console.log('[PASS] Android local preflight: source, gateway, dependencies, routes.');

@@ -1,12 +1,12 @@
 import { getBloomStatusBarStyle } from "../../constants/theme";
 import { useBloomThemeRevision } from '../../theme/BloomThemeProvider';
 import { createBloomStyles } from '../../theme/createBloomStyles';
-import { BloomButton } from "@/components/ui/BloomButtonComponents";
+import type {ViewStyle,StyleProp} from "react-native";
 import { BloomTextInput } from "@/components/ui/BloomInputComponents";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text as NativeText, StyleSheet, View } from 'react-native';
 import { BloomText as Text } from '../../components/ui/BloomText';
 import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
@@ -19,6 +19,18 @@ import { useAuth } from "../../context/AuthContext";
 import { useA3Theme } from '../../appearance3/useAppearance3';
 import { useA3LegacyStyles } from '../../appearance3/compatReactiveStyles';
 
+
+// Keep one native text/view tree alive across Google account-picker transitions.
+function LoginButton({title,icon,iconPosition='left',onPress,customStyle,isLoading=false,disabled=false,textStyle}:{title:string;icon:import("react").ReactNode;iconPosition?:'left'|'right';onPress:()=>void;customStyle:StyleProp<ViewStyle>;isLoading?:boolean;disabled?:boolean;textStyle:{color:string};keepTextWhileLoading?:boolean}){
+ const {colors}=useA3Theme();const locked=disabled||isLoading;
+ return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{disabled:locked,busy:isLoading}} disabled={locked} onPress={onPress} style={({pressed})=>[{backgroundColor:colors.primary,minHeight:48,paddingHorizontal:15,paddingVertical:12,justifyContent:'center',alignItems:'center',opacity:locked&&!isLoading?.65:pressed?.86:1},customStyle]}>
+  <View collapsable={false} style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:10}}>
+   <View style={{width:22,alignItems:'center'}}>{isLoading?<ActivityIndicator color={textStyle.color} size="small"/>:iconPosition==='left'?icon:null}</View>
+   <NativeText style={{color:textStyle.color,fontSize:15,fontWeight:'700',textAlign:'center',flexShrink:1}}>{title}</NativeText>
+   <View style={{width:22,alignItems:'center'}}>{!isLoading&&iconPosition==='right'?icon:null}</View>
+  </View>
+ </Pressable>;
+}
 
 export default function Login() {
   const __a3Theme = useA3Theme();
@@ -63,7 +75,6 @@ export default function Login() {
         />
         </BloomRouteEntrance>
 
-        <BloomRouteEntrance kind="login" delayMs={120}>
         <View style={__a3_styles.formWrap}>
           <View style={__a3_styles.brandRow}>
             <View>
@@ -89,7 +100,7 @@ export default function Login() {
             containerStyle={{ width: "100%" }}
           />
 
-          <BloomButton
+          <LoginButton
             title="TIẾP TỤC"
             icon={<Ionicons name="arrow-forward" color={__a3Colors.onPrimary} size={22} />}
             iconPosition="right"
@@ -102,7 +113,7 @@ export default function Login() {
           />
 
           <View style={__a3_styles.dividerRow}><View style={__a3_styles.divider}/><Text style={__a3_styles.orText}>HOẶC</Text><View style={__a3_styles.divider}/></View>
-          <BloomButton
+          <LoginButton
             title={isLoadingGoogle ? "ĐANG KẾT NỐI GOOGLE…" : "CHỌN TÀI KHOẢN GOOGLE"}
             icon={<Ionicons name="logo-google" size={22} color={__a3Colors.onPrimary} />}
             customStyle={__a3_styles.googleButton}
@@ -122,7 +133,6 @@ export default function Login() {
           )}
           <Text style={__a3_styles.promise}>Bloom chỉ dùng thông tin cần thiết để giữ đúng ngôi nhà và kỷ niệm của bạn.</Text>
         </View>
-        </BloomRouteEntrance>
       </BloomKeyboardScreen>
     </ScreenContainer>
   );

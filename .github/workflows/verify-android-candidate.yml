@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate, test/r16r11r55-android-diagnostics, test/r16r11r57-candidate, test/r16r11r58-candidate]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate, test/r16r11r55-android-diagnostics, test/r16r11r57-candidate, test/r16r11r58-candidate, test/r16r11r59-candidate]
   workflow_dispatch:
 permissions:
   contents: read
@@ -73,14 +73,17 @@ jobs:
           df -h . "$HOME" || true
           free -h || true
           log="$RUNNER_TEMP/bloom-gradle.log"
-          for attempt in 1 2; do
-            if ./gradlew --no-daemon --stacktrace --console=plain :app:assembleRelease 2>&1 | tee "$log"; then
+          for attempt in 1 2 3; do
+            refresh=()
+            if [ "$attempt" != 1 ]; then refresh+=(--refresh-dependencies); fi
+            if ./gradlew "${refresh[@]}" --no-daemon --stacktrace --console=plain :app:assembleRelease 2>&1 | tee "$log"; then
               exit 0
             fi
             df -h . "$HOME" || true
             free -h || true
-            if [ "$attempt" = 1 ] && grep -Fq "Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '1.0.0'] was not found" "$log"; then
-              echo 'Gradle plugin resolution failed; retrying once.'
+            if [ "$attempt" != 3 ] && grep -Fq "Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '1.0.0'] was not found" "$log"; then
+              echo 'Gradle plugin resolution failed; retrying with dependency refresh.'
+              sleep 15
               continue
             fi
             exit 1

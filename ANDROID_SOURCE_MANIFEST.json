@@ -1,7 +1,7 @@
 {
-  "release": "R16R11R58",
-  "version": "1.3.76",
-  "versionCode": 143086,
+  "release": "R16R11R59",
+  "version": "1.3.77",
+  "versionCode": 143087,
   "fileCount": 1854,
   "files": [
     {
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 6647,
-      "sha256": "1fc5e41ef31e927a29da662fea6b3a7dd4ee828cb06ffac85b02380c35cdb04b"
+      "bytes": 6836,
+      "sha256": "d3350c332227e727694455875f482865cc3ef9ceab2c47bbf2f20090b5cd8da6"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "2149f3115be3064e333d92ff9c1541a9603ebe7e12ced40f5182b6ebf9cef059"
+      "sha256": "187f334ccb667300f96f38d58493db05daeafcb866bc213821d33a476ba0d910"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -4932,12 +4932,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "6820d32f24b6d01aa5078464c25259a8fcf4e5ffced5f7f8b4628fe1662e6c89"
+      "sha256": "3816fb893e9acf28b66b1624a79150c96bca84c82c4e575ea4490a6de5af2939"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "f53192fe60c4e792f18c7a307b9b383c32ecd4733260427f9042b301c205d712"
+      "sha256": "fb1d97230c31e617594d40da64241996cfb3cf8d62cf5c5ace8dfeb07f4901b3"
     },
     {
       "path": "patch-manifest.json",
@@ -4967,12 +4967,12 @@
     {
       "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
       "bytes": 13143,
-      "sha256": "51a7e411760583b36539fe3f41e7589ebe974a306163f99ca81f80490b398f4a"
+      "sha256": "85e2d776a5ecee881d324bf69082d0cbadf57969a37f9c668d3e8dfbf2a74df6"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
       "bytes": 10659,
-      "sha256": "79b8587fe2e2ee709fb3fb2b6f5cc1708dc75b19624ba16cf3310305a1eac2eb"
+      "sha256": "d99d8708e44228597794f72d9387951d447b8dbe5072e34afe3e93d18becb1e9"
     },
     {
       "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
@@ -5042,7 +5042,7 @@
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
       "bytes": 8906,
-      "sha256": "57efe3b7f893d1a862a10d8e0f32fcf9140a484fe061dd5edb1baddc24bb92bb"
+      "sha256": "beb5d711002f5887c470c3906a5105c227a32af9bad0606db28cc17f5e5a4bf9"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5136,8 +5136,8 @@
     },
     {
       "path": "scripts/android/prepare-android-local.cjs",
-      "bytes": 2804,
-      "sha256": "7577a970e6f2fb4446fce942de1dd446019c3bb51351f558cba122c06a172b99"
+      "bytes": 3453,
+      "sha256": "708660468ea2f79e5a6cb134a22b89184bfe562bb7441ce8270c0cfae635129c"
     },
     {
       "path": "scripts/android/session/CAU_HINH_ANDROID_PHIEN_PREVIEW.cmd",
@@ -5467,7 +5467,7 @@
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
       "bytes": 3954,
-      "sha256": "97c95d51ae77893adddeb0255376939bb6c3fb63bc835a46cff2b2f8b4668f12"
+      "sha256": "4c9563a2ed2f47050e936bc3ca3ffbae798f5ea6a1ce886114be2ac5b75bc76d"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5547,7 +5547,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2890,
-      "sha256": "e598c3045b777243509e30333dfccedf39296e62ac1dd99403fcf04544693830"
+      "sha256": "7d049f8c315abbda366930518ad95ba0b0950f42562ba5827b73d8577512b464"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6341,8 +6341,8 @@
     },
     {
       "path": "scripts/tests/release/test-family-editor-offline.cjs",
-      "bytes": 2215,
-      "sha256": "b91e5ea6880c8d9ff89ea5c6dc8b51f47c538dc94359299b385af779f273c58c"
+      "bytes": 2588,
+      "sha256": "7e3d15e9f922fbda6a292e55a0ea12382417cf31411b4390d8ce383ae3e2aa6e"
     },
     {
       "path": "scripts/tests/release/test-family-field-document.cjs",
@@ -6721,8 +6721,8 @@
     },
     {
       "path": "scripts/tests/release/test-r16r11r10-google-cancel-ui.cjs",
-      "bytes": 1566,
-      "sha256": "3d275938d0ce1f596230834c0683576941cf3f94cd64a80a31cae50ff14bf44f"
+      "bytes": 1795,
+      "sha256": "e646f20f6d960dd60d790d9ad852d3dbcedfdc2220178e262b524402ec482fd7"
     },
     {
       "path": "scripts/tests/release/test-r16r11r12-person-directory-navigation.cjs",
@@ -6736,8 +6736,8 @@
     },
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
-      "bytes": 5071,
-      "sha256": "bc1e8e82c709904900b264e415cd16acbdbb53ff55d95ebf7905f6d36783c2ee"
+      "bytes": 6482,
+      "sha256": "78e3162278568a7b4bc2b05c953affdda78b84c05349439d99e12d77b259ee39"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -7141,8 +7141,8 @@
     },
     {
       "path": "src/app/(auth)/login.tsx",
-      "bytes": 7984,
-      "sha256": "08b448541091e883552c9309cf529c45183552ac993b9691bfa158d19c95c063"
+      "bytes": 9313,
+      "sha256": "1715039eff50f6257d720901b514e7ad116ef059c55b8894bd9ac74b962d1c1f"
     },
     {
       "path": "src/app/(auth)/otp.tsx",
@@ -7347,7 +7347,7 @@
     {
       "path": "src/app/(internal)/board-game-bot-test.tsx",
       "bytes": 43911,
-      "sha256": "ebbecfc9c44b0c3269e4629a27a69eb132bc6749523489c6ad6053212fd52a64"
+      "sha256": "f1e044bfb9acd518b482e40afbcda8b81bb08e6b408b0d554e092fcf800ac0e9"
     },
     {
       "path": "src/app/(internal)/developer-tools.tsx",
@@ -7761,8 +7761,8 @@
     },
     {
       "path": "src/components/onboarding/WelcomeModal.tsx",
-      "bytes": 19291,
-      "sha256": "2d71b4e185d6b7b1e128e52645274bcbf80adb4ca5f5a61ea58336b63cb972ad"
+      "bytes": 19303,
+      "sha256": "7e8ab22cdb489de67d173056f994dc9a69b79324e8badf405d5038fe35e2fe3f"
     },
     {
       "path": "src/components/system/BloomAppBootstrap.tsx",
@@ -8176,8 +8176,8 @@
     },
     {
       "path": "src/features/learning/FamilyArticles.tsx",
-      "bytes": 17471,
-      "sha256": "4e9a26a0c8be2d4dd491f5936672b5d71fafbdd126b40124d3551dc5dafba467"
+      "bytes": 20714,
+      "sha256": "52ac2a8710b3992aa82dc94fc0012e948c23f7b10de70912ff7b3c60f3ae778d"
     },
     {
       "path": "src/features/learning/LessonRichView.tsx",
@@ -8191,8 +8191,8 @@
     },
     {
       "path": "src/features/learning/familyDocument/FamilyEditorScreen.tsx",
-      "bytes": 13677,
-      "sha256": "32f552a6eebf5ef8644fd7da0bafab2e6722e8963adecb5b3e5f9654cda2a466"
+      "bytes": 15194,
+      "sha256": "d8a41e9ebd37ac763cc4d07479492c99dc7ea7949a8ef9cc80a762080f3070a2"
     },
     {
       "path": "src/features/learning/familyDocument/LocalMomentRecovery.tsx",

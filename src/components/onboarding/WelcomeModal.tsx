@@ -246,8 +246,8 @@ export function WelcomeModal({ visible, onContinue, preview = false }: Props) {
             <Pressable accessibilityRole="button" accessibilityLabel="Bước vào mái nhà Family Bloom"
               accessibilityState={{disabled:continuing, busy:continuing}}
               disabled={continuing} onPress={continueIntoFamily}
-              style={({pressed}) => [styles.cta, {backgroundColor:themeColor}, pressed && styles.ctaPressed]}>
-              <Text style={[styles.ctaText, {color:getBloomActiveColors().onPrimary}, small && styles.smallCtaText]}>
+              style={({pressed}) => [styles.cta, {backgroundColor:'#864625',borderColor:'#AD743B',borderWidth:1}, pressed && styles.ctaPressed]}>
+              <Text style={[styles.ctaText, {color:'#FFF5DE'}, small && styles.smallCtaText]}>
                 {preview ? 'Đóng bản xem thử · Không lưu dữ liệu' : continuing ? 'Đang xác nhận…' : 'Bước vào mái nhà Family Bloom'}
               </Text>
             </Pressable>
