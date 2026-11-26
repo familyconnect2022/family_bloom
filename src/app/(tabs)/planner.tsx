@@ -620,6 +620,10 @@ export default function PlannerScreen() {
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [pendingEvents, setPendingEvents] = useState<FamilyEvent[]>([]);
   const [composerVisible, setComposerVisible] = useState(false);
+  const createLock = useRef(false);
+  const createAttempt = useRef<{ familyId: string; uid: string; id: string } | null>(null);
+  const createScope = useRef("");
+  createScope.current = `${activeFamilyId ?? ""}:${user?.uid ?? ""}`;
   const [composerDirty, setComposerDirty] = useState(false);
   const [eventTitle, setEventTitle] = useState("");
   const [eventDate, setEventDate] = useState<Date>(today);
@@ -765,6 +769,8 @@ export default function PlannerScreen() {
   }, [panelWidthValue]);
 
   const openComposer = useCallback(() => {
+    if (createLock.current) return;
+    createAttempt.current = null;
     // Nút tạo mới thuộc tab Sự kiện: bắt đầu từ hôm nay, không kế thừa
     // một ngày đã chọn trong tab Lịch từ lần xem trước.
     const initialDate = new Date();
@@ -786,6 +792,8 @@ export default function PlannerScreen() {
   }, []);
 
   const closeComposerNow = useCallback(() => {
+    if (createLock.current) return;
+    createAttempt.current = null;
     setShowTimePicker(false);
     setComposerVisible(false);
     setComposerDirty(false);
@@ -809,7 +817,8 @@ export default function PlannerScreen() {
 
   useEffect(() => {
     const requestedPersonId = typeof params.personId === "string" ? params.personId.trim() : "";
-    if (!requestedPersonId || !activeFamilyId) return;
+    if (!requestedPersonId || !activeFamilyId || createLock.current) return;
+    createAttempt.current = null;
     const selected = new Date(year, monthIndex, selectedDay, 12, 0, 0, 0);
     const initialDate = isDateBeforeToday(selected, today) ? today : selected;
     setEventDate(new Date(initialDate));
@@ -836,7 +845,7 @@ export default function PlannerScreen() {
   }, [router]);
 
   const publishEvent = () => {
-    if (!activeFamilyId || !user) return;
+    if (!activeFamilyId || !user || createLock.current) return;
     const title = eventTitle.trim();
     if (!title) {
       showToast({ ...parseAppError({ code: "EVENT_TITLE_REQUIRED" }), duration: 2800 });
@@ -875,7 +884,11 @@ export default function PlannerScreen() {
     };
 
     const timestamp = new Date().toISOString();
-    const tempId = `pending-${Date.now()}`;
+    if (!createAttempt.current || createAttempt.current.familyId !== activeFamilyId || createAttempt.current.uid !== user.uid) createAttempt.current = {familyId:activeFamilyId,uid:user.uid,id:calendarService.newEventId(activeFamilyId)};
+    const attempt = createAttempt.current;
+    const scope = createScope.current;
+    createLock.current = true;
+    const tempId = `pending-${attempt.id}`;
     const optimisticEvent: FamilyEvent = {
       id: tempId,
       familyId: activeFamilyId,
@@ -910,8 +923,9 @@ export default function PlannerScreen() {
     // Sau khi đăng từ tab Sự kiện, giữ nguyên tab để người dùng thấy danh sách.
     startTask({ title: "Bloom đang gieo sự kiện…", message: title });
 
-    void calendarService.createEvent(activeFamilyId, input)
+    void calendarService.createEvent(activeFamilyId, input, attempt.id)
       .then((createdEvent) => {
+        if (createAttempt.current === attempt) createAttempt.current = null;
         setPendingEvents((current) => current.filter((item) => item.id !== tempId));
         smartReminderService.invalidate(activeFamilyId);
         void activityService.createForEvent(createdEvent, userProfile?.displayName || "Một thành viên").catch(() => undefined);
@@ -941,8 +955,9 @@ export default function PlannerScreen() {
       })
       .catch((error) => {
         setPendingEvents((current) => current.filter((item) => item.id !== tempId));
+        if (createScope.current === scope && createAttempt.current === attempt) {setComposerVisible(true);setComposerDirty(true);}
         failTask(error, { title: "Sự kiện chưa lên lịch được", message: title });
-      });
+      }).finally(() => {createLock.current = false;});
   };
 
   const listSections = useMemo<PlannerEventSection[]>(() => [

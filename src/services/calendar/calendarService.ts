@@ -3,7 +3,8 @@ import { eventService } from "../event/eventService";
 
 /** Calendar stays a thin facade so event domain logic has a single source of truth. */
 export const calendarService = {
-  createEvent: (familyId: string, input: CreateEventInput) => eventService.create(familyId, input),
+  newEventId: (familyId: string) => eventService.newEventId(familyId),
+  createEvent: (familyId: string, input: CreateEventInput, id?: string) => eventService.create(familyId, input, id),
   getEvent: (familyId: string, eventId: string) => eventService.getById(familyId, eventId),
   subscribeEvent: eventService.subscribeById,
   listEvents: (familyId: string) => eventService.list(familyId),

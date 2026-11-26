@@ -12,7 +12,7 @@ function isText(b){return !b.includes(0)&&Buffer.from(b.toString('utf8')).equals
 function gitBlob(rel){const r=cp.spawnSync('git',['-C',root,'show',':'+rel],{encoding:null,maxBuffer:20*1024*1024});return r.status===0?r.stdout:null;}
 const m=JSON.parse(fs.readFileSync(path.join(root,manifestFile),'utf8'));
 const app=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8')).expo;
-if(m.release!=='R16R11R53'||m.version!==app.version||m.versionCode!==app.android.versionCode||m.fileCount!==m.files.length)throw Error('Release manifest/version mismatch');
+if(m.release!=='R16R11R54'||m.version!==app.version||m.versionCode!==app.android.versionCode||m.fileCount!==m.files.length)throw Error('Release manifest/version mismatch');
 const seen=new Set();
 for(const e of m.files){
  if(typeof e.path!=='string'||path.isAbsolute(e.path)||e.path.split('/').some(x=>!x||x==='..'||x==='.')||seen.has(e.path)||e.path===manifestFile)throw Error('Unsafe manifest path');

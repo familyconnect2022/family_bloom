@@ -10,7 +10,6 @@ import {
   orderBy,
   query,
   runTransaction,
-  setDoc,
   startAfter,
   updateDoc,
   where,
@@ -35,7 +34,7 @@ import { removeUndefinedDeep } from "../../utils/firestore";
 import { FIRESTORE_PATHS } from "../firebase/firestorePaths";
 import { familyGraphRepository } from "../familyGraph/familyGraphRepository";
 import { readIso } from "../../utils/dataBoundary";
-import { checkEventEdit, eventContentPatch } from "../../features/learning/familyDocument/publishManager.cjs";
+import { checkEventCreate, checkEventEdit, eventContentPatch } from "../../features/learning/familyDocument/publishManager.cjs";
 
 const nowIso = () => new Date().toISOString();
 const cleanNullable = (value: unknown) => {
@@ -191,9 +190,11 @@ const todayStartIso = () => {
 };
 
 export const eventService = {
-  async create(familyId: string, input: CreateEventInput): Promise<FamilyEvent> {
+  newEventId(familyId: string): string {return doc(collection(getFirestore(), FIRESTORE_PATHS.familyEvents(familyId))).id;},
+  async create(familyId: string, input: CreateEventInput, id = this.newEventId(familyId)): Promise<FamilyEvent> {
     const db = getFirestore();
-    const ref = doc(collection(db, FIRESTORE_PATHS.familyEvents(familyId)));
+    if (!/^[A-Za-z0-9_-]{1,180}$/.test(id) || getAuth().currentUser?.uid !== input.createdByUid) throw new AppError("EVENT_NOT_OWNER", "EVENT");
+    const ref = doc(db, FIRESTORE_PATHS.familyEvent(familyId, id));
     const timestamp = nowIso();
     const clean = await normalizeCreateInput(familyId, input);
     const event: FamilyEvent = {
@@ -206,8 +207,14 @@ export const eventService = {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    await setDoc(ref, removeUndefinedDeep(event));
-    return event;
+    return runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (getAuth().currentUser?.uid !== input.createdByUid) throw new AppError("EVENT_NOT_OWNER", "EVENT");
+      const live = snapshot.exists() ? normalizeFamilyEvent(snapshot.data() as Record<string, unknown>, id, familyId) : null;
+      let verdict; try { verdict = checkEventCreate(live, event); } catch { throw new AppError("EVENT_EDIT_CONFLICT", "EVENT"); }
+      if (verdict === "ALREADY_COMMITTED" && live) return live;
+      tx.set(ref, removeUndefinedDeep(event)); return event;
+    });
   },
 
   async getById(familyId: string, eventId: string): Promise<FamilyEvent | null> {

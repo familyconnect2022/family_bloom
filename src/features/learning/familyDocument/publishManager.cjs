@@ -23,5 +23,6 @@ function matchesPublishedMoment(existing,desired){try{return existing!=null&&ide
 const eventKeys=['title','dateISO','allDay','eventType','notificationLevel','participantsMode','participantIds','personIds','recurrence','description','location','attachments','attachmentPublicIds','coverAttachmentId'];
 function eventIdentity(e){if(!e||![e.id,e.familyId,e.createdByUid].every(validId)||typeof e.title!=='string'||!e.title.trim()||typeof e.dateISO!=='string'||!Number.isFinite(Date.parse(e.dateISO)))fail('EVENT_EDIT_CONFLICT');return JSON.stringify([e.id,e.familyId,e.createdByUid,...eventKeys.map(k=>e[k]??null)]);}
 function checkEventEdit(live,base,next){const a=eventIdentity(live),b=eventIdentity(base),c=eventIdentity(next);if(['id','familyId','createdByUid'].some(k=>live[k]!==base[k]||live[k]!==next[k]))fail('EVENT_EDIT_CONFLICT');if(a===c)return 'ALREADY_COMMITTED';if(a!==b)fail('EVENT_EDIT_CONFLICT');return 'UPDATE';}
-function eventContentPatch(e){eventIdentity(e);return Object.fromEntries([...eventKeys,'dateKey','year','month','day','updatedAt'].map(k=>[k,e[k]]));}
-module.exports={checkEventEdit,eventContentPatch,identity,checkExisting,checkAssets,editIdentity,checkEdit,prepareEdit,matchesPublishedMoment};
+function eventContentPatch(e){eventIdentity(e);return Object.fromEntries([...eventKeys,'dateKey','year','month','day','updatedAt'].filter(k=>e[k]!==undefined).map(k=>[k,e[k]]));}
+function checkEventCreate(existing,desired){eventIdentity(desired);if(existing==null)return 'CREATE';if(eventIdentity(existing)!==eventIdentity(desired))fail('EVENT_EDIT_CONFLICT');return 'ALREADY_COMMITTED';}
+module.exports={checkEventCreate,checkEventEdit,eventContentPatch,identity,checkExisting,checkAssets,editIdentity,checkEdit,prepareEdit,matchesPublishedMoment};

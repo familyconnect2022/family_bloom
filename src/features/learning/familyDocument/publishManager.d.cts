@@ -9,3 +9,4 @@ export function matchesPublishedMoment(existing:unknown,desired:unknown):boolean
 
 export function checkEventEdit(live:unknown,base:unknown,next:unknown):'UPDATE'|'ALREADY_COMMITTED';
 export function eventContentPatch(e:unknown):Record<string,unknown>;
+export function checkEventCreate(existing:unknown,desired:unknown):'CREATE'|'ALREADY_COMMITTED';
