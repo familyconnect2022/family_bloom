@@ -33,7 +33,7 @@ import { useAuth } from "../../context/AuthContext";
 import { profileService } from "../../services/profile/profileService";
 import { momentMediaApi } from "../../services/media/momentMediaApi";
 import type { BloodType, Gender } from "../../types/user";
-import { familyIntroCharacters, FAMILY_INTRO_MAX } from "../../utils/familyIntroduction";
+import { familyIntroCharacters, FAMILY_INTRO_MAX, canChangeFamilyIntroName } from "../../utils/familyIntroduction";
 import { useA3Theme } from '../../appearance3/useAppearance3';
 import { useA3LegacyStyles } from '../../appearance3/compatReactiveStyles';
 
@@ -94,7 +94,8 @@ export default function Profile() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [editIntro, setEditIntro] = useState(false);
   const [introDraft, setIntroDraft] = useState("");
-  const canEditIntro = membership?.role === "admin" || membership?.role === "owner" || inviteFamily?.ownerId === user?.uid;
+  const introRole = !!inviteFamily && !!user?.uid && (membership?.role === "admin" || membership?.role === "owner" || inviteFamily.ownerId === user.uid);
+  const canEditIntro = introRole && !!activeFamilyId && canChangeFamilyIntroName(activeFamilyId, inviteFamily?.introName);
   useEffect(() => {
     let active = true;
     setInviteFamily(null);
@@ -123,9 +124,15 @@ export default function Profile() {
     finally { setInviteBusy(false); }
   };
   const saveIntroductionName = async () => {
-    if (!activeFamilyId || !user?.uid || inviteBusy) return;
+    if (!activeFamilyId || !user?.uid || inviteBusy || !canEditIntro || introDraft.trim().normalize('NFC') === inviteFamily?.introName) return;
     setInviteBusy(true);
     try {
+      const accepted = await confirm({
+        eyebrow: "TÊN GIỚI THIỆU", title: "Xác nhận đổi tên giới thiệu?",
+        message: "Mỗi gia đình chỉ được đổi tên giới thiệu một lần duy nhất. Hãy chọn cẩn thận. Mã nhà cũ vẫn dùng được.",
+        icon: "information-circle-outline", cancelLabel: "Chọn lại", confirmLabel: "Xác nhận đổi tên",
+      });
+      if (!accepted) return;
       await familyService.updateFamilyIntroName(activeFamilyId, user.uid, introDraft);
       setInviteFamily(await familyService.getFamily(activeFamilyId));
       setEditIntro(false);
@@ -456,10 +463,14 @@ export default function Profile() {
                   <Ionicons name="copy-outline" size={17} color={__a3Colors.white} /><Text style={__a3_styles.copyFamilyIdText}>Sao chép</Text>
                 </Pressable>}
               </View>
+              {introRole && <View style={__a3_styles.familyInviteNote}>
+                <Ionicons name={canEditIntro ? "information-circle-outline" : "lock-closed-outline"} size={15} color={__a3Colors.primary} />
+                <Text style={__a3_styles.familyInviteNoteText}>{canEditIntro ? "Tên giới thiệu chỉ được đổi 1 lần duy nhất. Hãy chọn cẩn thận." : "Đã sử dụng lượt đổi tên duy nhất. Tên giới thiệu không thể đổi thêm."}</Text>
+              </View>}
               {canEditIntro && !editIntro && <BloomButton title="Đổi tên giới thiệu" onPress={() => { setIntroDraft(inviteFamily?.introName || inviteFamily?.familyCode || ""); setEditIntro(true); }} />}
               {canEditIntro && editIntro && <View style={{ gap: 9, marginVertical: 8 }}>
                 <BloomTextInput label="Tên mới" value={introDraft} onChangeText={setIntroDraft} autoCorrect={false} autoCapitalize="none" placeholder="Ví dụ: Nhà Bắp 🌷" helperText={`${familyIntroCharacters(introDraft)}/${FAMILY_INTRO_MAX} ký tự · Có dấu, khoảng trắng, ký hiệu đặc biệt · Phân biệt hoa/thường`} />
-                <BloomButton title="Lưu tên giới thiệu" disabled={inviteBusy || familyIntroCharacters(introDraft.trim()) > FAMILY_INTRO_MAX || !introDraft.trim()} isLoading={inviteBusy} onPress={() => void saveIntroductionName()} />
+                <BloomButton title="Lưu tên giới thiệu" disabled={inviteBusy || familyIntroCharacters(introDraft.trim()) > FAMILY_INTRO_MAX || !introDraft.trim() || introDraft.trim().normalize('NFC') === inviteFamily?.introName} isLoading={inviteBusy} onPress={() => void saveIntroductionName()} />
                 <BloomButton title="Huỷ đổi tên" disabled={inviteBusy} onPress={() => setEditIntro(false)} />
               </View>}
               <Text style={__a3_styles.familyInviteHint}>Mã nhà cũ (vẫn dùng được)</Text>

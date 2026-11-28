@@ -33,3 +33,9 @@ export function validateFamilyIntroName(input: string): string {
 export function familyIntroDocId(name: string): string {
   return `v1_${encodeURIComponent(name.normalize('NFC'))}`;
 }
+
+/** Existing custom aliases count as used; generated bootstrap does not. */
+export function canChangeFamilyIntroName(familyId: string, currentName?: string | null): boolean {
+  return !currentName || currentName === `Nhà-${familyId.slice(0, 10)}`;
+}
+export const FAMILY_INTRO_RENAME_LOCKED = 'Tên giới thiệu đã được đổi một lần và không thể đổi thêm.';

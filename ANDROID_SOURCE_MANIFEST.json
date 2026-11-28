@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R105",
+  "release": "R16R11R109",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -4631,8 +4631,8 @@
     },
     {
       "path": "firestore.cloud.rules",
-      "bytes": 130381,
-      "sha256": "2fb4b362cee2de38f096d1a5ac92c53b5ff4e7762143abbd26249d60160fc4c2"
+      "bytes": 131004,
+      "sha256": "1702ffafe6562a9274ce6d7679b69fdc3d5db81ff28f75607e8f16b9097925f7"
     },
     {
       "path": "firestore.indexes.json",
@@ -4641,8 +4641,8 @@
     },
     {
       "path": "firestore.rules",
-      "bytes": 150824,
-      "sha256": "1e04865fdb8947536c1e521c6979372d21f787d897fc642d2d228c2f1bf063c0"
+      "bytes": 151447,
+      "sha256": "d511b6053995cd5f63e13eb33dfa36d856dcfaa7075d48bc2b80f63556f4b408"
     },
     {
       "path": "functions/cloudFeatureFlags.js",
@@ -5206,8 +5206,8 @@
     },
     {
       "path": "scripts/firestore.rules",
-      "bytes": 150141,
-      "sha256": "62095beca18b3fdf4d80f1e77a5371075fd045423131b3617df53bce5179e8fe"
+      "bytes": 150764,
+      "sha256": "4f705e24c9daa8472a441a48deda5316831626c7c307b8d69e3d9ff876b6b8af"
     },
     {
       "path": "scripts/maintenance/Family_Bloom_Cleanup_Expo_Route_JS.bat",
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "e49bc80fa3fa8c53e05103b7acc1cf7905ba2297eb8f95fdbb5e9241fa0e00f1"
+      "sha256": "9d43405915095db32df3590f83b3fbfc90ab6f61721884f55e48b37007799081"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "9ae4200b6ea6e817ab81bec59591a68c7a3674ec68c3052aef13cdaa36ab8ae0"
+      "sha256": "77a2a3d1dc843914a4e5d09cdd590ece576b9f10dc0ad90ce1f6854b0c09672e"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -6826,8 +6826,8 @@
     },
     {
       "path": "scripts/tests/release/test-r3r12-family-intro-letter-radical.cjs",
-      "bytes": 5359,
-      "sha256": "cda9963f7a785fbf2c5c5f3af79aa11f8ce292685473e97b54e42e2f3b693edc"
+      "bytes": 5919,
+      "sha256": "33b13a3fede44eff915be5cdd56876b9d1b2f394128a1b029f6f14001c442551"
     },
     {
       "path": "scripts/tests/release/test-r3r13-blaze-ready.cjs",
@@ -6986,8 +6986,8 @@
     },
     {
       "path": "scripts/tests/release/test-r44-private-rules-emulator.cjs",
-      "bytes": 3768,
-      "sha256": "2af5fca4a5a369c1eadb71ec4c4538a9a9b57391a18503f05008f6b19bdfe150"
+      "bytes": 5862,
+      "sha256": "8623fdab157f747054e8432c76d752b79e5cd3b8fd7b138d796922baa2970973"
     },
     {
       "path": "scripts/tests/release/test-r8r2-profile-welcome-save-flow.cjs",
@@ -7436,8 +7436,8 @@
     },
     {
       "path": "src/app/(profile)/profile.tsx",
-      "bytes": 44002,
-      "sha256": "ef8322341f2b09580a9123b27e03be7e3ed38eae64c7d921b68114c7fc2df3af"
+      "bytes": 45289,
+      "sha256": "c98358f2e7194f0db7c2beb7ec61ab9d5fea835a7ececff8b84fe9ed2af2bb8f"
     },
     {
       "path": "src/app/(profile)/settings.tsx",
@@ -8671,8 +8671,8 @@
     },
     {
       "path": "src/services/family/familyService.ts",
-      "bytes": 14050,
-      "sha256": "5db30054aa7b63c8688cecab5355b5bacc8f4178fbb12655b09c95d6a6957913"
+      "bytes": 14216,
+      "sha256": "84271ce23d139892e7070622b39c8bae7bc2079ef82a798afedf61800f75b462"
     },
     {
       "path": "src/services/familyGraph/crossFamilyGraphBridge.ts",
@@ -9241,8 +9241,8 @@
     },
     {
       "path": "src/utils/familyIntroduction.ts",
-      "bytes": 1822,
-      "sha256": "28a37e705d79dc039fa3f6709cd97ea7e3ff92fbac6d9c190bce35abe3ed3904"
+      "bytes": 2203,
+      "sha256": "0d9968f85506f0d10f364d39b68dea864e5e353855a99ccbb6f2f8a4af0e24d2"
     },
     {
       "path": "src/utils/firestore.ts",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R105",
+  "candidate": "R16R11R109",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

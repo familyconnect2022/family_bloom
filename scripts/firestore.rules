@@ -454,6 +454,12 @@ service cloud.firestore {
 
     // Public directory of case-sensitive invitation names. Mutations are atomic
     // with families/{id}. The deterministic URI-encoded key supports all symbols.
+    // One custom introduction name per family. Legacy families without a name
+    // can receive the generated default without consuming their one change.
+    function familyIntroCanChange(familyId, currentName) {
+      return currentName == null || currentName == ''
+        || currentName == ('Nhà-' + (familyId.size() > 10 ? familyId[0:10] : familyId));
+    }
     match /family_intro_names/{nameKey} {
       allow get: if signedIn();
       allow list: if false;
@@ -840,7 +846,10 @@ service cloud.firestore {
         (owner(familyId)
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['introName','introNameKey']))
         || (graphAdmin(familyId)
+          && familyIntroCanChange(familyId, resource.data.get('introName', null))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['introName','introNameKey','updatedAt'])
+          && request.resource.data.introName != resource.data.get('introName', null)
+          && request.resource.data.introNameKey != resource.data.get('introNameKey', null)
           && request.resource.data.keys().hasAll(['introName','introNameKey'])
           && request.resource.data.introName is string
           && request.resource.data.introName.size() > 0

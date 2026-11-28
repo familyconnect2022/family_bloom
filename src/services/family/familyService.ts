@@ -4,7 +4,7 @@ import { CreateProfileInput, Family, FamilyMember, UserFamilyMembership, UserPro
 import { normalizeUserProfile } from "../../utils/profile";
 import { removeUndefinedDeep } from "../../utils/firestore";
 import { createFamilyCodeCandidate } from "../../utils/family";
-import { familyIntroDocId, validateFamilyIntroName } from "../../utils/familyIntroduction";
+import { familyIntroDocId, validateFamilyIntroName, canChangeFamilyIntroName, FAMILY_INTRO_RENAME_LOCKED } from "../../utils/familyIntroduction";
 import { AppError } from "../../types/errors";
 import { readMembership, readFamilyMember } from "../../utils/dataBoundary";
 
@@ -160,6 +160,7 @@ export const familyService = {
         const role = memberSnap.exists() ? (memberSnap.data() as FamilyMember).role : null;
         if (family.ownerId !== uid && role !== 'owner' && role !== 'admin') throw new Error('Chỉ quản trị viên của nhà mới được đổi tên giới thiệu.');
         if (family.introName === name) return name;
+        if (!canChangeFamilyIntroName(familyId, family.introName)) throw new Error(FAMILY_INTRO_RENAME_LOCKED);
         if (newSnap.exists() && newSnap.data()?.familyId !== familyId) throw new Error('Tên giới thiệu này đã được nhà khác sử dụng.');
         if (legacySnap?.exists() && legacySnap.data()?.familyId !== familyId) throw new Error('Tên giới thiệu này đã được nhà khác sử dụng.');
         const oldKey = family.introNameKey;

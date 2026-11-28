@@ -48,7 +48,8 @@ let ts;try{ts=require('typescript')}catch{}
 if(ts){
  const code=ts.transpileModule(alias,{fileName:'familyIntroduction.ts',compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const m={exports:{}};new Function('module','exports',code)(m,m.exports);
- const {familyIntroDocId:encode,validateFamilyIntroName:validate,familyIntroCharacters:count}=m.exports;
+ const {familyIntroDocId:encode,validateFamilyIntroName:validate,familyIntroCharacters:count,canChangeFamilyIntroName:canRename}=m.exports;
+ test('one custom alias, no quota consumed by legacy bootstrap',()=>{assert(canRename('abcdefghijk',null));assert(canRename('abcdefghijk','Nhà-abcdefghij'));assert(!canRename('abcdefghijk','Nhà-khac'));assert(!canRename('abcdefghijk','Gia đình Bloom'));assert(service.includes('!canChangeFamilyIntroName(familyId, family.introName)'));for(const f of ['firestore.rules','firestore.cloud.rules','scripts/firestore.rules'])assert(read(f).includes("familyIntroCanChange(familyId, resource.data.get('introName', null))"));});
  test('case-sensitive aliases, 20-character limit and arbitrary symbols behave correctly',()=>{
   assert.notEqual(encode('Nhà Hoa'),encode('nhà hoa'));
   assert.notEqual(encode('Nhà Hoa'),encode('Nha Hoa'));
