@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R109",
+  "release": "R16R11R111",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "9d43405915095db32df3590f83b3fbfc90ab6f61721884f55e48b37007799081"
+      "sha256": "40cf26d9910bafd8153c6666794271abaf3f983f326ca43a4fddfda255b3abc0"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6341,8 +6341,8 @@
     },
     {
       "path": "scripts/tests/release/test-family-articles.cjs",
-      "bytes": 7284,
-      "sha256": "c2096dc1402a161cb8331a0136821d7f09e3fb117bc3f956397152fd1893a81b"
+      "bytes": 7780,
+      "sha256": "91f8d7c7a27874965f85d6e82e935bd6a978a5f75268bbe7a756f000e81314ad"
     },
     {
       "path": "scripts/tests/release/test-family-cv-r7-contract.cjs",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "77a2a3d1dc843914a4e5d09cdd590ece576b9f10dc0ad90ce1f6854b0c09672e"
+      "sha256": "d5a8d18fcf8c0db3609ac7d540ddc8a013e140c274784f0fbdb8dcd113d3bdc6"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -8216,8 +8216,8 @@
     },
     {
       "path": "src/features/learning/FamilyArticles.tsx",
-      "bytes": 24939,
-      "sha256": "b8a873cc75677722f089597f3c9b1adf150835968306109dce4c0662316bec92"
+      "bytes": 27257,
+      "sha256": "f7375b6b8522a045c3936d0e85125124125914a78c948bb3d67b6cfbde5daf1a"
     },
     {
       "path": "src/features/learning/LearningHub.tsx",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R109",
+  "candidate": "R16R11R111",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }
