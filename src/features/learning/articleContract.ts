@@ -1,8 +1,13 @@
-export type Article={articleId:string;ownerUid:string;draftId:string;title:string;articleRevision:number;draftRevision:number;publishedAt:number;visible:boolean;coverMediaId?:string|null};
+import {validPenName} from './penName.cjs';
+import {validCategory} from './articleCategories.cjs';
+export type Article={articleId:string;ownerUid:string;draftId:string;title:string;articleRevision:number;draftRevision:number;publishedAt:number;visible:boolean;coverMediaId?:string|null;communityShared?:boolean;categoryId?:string;authorName?:string};
+export type ReadableArticle=Pick<Article,'articleId'|'articleRevision'|'title'|'publishedAt'|'coverMediaId'|'categoryId'|'authorName'>;
 export const hex=(x:unknown)=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 export const id=(x:unknown)=>typeof x==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(x);
 export const positive=(x:unknown)=>typeof x==='number'&&Number.isSafeInteger(x)&&x>0;
-export const validArticle=(a:any):a is Article=>!!a&&hex(a.articleId)&&id(a.ownerUid)&&id(a.draftId)&&typeof a.title==='string'&&positive(a.articleRevision)&&positive(a.draftRevision)&&Number.isSafeInteger(a.publishedAt)&&typeof a.visible==='boolean'&&(a.coverMediaId===undefined||a.coverMediaId===null||hex(a.coverMediaId));
+export const validArticle=(a:any):a is Article=>!!a&&hex(a.articleId)&&id(a.ownerUid)&&id(a.draftId)&&typeof a.title==='string'&&positive(a.articleRevision)&&positive(a.draftRevision)&&Number.isSafeInteger(a.publishedAt)&&typeof a.visible==='boolean'&&(a.authorName===undefined||validPenName(a.authorName))&&(a.categoryId===undefined||validCategory(a.categoryId))&&(a.communityShared===undefined||typeof a.communityShared==='boolean')&&(!a.communityShared||a.visible)&&(a.coverMediaId===undefined||a.coverMediaId===null||hex(a.coverMediaId));
+
+export const validCommunityArticle=(a:any):a is ReadableArticle=>!!a&&hex(a.articleId)&&positive(a.articleRevision)&&typeof a.title==='string'&&a.title.trim().length>0&&Number.isSafeInteger(a.publishedAt)&&(a.coverMediaId===null||hex(a.coverMediaId))&&(a.authorName===undefined||validPenName(a.authorName))&&(a.categoryId===undefined||validCategory(a.categoryId))&&a.ownerUid===undefined&&a.draftId===undefined&&a.familyId===undefined;
 
 // No local draft can masquerade as a published article. The server must acknowledge the exact revision.
 export async function publishCheckedArticle(request:(body:Record<string,unknown>)=>Promise<any>,target:{draftId:string;revision:number;previous:Article|null;options:string[]},cover:string|null):Promise<Article>{

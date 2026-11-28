@@ -1,0 +1,1 @@
+export function createNativeEditorTransport(options:{request:(body:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;authorize:()=>Promise<void>;active:()=>boolean;reply:(id:string,ok:boolean,value:unknown)=>void}):{receive:(id:unknown,body:unknown)=>boolean;cancel:()=>void};

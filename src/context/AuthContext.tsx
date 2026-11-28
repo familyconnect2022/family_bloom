@@ -1,5 +1,6 @@
 import { familyBloomSessionDiagnostics as diagnostic } from "../diagnostics/sessionDiagnostics";
 import { metroTestLogsEnabled } from "../diagnostics/metroLogging";
+import { sha256 } from "../features/learning/familyDocument/nativePublishJournal.cjs";
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
 import { toAppError } from "@/services/error/errorService";
@@ -75,6 +76,8 @@ export type AuthContextType = {
   /** Recheck Firebase for this same UID without signing out or trusting cache. */
   retryFirebaseVerification: () => void;
   logout: () => Promise<void>;
+  learningSessionEpoch: string | null;
+  authorizeLearningPublication: (uid: string, familyId: string) => Promise<void>;
   singleSessionStatus: "off" | "checking" | "active" | "unavailable";
   singleSessionNotice: string | null;
   retrySingleSession: () => void;
@@ -875,6 +878,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     && families.length > 1
     && !activeMembership;
 
+  // Hash the lease locally; the WebView never sees the credential or ID token.
+  const learningSessionEpoch = user ? sha256(JSON.stringify(['learning-native-v1',user.uid,sessionLeaseRef.current?.token ?? user.metadata?.lastSignInTime ?? String(authEpochRef.current)])).slice(0,32) : null;
+  const learningScopeRef = useRef({uid:user?.uid,familyId:activeMembership?.familyId});
+  learningScopeRef.current={uid:user?.uid,familyId:activeMembership?.familyId};
+  const authorizeLearningPublication = useCallback(async (uid:string,familyId:string) => {
+    const fail=(code:string)=>Object.assign(Error(code),{code});
+    const scopeOK=()=>authUidRef.current===uid&&learningScopeRef.current.uid===uid&&learningScopeRef.current.familyId===familyId;
+    if(!user||user.uid!==uid||!scopeOK())throw fail('AUTH_CHANGED');
+    if(singleSessionEnabled(uid)){
+      const lease=sessionLeaseRef.current;
+      if(!lease||lease.uid!==uid)throw fail('SESSION_UNAVAILABLE');
+      let result;try{result=await checkAndroidSession(user,lease);}catch{throw fail('SESSION_UNAVAILABLE');}
+      if(result!=='active'||sessionLeaseRef.current!==lease||!scopeOK())throw fail('SESSION_REPLACED');
+    }
+    if(!scopeOK())throw fail('AUTH_CHANGED');
+  },[user]);
   const value = useMemo<AuthContextType>(() => ({
     user,
     userProfile,
@@ -905,6 +924,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     dismissWelcome,
     requestWelcomeForFamily,
     logout,
+    learningSessionEpoch,
+    authorizeLearningPublication,
     singleSessionStatus,
     singleSessionNotice,
     retrySingleSession,
@@ -912,7 +933,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user, userProfile, families, activeMembership, familySelectionRequired, familyTransition, welcomeReady,
     switchFamily, completeFamilyTransition, authStatus, profileStatus, membershipStatus, verificationIssue, welcomeTarget, isLoadingPhone,
     googleLoginPhase, googleLoginNotice, loginWithGoogle, sendPhoneCode, confirmPhoneCode, resendPhoneCode, pendingPhoneNumber,
-    refreshProfile, retryFirebaseVerification, dismissWelcome, requestWelcomeForFamily, logout,
+    refreshProfile, retryFirebaseVerification, dismissWelcome, requestWelcomeForFamily, logout, learningSessionEpoch, authorizeLearningPublication,
     singleSessionStatus, singleSessionNotice, retrySingleSession,
   ]);
 
