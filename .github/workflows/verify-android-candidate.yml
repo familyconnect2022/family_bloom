@@ -1,7 +1,7 @@
 name: Verify Android candidate
 on:
   push:
-    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate, test/r16r11r55-android-diagnostics, test/r16r11r57-candidate, test/r16r11r58-candidate, test/r16r11r59-candidate, test/r16r11r60-candidate, test/r16r11r67-candidate, test/r16r11r68-candidate, main, test/r16r11r69-candidate, test/r16r11r101-candidate]
+    branches: [test/r16r11r32-android-candidate, test/r16r11r33-android-reproducible, test/r16r11r34-moment-field, test/r16r11r36-form-draft, test/r16r11r37-draft-resume, test/r16r11r38-draft-images, test/r16r11r39-draft-autosave, test/r16r11r42-integrated, test/r16r11r43-integrated, test/r16r11r44-candidate, test/r16r11r45-candidate, test/r16r11r46-candidate, test/r16r11r47-candidate, test/r16r11r48-candidate, test/r16r11r49-candidate, test/r16r11r50-candidate, test/r16r11r51-candidate, test/r16r11r52-candidate, test/r16r11r53-candidate, test/r16r11r54-candidate, test/r16r11r55-candidate, test/r16r11r55-android-diagnostics, test/r16r11r57-candidate, test/r16r11r58-candidate, test/r16r11r59-candidate, test/r16r11r60-candidate, test/r16r11r67-candidate, test/r16r11r68-candidate, main, test/r16r11r69-candidate, test/r16r11r101-candidate, test/r16r11r102-candidate]
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,7 +40,8 @@ jobs:
       - run: node scripts/tests/release/test-r16r11r15-local-preflight.cjs
       - run: node scripts/tests/release/test-r33-lock-contract.cjs
       - run: npm run build:entrypoints-check
-      - run: npm run phaseP2_37R2C:check
+      - name: Run Windows Debug BAT source gates on CI
+        run: node scripts/setup/check-debug-source-gates.cjs
       - name: Android Metro production bundle (no deploy, no signing)
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'

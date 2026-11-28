@@ -99,6 +99,13 @@ for /f "delims=" %%M in ('"!ADB!" -s "!DEVICE_SERIAL!" shell getprop ro.product.
 echo       Device: !DEVICE_MODEL!  [!DEVICE_SERIAL!]
 
 echo [2/7] Existing npm dependencies verified by shared preflight.
+REM Explicit final verification only; shared preflight owns dependency installation.
+if not exist "node_modules\expo-audio\package.json" goto :fail
+if not exist "node_modules\expo-asset\package.json" goto :fail
+node scripts\setup\check-expo-dependencies.js
+if errorlevel 1 goto :fail
+node scripts\setup\check-package-lock.js
+if errorlevel 1 goto :fail
 node scripts\setup\check-effective-expo-config.js
 if errorlevel 1 goto :fail
 node scripts\setup\check-board-audio-integrity.js

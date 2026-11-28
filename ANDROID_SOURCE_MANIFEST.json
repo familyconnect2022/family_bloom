@@ -1,8 +1,8 @@
 {
-  "release": "R16R11R101",
-  "version": "1.3.82",
-  "versionCode": 143092,
-  "fileCount": 1877,
+  "release": "R16R11R102",
+  "version": "1.3.83",
+  "versionCode": 143093,
+  "fileCount": 1878,
   "files": [
     {
       "path": ".easignore",
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 7085,
-      "sha256": "9bd696144461aff2656a80815570a2973077f6529d14fa8b2544c4b44040a72c"
+      "bytes": 7187,
+      "sha256": "080b3cd5ab15bade84b15c7c7202dc5c94174aa10cb2972bc18297cbe5b6f725"
     },
     {
       "path": ".gitignore",
@@ -67,7 +67,7 @@
     {
       "path": "app.json",
       "bytes": 2366,
-      "sha256": "d42b79440a44da121537c35c679fba12df4e8d66854ca4a260eedabb2ba9999f"
+      "sha256": "e2d61942134da3b756b2dd98f9931303fbfd08aa0b64af53c8279cfa243e21e1"
     },
     {
       "path": "assets/audio/board-game/capture.mp3",
@@ -4942,12 +4942,12 @@
     {
       "path": "package-lock.json",
       "bytes": 367292,
-      "sha256": "0d4505468e1ce8d74d2fcdc5841a7a2834632afcab4180fda318bdbabec9fbe0"
+      "sha256": "bc3ef0ec4d76b499c08ff529163ba68d72f44585875e03f69312dde04bb6f541"
     },
     {
       "path": "package.json",
       "bytes": 19011,
-      "sha256": "847ab1d2a972b7eee91622a7261ce217a5ae031c516bad18fa16095bfd625659"
+      "sha256": "62f57093a619b287b0dd176a9884088c18bf79f8e00dd7c9e4c74d22c675e39f"
     },
     {
       "path": "patch-manifest.json",
@@ -4977,12 +4977,12 @@
     {
       "path": "scripts/android/build/Family_Bloom_Android_Release_Build_APK_And_Share.bat",
       "bytes": 13143,
-      "sha256": "3d7b48c3ed46676f5c7aee6d801131bdf3ee7c0ac0f95d9ba137a9b117818f87"
+      "sha256": "00d4d911c72778e0ffe44845af7a1e40a98d7e77ba6ef0a033a0ec9affda33d2"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_Test_App_RELEASE.bat",
       "bytes": 10659,
-      "sha256": "1f313b2654654a52850d8727f82076bed1ad3683a954f246b723af65f69d69d6"
+      "sha256": "62a05092176d238f7c45e2f0f382bfce5308e59465bbade8d45f0d2b30ca729e"
     },
     {
       "path": "scripts/android/build/Family_Bloom_BUILD_APK_AND_SHARE.bat",
@@ -5041,8 +5041,8 @@
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat",
-      "bytes": 7988,
-      "sha256": "f5b9faf65e21749c37e11b99edc1cfdf69d09040dd182481f66492256118988f"
+      "bytes": 8347,
+      "sha256": "d1c2e43d1c659310d2988aa4225895714d5526efc56e68c3792ff3c5b4b7a6d0"
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Metro_Only.bat",
@@ -5052,7 +5052,7 @@
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
       "bytes": 8906,
-      "sha256": "6a3e6a627367c10e050b20392f4a9f02dc9820fa01632568c3cf1825d06a8877"
+      "sha256": "9d83892ff53ffb420f3d6fcad8b70e3c114aa22efb42df72fe9d4e864be56d51"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5410,6 +5410,11 @@
       "sha256": "01bb8fc27e2df83840e5ade25b66c1dbab1fc44790f57a82f6f944edb64c64c6"
     },
     {
+      "path": "scripts/setup/check-debug-source-gates.cjs",
+      "bytes": 1712,
+      "sha256": "c7d7c809b2231d711294379a023c94336a2a1a1e78d9f80ac57753073fa3e655"
+    },
+    {
       "path": "scripts/setup/check-effective-expo-config.js",
       "bytes": 2970,
       "sha256": "ed01cb54733c534548299f6740e2e73bd368f7d9d14c6e35ac233ea080169919"
@@ -5482,7 +5487,7 @@
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
       "bytes": 3954,
-      "sha256": "e5db4856360dfd9096586784cb564bbb54dbf104e344dc85968e893accebb7f1"
+      "sha256": "286fd0ed797400a7995924092ff231260e238631274ec8e0216a3af202706af0"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5562,7 +5567,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "426949d7e478414a392f8d4c46148c557b0c3cc12e2eb4078875dff947fea9a3"
+      "sha256": "d990b2de20c4536d5fdfbba49d02812a2732210aab7a0edc6e07a3d67a3a5a8d"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5921,8 +5926,8 @@
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
-      "bytes": 8047,
-      "sha256": "d77264d2ef759ab51f56dc690a89520c18f151f76490c9c9f04a93f34dbc33b1"
+      "bytes": 8151,
+      "sha256": "99d2372ff8083744a594d42d1ba08722f3838a358837c1483d9ce600cc2fd4c5"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
@@ -5931,13 +5936,13 @@
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
-      "bytes": 6063,
-      "sha256": "f551883f3aa4ebd37ee8f751a33b829e65b317844253e0ec168a7806c49d5bd5"
+      "bytes": 6226,
+      "sha256": "5f0a60dd07494f1022c2c5ad9f9127a662134a214c07a4a41606775d85242d3c"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
-      "bytes": 3906,
-      "sha256": "98559bfe1e247f7b5810aeb3ce48eeb7f0a3f98ba77123f291cae0a4e844049f"
+      "bytes": 4067,
+      "sha256": "32a7293e5936bfa04777bdaa21eec1e27c6c5acd0af4770273795fcc3a8c10e0"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
@@ -6762,7 +6767,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "fd91d79f69dc9d9d847f5e06b756c82f6fda1fafda4567b64ce5a04cf1db4fa5"
+      "sha256": "b0b2f11f06cb65903c139192a74346f55c6922a49ab5532fc609ff5901673eb4"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -7377,7 +7382,7 @@
     {
       "path": "src/app/(internal)/board-game-bot-test.tsx",
       "bytes": 43911,
-      "sha256": "4708175bf97bd0e8fe09a080a48f995bfac61f1b721a853856b01a27ab14eed7"
+      "sha256": "70fd060da03958992fedb7c0ad8073fa0f77eaf9a3227718453401acf4fe9e73"
     },
     {
       "path": "src/app/(internal)/developer-tools.tsx",
