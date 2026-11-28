@@ -1,6 +1,7 @@
 import { familyBloomSessionDiagnostics as diagnostic } from "../diagnostics/sessionDiagnostics";
 import { metroTestLogsEnabled } from "../diagnostics/metroLogging";
 import { sha256 } from "../features/learning/familyDocument/nativePublishJournal.cjs";
+import { setRecentCoverScope } from "../features/learning/recentArticles.cjs";
 import { useBloomToast } from "@/components/ui/BloomToast";
 import { parseAppError } from "@/constants/errorConstants";
 import { toAppError } from "@/services/error/errorService";
@@ -27,7 +28,7 @@ import { localNotificationService } from "../services/push/localNotificationServ
 import { pushTokenService } from "../services/push/pushTokenService";
 import { resetSharedRealtimeRegistry } from "../services/realtime/sharedRealtimeRegistry";
 import { ConfirmationResult, User } from "@react-native-firebase/auth";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { AuthStatus, ProfileStatus, UserFamilyMembership, UserProfile } from "../types";
 import { readMembership } from "../utils/dataBoundary";
@@ -880,6 +881,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Hash the lease locally; the WebView never sees the credential or ID token.
   const learningSessionEpoch = user ? sha256(JSON.stringify(['learning-native-v1',user.uid,sessionLeaseRef.current?.token ?? user.metadata?.lastSignInTime ?? String(authEpochRef.current)])).slice(0,32) : null;
+  useLayoutEffect(() => {
+    const ready=profileStatus==="ready"&&membershipStatus==="ready";
+    setRecentCoverScope(ready?user?.uid:null,ready?activeMembership?.familyId:null,learningSessionEpoch??'');
+    return()=>setRecentCoverScope(null,null);
+  },[user?.uid,activeMembership?.familyId,learningSessionEpoch,profileStatus,membershipStatus]);
   const learningScopeRef = useRef({uid:user?.uid,familyId:activeMembership?.familyId});
   learningScopeRef.current={uid:user?.uid,familyId:activeMembership?.familyId};
   const authorizeLearningPublication = useCallback(async (uid:string,familyId:string) => {
