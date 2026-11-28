@@ -38,6 +38,9 @@ function scanDocumentation(current) {
     if (['node_modules', '.git', '.expo', '.familybloom_backups', 'android', 'ios', 'dist'].includes(entry.name)) continue;
     const absolute = path.join(current, entry.name);
     const rel = path.relative(root, absolute).replace(/\\/g, '/');
+    // Build-And-Sign.ps1 writes this exact local machine-generated report.
+    // Preserve it and continue checking every other Markdown/TXT file in release/.
+    if (entry.isFile() && rel === 'release/BUILD_RESULT.txt') continue;
     // Historical update payload is an inert package snapshot, not live project documentation.
     // Keep enforcing document/ for all live source and non-payload update files.
     if (/^updates\/[^/]+\/payload(?:\/|$)/.test(rel)) continue;

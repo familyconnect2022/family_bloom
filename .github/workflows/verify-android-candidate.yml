@@ -61,6 +61,11 @@ jobs:
         shell: bash
         run: |
           failures=0
+          # Reproduce a previously built Windows workspace without using user data.
+          mkdir -p release
+          test ! -e release/BUILD_RESULT.txt
+          printf '%s\n' 'CI synthetic signed-build report' > release/BUILD_RESULT.txt
+          trap 'rm -f release/BUILD_RESULT.txt' EXIT
           echo '>>> node scripts/setup/check-expo-dependencies.js'
           if ! node scripts/setup/check-expo-dependencies.js; then echo '::error::Failed: node scripts/setup/check-expo-dependencies.js'; failures=$((failures+1)); fi
           echo '>>> node scripts/setup/check-package-lock.js'
