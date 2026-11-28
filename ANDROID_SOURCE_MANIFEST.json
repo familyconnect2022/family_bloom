@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R104",
+  "release": "R16R11R105",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 13561,
-      "sha256": "e9814d71a1d42967b82a3b367da195b52cb7a296500fda49596f8022b8011171"
+      "bytes": 16664,
+      "sha256": "5aedc456128b097a5cced9dfec5d8721620143b88783b1623481ce5229a0f279"
     },
     {
       "path": ".gitignore",
@@ -4966,8 +4966,8 @@
     },
     {
       "path": "scripts/android/build/Build-And-Sign.ps1",
-      "bytes": 10948,
-      "sha256": "21f81c728b9fe262beeb39693feac8f6b0a3763db07ed4a5a36e1dfdb1c0b7ec"
+      "bytes": 11304,
+      "sha256": "a8a85aac6103f17ad025b60ee77bba67028ae103189c87d3b42230bd71ab7c53"
     },
     {
       "path": "scripts/android/build/Family_Bloom_Android_RUN_TEST.bat",
@@ -5041,8 +5041,8 @@
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat",
-      "bytes": 8482,
-      "sha256": "730a52e7bb40e11d434e7a10e056436ab7ecb00541a9787756cc685d3bf3ee0f"
+      "bytes": 8596,
+      "sha256": "44b9b02c38d40f77507efda97828672525714715940f3420c6233816f0704e0d"
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Metro_Only.bat",
@@ -5481,8 +5481,8 @@
     },
     {
       "path": "scripts/setup/check-p2_37r2c-apk-native-proof.js",
-      "bytes": 3954,
-      "sha256": "e5db4856360dfd9096586784cb564bbb54dbf104e344dc85968e893accebb7f1"
+      "bytes": 4833,
+      "sha256": "03afe17385e43c5a48d77e0727b5089b9d6cbb9bb6df2f6b1a27e5f7e395e51d"
     },
     {
       "path": "scripts/setup/check-p2_37r2c-eas-apk-proof.js",
@@ -5491,8 +5491,8 @@
     },
     {
       "path": "scripts/setup/check-p2_37r2c-native-package.js",
-      "bytes": 9663,
-      "sha256": "df8a38b96da8575a7e02a8ff521d39c66859b25f3a27b7a0db971e329fa90bfb"
+      "bytes": 10306,
+      "sha256": "f728b6ed832a5a976a3a58bfe92a3bdd5b01a718fed642d09012f01d32ff785c"
     },
     {
       "path": "scripts/setup/check-package-lock.js",
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "29ef4ff1e283d5933fb00ea57c75082860e5f153d14c53e45b6828071abe7d64"
+      "sha256": "e49bc80fa3fa8c53e05103b7acc1cf7905ba2297eb8f95fdbb5e9241fa0e00f1"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5791,8 +5791,8 @@
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c-binary-identity-lock.js",
-      "bytes": 3294,
-      "sha256": "48a2db2d486f3aab254cda609f8ffd5e383e9e3c6ccc783c55c9bf87f271268d"
+      "bytes": 3427,
+      "sha256": "c2a88895c356da88686310a5e59db052865483815f5da50b3b3d6a8c353bd906"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h1-kotlin-event-payload.js",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "5d123813348aba3d3c3e4161faa23719fdf9e2958976992d4fb9aa31fcab7995"
+      "sha256": "9ae4200b6ea6e817ab81bec59591a68c7a3674ec68c3052aef13cdaa36ab8ae0"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R104",
+  "candidate": "R16R11R105",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

@@ -148,6 +148,8 @@ try {
   if (-not (Test-Path -LiteralPath 'android\gradlew.bat' -PathType Leaf)) { throw 'Prebuild did not generate android/gradlew.bat' }
   & node scripts/setup/check-generated-android-package.js 'com.familybloom.android'
   Ensure-Success 'Android native package check'
+  & node scripts/setup/check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config --require-generated-project --require-gradle-project
+  Ensure-Success 'Android native module and Gradle graph proof'
 
 
   # Append Groovy DSL after all generated build.gradle blocks; override Expo's default debug release signing.
@@ -193,6 +195,8 @@ android {
 
   & node scripts/setup/check-p2_37r2c-apk-native-proof.js $apk.FullName
   Ensure-Success 'Android APK native identity proof'
+  & node scripts/setup/check-board-audio-apk.js $apk.FullName
+  Ensure-Success 'Android compiled board audio proof'
   Log '[SIGN] Verifying APK cryptographic signature using Android SDK apksigner.'
   & $apkSigner verify --verbose --print-certs $apk.FullName
   Ensure-Success 'apksigner verify'

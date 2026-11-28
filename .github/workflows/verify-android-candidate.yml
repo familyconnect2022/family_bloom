@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,7 +53,7 @@ jobs:
           java-version: '17'
       - name: Generate synthetic Firebase config for CI native build only
         run: node scripts/setup/write-ci-google-services.cjs
-      - name: Run all pre-native Debug BAT regression commands on CI
+      - name: Run pre-native Debug BAT and signed Release regression commands on CI
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
           EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
@@ -122,7 +122,23 @@ jobs:
           if ! npm run release:check; then echo '::error::Failed: npm run release:check'; failures=$((failures+1)); fi
           echo '>>> npm run typecheck'
           if ! npm run typecheck; then echo '::error::Failed: npm run typecheck'; failures=$((failures+1)); fi
-          echo "Pre-native Debug failures: $failures"
+          echo '>>> npm run login:pill-edges-check'
+          if ! npm run login:pill-edges-check; then echo '::error::Failed: npm run login:pill-edges-check'; failures=$((failures+1)); fi
+          echo '>>> npm run single-session:config-check'
+          if ! npm run single-session:config-check; then echo '::error::Failed: npm run single-session:config-check'; failures=$((failures+1)); fi
+          echo '>>> npm run single-session:check'
+          if ! npm run single-session:check; then echo '::error::Failed: npm run single-session:check'; failures=$((failures+1)); fi
+          echo '>>> npm run graph:web-parity:check'
+          if ! npm run graph:web-parity:check; then echo '::error::Failed: npm run graph:web-parity:check'; failures=$((failures+1)); fi
+          echo '>>> npm run graph:web-dashboard:check'
+          if ! npm run graph:web-dashboard:check; then echo '::error::Failed: npm run graph:web-dashboard:check'; failures=$((failures+1)); fi
+          echo '>>> npm run graph:relation-choice:check'
+          if ! npm run graph:relation-choice:check; then echo '::error::Failed: npm run graph:relation-choice:check'; failures=$((failures+1)); fi
+          echo '>>> npm run graph:postsave:check'
+          if ! npm run graph:postsave:check; then echo '::error::Failed: npm run graph:postsave:check'; failures=$((failures+1)); fi
+          echo '>>> npm run android:separation:check'
+          if ! npm run android:separation:check; then echo '::error::Failed: npm run android:separation:check'; failures=$((failures+1)); fi
+          echo "Pre-native Debug and signed Release failures: $failures"
           test "$failures" -eq 0
       - name: Generate Android project (synthetic Firebase, no production credentials)
         env:
@@ -131,6 +147,27 @@ jobs:
           EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
         run: npx --no-install expo prebuild --platform android --clean --no-install
       - run: node scripts/setup/check-generated-android-package.js com.familybloom.android
+      - name: Verify generated native identity and actual Gradle module graph
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        run: |
+          printf '\norg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8\norg.gradle.workers.max=2\n' >> android/gradle.properties
+          node scripts/setup/check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config --require-generated-project --require-gradle-project
+      - name: Compile Debug APK and verify native DEX and audio (no device or distribution)
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        shell: bash
+        run: |
+          (cd android && ./gradlew --no-daemon --stacktrace --console=plain --max-workers=2 :app:assembleDebug) 2>&1 | tee "$RUNNER_TEMP/bloom-debug-gradle.log"
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' -type f | head -n 1)
+          test -n "$APK"
+          node scripts/setup/check-p2_37r2c-apk-native-proof.js "$APK"
+          node scripts/setup/check-board-audio-apk.js "$APK"
+          rm -f "$APK"
       - name: Compile unsigned Release APK, never publish or distribute
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
@@ -147,7 +184,7 @@ jobs:
           for attempt in 1 2 3; do
             refresh=()
             if [ "$attempt" != 1 ]; then refresh+=(--refresh-dependencies); fi
-            if ./gradlew "${refresh[@]}" --no-daemon --stacktrace --console=plain :app:assembleRelease 2>&1 | tee "$log"; then
+            if ./gradlew "${refresh[@]}" --no-daemon --stacktrace --console=plain --max-workers=2 :app:assembleRelease 2>&1 | tee "$log"; then
               exit 0
             fi
             df -h . "$HOME" || true
@@ -164,7 +201,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-gradle-diagnostics
-          path: ${{ runner.temp }}/bloom-gradle.log
+          path: |
+            ${{ runner.temp }}/bloom-gradle.log
+            ${{ runner.temp }}/bloom-debug-gradle.log
           if-no-files-found: ignore
       - name: Inspect APK manifest, DEX and board audio (CI only)
         run: |

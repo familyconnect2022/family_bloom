@@ -32,8 +32,15 @@ const eas = JSON.parse(read('eas.json'));
 const localPkg = JSON.parse(read('modules/family-bloom-overlay/package.json'));
 const config = JSON.parse(read('modules/family-bloom-overlay/expo-module.config.json'));
 
-if (app.expo?.version === '1.3.46' && app.expo?.android?.versionCode === 143056) pass('app.json binary identity = 1.3.46 / 143056');
-else fail('app.json must be version 1.3.46 with Android versionCode 143056');
+const release = JSON.parse(read('ANDROID_SOURCE_MANIFEST.json'));
+const expectedVersion = release.version;
+const expectedVersionCode = release.versionCode;
+const validIdentity = typeof expectedVersion === 'string' && /^\d+\.\d+\.\d+$/.test(expectedVersion) &&
+  Number.isSafeInteger(expectedVersionCode) && expectedVersionCode > 0;
+if (validIdentity && app.expo?.version === expectedVersion && app.expo?.android?.versionCode === expectedVersionCode &&
+    pkg.version === expectedVersion && app.expo?.android?.package === 'com.familybloom.android')
+  pass(`app.json/package.json binary identity = ${expectedVersion} / ${expectedVersionCode}`);
+else fail(`app.json/package.json binary identity must match verified release manifest: ${expectedVersion} / ${expectedVersionCode}`);
 
 if (eas.cli?.appVersionSource === 'local') pass('EAS appVersionSource=local locks app.json versionCode into build');
 else fail('eas.json must set cli.appVersionSource=local');
@@ -113,7 +120,7 @@ if (requireEffectiveConfig) {
         const effective = JSON.parse(r.stdout.trim());
         if (effective.android?.package === 'com.familybloom.android') pass('effective Expo config package=com.familybloom.android');
         else fail(`effective Expo package mismatch: ${effective.android?.package || 'missing'}`);
-        if (effective.version === '1.3.46' && effective.android?.versionCode === 143056) pass('effective Expo config = 1.3.46 / versionCode 143056');
+        if (validIdentity && effective.version === expectedVersion && effective.android?.versionCode === expectedVersionCode) pass(`effective Expo config = ${expectedVersion} / versionCode ${expectedVersionCode}`);
         else fail(`effective Expo binary identity mismatch: ${effective.version || '?'} / ${effective.android?.versionCode || '?'}`);
       } catch (error) {
         fail(`could not parse expo config JSON: ${error instanceof Error ? error.message : String(error)}`);
@@ -158,7 +165,7 @@ if (requireGradleProject) {
 
     const out = `${r.stdout || ''}\n${r.stderr || ''}`;
     const graphHasOverlay = /(?:Project|project)\s+['"]?:family-bloom-overlay['"]?/i.test(out)
-      || /family-bloom-overlay\s*\(1\.3\.5\)/i.test(out);
+      || out.includes(`family-bloom-overlay (${localPkg.version})`);
 
     if (r.status === 0) pass('Gradle projects command completed');
     else {

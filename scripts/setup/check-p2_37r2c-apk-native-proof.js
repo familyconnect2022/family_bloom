@@ -6,7 +6,16 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 
-const EXPECTED_VERSION_CODE = '143092';
+const root = path.resolve(__dirname, '../..');
+const release = JSON.parse(fs.readFileSync(path.join(root, 'ANDROID_SOURCE_MANIFEST.json'), 'utf8'));
+const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8')).expo;
+const pkgConfig = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+if (!Number.isSafeInteger(release.versionCode) || release.versionCode <= 0 ||
+    app?.android?.versionCode !== release.versionCode || app?.version !== release.version || pkgConfig.version !== release.version) {
+  console.error('FAIL APK expected identity disagrees with release manifest/app/package');
+  process.exit(1);
+}
+const EXPECTED_VERSION_CODE = String(release.versionCode);
 const EXPECTED_PACKAGE = 'com.familybloom.android';
 const EXPECTED_IDENTITY = 'P2.37R2C-H25-native-3';
 
@@ -49,6 +58,8 @@ catch (error) { console.error(`FAIL aapt dump badging failed: ${error instanceof
 const packageLine = badging.split(/\r?\n/).find((line) => line.startsWith('package:')) || '';
 const pkg = packageLine.match(/name='([^']+)'/)?.[1];
 const versionCode = packageLine.match(/versionCode='([^']+)'/)?.[1];
+const versionName = packageLine.match(/versionName='([^']+)'/)?.[1];
+if (versionName !== release.version) { console.error(`FAIL APK versionName=${versionName || '?'} expected=${release.version}`); process.exit(1); }
 if (pkg !== EXPECTED_PACKAGE) { console.error(`FAIL APK package=${pkg || '?'} expected=${EXPECTED_PACKAGE}`); process.exit(1); }
 if (versionCode !== EXPECTED_VERSION_CODE) { console.error(`FAIL APK versionCode=${versionCode || '?'} expected=${EXPECTED_VERSION_CODE}`); process.exit(1); }
 console.log(`PASS APK manifest package/versionCode = ${pkg} / ${versionCode}`);

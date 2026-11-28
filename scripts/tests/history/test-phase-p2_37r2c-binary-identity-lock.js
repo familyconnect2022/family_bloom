@@ -27,7 +27,7 @@ check(screen.includes('Binary gate:') && screen.includes('nativeBinaryReady'), '
 check(screen.includes('disabled={busy || !nativeBinaryReady}'), 'Surface probes are disabled until correct binary is installed');
 check(pkg.scripts?.['eas-build-post-install']?.includes('check-p2_37r2c-native-package.js'), 'EAS post-install runs R2C native package proof');
 check(pkg.scripts?.['eas-build-on-success']?.includes('check-p2_37r2c-eas-apk-proof.js'), 'EAS on-success inspects built R2C APK');
-check(read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes(`EXPECTED_VERSION_CODE = '${versionCode}'`) && read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('P2.37R2C-H25-native-3'), 'APK proof requires manifest versionCode + exact native identity');
+check(read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('EXPECTED_VERSION_CODE = String(release.versionCode)') && read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('app?.android?.versionCode !== release.versionCode') && read('scripts/setup/check-p2_37r2c-apk-native-proof.js').includes('P2.37R2C-H25-native-3'), 'APK proof requires manifest versionCode + exact native identity');
 check(!bat.includes('--no-wait') && bat.includes('--clear-cache'), 'EAS helper always waits and always clears cache');
 check(bat.includes(versionCode) && bat.includes(version) && bat.includes('P2.37R2C-H25-native-3'), 'EAS helper prints exact expected artifact identity');
 console.log(`\n${release.release} binary identity lock: ${fail?'FAIL':'PASS'} (${pass}/${pass+fail})\n`); process.exit(fail?1:0);

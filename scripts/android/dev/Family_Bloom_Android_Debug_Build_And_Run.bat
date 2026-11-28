@@ -176,7 +176,7 @@ call npx --no-install expo prebuild --platform android --clean --no-install
 if errorlevel 1 goto :fail
 node scripts\setup\check-generated-android-package.js "%APP_PACKAGE%"
 if errorlevel 1 goto :fail
-node scripts\setup\check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-generated-project --require-gradle-project
+node scripts\setup\check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config --require-generated-project --require-gradle-project
 if errorlevel 1 goto :fail
 
 echo [5/7] Building DEBUG APK with Gradle...
@@ -200,6 +200,8 @@ if not defined DEBUG_APK (
 )
 echo       APK: !DEBUG_APK!
 node scripts\setup\check-p2_37r2c-apk-native-proof.js "!DEBUG_APK!"
+if errorlevel 1 goto :fail
+node scripts\setup\check-board-audio-apk.js "!DEBUG_APK!"
 if errorlevel 1 goto :fail
 
 echo [6/7] Installing DEBUG build on the selected phone...
