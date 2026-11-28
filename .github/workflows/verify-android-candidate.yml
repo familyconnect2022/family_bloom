@@ -154,7 +154,21 @@ jobs:
           EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
         run: |
           printf '\norg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8\norg.gradle.workers.max=2\n' >> android/gradle.properties
-          node scripts/setup/check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config --require-generated-project --require-gradle-project
+          set -o pipefail
+          for attempt in 1 2 3; do
+            export BLOOM_GRADLE_REFRESH=0
+            if [ "$attempt" != 1 ]; then export BLOOM_GRADLE_REFRESH=1; fi
+            log="$RUNNER_TEMP/bloom-native-graph-${attempt}.log"
+            if node scripts/setup/check-p2_37r2c-native-package.js --require-node-module --require-resolve --require-effective-config --require-generated-project --require-gradle-project 2>&1 | tee "$log"; then
+              exit 0
+            fi
+            if [ "$attempt" != 3 ] && grep -Fq 'Gradle projects command failed' "$log" && grep -Eiq "Plugin .* was not found in any of the following sources|Could not (GET|HEAD|resolve all (files|artifacts|dependencies))|Read timed out|Connection reset|UnknownHostException|HTTP (429|50[234])" "$log"; then
+              echo 'Gradle repository resolution failed; retrying native graph with dependency refresh.'
+              sleep 15
+              continue
+            fi
+            exit 1
+          done
       - name: Compile Debug APK and verify native DEX and audio (no device or distribution)
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
@@ -204,6 +218,7 @@ jobs:
           path: |
             ${{ runner.temp }}/bloom-gradle.log
             ${{ runner.temp }}/bloom-debug-gradle.log
+            ${{ runner.temp }}/bloom-native-graph-*.log
           if-no-files-found: ignore
       - name: Inspect APK manifest, DEX and board audio (CI only)
         run: |

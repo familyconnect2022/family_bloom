@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R111",
+  "release": "R16R11R112",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 16664,
-      "sha256": "5aedc456128b097a5cced9dfec5d8721620143b88783b1623481ce5229a0f279"
+      "bytes": 17535,
+      "sha256": "b6223cf29abec680612fcb14838b147739cf2157d9dd434fd2522ede7485f724"
     },
     {
       "path": ".gitignore",
@@ -5491,8 +5491,8 @@
     },
     {
       "path": "scripts/setup/check-p2_37r2c-native-package.js",
-      "bytes": 10306,
-      "sha256": "f728b6ed832a5a976a3a58bfe92a3bdd5b01a718fed642d09012f01d32ff785c"
+      "bytes": 10457,
+      "sha256": "8e8785a93987dcd945fca2ed323a9145781a007c4ee8f5b56e47243d8287db8a"
     },
     {
       "path": "scripts/setup/check-package-lock.js",
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "40cf26d9910bafd8153c6666794271abaf3f983f326ca43a4fddfda255b3abc0"
+      "sha256": "6a77a53dca55b9519950f9eff317e47efcb73e734f820a93f3f221838ce3b570"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "d5a8d18fcf8c0db3609ac7d540ddc8a013e140c274784f0fbdb8dcd113d3bdc6"
+      "sha256": "a2ff5c9ef9f5e132c13488910a7462143ec2e67fb659a80d67c836032cdcc836"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R111",
+  "candidate": "R16R11R112",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

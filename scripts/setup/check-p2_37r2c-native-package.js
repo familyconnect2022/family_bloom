@@ -158,7 +158,7 @@ if (requireGradleProject) {
         cwd: androidDir, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, windowsHide: true
       });
     } else {
-      r = spawnSync(gradle, ['projects', '--console=plain'], {
+      r = spawnSync(gradle, ['projects', '--console=plain', '--stacktrace', '--no-daemon', ...(process.env.BLOOM_GRADLE_REFRESH === '1' ? ['--refresh-dependencies'] : [])], {
         cwd: androidDir, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024
       });
     }
@@ -169,8 +169,10 @@ if (requireGradleProject) {
 
     if (r.status === 0) pass('Gradle projects command completed');
     else {
-      const diagnostic = out.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(-8).join(' | ');
-      fail(`Gradle projects command failed (${r.status ?? 'unknown'})${diagnostic ? `: ${diagnostic}` : ''}`);
+      // Preserve the first cause, not just the generic Gradle help footer.
+      console.error(out);
+      if (r.error) console.error(r.error.message);
+      fail(`Gradle projects command failed (${r.status ?? 'unknown'}); see complete Gradle output above`);
     }
 
     if (graphHasOverlay) pass('Gradle project graph contains family-bloom-overlay');
