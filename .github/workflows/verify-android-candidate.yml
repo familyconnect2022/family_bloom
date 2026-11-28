@@ -60,34 +60,65 @@ jobs:
           EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
         shell: bash
         run: |
-          node scripts/setup/check-expo-dependencies.js
-          node scripts/setup/check-package-lock.js
-          node scripts/setup/check-effective-expo-config.js
-          node scripts/setup/check-board-audio-integrity.js
-          node scripts/setup/check-build-entrypoints.js
-          npm run phase15a4:check
-          node scripts/tests/release/test-a3-render-backend-urls.cjs
-          npm run phaseP2_12_4:check
-          npm run phaseP2_12_6:check
-          npm run phaseP2_12_7:check
-          npm run phaseP2_12_8:check
-          npm run phaseP2_32:check
-          node scripts/tests/release/test-h25r2r2-release-preflight.cjs
-          node scripts/tests/release/test-h25r2r5-internet-connectivity.cjs --source-only
-          npm run phaseP2_34:check
-          npm run phaseP2_35:check
-          node scripts/setup/check-source-import-integrity.js
-          npm run phaseP2_37R2C:check
-          npm run phaseP2_37R2C_H6:check
-          npm run phaseP2_37R2C_H7:check
-          npm run phaseP2_37R2C_H8:check
-          npm run phaseP2_37R2C_H9A:check
-          node scripts/setup/check-expo-route-uniqueness.cjs
-          npm run structure:check
-          npm run phaseP2_15_5_1:check
-          npm run doctor:native-check
-          npm run release:check
-          npm run typecheck
+          failures=0
+          echo '>>> node scripts/setup/check-expo-dependencies.js'
+          if ! node scripts/setup/check-expo-dependencies.js; then echo '::error::Failed: node scripts/setup/check-expo-dependencies.js'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-package-lock.js'
+          if ! node scripts/setup/check-package-lock.js; then echo '::error::Failed: node scripts/setup/check-package-lock.js'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-effective-expo-config.js'
+          if ! node scripts/setup/check-effective-expo-config.js; then echo '::error::Failed: node scripts/setup/check-effective-expo-config.js'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-board-audio-integrity.js'
+          if ! node scripts/setup/check-board-audio-integrity.js; then echo '::error::Failed: node scripts/setup/check-board-audio-integrity.js'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-build-entrypoints.js'
+          if ! node scripts/setup/check-build-entrypoints.js; then echo '::error::Failed: node scripts/setup/check-build-entrypoints.js'; failures=$((failures+1)); fi
+          echo '>>> npm run phase15a4:check'
+          if ! npm run phase15a4:check; then echo '::error::Failed: npm run phase15a4:check'; failures=$((failures+1)); fi
+          echo '>>> node scripts/tests/release/test-a3-render-backend-urls.cjs'
+          if ! node scripts/tests/release/test-a3-render-backend-urls.cjs; then echo '::error::Failed: node scripts/tests/release/test-a3-render-backend-urls.cjs'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_12_4:check'
+          if ! npm run phaseP2_12_4:check; then echo '::error::Failed: npm run phaseP2_12_4:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_12_6:check'
+          if ! npm run phaseP2_12_6:check; then echo '::error::Failed: npm run phaseP2_12_6:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_12_7:check'
+          if ! npm run phaseP2_12_7:check; then echo '::error::Failed: npm run phaseP2_12_7:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_12_8:check'
+          if ! npm run phaseP2_12_8:check; then echo '::error::Failed: npm run phaseP2_12_8:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_32:check'
+          if ! npm run phaseP2_32:check; then echo '::error::Failed: npm run phaseP2_32:check'; failures=$((failures+1)); fi
+          echo '>>> node scripts/tests/release/test-h25r2r2-release-preflight.cjs'
+          if ! node scripts/tests/release/test-h25r2r2-release-preflight.cjs; then echo '::error::Failed: node scripts/tests/release/test-h25r2r2-release-preflight.cjs'; failures=$((failures+1)); fi
+          echo '>>> node scripts/tests/release/test-h25r2r5-internet-connectivity.cjs --source-only'
+          if ! node scripts/tests/release/test-h25r2r5-internet-connectivity.cjs --source-only; then echo '::error::Failed: node scripts/tests/release/test-h25r2r5-internet-connectivity.cjs --source-only'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_34:check'
+          if ! npm run phaseP2_34:check; then echo '::error::Failed: npm run phaseP2_34:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_35:check'
+          if ! npm run phaseP2_35:check; then echo '::error::Failed: npm run phaseP2_35:check'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-source-import-integrity.js'
+          if ! node scripts/setup/check-source-import-integrity.js; then echo '::error::Failed: node scripts/setup/check-source-import-integrity.js'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_37R2C:check'
+          if ! npm run phaseP2_37R2C:check; then echo '::error::Failed: npm run phaseP2_37R2C:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_37R2C_H6:check'
+          if ! npm run phaseP2_37R2C_H6:check; then echo '::error::Failed: npm run phaseP2_37R2C_H6:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_37R2C_H7:check'
+          if ! npm run phaseP2_37R2C_H7:check; then echo '::error::Failed: npm run phaseP2_37R2C_H7:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_37R2C_H8:check'
+          if ! npm run phaseP2_37R2C_H8:check; then echo '::error::Failed: npm run phaseP2_37R2C_H8:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_37R2C_H9A:check'
+          if ! npm run phaseP2_37R2C_H9A:check; then echo '::error::Failed: npm run phaseP2_37R2C_H9A:check'; failures=$((failures+1)); fi
+          echo '>>> node scripts/setup/check-expo-route-uniqueness.cjs'
+          if ! node scripts/setup/check-expo-route-uniqueness.cjs; then echo '::error::Failed: node scripts/setup/check-expo-route-uniqueness.cjs'; failures=$((failures+1)); fi
+          echo '>>> npm run structure:check'
+          if ! npm run structure:check; then echo '::error::Failed: npm run structure:check'; failures=$((failures+1)); fi
+          echo '>>> npm run phaseP2_15_5_1:check'
+          if ! npm run phaseP2_15_5_1:check; then echo '::error::Failed: npm run phaseP2_15_5_1:check'; failures=$((failures+1)); fi
+          echo '>>> npm run doctor:native-check'
+          if ! npm run doctor:native-check; then echo '::error::Failed: npm run doctor:native-check'; failures=$((failures+1)); fi
+          echo '>>> npm run release:check'
+          if ! npm run release:check; then echo '::error::Failed: npm run release:check'; failures=$((failures+1)); fi
+          echo '>>> npm run typecheck'
+          if ! npm run typecheck; then echo '::error::Failed: npm run typecheck'; failures=$((failures+1)); fi
+          echo "Pre-native Debug failures: $failures"
+          test "$failures" -eq 0
       - name: Generate Android project (synthetic Firebase, no production credentials)
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'

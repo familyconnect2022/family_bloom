@@ -19,8 +19,9 @@ const rootLayout = read('src/app/_layout.tsx');
 const mod = json('modules/family-bloom-overlay/package.json');
 const app = json('app.json');
 
-check(mod.version === '1.3.18' && native.includes('P2.37R2C-H25-native-3'), 'native binary identity is H9B / module 1.3.14');
-check(app.expo.version === '1.3.49' && app.expo.android.versionCode === 143059, 'app identity remains 1.3.49 / 143059');
+check(mod.version === '1.3.18' && native.includes('P2.37R2C-H25-native-3'), 'native binary identity is H25-native-3 / module 1.3.18');
+const releaseIdentity = json('ANDROID_SOURCE_MANIFEST.json');
+check(app.expo.version === releaseIdentity.version && app.expo.android.versionCode === releaseIdentity.versionCode && app.expo.android.package === 'com.familybloom.android', 'app identity matches the current release manifest');
 check(store.includes('STORE_PRESERVE_LOCAL_MODE') && store.includes('snapshot.activeGameId === gameId'), 'same authoritative game refresh preserves local Full/Mini mode');
 check(store.includes('STORE_REJECT_DIFFERENT_GAME_REFRESH'), 'stale/different game state cannot steal active presentation');
 check(bridge.includes('presentConfirmedBoardGame("chess", state.gameId)') && bridge.includes('presentConfirmedBoardGame("xiangqi", state.gameId)'), 'server still owns live-game existence while store owns local presentation mode');

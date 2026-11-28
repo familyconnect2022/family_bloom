@@ -156,7 +156,7 @@ if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c-binary-identity-lock.js
 if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c_h6-decor-rail-isolation.js
-if errorlevel 1 exit /b 1
+if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js
 if errorlevel 1 goto :fail
 node scripts\tests\history\test-phase-p2_37r2c_h8-native-chess-tap-move.js
@@ -179,7 +179,7 @@ if errorlevel 1 goto :fail
 echo.
 echo ------------------------------------------------------------
 echo PRE-BUILD IDENTITY VERIFIED
-echo   app version : 1.3.46
+echo   app version : 1.3.82
 echo   versionCode : 143092
 echo   native ID   : P2.37R2C-H25-native-3
 echo ------------------------------------------------------------

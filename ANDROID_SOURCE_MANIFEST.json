@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R102",
+  "release": "R16R11R103",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 8714,
-      "sha256": "cd62d17a107b93ff4999cc06161b94cad9a14b9ade43e45a601c5c9250693818"
+      "bytes": 13266,
+      "sha256": "0acc43b262c608df42c218b5ab6972c149a3516ae33070f3a9c233a7fbd85b65"
     },
     {
       "path": ".gitignore",
@@ -5041,18 +5041,18 @@
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat",
-      "bytes": 8481,
-      "sha256": "58227bbce6a788014f5dcad2694a619da5b883d09e2a78bdfd6b532007c52c40"
+      "bytes": 8482,
+      "sha256": "730a52e7bb40e11d434e7a10e056436ab7ecb00541a9787756cc685d3bf3ee0f"
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Metro_Only.bat",
-      "bytes": 628,
-      "sha256": "a6c4a394651b781b6cdde1c6e2312cd418b5874a20c75307e2f7a403021a19e1"
+      "bytes": 768,
+      "sha256": "5906e08a8a684b1af9efb500d1b33db417816fc716d621ce96006cbdc3bdf686"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat",
-      "bytes": 8906,
-      "sha256": "6a3e6a627367c10e050b20392f4a9f02dc9820fa01632568c3cf1825d06a8877"
+      "bytes": 8907,
+      "sha256": "ef542855628eeb18c7a155014faacdc893ddebaa2bd4a1c4ef90367dc85f8c6f"
     },
     {
       "path": "scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat",
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "d990b2de20c4536d5fdfbba49d02812a2732210aab7a0edc6e07a3d67a3a5a8d"
+      "sha256": "8c6ec0efb97cda6a2c85012e45c3ad6dcb16aea591807729f3d531b6c3188ec8"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -5921,8 +5921,8 @@
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h6-decor-rail-isolation.js",
-      "bytes": 8047,
-      "sha256": "d77264d2ef759ab51f56dc690a89520c18f151f76490c9c9f04a93f34dbc33b1"
+      "bytes": 8478,
+      "sha256": "9bf4739326c2c0da9770d9805adc43107dcc9c62c08044ce11e6c200c444cf9e"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h7-tab-navigator-flex-layout.js",
@@ -5931,13 +5931,13 @@
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h8-native-chess-tap-move.js",
-      "bytes": 6063,
-      "sha256": "f551883f3aa4ebd37ee8f751a33b829e65b317844253e0ec168a7806c49d5bd5"
+      "bytes": 6243,
+      "sha256": "ee7c0abaf5ff46e403c9814de17b548fcb8e900cdc10192cbe782e3df97881bf"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h9a-mini-lifecycle-performance.js",
-      "bytes": 3906,
-      "sha256": "98559bfe1e247f7b5810aeb3ce48eeb7f0a3f98ba77123f291cae0a4e844049f"
+      "bytes": 4084,
+      "sha256": "ceaa0fae0842c62468ac505c031c650e04a87e8d8edbdedd1038f7aa5888553c"
     },
     {
       "path": "scripts/tests/history/test-phase-p2_37r2c_h9b-bloom-super-hero-ui.js",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "8f000d7bc9526003681aa92a6d2d43d396c301f53a2d522140517e67ee3d1d81"
+      "sha256": "33bb8a7deca616b9ef63f4a8478e770d1873646a33db46a70430ff3934ba57ac"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R102",
+  "candidate": "R16R11R103",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

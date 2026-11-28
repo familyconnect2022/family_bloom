@@ -84,7 +84,13 @@ check(!native.includes('View(FamilyBloomOverlayHostView::class)') && !native.inc
 check(native.includes('P2.37R2C-H25-native-3') && mod.version==='1.3.18', 'current native identity/module version = P2.37R2C-H25-native-3 / 1.3.18');
 check(native.includes('visibility = View.INVISIBLE') && native.includes('Full/Mini containers retained'), 'IDLE/background keeps persistent rail hidden without destroying containers');
 check(native.includes('bringToFront()') && native.includes('Activity.window.decorView'), 'active presentation can rise only inside Android decor hierarchy');
-check(eas.includes('143059') && eas.includes('P2.37R2C-H25-native-3'), 'EAS helper prints exact current app/native identity');
+const appIdentity = json('app.json').expo;
+const releaseIdentity = json('ANDROID_SOURCE_MANIFEST.json');
+const versionCode = appIdentity.android.versionCode;
+check(appIdentity.version === releaseIdentity.version && versionCode === releaseIdentity.versionCode &&
+  eas.includes(`EXPECTED: app ${appIdentity.version} / versionCode ${versionCode}`) &&
+  eas.includes(`app version : ${appIdentity.version}`) && eas.includes(`ACTUAL versionCode: ${versionCode}`) &&
+  eas.includes('P2.37R2C-H25-native-3'), 'EAS helper prints exact current app/native identity');
 check(['scripts/android/eas/Family_Bloom_EAS_BUILD_TEST.bat','scripts/android/eas/Family_Bloom_EAS_UPDATE_TEST.bat','scripts/android/maintenance/Family_Bloom_CLEAN_APPLY_FULL.bat','scripts/android/maintenance/Family_Bloom_PRE_COPY_CLEAN_OLD_PROJECT.bat','scripts/android/build/Family_Bloom_BUILD_APK_TO_SHARE.bat'].every((name)=>fs.existsSync(path.join(root,name))), 'EAS, maintenance, Build & Share helpers remain in managed folders');
 console.log(`\nP2.37R2C-H6 decor rail gate: ${fail?'FAIL':'PASS'} (${pass}/${pass+fail})\n`);
 process.exit(fail?1:0);

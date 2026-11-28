@@ -147,7 +147,7 @@ if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C_H6:check
-if errorlevel 1 exit /b 1
+if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C_H7:check
 if errorlevel 1 goto :fail
 call npm run phaseP2_37R2C_H8:check

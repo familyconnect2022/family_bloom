@@ -18,4 +18,9 @@ if errorlevel 1 (
   exit /b 1
 )
 call npx --no-install expo start --dev-client %*
-exit /b %ERRORLEVEL%
+set "METRO_RC=%ERRORLEVEL%"
+if not "%METRO_RC%"=="0" (
+  echo [ERROR] Metro exited with code %METRO_RC%. Read the error above.
+  pause
+)
+exit /b %METRO_RC%
