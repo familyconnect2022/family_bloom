@@ -27,7 +27,7 @@ try{
  put('src/fixture.ts','const value = 1;\n');
  const paths=[pre,env,verify,'scripts/setup/semver-contract.js','.env.main.example','app.json','package.json','src/fixture.ts','scripts/setup/check-p2_37r2-local-install.js','scripts/setup/check-expo-route-uniqueness.cjs'];
  const files=paths.map(p=>{const bytes=fs.readFileSync(path.join(tmp,p));return {path:p,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')}});
- put('ANDROID_SOURCE_MANIFEST.json',JSON.stringify({release:'R16R11R101',version:'1.3.82',versionCode:143092,fileCount:files.length,files}));
+ put('ANDROID_SOURCE_MANIFEST.json',JSON.stringify({release:'R16R11R102',version:'1.3.82',versionCode:143092,fileCount:files.length,files}));
  // Reject missing production URL on all launch modes; no silent disabled mode.
  bad(run(pre));assert(!fs.existsSync(path.join(tmp,'.env')));
  bad(run(env,'init','http://invalid.test/api/session'));assert(!fs.existsSync(path.join(tmp,'.env')));

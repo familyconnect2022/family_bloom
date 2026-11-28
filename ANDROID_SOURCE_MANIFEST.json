@@ -1,5 +1,5 @@
 {
-  "release": "R16R11R101",
+  "release": "R16R11R102",
   "version": "1.3.82",
   "versionCode": 143092,
   "fileCount": 1877,
@@ -26,8 +26,8 @@
     },
     {
       "path": ".github/workflows/verify-android-candidate.yml",
-      "bytes": 7085,
-      "sha256": "9bd696144461aff2656a80815570a2973077f6529d14fa8b2544c4b44040a72c"
+      "bytes": 8714,
+      "sha256": "cd62d17a107b93ff4999cc06161b94cad9a14b9ade43e45a601c5c9250693818"
     },
     {
       "path": ".gitignore",
@@ -5041,8 +5041,8 @@
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Debug_Build_And_Run.bat",
-      "bytes": 7988,
-      "sha256": "f5b9faf65e21749c37e11b99edc1cfdf69d09040dd182481f66492256118988f"
+      "bytes": 8481,
+      "sha256": "58227bbce6a788014f5dcad2694a619da5b883d09e2a78bdfd6b532007c52c40"
     },
     {
       "path": "scripts/android/dev/Family_Bloom_Android_Metro_Only.bat",
@@ -5562,7 +5562,7 @@
     {
       "path": "scripts/setup/verify-release-source.cjs",
       "bytes": 2891,
-      "sha256": "426949d7e478414a392f8d4c46148c557b0c3cc12e2eb4078875dff947fea9a3"
+      "sha256": "d990b2de20c4536d5fdfbba49d02812a2732210aab7a0edc6e07a3d67a3a5a8d"
     },
     {
       "path": "scripts/setup/write-ci-google-services.cjs",
@@ -6762,7 +6762,7 @@
     {
       "path": "scripts/tests/release/test-r16r11r15-local-preflight.cjs",
       "bytes": 6483,
-      "sha256": "fd91d79f69dc9d9d847f5e06b756c82f6fda1fafda4567b64ce5a04cf1db4fa5"
+      "sha256": "8f000d7bc9526003681aa92a6d2d43d396c301f53a2d522140517e67ee3d1d81"
     },
     {
       "path": "scripts/tests/release/test-r16r11r2-node-login-tabbar.cjs",
@@ -9390,6 +9390,6 @@
       "sha256": "69ae20998148e921d6249ee682b3dd12a4130a5ae2cb9a59126851802e99be87"
     }
   ],
-  "candidate": "R16R11R57-DEV",
+  "candidate": "R16R11R102",
   "candidateStatus": "NOT_RELEASED_CI_PENDING"
 }

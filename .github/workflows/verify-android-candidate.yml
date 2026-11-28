@@ -53,6 +53,41 @@ jobs:
           java-version: '17'
       - name: Generate synthetic Firebase config for CI native build only
         run: node scripts/setup/write-ci-google-services.cjs
+      - name: Run all pre-native Debug BAT regression commands on CI
+        env:
+          EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'
+          EXPO_PUBLIC_SINGLE_SESSION_API_URL: https://session.example.invalid/api/session
+          EXPO_PUBLIC_MOMENT_MEDIA_API_URL: https://media.example.invalid
+        shell: bash
+        run: |
+          node scripts/setup/check-expo-dependencies.js
+          node scripts/setup/check-package-lock.js
+          node scripts/setup/check-effective-expo-config.js
+          node scripts/setup/check-board-audio-integrity.js
+          node scripts/setup/check-build-entrypoints.js
+          npm run phase15a4:check
+          node scripts/tests/release/test-a3-render-backend-urls.cjs
+          npm run phaseP2_12_4:check
+          npm run phaseP2_12_6:check
+          npm run phaseP2_12_7:check
+          npm run phaseP2_12_8:check
+          npm run phaseP2_32:check
+          node scripts/tests/release/test-h25r2r2-release-preflight.cjs
+          node scripts/tests/release/test-h25r2r5-internet-connectivity.cjs --source-only
+          npm run phaseP2_34:check
+          npm run phaseP2_35:check
+          node scripts/setup/check-source-import-integrity.js
+          npm run phaseP2_37R2C:check
+          npm run phaseP2_37R2C_H6:check
+          npm run phaseP2_37R2C_H7:check
+          npm run phaseP2_37R2C_H8:check
+          npm run phaseP2_37R2C_H9A:check
+          node scripts/setup/check-expo-route-uniqueness.cjs
+          npm run structure:check
+          npm run phaseP2_15_5_1:check
+          npm run doctor:native-check
+          npm run release:check
+          npm run typecheck
       - name: Generate Android project (synthetic Firebase, no production credentials)
         env:
           EXPO_PUBLIC_SINGLE_SESSION_ENABLED: '1'

@@ -99,6 +99,19 @@ for /f "delims=" %%M in ('"!ADB!" -s "!DEVICE_SERIAL!" shell getprop ro.product.
 echo       Device: !DEVICE_MODEL!  [!DEVICE_SERIAL!]
 
 echo [2/7] Existing npm dependencies verified by shared preflight.
+rem Keep explicit native dependency gates after shared repair; never reinstall here.
+if not exist "node_modules\expo-audio\package.json" (
+  echo [ERROR] expo-audio missing after shared preflight.
+  goto :fail
+)
+if not exist "node_modules\expo-asset\package.json" (
+  echo [ERROR] expo-asset missing after shared preflight.
+  goto :fail
+)
+node scripts\setup\check-expo-dependencies.js
+if errorlevel 1 goto :fail
+node scripts\setup\check-package-lock.js
+if errorlevel 1 goto :fail
 node scripts\setup\check-effective-expo-config.js
 if errorlevel 1 goto :fail
 node scripts\setup\check-board-audio-integrity.js
